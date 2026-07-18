@@ -1,0 +1,26 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Hisense VIDAA TV",
+        "description": "Enter the IP address and optionally MAC address of your Hisense TV.",
+        "data": {
+          "ip_address": "IP Address",
+          "mac_address": "MAC Address (Optional, required for Wake-on-LAN)"
+        }
+      },
+      "auth": {
+        "title": "Enter TV PIN Code",
+        "description": "A 4-digit PIN code should now be displayed on your TV screen. Please enter it below.",
+        "data": {
+          "pin_code": "PIN Code"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the TV.",
+      "invalid_auth": "Invalid PIN code. Please try again.",
+      "unknown": "An unknown error occurred."
+    }
+  }
+}
