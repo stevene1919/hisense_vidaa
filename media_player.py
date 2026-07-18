@@ -7,6 +7,7 @@ from homeassistant.components.media_player import (
     BrowseMedia
 )
 from homeassistant.const import STATE_ON, STATE_OFF
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 
 from .const import DOMAIN, CONF_MAC_ADDRESS
 
@@ -39,6 +40,28 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
     @property
     def name(self):
         return self._name
+
+    @property
+    def unique_id(self):
+        """Return a unique ID."""
+        return f"{self._entry_id}_media_player"
+
+    @property
+    def device_info(self):
+        """Return device info."""
+        info = {
+            "identifiers": {(DOMAIN, self._entry_id)},
+            "name": self._name,
+            "manufacturer": "Hisense",
+            "model": "VIDAA TV",
+        }
+        
+        if self._mac:
+            # HA explicitly requires lowercase MAC address formats separated by colons
+            cleaned_mac = self._mac.replace("-", ":").lower()
+            info["connections"] = {(CONNECTION_NETWORK_MAC, cleaned_mac)}
+            
+        return info
 
     @property
     def state(self):
@@ -107,7 +130,7 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         if app:
             self._client.launch_app(app["appId"], app["name"], app["url"])
             return
-        
+
         # Input source
         src = self._source_dict.get(source)
         if src:
@@ -181,7 +204,7 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             pub = self._client.topicTVPSBasepath + "actions/getchannellistinfo"
             sub = self._client.topicMobiBasepath + "platform_service/data/getchannellistinfo"
             payload = await self._client.async_query(pub, sub)
-            
+
             self._channel_infos = {item.get("list_para"): item for item in payload if item.get("list_para")}
             for key, item in self._channel_infos.items():
                 node.children.append(
@@ -224,7 +247,7 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             pub = self._client.topicTVUIBasepath + "actions/applist"
             sub = self._client.topicMobiBasepath + "ui_service/data/applist"
             payload = await self._client.async_query(pub, sub)
-            
+
             self._app_list = payload
             self._app_dict = {item.get("name"): item for item in payload if item.get("name")}
             for item in payload:
@@ -263,7 +286,7 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 async def async_setup_entry(hass, config_entry, async_add_entities):
     client = hass.data[DOMAIN][config_entry.entry_id]
     mac = config_entry.data.get(CONF_MAC_ADDRESS)
-    
+
     entity = HisenseVidaaMediaPlayer(
         client=client,
         mac=mac,
