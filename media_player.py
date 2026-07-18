@@ -149,6 +149,7 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         if statetype == "fake_sleep_0":
             self._state = STATE_OFF
         else:
+            was_off = (self._state == STATE_OFF)
             self._state = STATE_ON
             if statetype == "sourceswitch":
                 self._source = data.get("sourcename") or data.get("displayname")
@@ -157,7 +158,10 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             elif statetype == "livetv":
                 self._source = "TV"
 
-        self.schedule_update_ha_state()
+            if was_off or not self._source_dict or not self._app_dict:
+                self.hass.add_job(self._client.query_initial_state)
+
+        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
 
     def _handle_volume_update(self, data):
         self._state = STATE_ON
@@ -166,24 +170,24 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         elif data.get("volume_type") == 2:
             self._muted = (data.get("volume_value") == 1)
 
-        self.schedule_update_ha_state()
+        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
 
     def _handle_sourcelist_update(self, data):
         if not data:
             return
         self._source_dict = {item.get("sourcename"): item for item in data if item.get("sourcename")}
-        self.schedule_update_ha_state()
+        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
 
     def _handle_applist_update(self, data):
         if not data:
             return
         self._app_list = data
         self._app_dict = {item.get("name"): item for item in data if item.get("name")}
-        self.schedule_update_ha_state()
+        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
 
     def _handle_disconnected(self):
         self._state = STATE_OFF
-        self.schedule_update_ha_state()
+        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
 
     # Browser Media Support
     async def async_browse_media(self, media_content_type=None, media_content_id=None):
