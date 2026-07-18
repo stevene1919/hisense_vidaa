@@ -30,12 +30,16 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         self._app_dict = {}
         self._channel_infos = {}
 
-        # Register client push callbacks
+    async def async_added_to_hass(self):
+        """Register callbacks and query initial state when entity is added."""
         self._client.on_state_update = self._handle_state_update
         self._client.on_volume_update = self._handle_volume_update
         self._client.on_sourcelist_update = self._handle_sourcelist_update
         self._client.on_applist_update = self._handle_applist_update
         self._client.on_disconnected_callback = self._handle_disconnected
+
+        # Query initial state now that callbacks are registered and active
+        await self.hass.async_add_executor_job(self._client.query_initial_state)
 
     @property
     def name(self):
@@ -81,10 +85,12 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 
     @property
     def source_list(self):
-        # Merge input sources and apps for the source dropdown
-        sources = list(self._source_dict.keys())
-        apps = [app["name"] for app in self._app_list]
-        return sorted(sources + apps)
+        # Filter just the physical inputs (HDMI, TV, AV)
+        sources = [
+            s for s in self._source_dict.keys()
+            if "hdmi" in s.lower() or s.lower() in ("tv", "av")
+        ]
+        return sorted(sources)
 
     @property
     def supported_features(self):

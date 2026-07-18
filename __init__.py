@@ -50,8 +50,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             CONF_REFRESH_TOKEN_DURATION: client.refresh_token_duration,
         })
 
-    # Start running background thread loop for MQTT client
-    client.connect_and_run()
+    # Start running background thread loop for MQTT client in executor
+    await hass.async_add_executor_job(client.connect_and_run)
     
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = client

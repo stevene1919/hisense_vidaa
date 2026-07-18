@@ -2,7 +2,7 @@
   "domain": "hisense_vidaa",
   "name": "Hisense VIDAA TV",
   "version": "1.0.0",
-  "documentation": "https://github.com/steven/projects/homeassistant",
+  "documentation": "https://github.com/stevene1919/hisense_vidaa",
   "requirements": [
     "paho-mqtt>=1.6.1",
     "wakeonlan>=2.1.0"

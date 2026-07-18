@@ -28,8 +28,8 @@ class HisenseTvClient:
 
         # Locate certs packaged in the custom component
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.certfile = os.path.join(script_dir, "certs", "rcm_certchain_pem.cer")
-        self.keyfile = os.path.join(script_dir, "certs", "rcm_pem_privkey.pkcs8")
+        self.certfile = os.path.join(script_dir, "certs", "cert.pem")
+        self.keyfile = os.path.join(script_dir, "certs", "key.pem")
 
         self.mqtt_client = None
         self.connected = False
@@ -60,12 +60,8 @@ class HisenseTvClient:
 
     def generate_initial_creds(self):
         timestamp = int(time.time())
-        if not self.mac:
-            # Generate random MAC if not provided
-            mac = ':'.join(f'{random.randint(0, 255):02x}' for _ in range(6)).upper()
-            self.mac = mac
-        else:
-            mac = self.mac.replace('-', ':').upper()
+        # Always generate a random MAC address for the client ID to prevent conflicts
+        mac = ':'.join(f'{random.randint(0, 255):02x}' for _ in range(6)).upper()
 
         second_hash = hashlib.md5(f"38D65DC30F45109A369A86FCE866A85B${mac}".encode("utf-8")).hexdigest().upper()
         last_digit_of_cross_sum = sum(int(digit) for digit in str(timestamp)) % 10
@@ -92,6 +88,19 @@ class HisenseTvClient:
         if rc == 0:
             self.connected = True
             _LOGGER.info("Connected to TV MQTT Broker")
+            if hasattr(self, 'topicBrcsBasepath'):
+                client.subscribe([
+                    (self.topicBrcsBasepath + "ui_service/state", 0),
+                    (self.topicBrcsBasepath + "platform_service/actions/volumechange", 0),
+                    (self.topicBrcsBasepath + "platform_service/actions/tvsleep", 0),
+                    (self.topicMobiBasepath + "ui_service/data/sourcelist", 0),
+                    (self.topicMobiBasepath + "ui_service/data/applist", 0),
+                    (self.topicMobiBasepath + "ui_service/data/gettvstate", 0),
+                    (self.topicMobiBasepath + "platform_service/data/getvolume", 0),
+                ])
+                if self.on_state_update:
+                    import threading
+                    threading.Timer(1.0, self.query_initial_state).start()
         else:
             _LOGGER.error(f"Failed to connect to TV MQTT Broker, rc: {rc}")
 
@@ -115,14 +124,14 @@ class HisenseTvClient:
             self._token_future.set_result(payload)
 
         # Handle state push callbacks
-        if topic == self.topicBrcsBasepath + "ui_service/state":
+        if topic in (self.topicBrcsBasepath + "ui_service/state", self.topicMobiBasepath + "ui_service/data/gettvstate"):
             try:
                 data = json.loads(payload)
                 if self.on_state_update:
                     self.on_state_update(data)
             except Exception as e:
                 _LOGGER.error(f"Error parsing state: {e}")
-        elif topic == self.topicBrcsBasepath + "platform_service/actions/volumechange":
+        elif topic in (self.topicBrcsBasepath + "platform_service/actions/volumechange", self.topicMobiBasepath + "platform_service/data/getvolume"):
             try:
                 data = json.loads(payload)
                 if self.on_volume_update:
@@ -231,19 +240,20 @@ class HisenseTvClient:
             self.mqtt_client.disconnect()
 
     def check_and_refresh_token(self):
-        """Checks if access token is expired and refreshes it synchronously."""
+        """Checks if access token is expired (valid for 2 hours) and refreshes it synchronously."""
         current_time = time.time()
-        expiration_time = self.access_token_time + (self.access_token_duration * 24 * 60 * 60)
+        expiration_time = self.access_token_time + (2 * 60 * 60) # 2 hours duration
         
         # If token is still valid, return
-        if current_time <= expiration_time - 300: # Refresh 5 minutes before expiry
+        if current_time <= expiration_time - 300: # 5 minutes buffer
             return False
 
-        _LOGGER.info("Access token expired, refreshing...")
+        _LOGGER.info("Access token expired or close to expiry, refreshing...")
         client = self.create_mqtt_client(self.client_id, self.username, self.refresh_token)
         
         # Synchronous wait wrapper
-        lock = asyncio.Event()
+        import threading
+        lock = threading.Event()
         updated_data = {}
 
         def on_token(client, userdata, msg):
@@ -289,24 +299,25 @@ class HisenseTvClient:
         self.mqtt_client.connect_async(self.ip, 36669, 60)
         self.mqtt_client.loop_start()
 
-        # Subscribe to channels for state/volume updates
-        self.mqtt_client.subscribe([
-            (self.topicBrcsBasepath + "ui_service/state", 0),
-            (self.topicBrcsBasepath + "platform_service/actions/volumechange", 0),
-            (self.topicBrcsBasepath + "platform_service/actions/tvsleep", 0),
-            (self.topicMobiBasepath + "ui_service/data/sourcelist", 0),
-            (self.topicMobiBasepath + "ui_service/data/applist", 0),
-        ])
+        # Wait up to 10 seconds for connection
+        for _ in range(50):
+            if self.connected:
+                break
+            time.sleep(0.2)
 
-        # Query initial state
-        self.query_initial_state()
+        if not self.connected:
+            self.mqtt_client.loop_stop()
+            raise Exception("Cannot connect to TV MQTT Broker")
 
     def query_initial_state(self):
         if self.connected:
-            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/gettvstate", None)
-            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/getvolume", None)
-            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/sourcelist", None)
-            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/applist", None)
+            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/gettvstate", "")
+            time.sleep(0.1)
+            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/getvolume", "")
+            time.sleep(0.1)
+            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/sourcelist", "")
+            time.sleep(0.1)
+            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/applist", "")
 
     def send_key(self, key):
         if self.connected:
