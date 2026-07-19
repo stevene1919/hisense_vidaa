@@ -17,6 +17,15 @@ This integration connects **directly** to the TV's internal MQTT broker (SSL por
   - Media Browser for launching applications.
   - Real-time updates via local push.
 
+## Credits & Acknowledgments
+
+This native integration adapts the foundational reverse-engineering and secure pairing logic discovered by the open-source community. Special thanks to:
+
+* **Nika Gerson Lohman ([@nikagl](https://github.com/nikagl))**: For creating the original `hisense.py` script architecture, handling the complex SSL handshake mechanics, and proving the concept for the RemoteNOW-style dynamic PIN authentication flow.
+* **[@Krazy998](https://github.com/Krazy998) & Contributors**: For their collaborative efforts on the `mqtt-hisensetv` repository, which served as a crucial repository of knowledge for decoding the newer VIDAA OS MQTT communication barriers.
+
+---
+
 ## Installation
 
 1. Copy the `hisense_vidaa` directory to your Home Assistant `custom_components/` directory (e.g. `/config/custom_components/hisense_vidaa`).

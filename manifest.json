@@ -8,7 +8,7 @@
     "wakeonlan>=2.1.0"
   ],
   "dependencies": [],
-  "codeowners": ["@steven"],
+  "codeowners": ["@stevene1919"],
   "config_flow": true,
   "iot_class": "local_push"
 }
