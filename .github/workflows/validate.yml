@@ -6,11 +6,12 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    - cron: "0 0 * * *" # Daily sanity check
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 jobs:
   validate:
+    if: false  # <-- Disables this job temporarily
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

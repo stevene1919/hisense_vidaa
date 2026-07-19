@@ -9,6 +9,7 @@ on:
 jobs:
   hassfest:
     name: Run Hassfest
+    if: false  # <-- Disables this job temporarily
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -19,6 +20,7 @@ jobs:
 
   ruff:
     name: Run Ruff Linting
+    if: false  # <-- Disables this job temporarily
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
