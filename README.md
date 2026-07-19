@@ -17,6 +17,8 @@ This integration connects **directly** to the TV's internal MQTT broker (SSL por
   - Media Browser for launching applications.
   - Real-time updates via local push.
 
+![Integration Preview](preview.png)
+
 ## Credits & Acknowledgments
 
 This native integration adapts the foundational reverse-engineering and secure pairing logic discovered by the open-source community. Special thanks to:
