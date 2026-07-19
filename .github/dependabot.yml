@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Keeps your GitHub Action workflow runners updated safely
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Tracks requirements listed in manifest.json / requirements.txt
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      # Optional: Groups minor/patch updates together to reduce PR noise
+      homeassistant-deps:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
