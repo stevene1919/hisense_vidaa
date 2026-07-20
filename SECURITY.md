@@ -8,5 +8,5 @@ We take the security of this integration seriously. If you find a security vulne
    Navigate to the **Security** tab of this repository on GitHub, click **Vulnerability reporting** on the left menu, and click **Report a vulnerability**. This will open a private draft advisory where you can securely collaborate with the maintainer.
    
 2. **Direct Private Contact**:
-   Alternatively, you can contact the maintainer directly at:
-   `[YOUR_EMAIL_OR_CONTACT_METHOD]`
+   Alternatively, you can send a message directly using the secure contact form at:
+   https://stevene.enuff.com
