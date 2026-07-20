@@ -1,13 +1,15 @@
 {
   "domain": "hisense_vidaa",
   "name": "Hisense VIDAA TV",
-  "version": "1.1.0",
+  "codeowners": [
+    "@stevene1919"
+  ],
+  "config_flow": true,
+  "dependencies": [],
   "documentation": "https://github.com/stevene1919/hisense_vidaa",
+  "iot_class": "local_push",
   "requirements": [
     "paho-mqtt>=1.6.1"
   ],
-  "dependencies": [],
-  "codeowners": ["@stevene1919"],
-  "config_flow": true,
-  "iot_class": "local_push"
+  "version": "1.1.0"
 }
