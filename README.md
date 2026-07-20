@@ -14,7 +14,6 @@ This integration connects **directly** to the TV's internal MQTT broker (SSL por
   - Power control.
   - Volume adjust, step, and mute.
   - Source selector (combines HDMI/AV inputs and installed applications).
-  - Media Browser for launching applications.
   - Real-time updates via local push.
 - **Robust Connection Handlers**:
   - Non-blocking startup ensures the integration loads even if the TV is off.
