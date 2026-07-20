@@ -9,4 +9,4 @@ We take the security of this integration seriously. If you find a security vulne
    
 2. **Direct Private Contact**:
    Alternatively, you can send a message directly using the secure contact form at:
-   https://stevene.enuff.com
+   https://stevene.enuff.com/contact
