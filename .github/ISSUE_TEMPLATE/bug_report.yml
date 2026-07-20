@@ -1,0 +1,47 @@
+name: 🐛 Bug Report
+description: Report a bug to help us improve the integration.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Prerequisites
+      description: Please check the following before submitting:
+      options:
+        - label: I have restarted Home Assistant and verified the issue persists.
+          required: true
+        - label: I have checked the integration logs and included any error tracebacks below.
+          required: true
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant Version
+      placeholder: e.g. 2026.7.1
+    validations:
+      required: true
+  - type: input
+    id: tv-model
+    attributes:
+      label: TV Model
+      placeholder: e.g. 65U7G / VIDAA U5
+    validations:
+      required: false
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Integration Logs / Traceback
+      description: Please paste any relevant logs from Home Assistant. Wrap code blocks in triple backticks.
+      render: bash
+    validations:
+      required: false
