@@ -16,11 +16,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Prepare directory structure for HACS
-        run: |
-          mkdir -p custom_components/hisense_vidaa
-          find . -maxdepth 1 -not -name '.' -not -name '..' -not -name 'custom_components' -not -name '.git' -not -name '.github' -exec mv {} custom_components/hisense_vidaa/ \;
-
       - name: HACS Action Validation
         uses: hacs/action@main
         with:
