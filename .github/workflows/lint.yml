@@ -9,18 +9,21 @@ on:
 jobs:
   hassfest:
     name: Run Hassfest
-    if: false  # <-- Disables this job temporarily
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Prepare directory structure for Hassfest
+        run: |
+          mkdir -p custom_components/hisense_vidaa
+          find . -maxdepth 1 -not -name '.' -not -name '..' -not -name 'custom_components' -not -name '.git' -not -name '.github' -exec cp -r {} custom_components/hisense_vidaa/ \;
 
       - name: Home Assistant Hassfest Validation
         uses: home-assistant/actions/hassfest@master
 
   ruff:
     name: Run Ruff Linting
-    if: false  # <-- Disables this job temporarily
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

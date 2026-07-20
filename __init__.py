@@ -37,18 +37,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         refresh_token_duration=data[CONF_REFRESH_TOKEN_DURATION]
     )
 
+    # Callback to persist token updates in Home Assistant config entry
+    def update_entry_tokens(refreshed_client):
+        hass.config_entries.async_update_entry(entry, data={
+            **entry.data,
+            CONF_ACCESS_TOKEN: refreshed_client.access_token,
+            CONF_ACCESS_TOKEN_TIME: refreshed_client.access_token_time,
+            CONF_ACCESS_TOKEN_DURATION: refreshed_client.access_token_duration,
+            CONF_REFRESH_TOKEN: refreshed_client.refresh_token,
+            CONF_REFRESH_TOKEN_TIME: refreshed_client.refresh_token_time,
+            CONF_REFRESH_TOKEN_DURATION: refreshed_client.refresh_token_duration,
+        })
+    client.on_token_refreshed = lambda c: hass.loop.call_soon_threadsafe(update_entry_tokens, c)
+
     # Check and refresh tokens, run client loop in executor
     updated = await hass.async_add_executor_job(client.check_and_refresh_token)
     if updated:
-        hass.config_entries.async_update_entry(entry, data={
-            **entry.data,
-            CONF_ACCESS_TOKEN: client.access_token,
-            CONF_ACCESS_TOKEN_TIME: client.access_token_time,
-            CONF_ACCESS_TOKEN_DURATION: client.access_token_duration,
-            CONF_REFRESH_TOKEN: client.refresh_token,
-            CONF_REFRESH_TOKEN_TIME: client.refresh_token_time,
-            CONF_REFRESH_TOKEN_DURATION: client.refresh_token_duration,
-        })
+        update_entry_tokens(client)
 
     # Start running background thread loop for MQTT client in executor
     await hass.async_add_executor_job(client.connect_and_run)

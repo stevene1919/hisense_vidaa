@@ -1,10 +1,9 @@
 import logging
-import json
-from wakeonlan import send_magic_packet
+import time
+import threading
 from homeassistant.components.media_player import (
     MediaPlayerEntity,
-    MediaPlayerEntityFeature,
-    BrowseMedia
+    MediaPlayerEntityFeature
 )
 from homeassistant.const import STATE_ON, STATE_OFF
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
@@ -101,17 +100,40 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             | MediaPlayerEntityFeature.VOLUME_STEP
             | MediaPlayerEntityFeature.VOLUME_MUTE
             | MediaPlayerEntityFeature.SELECT_SOURCE
-            | MediaPlayerEntityFeature.BROWSE_MEDIA
-            | MediaPlayerEntityFeature.PLAY_MEDIA
         )
 
     def turn_on(self):
-        if self._mac:
-            send_magic_packet(self._mac)
-            self._state = STATE_ON
-            self.schedule_update_ha_state()
+        # Send KEY_POWER via MQTT to wake/turn on the TV.
+        # Since the TV's MQTT broker might be running in low power standby,
+        # we always attempt to send the key.
+        if self._client.connected:
+            _LOGGER.debug("TV MQTT connected. Sending KEY_POWER to turn on")
+            self._client.send_key("KEY_POWER")
         else:
-            _LOGGER.warning("Cannot turn on without MAC address")
+            _LOGGER.debug("TV MQTT not connected. Attempting background token refresh and reconnect to send KEY_POWER")
+            def reconnect_and_send():
+                try:
+                    # Try to refresh token and reconnect
+                    self._client.check_and_refresh_token()
+                    self._client.mqtt_client.username_pw_set(
+                        username=self._client.username,
+                        password=self._client.access_token
+                    )
+                    self._client.mqtt_client.reconnect()
+                    # Wait up to 5 seconds for connection to succeed and then send the key
+                    for _ in range(50):
+                        if self._client.connected:
+                            _LOGGER.debug("TV MQTT connected after reconnect. Sending KEY_POWER")
+                            self._client.send_key("KEY_POWER")
+                            break
+                        time.sleep(0.1)
+                except Exception as e:
+                    _LOGGER.error(f"Failed to reconnect and send KEY_POWER: {e}")
+
+            threading.Thread(target=reconnect_and_send, daemon=True).start()
+
+        self._state = STATE_ON
+        self.schedule_update_ha_state()
 
     def turn_off(self):
         self._client.send_key("KEY_POWER")
@@ -189,109 +211,7 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         self._state = STATE_OFF
         self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
 
-    # Browser Media Support
-    async def async_browse_media(self, media_content_type=None, media_content_id=None):
-        """Implement the websocket media browsing helper."""
-        if media_content_id in [None, "library"]:
-            return await self._build_library_node()
-        if media_content_id == "app_list":
-            return await self._build_app_list_node()
-        return None
 
-    async def _build_library_node(self):
-        node = BrowseMedia(
-            title="Media Library",
-            media_class="directory",
-            media_content_type="library",
-            media_content_id="library",
-            can_play=False,
-            can_expand=True,
-            children=[],
-        )
-
-        try:
-            # Query channel list info dynamically using direct connection query
-            pub = self._client.topicTVPSBasepath + "actions/getchannellistinfo"
-            sub = self._client.topicMobiBasepath + "platform_service/data/getchannellistinfo"
-            payload = await self._client.async_query(pub, sub)
-
-            self._channel_infos = {item.get("list_para"): item for item in payload if item.get("list_para")}
-            for key, item in self._channel_infos.items():
-                node.children.append(
-                    BrowseMedia(
-                        title=item.get("list_name"),
-                        media_class="directory",
-                        media_content_type="channellistinfo",
-                        media_content_id=key,
-                        can_play=False,
-                        can_expand=True,
-                    )
-                )
-        except Exception as e:
-            _LOGGER.debug(f"Failed to fetch channel list info: {e}")
-
-        node.children.append(
-            BrowseMedia(
-                title="Applications",
-                media_class="app",
-                media_content_type="apps",
-                media_content_id="app_list",
-                can_play=False,
-                can_expand=True,
-            )
-        )
-        return node
-
-    async def _build_app_list_node(self):
-        node = BrowseMedia(
-            title="Applications",
-            media_class="app",
-            media_content_type="apps",
-            media_content_id="app_list",
-            can_play=False,
-            can_expand=True,
-            children=[],
-        )
-
-        try:
-            pub = self._client.topicTVUIBasepath + "actions/applist"
-            sub = self._client.topicMobiBasepath + "ui_service/data/applist"
-            payload = await self._client.async_query(pub, sub)
-
-            self._app_list = payload
-            self._app_dict = {item.get("name"): item for item in payload if item.get("name")}
-            for item in payload:
-                node.children.append(
-                    BrowseMedia(
-                        title=item.get("name"),
-                        media_class="app",
-                        media_content_type="app",
-                        media_content_id=item.get("appId"),
-                        can_play=True,
-                        can_expand=False,
-                    )
-                )
-        except Exception as e:
-            _LOGGER.debug(f"Failed to fetch apps: {e}")
-
-        return node
-
-    async def async_play_media(self, media_type, media_id, **kwargs):
-        """Send the play_media command to the media player."""
-        if media_type == "channel":
-            payload = json.dumps({"channel_param": media_id})
-            self._client.mqtt_client.publish(
-                self._client.topicTVUIBasepath + "actions/changechannel", payload
-            )
-        elif media_type == "app":
-            # Search in app list
-            app = None
-            for item in self._app_list:
-                if item.get("appId") == media_id:
-                    app = item
-                    break
-            if app:
-                self._client.launch_app(app["appId"], app["name"], app["url"])
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     client = hass.data[DOMAIN][config_entry.entry_id]

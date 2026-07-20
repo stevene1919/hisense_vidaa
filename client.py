@@ -38,6 +38,7 @@ class HisenseTvClient:
         self.on_sourcelist_update = None
         self.on_applist_update = None
         self.on_disconnected_callback = None
+        self.on_token_refreshed = None
 
         self._auth_future = None
         self._auth_code_future = None
@@ -103,6 +104,18 @@ class HisenseTvClient:
                     threading.Timer(1.0, self.query_initial_state).start()
         else:
             _LOGGER.error(f"Failed to connect to TV MQTT Broker, rc: {rc}")
+            if rc in (4, 5):
+                _LOGGER.info("Authentication failed on connect. Refreshing token in background...")
+                import threading
+                threading.Thread(target=self._refresh_token_and_update_creds, daemon=True).start()
+
+    def _refresh_token_and_update_creds(self):
+        try:
+            if self.check_and_refresh_token():
+                _LOGGER.info("Token successfully refreshed on connection failure. Updating client credentials.")
+                self.mqtt_client.username_pw_set(username=self.username, password=self.access_token)
+        except Exception as e:
+            _LOGGER.error(f"Error during background token refresh: {e}")
 
     def _on_disconnect(self, client, userdata, rc):
         self.connected = False
@@ -287,6 +300,8 @@ class HisenseTvClient:
             self.refresh_token = updated_data["refreshtoken"]
             self.refresh_token_time = int(updated_data["refreshtoken_time"])
             self.refresh_token_duration = int(updated_data["refreshtoken_duration_day"])
+            if self.on_token_refreshed:
+                self.on_token_refreshed(self)
             return True
         else:
             _LOGGER.error("Failed to refresh token")
@@ -294,20 +309,15 @@ class HisenseTvClient:
 
     def connect_and_run(self):
         """Main client connection loop using the access token as password."""
-        self.check_and_refresh_token()
+        try:
+            self.check_and_refresh_token()
+        except Exception as e:
+            _LOGGER.warning(f"Failed to check/refresh token during startup: {e}")
+
         self.mqtt_client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
+        _LOGGER.info("Starting background MQTT connection loop to TV")
         self.mqtt_client.connect_async(self.ip, 36669, 60)
         self.mqtt_client.loop_start()
-
-        # Wait up to 10 seconds for connection
-        for _ in range(50):
-            if self.connected:
-                break
-            time.sleep(0.2)
-
-        if not self.connected:
-            self.mqtt_client.loop_stop()
-            raise Exception("Cannot connect to TV MQTT Broker")
 
     def query_initial_state(self):
         if self.connected:

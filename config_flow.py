@@ -1,7 +1,5 @@
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.const import CONF_IP_ADDRESS
-import homeassistant.helpers.config_validation as cv
 
 from .const import (
     DOMAIN,
@@ -38,7 +36,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 await self.client.async_start_auth()
                 return await self.async_step_auth()
-            except Exception as e:
+            except Exception:
                 errors["base"] = "cannot_connect"
 
         return self.async_show_form(
@@ -55,7 +53,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             pin_code = user_input["pin_code"]
             try:
-                token_data = await self.client.async_submit_pin(pin_code)
+                await self.client.async_submit_pin(pin_code)
                 return self.async_create_entry(
                     title=f"Hisense TV ({self.ip_address})",
                     data={
@@ -72,7 +70,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_REFRESH_TOKEN_DURATION: self.client.refresh_token_duration,
                     }
                 )
-            except Exception as e:
+            except Exception:
                 errors["base"] = "invalid_auth"
 
         return self.async_show_form(
