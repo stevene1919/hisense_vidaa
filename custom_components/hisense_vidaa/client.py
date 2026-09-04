@@ -220,14 +220,15 @@ class HisenseTvClient:
             results["auth_model"] = "legacy_static"
             results["auth_recommendation"] = (
                 "Your TV accepts legacy static credentials ('hisenseservice'). "
-                "You can use legacy MQTT integrations such as 'ha_hisense_tv' (github.com/alexmohr/ha_hisense_tv) "
-                "or this integration without PIN pairing."
+                "See the README (https://github.com/stevene1919/hisense_vidaa#which-integration-should-you-use) "
+                "for recommended legacy integrations or use this integration without PIN pairing."
             )
         else:
             results["auth_model"] = "modern_vidaa"
             results["auth_recommendation"] = (
                 "Your TV enforces modern VIDAA OS authentication (static 'hisenseservice' logins rejected). "
-                "Dynamic PIN pairing via this 'hisense_vidaa' integration is required."
+                "Dynamic PIN pairing via this 'hisense_vidaa' integration is required. "
+                "See README (https://github.com/stevene1919/hisense_vidaa#readme) for setup."
             )
 
         return results

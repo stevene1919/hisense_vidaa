@@ -18,7 +18,7 @@ Hisense changed the MQTT authentication model across firmware revisions:
 | TV Firmware / Model | MQTT Authentication Model | Recommended Integration |
 | :--- | :--- | :--- |
 | **Modern VIDAA OS (VIDAA U5, U6, U7, 2022+)** | **Dynamic PIN Pairing** (`actions/vidaa_app_connect`) | **👉 This Integration (`hisense_vidaa`)** |
-| **Legacy Hisense / Older VIDAA (Pre-2022)** | **Static Credentials** (`hisenseservice` / `multimqttservice`) | [alexmohr/ha_hisense_tv](https://github.com/alexmohr/ha_hisense_tv) or [sehaas/hisensetv](https://github.com/sehaas/hisensetv) |
+| **Legacy Hisense / Older VIDAA (Pre-2022)** | **Static Credentials** (`hisenseservice` / `multimqttservice`) | [sehaas/ha_hisense_tv](https://github.com/sehaas/ha_hisense_tv) or [Krazy998/mqtt-hisensetv](https://github.com/Krazy998/mqtt-hisensetv/) |
 
 > [!TIP]
 > Not sure which firmware your TV has? Run the built-in diagnostic probe:
@@ -159,9 +159,8 @@ python3 test_client.py send-key KEY_POWER
 
 If your TV accepts static credentials or you are running older Hisense hardware:
 
-* **[alexmohr/ha_hisense_tv](https://github.com/alexmohr/ha_hisense_tv)**: Home Assistant custom component for older firmware supporting static MQTT credentials.
-* **[sehaas/hisensetv](https://github.com/sehaas/hisensetv)**: Python library and command-line tool for older static-credential Hisense TVs.
-* **[Krazy998/mqtt-hisensetv](https://github.com/Krazy998/mqtt-hisensetv)**: Docker MQTT broker bridge for legacy models.
+* **[sehaas/ha_hisense_tv](https://github.com/sehaas/ha_hisense_tv)**: Home Assistant custom component for older firmware supporting static MQTT credentials.
+* **[Krazy998/mqtt-hisensetv](https://github.com/Krazy998/mqtt-hisensetv/)**: Docker MQTT broker bridge and utilities for legacy models.
 
 ---
 
