@@ -41,6 +41,15 @@ Hisense changed the MQTT authentication model across firmware revisions:
 
 ---
 
+## 🌐 Important Network Requirement
+
+> [!IMPORTANT]
+> **Internet Connectivity Required**: The TV **must have active internet connectivity and unblocked DNS resolution** for pairing, token exchange, and token refresh to succeed.
+> 
+> If the TV is isolated on an offline IoT VLAN or blocked by network-level ad blockers / firewalls (e.g., AdGuard Home, Pi-hole), VIDAA OS will refuse to complete the pairing handshake or refresh tokens. We are investigating the exact cloud endpoints and domains required so specific whitelist rules can be documented in the future, but in the meantime, ensure the TV has outbound WAN access.
+
+---
+
 ## 🔒 SSL Certificate Setup
 
 VIDAA OS requires a client SSL certificate and private key to communicate with port `36669`. Certificates are excluded from this repository and must be provided locally.
