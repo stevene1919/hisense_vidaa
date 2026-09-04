@@ -24,9 +24,30 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Hisense VIDAA TV from a config entry."""
     data = entry.data
+    mac = data.get(CONF_MAC_ADDRESS)
+    if not mac:
+        try:
+            from functools import partial
+
+            from getmac import get_mac_address
+            from homeassistant.helpers.device_registry import format_mac
+
+            raw_mac = await hass.async_add_executor_job(
+                partial(get_mac_address, ip=data[CONF_IP_ADDRESS])
+            )
+            if raw_mac:
+                mac = format_mac(raw_mac)
+                hass.config_entries.async_update_entry(
+                    entry,
+                    data={**entry.data, CONF_MAC_ADDRESS: mac},
+                    unique_id=entry.unique_id or mac
+                )
+        except Exception:
+            pass
+
     client = HisenseTvClient(
         ip=data[CONF_IP_ADDRESS],
-        mac=data.get(CONF_MAC_ADDRESS),
+        mac=mac,
         client_id=data[CONF_CLIENT_ID],
         username=data[CONF_USERNAME],
         password=data[CONF_PASSWORD],

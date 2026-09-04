@@ -3,10 +3,9 @@
     "step": {
       "user": {
         "title": "Configure Hisense VIDAA TV",
-        "description": "Enter the IP address and optionally MAC address of your Hisense TV.",
+        "description": "Enter the IP address of your Hisense TV.",
         "data": {
-          "ip_address": "IP Address",
-          "mac_address": "MAC Address (Optional, required for Wake-on-LAN)"
+          "ip_address": "IP Address"
         }
       },
       "auth": {

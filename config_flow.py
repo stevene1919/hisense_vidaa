@@ -30,12 +30,42 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             self.ip_address = user_input[CONF_IP_ADDRESS]
-            self.mac_address = user_input.get(CONF_MAC_ADDRESS)
+
+            # Attempt automatic MAC address resolution from ARP cache
+            try:
+                from functools import partial
+
+                from getmac import get_mac_address
+                from homeassistant.helpers.device_registry import format_mac
+
+                raw_mac = await self.hass.async_add_executor_job(
+                    partial(get_mac_address, ip=self.ip_address)
+                )
+                if raw_mac:
+                    self.mac_address = format_mac(raw_mac)
+            except Exception:
+                self.mac_address = None
 
             # Start the client connection to TV
             self.client = HisenseTvClient(self.ip_address, self.mac_address)
             try:
                 await self.client.async_start_auth()
+
+                # If MAC was not in ARP before, try again now that TCP connection was established
+                if not self.mac_address:
+                    try:
+                        raw_mac = await self.hass.async_add_executor_job(
+                            partial(get_mac_address, ip=self.ip_address)
+                        )
+                        if raw_mac:
+                            self.mac_address = format_mac(raw_mac)
+                    except Exception:
+                        pass
+
+                if self.mac_address:
+                    await self.async_set_unique_id(self.mac_address)
+                    self._abort_if_unique_id_configured()
+
                 return await self.async_step_auth()
             except Exception:
                 errors["base"] = "cannot_connect"
@@ -44,7 +74,6 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required(CONF_IP_ADDRESS): str,
-                vol.Optional(CONF_MAC_ADDRESS): str,
             }),
             errors=errors
         )

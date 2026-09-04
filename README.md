@@ -116,7 +116,7 @@ python3 test_client.py send-key KEY_POWER
 2. Place `cert.pem` and `key.pem` inside `custom_components/hisense_vidaa/certs/`.
 3. Restart Home Assistant.
 4. Go to **Settings -> Devices & Services -> Add Integration** and search for **Hisense VIDAA TV**.
-5. Enter the TV's IP address and (optional) MAC address.
+5. Enter the TV's IP address (the hardware MAC address is automatically discovered via ARP and linked to Home Assistant).
 6. Enter the 4-digit PIN code displayed on the TV screen to complete the setup.
 
 > [!IMPORTANT]

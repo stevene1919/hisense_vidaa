@@ -37,6 +37,28 @@ def save_credentials(file_path, creds):
     print(f"Credentials successfully saved to '{file_path}'")
 
 
+def get_arp_mac(ip):
+    try:
+        from getmac import get_mac_address
+        mac = get_mac_address(ip=ip)
+        if mac:
+            return mac
+    except Exception:
+        pass
+    try:
+        if os.path.exists("/proc/net/arp"):
+            with open("/proc/net/arp") as f:
+                for line in f:
+                    parts = line.split()
+                    if len(parts) >= 4 and parts[0] == ip:
+                        mac = parts[3]
+                        if mac != "00:00:00:00:00:00":
+                            return mac
+    except Exception:
+        pass
+    return None
+
+
 def do_ping(ip, creds, certfile, keyfile):
     print(f"\n[PING] Probing TV connectivity and MQTT broker at {ip}:36669...")
 
@@ -75,6 +97,10 @@ def do_ping(ip, creds, certfile, keyfile):
             print("\n💡 Firmware Compatibility & Integration Recommendation:")
             print(f"  • {res['auth_recommendation']}")
 
+        arp_mac = get_arp_mac(ip)
+        if arp_mac:
+            print(f"\n🔍 Discovered Hardware MAC: {arp_mac}")
+
         if res.get("error"):
             print(f"\n⚠️ Notice: {res['error']}")
     except FileNotFoundError as e:
@@ -107,6 +133,10 @@ def do_test_ssl(ip, certfile, keyfile):
 
 
 async def do_auth(ip, mac, certfile, keyfile, save_path):
+    if not mac:
+        mac = get_arp_mac(ip)
+        if mac:
+            print(f"🔍 Auto-discovered Hardware MAC via ARP: {mac}")
     print(f"\n[AUTH] Connecting to Hisense TV at {ip} on port 36669 (TLS)...")
     client = HisenseTvClient(ip=ip, mac=mac, certfile=certfile, keyfile=keyfile)
     try:
