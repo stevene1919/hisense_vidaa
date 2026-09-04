@@ -5,6 +5,7 @@ import logging
 import hashlib
 import random
 import os
+import socket
 import paho.mqtt.client as mqtt
 import asyncio
 
@@ -13,7 +14,8 @@ _LOGGER = logging.getLogger(__name__)
 class HisenseTvClient:
     def __init__(self, ip, mac=None, client_id=None, username=None, password=None, 
                  access_token=None, access_token_time=0, access_token_duration=0,
-                 refresh_token=None, refresh_token_time=0, refresh_token_duration=0):
+                 refresh_token=None, refresh_token_time=0, refresh_token_duration=0,
+                 certfile=None, keyfile=None):
         self.ip = ip
         self.mac = mac
         self.client_id = client_id
@@ -26,10 +28,32 @@ class HisenseTvClient:
         self.refresh_token_time = refresh_token_time
         self.refresh_token_duration = refresh_token_duration
 
-        # Locate certs packaged in the custom component
+        # Determine cert locations: custom paths > local certs/ dir > /config/certs or /config/ssl fallback
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.certfile = os.path.join(script_dir, "certs", "cert.pem")
-        self.keyfile = os.path.join(script_dir, "certs", "key.pem")
+        default_cert = os.path.join(script_dir, "certs", "cert.pem")
+        default_key = os.path.join(script_dir, "certs", "key.pem")
+
+        if certfile:
+            self.certfile = os.path.abspath(certfile)
+        elif os.path.exists(default_cert):
+            self.certfile = default_cert
+        elif os.path.exists("/config/certs/cert.pem"):
+            self.certfile = "/config/certs/cert.pem"
+        elif os.path.exists("/config/ssl/cert.pem"):
+            self.certfile = "/config/ssl/cert.pem"
+        else:
+            self.certfile = default_cert
+
+        if keyfile:
+            self.keyfile = os.path.abspath(keyfile)
+        elif os.path.exists(default_key):
+            self.keyfile = default_key
+        elif os.path.exists("/config/certs/key.pem"):
+            self.keyfile = "/config/certs/key.pem"
+        elif os.path.exists("/config/ssl/key.pem"):
+            self.keyfile = "/config/ssl/key.pem"
+        else:
+            self.keyfile = default_key
 
         self.mqtt_client = None
         self.connected = False
@@ -57,6 +81,39 @@ class HisenseTvClient:
         
         if self.client_id:
             self.define_topic_paths()
+
+    def validate_certificates(self):
+        """Verifies that the SSL certificate and private key files exist and are readable."""
+        if not os.path.isfile(self.certfile):
+            raise FileNotFoundError(
+                f"SSL Certificate file not found: '{self.certfile}'. "
+                "Please place 'cert.pem' in the 'certs/' folder or specify --cert."
+            )
+        if not os.path.isfile(self.keyfile):
+            raise FileNotFoundError(
+                f"SSL Private Key file not found: '{self.keyfile}'. "
+                "Please place 'key.pem' in the 'certs/' folder or specify --key."
+            )
+
+    def test_ssl_connection(self, timeout=5.0):
+        """Tests the raw TLS handshake with the TV on port 36669 without authenticating."""
+        self.validate_certificates()
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        context.load_cert_chain(certfile=self.certfile, keyfile=self.keyfile)
+
+        with socket.create_connection((self.ip, 36669), timeout=timeout) as sock:
+            with context.wrap_socket(sock) as ssock:
+                cipher_name, proto, bits = ssock.cipher()
+                return {
+                    "connected": True,
+                    "tls_version": ssock.version(),
+                    "cipher": cipher_name,
+                    "bits": bits,
+                    "certfile": self.certfile,
+                    "keyfile": self.keyfile,
+                }
 
     def _safe_set_future_result(self, future, result):
         if future and not future.done():
