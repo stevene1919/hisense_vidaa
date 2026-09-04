@@ -29,15 +29,19 @@ class HisenseTvClient:
         self.refresh_token_time = refresh_token_time
         self.refresh_token_duration = refresh_token_duration
 
-        # Determine cert locations: custom paths > local certs/ dir > /config/certs or /config/ssl fallback
+        # Determine cert locations: custom paths > local certs/ dir > repo root certs/ > /config/certs or /config/ssl fallback
         script_dir = os.path.dirname(os.path.abspath(__file__))
         default_cert = os.path.join(script_dir, "certs", "cert.pem")
         default_key = os.path.join(script_dir, "certs", "key.pem")
+        repo_root_cert = os.path.join(os.path.dirname(os.path.dirname(script_dir)), "certs", "cert.pem")
+        repo_root_key = os.path.join(os.path.dirname(os.path.dirname(script_dir)), "certs", "key.pem")
 
         if certfile:
             self.certfile = os.path.abspath(certfile)
         elif os.path.exists(default_cert):
             self.certfile = default_cert
+        elif os.path.exists(repo_root_cert):
+            self.certfile = repo_root_cert
         elif os.path.exists("/config/certs/cert.pem"):
             self.certfile = "/config/certs/cert.pem"
         elif os.path.exists("/config/ssl/cert.pem"):
@@ -49,6 +53,8 @@ class HisenseTvClient:
             self.keyfile = os.path.abspath(keyfile)
         elif os.path.exists(default_key):
             self.keyfile = default_key
+        elif os.path.exists(repo_root_key):
+            self.keyfile = repo_root_key
         elif os.path.exists("/config/certs/key.pem"):
             self.keyfile = "/config/certs/key.pem"
         elif os.path.exists("/config/ssl/key.pem"):

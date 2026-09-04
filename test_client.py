@@ -15,7 +15,10 @@ import time
 
 # Ensure local custom_components/hisense_vidaa directory is in Python path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-if SCRIPT_DIR not in sys.path:
+COMP_DIR = os.path.join(SCRIPT_DIR, "custom_components", "hisense_vidaa")
+if os.path.isdir(COMP_DIR) and COMP_DIR not in sys.path:
+    sys.path.insert(0, COMP_DIR)
+elif SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
 from client import HisenseTvClient

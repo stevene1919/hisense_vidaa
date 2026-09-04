@@ -1,5 +1,12 @@
 # Hisense VIDAA TV Integration for Home Assistant
 
+[![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/default)
+[![Validate with HACS](https://github.com/stevene1919/hisense_vidaa/actions/workflows/validate.yml/badge.svg)](https://github.com/stevene1919/hisense_vidaa/actions/workflows/validate.yml)
+[![Lint & Verify](https://github.com/stevene1919/hisense_vidaa/actions/workflows/lint.yml/badge.svg)](https://github.com/stevene1919/hisense_vidaa/actions/workflows/lint.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/stevene1919/hisense_vidaa)](https://github.com/stevene1919/hisense_vidaa/releases)
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
+
 A custom Home Assistant integration for Hisense TVs running modern VIDAA OS.
 
 This integration connects **directly** to the TV's internal MQTT broker (SSL port `36669`) using client certificates, without requiring external Mosquitto bridges or system-level configuration.
@@ -112,12 +119,36 @@ python3 test_client.py send-key KEY_POWER
 
 ## ⚙️ Installation & Home Assistant Setup
 
-1. Copy the `hisense_vidaa` directory to your Home Assistant `custom_components/` directory (e.g. `/config/custom_components/hisense_vidaa`).
-2. Place `cert.pem` and `key.pem` inside `custom_components/hisense_vidaa/certs/`.
+### Method 1: HACS (Recommended)
+
+1. Click the button below to add this repository directly to HACS:
+
+   [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
+
+   *Or manually in HACS:*
+   - Go to **HACS** -> **Integrations**.
+   - Click the three dots in the top right -> **Custom repositories**.
+   - Add `https://github.com/stevene1919/hisense_vidaa` with Category **Integration**.
+   - Search for **Hisense VIDAA TV** and click **Download**.
+
+2. Place your certificate files (`cert.pem` and `key.pem`) into `/config/custom_components/hisense_vidaa/certs/` (or `/config/certs/` / `/config/ssl/`).
 3. Restart Home Assistant.
-4. Go to **Settings -> Devices & Services -> Add Integration** and search for **Hisense VIDAA TV**.
-5. Enter the TV's IP address (the hardware MAC address is automatically discovered via ARP and linked to Home Assistant).
-6. Enter the 4-digit PIN code displayed on the TV screen to complete the setup.
+
+### Method 2: Manual Installation
+
+1. Download the latest release from the [Releases](https://github.com/stevene1919/hisense_vidaa/releases) page.
+2. Copy the `custom_components/hisense_vidaa/` folder to your Home Assistant `/config/custom_components/` directory.
+3. Place `cert.pem` and `key.pem` inside `/config/custom_components/hisense_vidaa/certs/`.
+4. Restart Home Assistant.
+
+---
+
+### Pairing & Configuration
+
+1. In Home Assistant, go to **Settings -> Devices & Services -> Add Integration**.
+2. Search for **Hisense VIDAA TV**.
+3. Enter the TV's IP address (the hardware MAC address is automatically discovered via ARP and linked to Home Assistant).
+4. A 4-digit PIN code will appear on the TV screen — enter it into the prompt to complete setup.
 
 > [!IMPORTANT]
 > **Network Requirement**: VIDAA OS requires DNS / internet access on the TV during initial pairing to validate authentication tokens. Ensure the TV is not blocked from internet/DNS access on your local gateway.
