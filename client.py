@@ -346,8 +346,10 @@ class HisenseTvClient:
             start = time.time()
             while not lock.is_set() and time.time() - start < 10:
                 time.sleep(0.1)
+        except (OSError, TimeoutError) as e:
+            _LOGGER.debug(f"TV is offline or unreachable during token refresh: {e}")
         except Exception as e:
-            _LOGGER.error(f"Exception during refresh client connection/loop: {e}")
+            _LOGGER.error(f"Unexpected error during refresh client connection/loop: {e}")
         finally:
             client.loop_stop()
             client.disconnect()
@@ -363,7 +365,8 @@ class HisenseTvClient:
                 self.on_token_refreshed(self)
             return True
             
-        _LOGGER.error(f"Failed to refresh token. Connect RC: {connect_rc[0]}")
+        if connect_rc[0] is not None:
+            _LOGGER.error(f"Failed to refresh token. Connect RC: {connect_rc[0]}")
         return False
 
     def connect_and_run(self):
@@ -371,7 +374,7 @@ class HisenseTvClient:
         try:
             self.check_and_refresh_token()
         except Exception as e:
-            _LOGGER.warning(f"Failed to check/refresh token during startup: {e}")
+            _LOGGER.debug(f"Could not refresh token during startup (TV may be in standby): {e}")
 
         self.mqtt_client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
         _LOGGER.info("Starting background MQTT connection loop to TV")

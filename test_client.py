@@ -72,6 +72,8 @@ async def do_auth(ip, mac, save_path):
         save_credentials(save_path, creds)
     except Exception as e:
         print(f"\n❌ Authentication failed: {e}")
+        if "timeout" in str(e).lower() or "unreachable" in str(e).lower() or "connection rejected" in str(e).lower():
+            print("\n💡 Hint: Ensure your TV is actively powered ON with the remote and connected to your network.")
         sys.exit(1)
 
 
