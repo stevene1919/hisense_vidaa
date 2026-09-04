@@ -43,6 +43,7 @@ class HisenseTvClient:
         self._auth_future = None
         self._auth_code_future = None
         self._token_future = None
+        self._loop = None
         self._refreshing_token = False
         self._last_refresh_attempt = 0
         import threading
@@ -56,6 +57,20 @@ class HisenseTvClient:
         
         if self.client_id:
             self.define_topic_paths()
+
+    def _safe_set_future_result(self, future, result):
+        if future and not future.done():
+            if self._loop and self._loop.is_running():
+                self._loop.call_soon_threadsafe(future.set_result, result)
+            else:
+                future.set_result(result)
+
+    def _safe_set_future_exception(self, future, exc):
+        if future and not future.done():
+            if self._loop and self._loop.is_running():
+                self._loop.call_soon_threadsafe(future.set_exception, exc)
+            else:
+                future.set_exception(exc)
 
     def define_topic_paths(self):
         self.topicTVUIBasepath = f"/remoteapp/tv/ui_service/{self.client_id}/"
@@ -114,7 +129,7 @@ class HisenseTvClient:
         else:
             _LOGGER.error(f"Failed to connect to TV MQTT Broker, rc: {rc}")
             if self._auth_future and not self._auth_future.done():
-                self._auth_future.set_exception(Exception(f"MQTT connection rejected with code {rc} (Not authorized / invalid credentials)"))
+                self._safe_set_future_exception(self._auth_future, Exception(f"MQTT connection rejected with code {rc} (Not authorized / invalid credentials)"))
                 return
 
             if rc in (4, 5) and self.refresh_token:
@@ -160,11 +175,11 @@ class HisenseTvClient:
 
         # Check authentication futures
         if self._auth_future and topic == self.topicMobiBasepath + 'ui_service/data/authentication':
-            self._auth_future.set_result(payload)
+            self._safe_set_future_result(self._auth_future, payload)
         elif self._auth_code_future and topic == self.topicMobiBasepath + 'ui_service/data/authenticationcode':
-            self._auth_code_future.set_result(payload)
+            self._safe_set_future_result(self._auth_code_future, payload)
         elif self._token_future and topic == self.topicMobiBasepath + 'platform_service/data/tokenissuance':
-            self._token_future.set_result(payload)
+            self._safe_set_future_result(self._token_future, payload)
 
         # Handle state push callbacks
         if topic in (self.topicBrcsBasepath + "ui_service/state", self.topicMobiBasepath + "ui_service/data/gettvstate"):
@@ -203,6 +218,7 @@ class HisenseTvClient:
         """Starts the authentication handshake and triggers the TV to show PIN."""
         self.generate_initial_creds()
         loop = asyncio.get_running_loop()
+        self._loop = loop
         self.mqtt_client = await loop.run_in_executor(
             None, self.create_mqtt_client, self.client_id, self.username, self.password
         )
@@ -248,6 +264,7 @@ class HisenseTvClient:
     async def async_submit_pin(self, pin_code):
         """Submits the PIN code entered by the user."""
         loop = asyncio.get_running_loop()
+        self._loop = loop
         self._auth_code_future = loop.create_future()
 
         self.mqtt_client.publish(self.topicTVUIBasepath + "actions/authenticationcode", 
@@ -255,9 +272,11 @@ class HisenseTvClient:
 
         try:
             payload_str = await asyncio.wait_for(self._auth_code_future, timeout=15)
+            _LOGGER.debug(f"Received PIN response payload: {payload_str}")
             payload = json.loads(payload_str)
             if payload.get("result") != 1:
-                raise Exception("Incorrect PIN code")
+                _LOGGER.error(f"PIN validation rejected with payload: {payload_str}")
+                raise Exception(f"Incorrect PIN code (TV response: {payload_str})")
         except asyncio.TimeoutError:
             raise Exception("Timeout waiting for PIN validation")
         finally:
