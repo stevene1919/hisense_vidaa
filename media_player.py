@@ -13,6 +13,9 @@ from .const import DOMAIN, CONF_MAC_ADDRESS
 _LOGGER = logging.getLogger(__name__)
 
 class HisenseVidaaMediaPlayer(MediaPlayerEntity):
+    _attr_has_entity_name = True
+    _attr_name = None
+
     def __init__(self, client, mac, entry_id, name):
         self._client = client
         self._mac = mac
@@ -41,10 +44,6 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         await self.hass.async_add_executor_job(self._client.query_initial_state)
 
     @property
-    def name(self):
-        return self._name
-
-    @property
     def unique_id(self):
         """Return a unique ID."""
         return f"{self._entry_id}_media_player"
@@ -69,6 +68,10 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
     @property
     def state(self):
         return self._state
+
+    @property
+    def available(self):
+        return self._client.connected
 
     @property
     def volume_level(self):

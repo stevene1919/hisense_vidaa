@@ -43,6 +43,10 @@ class HisenseTvClient:
         self._auth_future = None
         self._auth_code_future = None
         self._token_future = None
+        self._refreshing_token = False
+        self._last_refresh_attempt = 0
+        import threading
+        self._refresh_lock = threading.Lock()
 
         self.topicTVUIBasepath = ""
         self.topicTVPSBasepath = ""
@@ -61,8 +65,12 @@ class HisenseTvClient:
 
     def generate_initial_creds(self):
         timestamp = int(time.time())
-        # Always generate a random MAC address for the client ID to prevent conflicts
-        mac = ':'.join(f'{random.randint(0, 255):02x}' for _ in range(6)).upper()
+        # Use provided MAC if available, otherwise generate a random MAC
+        if self.mac and len(self.mac.replace(":", "").replace("-", "")) == 12:
+            cleaned = self.mac.replace("-", ":").upper()
+            mac = cleaned
+        else:
+            mac = ':'.join(f'{random.randint(0, 255):02x}' for _ in range(6)).upper()
 
         second_hash = hashlib.md5(f"38D65DC30F45109A369A86FCE866A85B${mac}".encode("utf-8")).hexdigest().upper()
         last_digit_of_cross_sum = sum(int(digit) for digit in str(timestamp)) % 10
@@ -73,6 +81,7 @@ class HisenseTvClient:
         self.password = fourth_hash
         self.client_id = f"{mac}$his${second_hash[:6]}_vidaacommon_001"
         self.define_topic_paths()
+        _LOGGER.debug(f"Generated initial creds - Client ID: {self.client_id}, Username: {self.username}")
 
     def create_mqtt_client(self, client_id, username, password):
         client = mqtt.Client(client_id=client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
@@ -104,18 +113,39 @@ class HisenseTvClient:
                     threading.Timer(1.0, self.query_initial_state).start()
         else:
             _LOGGER.error(f"Failed to connect to TV MQTT Broker, rc: {rc}")
-            if rc in (4, 5):
-                _LOGGER.info("Authentication failed on connect. Refreshing token in background...")
-                import threading
-                threading.Thread(target=self._refresh_token_and_update_creds, daemon=True).start()
+            if self._auth_future and not self._auth_future.done():
+                self._auth_future.set_exception(Exception(f"MQTT connection rejected with code {rc} (Not authorized / invalid credentials)"))
+                return
+
+            if rc in (4, 5) and self.refresh_token:
+                current_time = time.time()
+                with self._refresh_lock:
+                    should_refresh = not self._refreshing_token and (current_time - self._last_refresh_attempt > 10)
+                if should_refresh:
+                    _LOGGER.info("Authentication failed on connect. Refreshing token in background...")
+                    import threading
+                    threading.Thread(target=self._refresh_token_and_update_creds, daemon=True).start()
 
     def _refresh_token_and_update_creds(self):
+        with self._refresh_lock:
+            if self._refreshing_token or not self.refresh_token:
+                _LOGGER.debug("Token refresh already in progress or no refresh token, skipping spawn.")
+                return
+            self._refreshing_token = True
+            self._last_refresh_attempt = time.time()
+
         try:
-            if self.check_and_refresh_token():
+            if self.check_and_refresh_token(force=True):
                 _LOGGER.info("Token successfully refreshed on connection failure. Updating client credentials.")
                 self.mqtt_client.username_pw_set(username=self.username, password=self.access_token)
+                self.mqtt_client.reconnect()
+            else:
+                _LOGGER.warning("Token refresh failed. Waiting before next attempt.")
         except Exception as e:
             _LOGGER.error(f"Error during background token refresh: {e}")
+        finally:
+            with self._refresh_lock:
+                self._refreshing_token = False
 
     def _on_disconnect(self, client, userdata, rc):
         self.connected = False
@@ -172,9 +202,11 @@ class HisenseTvClient:
     async def async_start_auth(self):
         """Starts the authentication handshake and triggers the TV to show PIN."""
         self.generate_initial_creds()
-        self.mqtt_client = self.create_mqtt_client(self.client_id, self.username, self.password)
-
         loop = asyncio.get_running_loop()
+        self.mqtt_client = await loop.run_in_executor(
+            None, self.create_mqtt_client, self.client_id, self.username, self.password
+        )
+
         self._auth_future = loop.create_future()
 
         self.mqtt_client.connect_async(self.ip, 36669, 60)
@@ -184,11 +216,14 @@ class HisenseTvClient:
         for _ in range(50):
             if self.connected:
                 break
+            if self._auth_future.done() and self._auth_future.exception():
+                self.mqtt_client.loop_stop()
+                raise self._auth_future.exception()
             await asyncio.sleep(0.2)
 
         if not self.connected:
             self.mqtt_client.loop_stop()
-            raise Exception("Cannot connect to TV MQTT Broker")
+            raise Exception("Cannot connect to TV MQTT Broker (connection timeout)")
 
         self.mqtt_client.subscribe([
             (self.topicTVUIBasepath + 'actions/vidaa_app_connect', 0),
@@ -252,46 +287,70 @@ class HisenseTvClient:
             self.mqtt_client.loop_stop()
             self.mqtt_client.disconnect()
 
-    def check_and_refresh_token(self):
+    def check_and_refresh_token(self, force=False):
         """Checks if access token is expired (valid for 2 hours) and refreshes it synchronously."""
+        if not self.refresh_token:
+            _LOGGER.debug("No refresh token available, skipping refresh.")
+            return False
+
         current_time = time.time()
         expiration_time = self.access_token_time + (2 * 60 * 60) # 2 hours duration
         
-        # If token is still valid, return
-        if current_time <= expiration_time - 300: # 5 minutes buffer
+        # If token is still valid, return (unless forced)
+        if not force and current_time <= expiration_time - 300: # 5 minutes buffer
             return False
 
         _LOGGER.info("Access token expired or close to expiry, refreshing...")
-        client = self.create_mqtt_client(self.client_id, self.username, self.refresh_token)
+        
+        # We must use the exact registered client ID because the TV broker validates it against the pairing whitelist
+        client = mqtt.Client(client_id=self.client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
+        client.tls_set(ca_certs=None, certfile=self.certfile, keyfile=self.keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
+        client.tls_insecure_set(True)
+        client.username_pw_set(username=self.username, password=self.refresh_token)
         
         # Synchronous wait wrapper
         import threading
         lock = threading.Event()
         updated_data = {}
+        connect_rc = [None]
+
+        def on_refresh_connect(client, userdata, flags, rc):
+            _LOGGER.debug(f"Refresh client connection result: {rc}")
+            connect_rc[0] = rc
+            if rc == 0:
+                client.subscribe(self.topicMobiBasepath + 'platform_service/data/tokenissuance')
+                client.publish(f"/remoteapp/tv/platform_service/{self.client_id}/data/gettoken", 
+                               json.dumps({"refreshtoken": self.refresh_token}))
+            else:
+                lock.set()
 
         def on_token(client, userdata, msg):
             nonlocal updated_data
+            _LOGGER.debug(f"Refresh client received token payload: {msg.payload}")
             try:
                 updated_data = json.loads(msg.payload.decode('utf-8'))
             except Exception as e:
                 _LOGGER.error(f"Error parsing refreshed token: {e}")
             lock.set()
 
+        client.on_connect = on_refresh_connect
+        client.on_message = None
+        client.on_disconnect = lambda client, userdata, rc: _LOGGER.debug(f"Refresh client disconnected: {rc}")
         client.message_callback_add(self.topicMobiBasepath + 'platform_service/data/tokenissuance', on_token)
-        client.connect(self.ip, 36669, 60)
-        client.loop_start()
         
-        client.subscribe(self.topicMobiBasepath + 'platform_service/data/tokenissuance')
-        client.publish(f"/remoteapp/tv/platform_service/{self.client_id}/data/gettoken", 
-                       json.dumps({"refreshtoken": self.refresh_token}))
-
-        # Synchronous wait in executor (will block calling thread but safe when run in executor)
-        start = time.time()
-        while not lock.is_set() and time.time() - start < 10:
-            time.sleep(0.1)
-
-        client.loop_stop()
-        client.disconnect()
+        try:
+            client.connect(self.ip, 36669, 60)
+            client.loop_start()
+            
+            # Wait up to 10 seconds
+            start = time.time()
+            while not lock.is_set() and time.time() - start < 10:
+                time.sleep(0.1)
+        except Exception as e:
+            _LOGGER.error(f"Exception during refresh client connection/loop: {e}")
+        finally:
+            client.loop_stop()
+            client.disconnect()
 
         if updated_data:
             self.access_token = updated_data["accesstoken"]
@@ -303,9 +362,9 @@ class HisenseTvClient:
             if self.on_token_refreshed:
                 self.on_token_refreshed(self)
             return True
-        else:
-            _LOGGER.error("Failed to refresh token")
-            return False
+            
+        _LOGGER.error(f"Failed to refresh token. Connect RC: {connect_rc[0]}")
+        return False
 
     def connect_and_run(self):
         """Main client connection loop using the access token as password."""
