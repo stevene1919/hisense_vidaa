@@ -1,21 +1,22 @@
 import voluptuous as vol
 from homeassistant import config_entries
 
+from .client import HisenseTvClient
 from .const import (
-    DOMAIN,
+    CONF_ACCESS_TOKEN,
+    CONF_ACCESS_TOKEN_DURATION,
+    CONF_ACCESS_TOKEN_TIME,
+    CONF_CLIENT_ID,
     CONF_IP_ADDRESS,
     CONF_MAC_ADDRESS,
-    CONF_CLIENT_ID,
-    CONF_USERNAME,
     CONF_PASSWORD,
-    CONF_ACCESS_TOKEN,
-    CONF_ACCESS_TOKEN_TIME,
-    CONF_ACCESS_TOKEN_DURATION,
     CONF_REFRESH_TOKEN,
+    CONF_REFRESH_TOKEN_DURATION,
     CONF_REFRESH_TOKEN_TIME,
-    CONF_REFRESH_TOKEN_DURATION
+    CONF_USERNAME,
+    DOMAIN,
 )
-from .client import HisenseTvClient
+
 
 class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
@@ -30,7 +31,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self.ip_address = user_input[CONF_IP_ADDRESS]
             self.mac_address = user_input.get(CONF_MAC_ADDRESS)
-            
+
             # Start the client connection to TV
             self.client = HisenseTvClient(self.ip_address, self.mac_address)
             try:

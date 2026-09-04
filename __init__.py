@@ -1,22 +1,23 @@
 import logging
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
+from .client import HisenseTvClient
 from .const import (
-    DOMAIN,
+    CONF_ACCESS_TOKEN,
+    CONF_ACCESS_TOKEN_DURATION,
+    CONF_ACCESS_TOKEN_TIME,
+    CONF_CLIENT_ID,
     CONF_IP_ADDRESS,
     CONF_MAC_ADDRESS,
-    CONF_CLIENT_ID,
-    CONF_USERNAME,
     CONF_PASSWORD,
-    CONF_ACCESS_TOKEN,
-    CONF_ACCESS_TOKEN_TIME,
-    CONF_ACCESS_TOKEN_DURATION,
     CONF_REFRESH_TOKEN,
+    CONF_REFRESH_TOKEN_DURATION,
     CONF_REFRESH_TOKEN_TIME,
-    CONF_REFRESH_TOKEN_DURATION
+    CONF_USERNAME,
+    DOMAIN,
 )
-from .client import HisenseTvClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Start running background thread loop for MQTT client in executor
     await hass.async_add_executor_job(client.connect_and_run)
-    
+
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = client
 

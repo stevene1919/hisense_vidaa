@@ -5,20 +5,20 @@ Allows direct testing and debugging of authentication, pairing PIN, token refres
 and command execution using the exact same HisenseTvClient logic as the Home Assistant integration.
 """
 
-import sys
-import os
-import time
-import json
-import asyncio
-import logging
 import argparse
+import asyncio
+import json
+import logging
+import os
+import sys
+import time
 
 # Ensure local custom_components/hisense_vidaa directory is in Python path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
-from client import HisenseTvClient  # noqa: E402
+from client import HisenseTvClient
 
 DEFAULT_CREDS_FILE = os.path.join(SCRIPT_DIR, "credentials.json")
 
@@ -27,7 +27,7 @@ def load_credentials(file_path):
     if not os.path.exists(file_path):
         print(f"Error: Credentials file '{file_path}' not found. Run 'auth' first or specify credentials.")
         sys.exit(1)
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         return json.load(f)
 
 
@@ -39,7 +39,7 @@ def save_credentials(file_path, creds):
 
 def do_ping(ip, creds, certfile, keyfile):
     print(f"\n[PING] Probing TV connectivity and MQTT broker at {ip}:36669...")
-    
+
     access_token = None
     client_id = None
     username = None
@@ -62,7 +62,7 @@ def do_ping(ip, creds, certfile, keyfile):
         print("\n📡 Connection Probe Results:")
         print(f"  • [1] TCP Port 36669:    {'✅ OPEN' if res['tcp_port_open'] else '❌ CLOSED / UNREACHABLE'}")
         print(f"  • [2] TLS Handshake:     {'✅ SUCCESS' if res['tls_handshake'] else '❌ FAILED'} ({res.get('tls_version') or 'N/A'}, {res.get('cipher') or 'N/A'})")
-        
+
         if res.get("mqtt_rc") is not None:
             if res["mqtt_connected"]:
                 print("  • [3] MQTT Broker Auth:  ✅ ACCEPTED (rc=0, broker is actively listening and responsive)")
@@ -313,7 +313,7 @@ def main():
         creds = None
         if os.path.exists(args.config):
             try:
-                with open(args.config, "r") as f:
+                with open(args.config) as f:
                     creds = json.load(f)
             except Exception:
                 pass

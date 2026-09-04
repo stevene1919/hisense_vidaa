@@ -1,14 +1,12 @@
 import logging
-import time
 import threading
-from homeassistant.components.media_player import (
-    MediaPlayerEntity,
-    MediaPlayerEntityFeature
-)
-from homeassistant.const import STATE_ON, STATE_OFF
+import time
+
+from homeassistant.components.media_player import MediaPlayerEntity, MediaPlayerEntityFeature
+from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 
-from .const import DOMAIN, CONF_MAC_ADDRESS
+from .const import CONF_MAC_ADDRESS, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,12 +55,12 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             "manufacturer": "Hisense",
             "model": "VIDAA TV",
         }
-        
+
         if self._mac:
             # HA explicitly requires lowercase MAC address formats separated by colons
             cleaned_mac = self._mac.replace("-", ":").lower()
             info["connections"] = {(CONNECTION_NETWORK_MAC, cleaned_mac)}
-            
+
         return info
 
     @property

@@ -1,18 +1,19 @@
-import ssl
-import time
+import asyncio
+import hashlib
 import json
 import logging
-import hashlib
-import random
 import os
+import random
 import socket
+import ssl
+import time
+
 import paho.mqtt.client as mqtt
-import asyncio
 
 _LOGGER = logging.getLogger(__name__)
 
 class HisenseTvClient:
-    def __init__(self, ip, mac=None, client_id=None, username=None, password=None, 
+    def __init__(self, ip, mac=None, client_id=None, username=None, password=None,
                  access_token=None, access_token_time=0, access_token_duration=0,
                  refresh_token=None, refresh_token_time=0, refresh_token_duration=0,
                  certfile=None, keyfile=None):
@@ -78,7 +79,7 @@ class HisenseTvClient:
         self.topicMobiBasepath = ""
         self.topicBrcsBasepath = "/remoteapp/mobile/broadcast/"
         self.topicRemoBasepath = ""
-        
+
         if self.client_id:
             self.define_topic_paths()
 
@@ -103,17 +104,19 @@ class HisenseTvClient:
         context.verify_mode = ssl.CERT_NONE
         context.load_cert_chain(certfile=self.certfile, keyfile=self.keyfile)
 
-        with socket.create_connection((self.ip, 36669), timeout=timeout) as sock:
-            with context.wrap_socket(sock) as ssock:
-                cipher_name, proto, bits = ssock.cipher()
-                return {
-                    "connected": True,
-                    "tls_version": ssock.version(),
-                    "cipher": cipher_name,
-                    "bits": bits,
-                    "certfile": self.certfile,
-                    "keyfile": self.keyfile,
-                }
+        with (
+            socket.create_connection((self.ip, 36669), timeout=timeout) as sock,
+            context.wrap_socket(sock) as ssock,
+        ):
+            cipher_name, _proto, bits = ssock.cipher()
+            return {
+                "connected": True,
+                "tls_version": ssock.version(),
+                "cipher": cipher_name,
+                "bits": bits,
+                "certfile": self.certfile,
+                "keyfile": self.keyfile,
+            }
 
     def ping(self, timeout=3.0):
         """Quickly tests if the TV MQTT broker is listening, accepting TLS, and responding to MQTT packets."""
@@ -150,9 +153,9 @@ class HisenseTvClient:
             import threading
             lock = threading.Event()
             rc_holder = [None]
-            
+
             client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
-            
+
             def on_conn(c, userdata, flags, rc):
                 rc_holder[0] = rc
                 lock.set()
@@ -252,10 +255,10 @@ class HisenseTvClient:
         else:
             mac = ':'.join(f'{random.randint(0, 255):02x}' for _ in range(6)).upper()
 
-        second_hash = hashlib.md5(f"38D65DC30F45109A369A86FCE866A85B${mac}".encode("utf-8")).hexdigest().upper()
+        second_hash = hashlib.md5(f"38D65DC30F45109A369A86FCE866A85B${mac}".encode()).hexdigest().upper()
         last_digit_of_cross_sum = sum(int(digit) for digit in str(timestamp)) % 10
-        third_hash = hashlib.md5(f"his{last_digit_of_cross_sum}h*i&s%e!r^v0i1c9".encode("utf-8")).hexdigest().upper()
-        fourth_hash = hashlib.md5(f"{timestamp}${third_hash[:6]}".encode("utf-8")).hexdigest().upper()
+        third_hash = hashlib.md5(f"his{last_digit_of_cross_sum}h*i&s%e!r^v0i1c9".encode()).hexdigest().upper()
+        fourth_hash = hashlib.md5(f"{timestamp}${third_hash[:6]}".encode()).hexdigest().upper()
 
         self.username = f"his${timestamp}"
         self.password = fourth_hash
@@ -414,13 +417,13 @@ class HisenseTvClient:
         ])
 
         # Publish connection message to trigger PIN
-        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/vidaa_app_connect", 
+        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/vidaa_app_connect",
                                   '{"app_version":2,"connect_result":0,"device_type":"Mobile App"}')
 
         # Wait for TV response triggering PIN
         try:
             await asyncio.wait_for(self._auth_future, timeout=15)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.mqtt_client.loop_stop()
             raise Exception("TV authentication request timed out")
         finally:
@@ -432,7 +435,7 @@ class HisenseTvClient:
         self._loop = loop
         self._auth_code_future = loop.create_future()
 
-        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/authenticationcode", 
+        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/authenticationcode",
                                   json.dumps({"authNum": int(pin_code)}))
 
         try:
@@ -442,7 +445,7 @@ class HisenseTvClient:
             if payload.get("result") != 1:
                 _LOGGER.error(f"PIN validation rejected with payload: {payload_str}")
                 raise Exception(f"Incorrect PIN code (TV response: {payload_str})")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise Exception("Timeout waiting for PIN validation")
         finally:
             self._auth_code_future = None
@@ -455,16 +458,16 @@ class HisenseTvClient:
         try:
             token_payload_str = await asyncio.wait_for(self._token_future, timeout=15)
             token_data = json.loads(token_payload_str)
-            
+
             self.access_token = token_data["accesstoken"]
             self.access_token_time = int(token_data["accesstoken_time"])
             self.access_token_duration = int(token_data["accesstoken_duration_day"])
             self.refresh_token = token_data["refreshtoken"]
             self.refresh_token_time = int(token_data["refreshtoken_time"])
             self.refresh_token_duration = int(token_data["refreshtoken_duration_day"])
-            
+
             return token_data
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise Exception("Timeout waiting for tokens")
         finally:
             self._token_future = None
@@ -479,19 +482,19 @@ class HisenseTvClient:
 
         current_time = time.time()
         expiration_time = self.access_token_time + (2 * 60 * 60) # 2 hours duration
-        
+
         # If token is still valid, return (unless forced)
         if not force and current_time <= expiration_time - 300: # 5 minutes buffer
             return False
 
         _LOGGER.info("Access token expired or close to expiry, refreshing...")
-        
+
         # We must use the exact registered client ID because the TV broker validates it against the pairing whitelist
         client = mqtt.Client(client_id=self.client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
         client.tls_set(ca_certs=None, certfile=self.certfile, keyfile=self.keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
         client.tls_insecure_set(True)
         client.username_pw_set(username=self.username, password=self.refresh_token)
-        
+
         # Synchronous wait wrapper
         import threading
         lock = threading.Event()
@@ -503,7 +506,7 @@ class HisenseTvClient:
             connect_rc[0] = rc
             if rc == 0:
                 client.subscribe(self.topicMobiBasepath + 'platform_service/data/tokenissuance')
-                client.publish(f"/remoteapp/tv/platform_service/{self.client_id}/data/gettoken", 
+                client.publish(f"/remoteapp/tv/platform_service/{self.client_id}/data/gettoken",
                                json.dumps({"refreshtoken": self.refresh_token}))
             else:
                 lock.set()
@@ -521,11 +524,11 @@ class HisenseTvClient:
         client.on_message = None
         client.on_disconnect = lambda client, userdata, rc: _LOGGER.debug(f"Refresh client disconnected: {rc}")
         client.message_callback_add(self.topicMobiBasepath + 'platform_service/data/tokenissuance', on_token)
-        
+
         try:
             client.connect(self.ip, 36669, 60)
             client.loop_start()
-            
+
             # Wait up to 10 seconds
             start = time.time()
             while not lock.is_set() and time.time() - start < 10:
@@ -548,7 +551,7 @@ class HisenseTvClient:
             if self.on_token_refreshed:
                 self.on_token_refreshed(self)
             return True
-            
+
         if connect_rc[0] is not None:
             _LOGGER.error(f"Failed to refresh token. Connect RC: {connect_rc[0]}")
         return False
@@ -596,17 +599,17 @@ class HisenseTvClient:
     async def async_query(self, pub_topic, sub_topic, payload=None):
         if not self.mqtt_client:
             raise Exception("MQTT client not initialized")
-        
+
         loop = asyncio.get_running_loop()
         future = loop.create_future()
-        
+
         def on_msg(client, userdata, msg):
             loop.call_soon_threadsafe(future.set_result, msg.payload.decode('utf-8'))
 
         self.mqtt_client.message_callback_add(sub_topic, on_msg)
         self.mqtt_client.subscribe(sub_topic)
         self.mqtt_client.publish(pub_topic, payload)
-        
+
         try:
             result = await asyncio.wait_for(future, timeout=10)
             return json.loads(result)
