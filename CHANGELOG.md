@@ -2,6 +2,17 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [1.3.0] - 2026-09-04
+
+### Added
+- **STANDARD HACS DIRECTORY STRUCTURE**: Relocated integration files into standard `custom_components/hisense_vidaa/` layout for seamless HACS installation and updates.
+- **HACS BRANDING & ASSETS**: Included icon and logo brand assets inside the component directory for HACS validation.
+- **MY HOME ASSISTANT BADGE**: Added 1-click installation badge and updated documentation for HACS Custom Repository setup.
+
+### Changed
+- **HACS CONFIGURATION**: Removed deprecated `content_in_root` attribute in `hacs.json`.
+- **CI WORKFLOWS**: Streamlined Hassfest validation and HACS Action checks to run directly on the standard component directory.
+
 ## [1.2.0] - 2026-09-04
 
 ### Added
