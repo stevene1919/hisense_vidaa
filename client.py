@@ -115,6 +115,114 @@ class HisenseTvClient:
                     "keyfile": self.keyfile,
                 }
 
+    def ping(self, timeout=3.0):
+        """Quickly tests if the TV MQTT broker is listening, accepting TLS, and responding to MQTT packets."""
+        results = {
+            "tcp_port_open": False,
+            "tls_handshake": False,
+            "tls_version": None,
+            "cipher": None,
+            "mqtt_connected": False,
+            "mqtt_rc": None,
+            "mqtt_status": None,
+            "error": None,
+        }
+        # 1. Test TCP port
+        try:
+            with socket.create_connection((self.ip, 36669), timeout=timeout):
+                results["tcp_port_open"] = True
+        except Exception as e:
+            results["error"] = f"TCP connection failed (TV may be in deep sleep / off): {e}"
+            return results
+
+        # 2. Test TLS Handshake
+        try:
+            ssl_info = self.test_ssl_connection(timeout=timeout)
+            results["tls_handshake"] = ssl_info.get("connected", False)
+            results["tls_version"] = ssl_info.get("tls_version")
+            results["cipher"] = ssl_info.get("cipher")
+        except Exception as e:
+            results["error"] = f"TLS handshake failed: {e}"
+            return results
+
+        # 3. Test MQTT Broker Response (if credentials available)
+        if self.access_token and self.client_id and self.username:
+            import threading
+            lock = threading.Event()
+            rc_holder = [None]
+            
+            client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
+            
+            def on_conn(c, userdata, flags, rc):
+                rc_holder[0] = rc
+                lock.set()
+
+            client.on_connect = on_conn
+            client.on_message = None
+            client.on_disconnect = lambda c, u, rc: lock.set()
+
+            try:
+                client.connect_async(self.ip, 36669, 10)
+                client.loop_start()
+                lock.wait(timeout=timeout)
+            finally:
+                client.loop_stop()
+                client.disconnect()
+
+            results["mqtt_rc"] = rc_holder[0]
+            if rc_holder[0] == 0:
+                results["mqtt_connected"] = True
+                results["mqtt_status"] = "Connection Accepted"
+            elif rc_holder[0] is not None:
+                results["mqtt_status"] = f"Connection Rejected (rc={rc_holder[0]})"
+            else:
+                results["mqtt_status"] = "Connection Timeout"
+        else:
+            results["mqtt_status"] = "Ready for pairing (no stored credentials)"
+
+        # 4. Probe Legacy Static Authentication Compatibility
+        import threading
+        legacy_rc = [None]
+        leg_lock = threading.Event()
+        leg_client = mqtt.Client(client_id="hisenseservice", clean_session=True, protocol=mqtt.MQTTv311)
+        leg_client.tls_set(ca_certs=None, certfile=self.certfile, keyfile=self.keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
+        leg_client.tls_insecure_set(True)
+        leg_client.username_pw_set(username="hisenseservice", password="multimqttservice")
+
+        def on_leg_conn(c, userdata, flags, rc):
+            legacy_rc[0] = rc
+            leg_lock.set()
+
+        leg_client.on_connect = on_leg_conn
+        leg_client.on_disconnect = lambda c, u, rc: leg_lock.set()
+
+        try:
+            leg_client.connect_async(self.ip, 36669, 5)
+            leg_client.loop_start()
+            leg_lock.wait(timeout=1.5)
+        except Exception:
+            pass
+        finally:
+            leg_client.loop_stop()
+            leg_client.disconnect()
+
+        results["legacy_rc"] = legacy_rc[0]
+        if legacy_rc[0] == 0:
+            results["auth_model"] = "legacy_static"
+            results["auth_recommendation"] = (
+                "Your TV accepts legacy static credentials ('hisenseservice'). "
+                "You can use legacy MQTT integrations such as 'ha_hisense_tv' (github.com/alexmohr/ha_hisense_tv) "
+                "or this integration without PIN pairing."
+            )
+        else:
+            results["auth_model"] = "modern_vidaa"
+            results["auth_recommendation"] = (
+                "Your TV enforces modern VIDAA OS authentication (static 'hisenseservice' logins rejected). "
+                "Dynamic PIN pairing via this 'hisense_vidaa' integration is required."
+            )
+
+        return results
+
     def _safe_set_future_result(self, future, result):
         if future and not future.done():
             if self._loop and self._loop.is_running():

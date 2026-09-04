@@ -18,7 +18,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
-from client import HisenseTvClient
+from client import HisenseTvClient  # noqa: E402
 
 DEFAULT_CREDS_FILE = os.path.join(SCRIPT_DIR, "credentials.json")
 
@@ -35,6 +35,54 @@ def save_credentials(file_path, creds):
     with open(file_path, "w") as f:
         json.dump(creds, f, indent=4)
     print(f"Credentials successfully saved to '{file_path}'")
+
+
+def do_ping(ip, creds, certfile, keyfile):
+    print(f"\n[PING] Probing TV connectivity and MQTT broker at {ip}:36669...")
+    
+    access_token = None
+    client_id = None
+    username = None
+    if creds:
+        access_token = creds.get("accesstoken") or creds.get("access_token")
+        client_id = creds.get("client_id")
+        username = creds.get("username")
+
+    client = HisenseTvClient(
+        ip=ip,
+        client_id=client_id,
+        username=username,
+        access_token=access_token,
+        certfile=certfile,
+        keyfile=keyfile
+    )
+
+    try:
+        res = client.ping()
+        print("\n📡 Connection Probe Results:")
+        print(f"  • [1] TCP Port 36669:    {'✅ OPEN' if res['tcp_port_open'] else '❌ CLOSED / UNREACHABLE'}")
+        print(f"  • [2] TLS Handshake:     {'✅ SUCCESS' if res['tls_handshake'] else '❌ FAILED'} ({res.get('tls_version') or 'N/A'}, {res.get('cipher') or 'N/A'})")
+        
+        if res.get("mqtt_rc") is not None:
+            if res["mqtt_connected"]:
+                print("  • [3] MQTT Broker Auth:  ✅ ACCEPTED (rc=0, broker is actively listening and responsive)")
+            else:
+                print(f"  • [3] MQTT Broker Auth:  ⚠️ {res['mqtt_status']}")
+        else:
+            print(f"  • [3] MQTT Broker State: ℹ️ {res['mqtt_status']}")
+
+        if res.get("auth_recommendation"):
+            print("\n💡 Firmware Compatibility & Integration Recommendation:")
+            print(f"  • {res['auth_recommendation']}")
+
+        if res.get("error"):
+            print(f"\n⚠️ Notice: {res['error']}")
+    except FileNotFoundError as e:
+        print(f"\n❌ Certificate Error: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n❌ Probe Failed: {e}")
+        sys.exit(1)
 
 
 def do_test_ssl(ip, certfile, keyfile):
@@ -68,7 +116,7 @@ async def do_auth(ip, mac, certfile, keyfile, save_path):
         pin = input("👉 Enter the 4-digit PIN: ").strip()
 
         print(f"\n[AUTH] Submitting PIN '{pin}' and requesting tokens...")
-        token_data = await client.async_submit_pin(pin)
+        await client.async_submit_pin(pin)
 
         creds = {
             "ip_address": ip,
@@ -224,6 +272,9 @@ def main():
         description="Hisense VIDAA Integration CLI Test Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Examples:
+  # Quick 3-tier connectivity & MQTT broker listening probe:
+  python3 test_client.py ping --ip 192.168.50.12
+
   # Test raw SSL/TLS certificate connection to TV:
   python3 test_client.py test-ssl --ip 192.168.50.12
 
@@ -244,9 +295,9 @@ def main():
 """
     )
 
-    parser.add_argument("action", choices=["test-ssl", "auth", "listen", "refresh", "send-key"], help="Action to perform")
+    parser.add_argument("action", choices=["ping", "test-ssl", "auth", "listen", "refresh", "send-key"], help="Action to perform")
     parser.add_argument("key", nargs="?", help="Key to send (for send-key action, e.g. KEY_POWER, KEY_VOLUMEUP)")
-    parser.add_argument("--ip", help="IP address of the TV (required for test-ssl and auth, optional override for other commands)")
+    parser.add_argument("--ip", help="IP address of the TV (required for ping/test-ssl/auth if not in config)")
     parser.add_argument("--mac", help="MAC address of the TV")
     parser.add_argument("--cert", help="Path to custom client certificate file (e.g. cert.pem)")
     parser.add_argument("--key", dest="key_file", help="Path to custom client private key file (e.g. key.pem)")
@@ -258,7 +309,21 @@ def main():
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=log_level, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
-    if args.action == "test-ssl":
+    if args.action == "ping":
+        creds = None
+        if os.path.exists(args.config):
+            try:
+                with open(args.config, "r") as f:
+                    creds = json.load(f)
+            except Exception:
+                pass
+        ip = args.ip or (creds.get("ip_address") if creds else None)
+        if not ip:
+            print("Error: --ip <IP> is required for 'ping' action (or valid credentials.json).")
+            sys.exit(1)
+        do_ping(ip, creds, args.cert, args.key_file)
+
+    elif args.action == "test-ssl":
         if not args.ip:
             print("Error: --ip <IP> is required for 'test-ssl' action.")
             sys.exit(1)
