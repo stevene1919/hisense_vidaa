@@ -2,6 +2,12 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [1.3.1] - 2026-09-04
+
+### Changed
+- **DOCUMENTATION & REPOSITORIES**: Updated references to legacy alternatives ([`sehaas/ha_hisense_tv`](https://github.com/sehaas/ha_hisense_tv) and [`Krazy998/mqtt-hisensetv`](https://github.com/Krazy998/mqtt-hisensetv/)).
+- **PROBE MESSAGES**: Pointed diagnostic probe output in `client.py` directly to the README section for integration selection guidance.
+
 ## [1.3.0] - 2026-09-04
 
 ### Added
