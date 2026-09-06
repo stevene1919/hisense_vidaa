@@ -62,8 +62,8 @@ def get_arp_mac(ip):
     return None
 
 
-def do_ping(ip, creds, certfile, keyfile):
-    print(f"\n[PING] Probing TV connectivity and MQTT broker at {ip}:36669...")
+def do_ping(ip, creds, certfile, keyfile, profile="auto"):
+    print(f"\n[PING] Probing TV connectivity and MQTT broker at {ip}:36669 (Profile: {profile})...")
 
     access_token = None
     client_id = None
@@ -79,7 +79,8 @@ def do_ping(ip, creds, certfile, keyfile):
         username=username,
         access_token=access_token,
         certfile=certfile,
-        keyfile=keyfile
+        keyfile=keyfile,
+        auth_profile=profile,
     )
 
     try:
@@ -143,7 +144,7 @@ def do_ping(ip, creds, certfile, keyfile):
         sys.exit(1)
 
 
-def do_report(ip, mac, creds, certfile, keyfile):
+def do_report(ip, mac, creds, certfile, keyfile, profile="auto"):
     print(f"\n🔍 [REPORT] Collecting diagnostics and generating GitHub issue report for {ip}...\n")
 
     access_token = None
@@ -161,7 +162,8 @@ def do_report(ip, mac, creds, certfile, keyfile):
         username=username,
         access_token=access_token,
         certfile=certfile,
-        keyfile=keyfile
+        keyfile=keyfile,
+        auth_profile=profile,
     )
 
     try:
@@ -235,9 +237,9 @@ def do_report(ip, mac, creds, certfile, keyfile):
         sys.exit(1)
 
 
-def do_test_ssl(ip, certfile, keyfile):
-    print(f"\n[SSL] Testing raw TLS connection to Hisense TV at {ip}:36669...")
-    client = HisenseTvClient(ip=ip, certfile=certfile, keyfile=keyfile)
+def do_test_ssl(ip, certfile, keyfile, profile="auto"):
+    print(f"\n[SSL] Testing raw TLS connection to Hisense TV at {ip}:36669 (Profile: {profile})...")
+    client = HisenseTvClient(ip=ip, certfile=certfile, keyfile=keyfile, auth_profile=profile)
     try:
         res = client.test_ssl_connection()
         print("\n✅ TLS Connection Successful!")
@@ -256,13 +258,13 @@ def do_test_ssl(ip, certfile, keyfile):
         sys.exit(1)
 
 
-async def do_auth(ip, mac, certfile, keyfile, save_path):
+async def do_auth(ip, mac, certfile, keyfile, save_path, profile="auto"):
     if not mac:
         mac = get_arp_mac(ip)
         if mac:
             print(f"🔍 Auto-discovered Hardware MAC via ARP: {mac}")
-    print(f"\n[AUTH] Connecting to Hisense TV at {ip} on port 36669 (TLS)...")
-    client = HisenseTvClient(ip=ip, mac=mac, certfile=certfile, keyfile=keyfile)
+    print(f"\n[AUTH] Connecting to Hisense TV at {ip} on port 36669 (TLS, Profile: {profile})...")
+    client = HisenseTvClient(ip=ip, mac=mac, certfile=certfile, keyfile=keyfile, auth_profile=profile)
     try:
         await client.async_start_auth()
         print("\n✅ Initial connection established!")
@@ -456,6 +458,7 @@ def main():
     parser.add_argument("key", nargs="?", help="Key to send (for send-key action, e.g. KEY_POWER, KEY_VOLUMEUP)")
     parser.add_argument("--ip", help="IP address of the TV (required for ping/report/test-ssl/auth if not in config)")
     parser.add_argument("--mac", help="MAC address of the TV")
+    parser.add_argument("--profile", choices=["auto", "modern", "remotenow", "vidaa_2024", "remotenow_2018"], default="auto", help="Authentication profile and cert selector (default: auto)")
     parser.add_argument("--cert", help="Path to custom client certificate file (e.g. cert.pem)")
     parser.add_argument("--key", dest="key_file", help="Path to custom client private key file (e.g. key.pem)")
     parser.add_argument("--config", default=DEFAULT_CREDS_FILE, help=f"Path to credentials file (default: {DEFAULT_CREDS_FILE})")
@@ -478,7 +481,7 @@ def main():
         if not ip:
             print("Error: --ip <IP> is required for 'ping' action (or valid credentials.json).")
             sys.exit(1)
-        do_ping(ip, creds, args.cert, args.key_file)
+        do_ping(ip, creds, args.cert, args.key_file, profile=args.profile)
 
     elif args.action == "report":
         creds = None
@@ -492,19 +495,19 @@ def main():
         if not ip:
             print("Error: --ip <IP> is required for 'report' action (or valid credentials.json).")
             sys.exit(1)
-        do_report(ip, args.mac, creds, args.cert, args.key_file)
+        do_report(ip, args.mac, creds, args.cert, args.key_file, profile=args.profile)
 
     elif args.action == "test-ssl":
         if not args.ip:
             print("Error: --ip <IP> is required for 'test-ssl' action.")
             sys.exit(1)
-        do_test_ssl(args.ip, args.cert, args.key_file)
+        do_test_ssl(args.ip, args.cert, args.key_file, profile=args.profile)
 
     elif args.action == "auth":
         if not args.ip:
             print("Error: --ip <IP> is required for 'auth' action.")
             sys.exit(1)
-        asyncio.run(do_auth(args.ip, args.mac, args.cert, args.key_file, args.config))
+        asyncio.run(do_auth(args.ip, args.mac, args.cert, args.key_file, args.config, profile=args.profile))
 
     elif args.action == "listen":
         creds = load_credentials(args.config)

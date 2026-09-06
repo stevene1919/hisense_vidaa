@@ -8,6 +8,7 @@ from .const import (
     CONF_ACCESS_TOKEN,
     CONF_ACCESS_TOKEN_DURATION,
     CONF_ACCESS_TOKEN_TIME,
+    CONF_AUTH_PROFILE,
     CONF_CLIENT_ID,
     CONF_ENABLE_REMOTE,
     CONF_IP_ADDRESS,
@@ -62,6 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         refresh_token=data[CONF_REFRESH_TOKEN],
         refresh_token_time=data[CONF_REFRESH_TOKEN_TIME],
         refresh_token_duration=data[CONF_REFRESH_TOKEN_DURATION],
+        auth_profile=data.get(CONF_AUTH_PROFILE, "auto"),
     )
 
     # Callback to persist token updates in Home Assistant config entry
@@ -114,6 +116,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry, PLATFORMS
     )
     if unload_ok:
-        client = hass.data[DOMAIN].pop(entry.entry_id)
-        client.disconnect()
+        client = hass.data[DOMAIN].pop(entry.entry_id, None)
+        if client:
+            await hass.async_add_executor_job(client.disconnect)
     return unload_ok

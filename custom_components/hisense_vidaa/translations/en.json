@@ -5,7 +5,8 @@
         "title": "Configure Hisense VIDAA TV",
         "description": "Enter the IP address of your Hisense TV.",
         "data": {
-          "ip_address": "IP Address"
+          "ip_address": "IP Address",
+          "auth_profile": "Authentication / Certificate Profile"
         }
       },
       "auth": {

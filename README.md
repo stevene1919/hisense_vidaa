@@ -18,7 +18,7 @@ Hisense changed the MQTT authentication model across firmware revisions:
 | TV Firmware / Model | MQTT Authentication Model | Recommended Integration |
 | :--- | :--- | :--- |
 | **Modern VIDAA OS (VIDAA U5, U6, U7, 2022+)** | **Dynamic PIN Pairing** (`actions/vidaa_app_connect`) | **👉 This Integration (`hisense_vidaa`)** |
-| **Legacy Hisense / Older VIDAA (Pre-2022)** | **Static Credentials** (`hisenseservice` / `multimqttservice`) | [sehaas/ha_hisense_tv](https://github.com/sehaas/ha_hisense_tv) or [Krazy998/mqtt-hisensetv](https://github.com/Krazy998/mqtt-hisensetv/) |
+| **Legacy Hisense / Older VIDAA (Pre-2022)** | **Static Credentials** (`hisenseservice` / `multimqttservice`) | [sehaas/ha_hisense_tv](https://github.com/sehaas/ha_hisense_tv) |
 
 > [!TIP]
 > Not sure which firmware your TV has? Run the built-in diagnostic probe:
@@ -69,18 +69,135 @@ Hisense changed the MQTT authentication model across firmware revisions:
 
 VIDAA OS requires a client SSL certificate and private key to communicate with port `36669`. Certificates are excluded from this repository and must be provided locally.
 
-1. Create a `certs/` directory inside `custom_components/hisense_vidaa/` (or place them in `/config/certs/` / `/config/ssl/`).
-2. Place your certificate and private key files:
-   ```text
-   custom_components/hisense_vidaa/certs/cert.pem
-   custom_components/hisense_vidaa/certs/key.pem
+1. Create a `certs/` directory inside `custom_components/hisense_vidaa/` (or place them in `/config/certs/` or `/config/ssl/`).
+2. Place your certificate and private key files according to your TV generation:
+
+| Profile | Firmware / Generation | Certificate Filename | Private Key Filename |
+| :--- | :--- | :--- | :--- |
+| **VIDAA 2.0 (Modern)** | VIDAA U7 / U8 / OS 7.x+ (`Q0704`+) | `vidaa_2024_cert.pem` | `vidaa_2024_key.pem` |
+| **RemoteNOW (Standard)** | VIDAA U4 / U5 / U6 (2018–2023) | `remotenow_2018_cert.pem` | `remotenow_2018_key.pem` |
+| **Generic / Custom** | Standard fallback for any profile | `cert.pem` | `key.pem` |
+
+### 🔍 How to Obtain & Extract Certificates from Official Apps
+
+If you do not already have the `.pem` files, you can extract them from the official Android APK bundles using OpenSSL:
+
+#### Option A: VIDAA Smart Remote App (`com.universal.remote.multi.apk`)
+1. Download or extract the APK for the official **VIDAA Smart TV Remote** app (`com.universal.remote.multi`).
+2. Extract the PKCS#12 bundle located in `res/raw/client_mobile_android.p12` (or `res/3R.p12` if obfuscated):
+   ```bash
+   unzip -q com.universal.remote.multi.apk "res/raw/client_mobile_android.p12" -d /tmp/vidaa_extract
    ```
+3. Extract the certificate and private key using the official PKCS#12 passphrase (`186e990688070325a1c4b0ce275d2388`):
+   ```bash
+   # Extract Client Certificate (X.509 PEM):
+   openssl pkcs12 -in /tmp/vidaa_extract/res/raw/client_mobile_android.p12 \
+     -clcerts -nokeys -out custom_components/hisense_vidaa/certs/vidaa_2024_cert.pem \
+     -passin pass:186e990688070325a1c4b0ce275d2388 -legacy
+
+   # Extract Private Key (RSA PEM):
+   openssl pkcs12 -in /tmp/vidaa_extract/res/raw/client_mobile_android.p12 \
+     -nocerts -nodes -out custom_components/hisense_vidaa/certs/vidaa_2024_key.pem \
+     -passin pass:186e990688070325a1c4b0ce275d2388 -legacy
+   ```
+
+#### Option B: RemoteNOW App (`com.hisense.hitv.remotenow.apk`)
+1. Download or extract the APK for the legacy **RemoteNOW** app (`com.hisense.hitv.remotenow`).
+2. Extract the certificate bundle from `assets/client.p12` with passphrase `hisenseremote`:
+   ```bash
+   openssl pkcs12 -in client.p12 -clcerts -nokeys -out remotenow_2018_cert.pem -passin pass:hisenseremote -legacy
+   openssl pkcs12 -in client.p12 -nocerts -nodes -out remotenow_2018_key.pem -passin pass:hisenseremote -legacy
+   ```
+
+---
+
+## 🔬 Under the Hood: VIDAA Protocol & Cryptographic Architecture
+
+The Hisense VIDAA smart TV runs an internal MQTT broker listening on TLS port `36669`. Reverse-engineering of `libmqttcrypt.so` and the official VIDAA Android client reveals the following multi-tier challenge-response architecture:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant HA as Home Assistant (Client)
+    participant TV as Hisense VIDAA TV (:36669)
+    
+    Note over HA,TV: 1. TLS v1.2 Mutual Handshake (Client Cert & Key)
+    HA->>TV: Connect MQTT (Dynamic Username + Salt Hash)
+    TV-->>HA: CONNACK (rc: 0)
+    
+    Note over HA,TV: 2. Challenge-Response PIN Handshake
+    HA->>TV: Subscribe: /remoteapp/mobile/<client_id>/ui_service/data/#
+    HA->>TV: Publish: .../actions/vidaa_app_connect
+    TV-->>HA: Display 4-digit PIN on screen & publish authentication challenge
+    HA->>TV: Publish: .../actions/authenticationcode {"authNum": <PIN>}
+    TV-->>HA: Publish: {"result": 1} (PIN Accepted)
+    
+    Note over HA,TV: 3. Session Token Issuance
+    HA->>TV: Publish: .../platform_service/<client_id>/data/gettoken
+    TV-->>HA: Publish: Token Payload (Access Token [2 days], Refresh Token [30 days])
+    
+    Note over HA,TV: 4. Normal Runtime Operations
+    HA->>TV: Reconnect with Access Token as MQTT password
+    HA->>TV: Publish Commands (actions/sendkey, actions/changesource, etc.)
+    TV-->>HA: Push State Broadcasts (volumechange, tvsleep, ui_service/state)
+```
+
+### 1. Dual-Tier Authentication Formulas
+The TV's internal MQTT broker (`libmqttcrypt`) enforces a strict client ID whitelist format during initial pairing: `${mac}$his${md5_prefix}_vidaacommon_001`. The suffix must be `_vidaacommon_001` or the connection is immediately rejected (`rc: 2`).
+
+#### 🟢 Generation 2: Modern VIDAA 2.0 (`libmqttcrypt.so` / Firmware `Q0704`+)
+- **Pattern:** `PATTERN = "38D65DC30F45109A369A86FCE866A85B"`
+- **Client ID:** `f"{mac}$his${md5(f'{PATTERN}${mac}')[:6]}_vidaacommon_001"`
+- **Username:** `f"his${timestamp ^ 6239759785777146216}"` *(XOR 64-bit mask `0x5689ab4102ef1908`)*
+- **Cross-Sum:** `sum_digit = sum(int(d) for d in str(timestamp)) % 10`
+- **Modern Salt:** `h!i@s#$v%i^d&a*a` *("hisvidaa")*
+- **Password Hash:** `md5(f"{timestamp}${md5(f'his{sum_digit}h!i@s#$v%i^d&a*a')[:6]}").upper()`
+
+#### 🟡 Generation 1: RemoteNOW (Standard / Firmware `P1027` and older)
+- **Client ID:** `f"{mac}$his${md5(f'{PATTERN}${mac}')[:6]}_vidaacommon_001"`
+- **Username:** `f"his${timestamp}"`
+- **Standard Salt:** `h*i&s%e!r^v0i1c9` *("hiserv0i1c9")*
+- **Password Hash:** `md5(f"{timestamp}${md5(f'his{sum_digit}h*i&s%e!r^v0i1c9')[:6]}").upper()`
+
+### 2. Session Token Lifecycle & Auto-Renewal
+- **Access Token (`accesstoken`):** Valid for **48 hours (2 days)**. Used directly as the MQTT password for all runtime commands and queries.
+- **Refresh Token (`refreshtoken`):** Valid for **30 days**. When the access token expires or connection receives `rc: 4`/`5`, the integration connects using the refresh token to topic `platform_service/data/tokenissuance`, requests a new 48-hour access token, and persists it to Home Assistant's config entries.
+
+### 3. MQTT Topic Hierarchy Reference
+
+| Topic Path | Direction | Purpose |
+| :--- | :--- | :--- |
+| `/remoteapp/tv/ui_service/{client_id}/actions/vidaa_app_connect` | `Publish` | Initiate pairing handshake & trigger on-screen PIN |
+| `/remoteapp/tv/ui_service/{client_id}/actions/authenticationcode` | `Publish` | Submit user-entered 4-digit PIN |
+| `/remoteapp/tv/ui_service/{client_id}/actions/authenticationcodeclose` | `Publish` | Dismiss PIN modal on TV screen |
+| `/remoteapp/tv/platform_service/{client_id}/data/gettoken` | `Publish` | Request initial access/refresh token pair |
+| `/remoteapp/tv/remote_service/{client_id}/actions/sendkey` | `Publish` | Dispatch remote keypress (e.g. `KEY_POWER`, `KEY_HOME`) |
+| `/remoteapp/tv/ui_service/{client_id}/actions/changesource` | `Publish` | Switch input source (`{"sourceid": "HDMI1"}`) |
+| `/remoteapp/tv/ui_service/{client_id}/actions/launchapp` | `Publish` | Launch installed Smart TV application |
+| `/remoteapp/tv/ps_service/{client_id}/actions/changevolume` | `Publish` | Set absolute volume level (`0`–`100`) |
+| `/remoteapp/mobile/{client_id}/ui_service/data/authentication` | `Subscribe` | Receive TV pairing challenge response |
+| `/remoteapp/mobile/{client_id}/platform_service/data/tokenissuance` | `Subscribe` | Receive issued / refreshed authentication tokens |
+| `/remoteapp/mobile/broadcast/ui_service/state` | `Subscribe` | Real-time push notifications for TV power and UI state |
+| `/remoteapp/mobile/broadcast/platform_service/actions/volumechange`| `Subscribe` | Real-time push notifications for volume and mute changes |
+
+---
+
+## 🏗 Codebase Architecture
+
+The integration is built around modular, single-responsibility components:
+
+| Module | Responsibility |
+| :--- | :--- |
+| [`crypto.py`](custom_components/hisense_vidaa/crypto.py) | Dynamic authentication hashing, salt matrices, XOR timestamp generation, and certificate path resolution. |
+| [`discovery.py`](custom_components/hisense_vidaa/discovery.py) | UPnP/SSDP XML device descriptor parser and mDNS Zeroconf network discovery helpers. |
+| [`const.py`](custom_components/hisense_vidaa/const.py) | Centralized constants, key aliases, and authentication profile definitions. |
+| [`client.py`](custom_components/hisense_vidaa/client.py) | Core asynchronous MQTT client lifecycle, challenge-response handshake, and event dispatching. |
 
 ---
 
 ## 🧪 Testing & Diagnostics (`test_client.py`)
 
-The integration includes a standalone CLI test utility [`test_client.py`](test_client.py) that imports and executes the exact same [`HisenseTvClient`](client.py) logic used by Home Assistant.
+The integration includes a standalone CLI test utility [`test_client.py`](test_client.py) that imports and executes the exact same [`HisenseTvClient`](custom_components/hisense_vidaa/client.py) logic used by Home Assistant.
 
 ### 1. Generate GitHub Issue Diagnostic Report (`report`)
 Generates a pre-formatted Markdown diagnostics block with hardware details, firmware profile, and multi-tier authentication capabilities ready to paste directly into GitHub issues:
@@ -92,37 +209,47 @@ python3 test_client.py report --ip <TV_IP>
 Tests TCP port reachability, TLS handshake, broker response, multi-tier auth capabilities, and suggests which integration style your TV firmware requires:
 ```bash
 python3 test_client.py ping --ip <TV_IP>
+
+# Test specific authentication profile (auto, modern, remotenow):
+python3 test_client.py ping --ip <TV_IP> --profile modern
 ```
 
-### 2. Test Raw SSL/TLS Connection & Cert Validity (`test-ssl`)
+### 3. Test Raw SSL/TLS Connection & Cert Validity (`test-ssl`)
 Verifies TLS cipher negotiation and certificate validity with the TV without initiating pairing:
 ```bash
-# Using default certs/ folder:
+# Test with auto profile:
 python3 test_client.py test-ssl --ip <TV_IP>
 
-# Using custom certificate locations:
+# Test with specific profile:
+python3 test_client.py test-ssl --ip <TV_IP> --profile modern
+python3 test_client.py test-ssl --ip <TV_IP> --profile remotenow
+
+# Test with custom certificate paths:
 python3 test_client.py test-ssl --ip <TV_IP> --cert /path/to/cert.pem --key /path/to/key.pem
 ```
 
-### 3. Test Pairing & Retrieve Tokens (`auth`)
+### 4. Test Pairing & Retrieve Tokens (`auth`)
 Initiates the challenge handshake, prompts for the 4-digit TV on-screen PIN, and saves tokens to `credentials.json`:
 ```bash
 python3 test_client.py auth --ip <TV_IP>
+
+# Specify profile explicitly if desired:
+python3 test_client.py auth --ip <TV_IP> --profile modern
 ```
 
-### 4. Test Token Refresh (`refresh`)
+### 5. Test Token Refresh (`refresh`)
 Tests synchronous renewal of the 2-day access token using the 30-day refresh token:
 ```bash
 python3 test_client.py refresh
 ```
 
-### 5. Listen to Real-Time TV Events (`listen`)
+### 6. Listen to Real-Time TV Events (`listen`)
 Subscribes to live state changes, volume updates, source list, and app list:
 ```bash
 python3 test_client.py listen
 ```
 
-### 6. Send Remote Control Keys (`send-key`)
+### 7. Send Remote Control Keys (`send-key`)
 Dispatches a keypress directly to the TV:
 ```bash
 python3 test_client.py send-key KEY_VOLUMEUP
@@ -145,14 +272,14 @@ python3 test_client.py send-key KEY_POWER
    - Add `https://github.com/stevene1919/hisense_vidaa` with Category **Integration**.
    - Search for **Hisense VIDAA TV** and click **Download**.
 
-2. Place your certificate files (`cert.pem` and `key.pem`) into `/config/custom_components/hisense_vidaa/certs/` (or `/config/certs/` / `/config/ssl/`).
+2. Place your certificate files (`vidaa_2024_cert.pem` / `remotenow_2018_cert.pem` or `cert.pem`) into `/config/custom_components/hisense_vidaa/certs/` (or `/config/certs/` / `/config/ssl/`).
 3. Restart Home Assistant.
 
 ### Method 2: Manual Installation
 
 1. Download the latest release from the [Releases](https://github.com/stevene1919/hisense_vidaa/releases) page.
 2. Copy the `custom_components/hisense_vidaa/` folder to your Home Assistant `/config/custom_components/` directory.
-3. Place `cert.pem` and `key.pem` inside `/config/custom_components/hisense_vidaa/certs/`.
+3. Place certificate files inside `/config/custom_components/hisense_vidaa/certs/`.
 4. Restart Home Assistant.
 
 ---
@@ -161,7 +288,7 @@ python3 test_client.py send-key KEY_POWER
 
 1. In Home Assistant, go to **Settings -> Devices & Services -> Add Integration**.
 2. Search for **Hisense VIDAA TV**.
-3. Enter the TV's IP address (the hardware MAC address is automatically discovered via ARP and linked to Home Assistant).
+3. Enter the TV's IP address and select your **Authentication / Certificate Profile** (default: `Auto Detect (Recommended)`).
 4. A 4-digit PIN code will appear on the TV screen — enter it into the prompt to complete setup.
 
 > [!IMPORTANT]

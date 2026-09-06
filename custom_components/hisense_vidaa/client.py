@@ -1,79 +1,49 @@
+"""Client for connecting to Hisense VIDAA TV MQTT broker over TLS."""
+
 import asyncio
-import hashlib
 import json
 import logging
 import os
-import random
 import socket
 import ssl
+import threading
 import time
+from typing import Any
 
 import paho.mqtt.client as mqtt
 
-_LOGGER = logging.getLogger(__name__)
+try:
+    from .const import KEY_ALIASES
+    from .crypto import generate_initial_credentials, resolve_certificates
+    from .discovery import get_device_fingerprint as discover_device_fingerprint
+except ImportError:
+    from const import KEY_ALIASES
+    from crypto import generate_initial_credentials, resolve_certificates
+    from discovery import get_device_fingerprint as discover_device_fingerprint
 
-KEY_ALIASES = {
-    "power": "KEY_POWER",
-    "up": "KEY_UP",
-    "down": "KEY_DOWN",
-    "left": "KEY_LEFT",
-    "right": "KEY_RIGHT",
-    "ok": "KEY_OK",
-    "enter": "KEY_OK",
-    "select": "KEY_OK",
-    "back": "KEY_RETURNS",
-    "return": "KEY_RETURNS",
-    "returns": "KEY_RETURNS",
-    "home": "KEY_HOME",
-    "menu": "KEY_MENU",
-    "exit": "KEY_EXIT",
-    "info": "KEY_INFO",
-    "volume_up": "KEY_VOLUMEUP",
-    "volumeup": "KEY_VOLUMEUP",
-    "volume_down": "KEY_VOLUMEDOWN",
-    "volumedown": "KEY_VOLUMEDOWN",
-    "mute": "KEY_MUTE",
-    "channel_up": "KEY_CHANNELUP",
-    "channelup": "KEY_CHANNELUP",
-    "channel_down": "KEY_CHANNELDOWN",
-    "channeldown": "KEY_CHANNELDOWN",
-    "play": "KEY_PLAY",
-    "pause": "KEY_PAUSE",
-    "stop": "KEY_STOP",
-    "fast_forward": "KEY_FORWARDS",
-    "fastforward": "KEY_FORWARDS",
-    "forwards": "KEY_FORWARDS",
-    "rewind": "KEY_BACK",
-    "subtitle": "KEY_SUBTITLE",
-    "subtitles": "KEY_SUBTITLE",
-    "guide": "KEY_EPG",
-    "epg": "KEY_EPG",
-    "red": "KEY_RED",
-    "green": "KEY_GREEN",
-    "yellow": "KEY_YELLOW",
-    "blue": "KEY_BLUE",
-    "netflix": "KEY_NETFLIX",
-    "youtube": "KEY_YOUTUBE",
-    "prime": "KEY_PRIME",
-    "disney": "KEY_DISNEY",
-    "0": "KEY_0",
-    "1": "KEY_1",
-    "2": "KEY_2",
-    "3": "KEY_3",
-    "4": "KEY_4",
-    "5": "KEY_5",
-    "6": "KEY_6",
-    "7": "KEY_7",
-    "8": "KEY_8",
-    "9": "KEY_9",
-}
+_LOGGER = logging.getLogger(__name__)
 
 
 class HisenseTvClient:
-    def __init__(self, ip, mac=None, client_id=None, username=None, password=None,
-                 access_token=None, access_token_time=0, access_token_duration=0,
-                 refresh_token=None, refresh_token_time=0, refresh_token_duration=0,
-                 certfile=None, keyfile=None):
+    """Client for connecting, authenticating, and controlling Hisense VIDAA TVs."""
+
+    def __init__(
+        self,
+        ip: str,
+        mac: str | None = None,
+        client_id: str | None = None,
+        username: str | None = None,
+        password: str | None = None,
+        access_token: str | None = None,
+        access_token_time: int = 0,
+        access_token_duration: int = 0,
+        refresh_token: str | None = None,
+        refresh_token_time: int = 0,
+        refresh_token_duration: int = 0,
+        certfile: str | None = None,
+        keyfile: str | None = None,
+        auth_profile: str = "auto",
+    ) -> None:
         self.ip = ip
         self.mac = mac
         self.client_id = client_id
@@ -85,41 +55,15 @@ class HisenseTvClient:
         self.refresh_token = refresh_token
         self.refresh_token_time = refresh_token_time
         self.refresh_token_duration = refresh_token_duration
+        self.auth_profile = (auth_profile or "auto").lower()
 
-        # Determine cert locations: custom paths > local certs/ dir > repo root certs/ > /config/certs or /config/ssl fallback
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        default_cert = os.path.join(script_dir, "certs", "cert.pem")
-        default_key = os.path.join(script_dir, "certs", "key.pem")
-        repo_root_cert = os.path.join(os.path.dirname(os.path.dirname(script_dir)), "certs", "cert.pem")
-        repo_root_key = os.path.join(os.path.dirname(os.path.dirname(script_dir)), "certs", "key.pem")
+        self.certfile, self.keyfile = resolve_certificates(
+            auth_profile=self.auth_profile,
+            certfile=certfile,
+            keyfile=keyfile,
+        )
 
-        if certfile:
-            self.certfile = os.path.abspath(certfile)
-        elif os.path.exists(default_cert):
-            self.certfile = default_cert
-        elif os.path.exists(repo_root_cert):
-            self.certfile = repo_root_cert
-        elif os.path.exists("/config/certs/cert.pem"):
-            self.certfile = "/config/certs/cert.pem"
-        elif os.path.exists("/config/ssl/cert.pem"):
-            self.certfile = "/config/ssl/cert.pem"
-        else:
-            self.certfile = default_cert
-
-        if keyfile:
-            self.keyfile = os.path.abspath(keyfile)
-        elif os.path.exists(default_key):
-            self.keyfile = default_key
-        elif os.path.exists(repo_root_key):
-            self.keyfile = repo_root_key
-        elif os.path.exists("/config/certs/key.pem"):
-            self.keyfile = "/config/certs/key.pem"
-        elif os.path.exists("/config/ssl/key.pem"):
-            self.keyfile = "/config/ssl/key.pem"
-        else:
-            self.keyfile = default_key
-
-        self.mqtt_client = None
+        self.mqtt_client: mqtt.Client | None = None
         self.connected = False
         self._state_callbacks = []
         self._volume_callbacks = []
@@ -128,13 +72,12 @@ class HisenseTvClient:
         self._disconnected_callbacks = []
         self._token_refreshed_callbacks = []
 
-        self._auth_future = None
-        self._auth_code_future = None
-        self._token_future = None
-        self._loop = None
+        self._auth_future: asyncio.Future | None = None
+        self._auth_code_future: asyncio.Future | None = None
+        self._token_future: asyncio.Future | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
         self._refreshing_token = False
-        self._last_refresh_attempt = 0
-        import threading
+        self._last_refresh_attempt = 0.0
         self._refresh_lock = threading.Lock()
 
         self.topicTVUIBasepath = ""
@@ -146,6 +89,7 @@ class HisenseTvClient:
         if self.client_id:
             self.define_topic_paths()
 
+    # Callback properties and registrations
     @property
     def on_state_update(self):
         return self._state_callbacks[0] if self._state_callbacks else None
@@ -290,21 +234,20 @@ class HisenseTvClient:
             except Exception as e:
                 _LOGGER.error("Error in token refreshed callback: %s", e)
 
-
-    def validate_certificates(self):
+    def validate_certificates(self) -> None:
         """Verifies that the SSL certificate and private key files exist and are readable."""
         if not os.path.isfile(self.certfile):
             raise FileNotFoundError(
                 f"SSL Certificate file not found: '{self.certfile}'. "
-                "Please place 'cert.pem' in the 'certs/' folder or specify --cert."
+                "Please place certificate files in 'certs/' or specify --cert."
             )
         if not os.path.isfile(self.keyfile):
             raise FileNotFoundError(
                 f"SSL Private Key file not found: '{self.keyfile}'. "
-                "Please place 'key.pem' in the 'certs/' folder or specify --key."
+                "Please place key files in 'certs/' or specify --key."
             )
 
-    def test_ssl_connection(self, timeout=5.0):
+    def test_ssl_connection(self, timeout: float = 5.0) -> dict[str, Any]:
         """Tests the raw TLS handshake with the TV on port 36669 without authenticating."""
         self.validate_certificates()
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -326,130 +269,48 @@ class HisenseTvClient:
                 "keyfile": self.keyfile,
             }
 
-    def get_device_fingerprint(self, timeout=2.0):
+    def get_device_fingerprint(self, timeout: float = 2.0) -> dict[str, Any]:
         """Fetches UPnP, DLNA, and mDNS device metadata for model and capability identification."""
-        info = {
-            "friendly_name": None,
-            "model_name": None,
-            "model_number": None,
-            "model_code": None,
-            "manufacturer": None,
-            "brand": None,
-            "platform": None,
-            "vidaa_support": None,
-            "voice": None,
-            "transport_protocol": None,
-            "mac_wifi": None,
-            "mac_ethernet": None,
-            "firmware_version": None,
-            "serial_number": None,
-            "upnp_raw": None,
-        }
-        # 1. Query UPnP / DLNA descriptor on port 38400
-        try:
-            import urllib.request
-            import xml.etree.ElementTree as ET
+        return discover_device_fingerprint(self.ip, timeout=timeout)
 
-            url = f"http://{self.ip}:38400/MediaServer/rendererdevicedesc.xml"
-            req = urllib.request.Request(url, headers={"User-Agent": "HisenseVIDAATestClient"})
-            with urllib.request.urlopen(req, timeout=timeout) as response:
-                content = response.read().decode("utf-8", errors="ignore")
-                root = ET.fromstring(content)
-                ns = {"d": "urn:schemas-upnp-org:device-1-0"}
-                device = root.find("d:device", ns)
-                if device is not None:
-                    fn = device.find("d:friendlyName", ns)
-                    mn = device.find("d:modelName", ns)
-                    mnum = device.find("d:modelNumber", ns)
-                    mfg = device.find("d:manufacturer", ns)
-                    desc = device.find("d:modelDescription", ns)
+    def define_topic_paths(self) -> None:
+        """Sets up topic paths for the specific client ID."""
+        self.topicTVUIBasepath = f"/remoteapp/tv/ui_service/{self.client_id}/"
+        self.topicTVPSBasepath = f"/remoteapp/tv/platform_service/{self.client_id}/"
+        self.topicMobiBasepath = f"/remoteapp/mobile/{self.client_id}/"
+        self.topicRemoBasepath = f"/remoteapp/tv/remote_service/{self.client_id}/"
 
-                    if fn is not None:
-                        info["friendly_name"] = fn.text
-                    if mn is not None:
-                        info["model_name"] = mn.text
-                    if mnum is not None:
-                        info["model_number"] = mnum.text
-                    if mfg is not None:
-                        info["manufacturer"] = mfg.text
+    def generate_initial_creds(self, use_new_auth: bool | None = None) -> None:
+        """Generates initial dynamic credentials for challenge-response pairing."""
+        self.client_id, self.username, self.password = generate_initial_credentials(
+            mac=self.mac,
+            auth_profile=self.auth_profile,
+            use_new_auth=use_new_auth,
+        )
+        self.define_topic_paths()
+        _LOGGER.debug(
+            "Generated initial creds (profile=%s, use_new_auth=%s) - Client ID: %s, Username: %s",
+            self.auth_profile,
+            use_new_auth,
+            self.client_id,
+            self.username,
+        )
 
-                    if desc is not None and desc.text:
-                        info["upnp_raw"] = desc.text.strip()
-                        for line in desc.text.strip().splitlines():
-                            if "=" in line:
-                                k, v = line.split("=", 1)
-                                k, v = k.strip(), v.strip()
-                                if k == "macWifi":
-                                    info["mac_wifi"] = v
-                                elif k == "macEthernet":
-                                    info["mac_ethernet"] = v
-                                elif k == "brand":
-                                    info["brand"] = v
-                                elif k == "platform":
-                                    info["platform"] = v
-                                elif k == "vidaa_support":
-                                    info["vidaa_support"] = v
-                                elif k == "voice":
-                                    info["voice"] = v
-                                elif k == "transport_protocol":
-                                    info["transport_protocol"] = v
-        except Exception as e:
-            _LOGGER.debug(f"UPnP device description query failed: {e}")
+    def create_mqtt_client(self, client_id: str, username: str, password: str) -> mqtt.Client:
+        """Creates and configures an authenticated MQTT client over TLS."""
+        client = mqtt.Client(client_id=client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
+        client.reconnect_delay_set(min_delay=2, max_delay=30)
+        client.tls_set(ca_certs=None, certfile=self.certfile, keyfile=self.keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
+        client.tls_insecure_set(True)
+        client.username_pw_set(username=username, password=password)
 
-        # 2. Query mDNS / Zeroconf if available
-        try:
-            from zeroconf import ServiceBrowser, Zeroconf
+        client.on_connect = self._on_connect
+        client.on_message = self._on_message
+        client.on_disconnect = self._on_disconnect
+        return client
 
-            discovered = {}
-            target_ip = self.ip
-
-            class MDNSListener:
-                def add_service(self, zc, type_, name):
-                    try:
-                        s_info = zc.get_service_info(type_, name)
-                        if s_info:
-                            addrs = [socket.inet_ntoa(a) for a in s_info.addresses]
-                            if target_ip in addrs or "Smart TV" in name:
-                                discovered[type_] = s_info.properties
-                    except Exception:
-                        pass
-
-                def update_service(self, zc, type_, name):
-                    pass
-
-                def remove_service(self, zc, type_, name):
-                    pass
-
-            zc = Zeroconf()
-            ServiceBrowser(zc, ["_airplay._tcp.local.", "_hap._tcp.local."], MDNSListener())
-            time.sleep(1.0)
-            zc.close()
-
-            airplay = discovered.get("_airplay._tcp.local.", {})
-            hap = discovered.get("_hap._tcp.local.", {})
-
-            model_bytes = airplay.get(b"model") or hap.get(b"md")
-            fv_bytes = airplay.get(b"fv")
-            serial_bytes = airplay.get(b"serialNumber")
-            company_bytes = airplay.get(b"company") or airplay.get(b"manufacturer")
-
-            if model_bytes:
-                info["model_code"] = model_bytes.decode("utf-8", errors="ignore")
-            if fv_bytes:
-                info["firmware_version"] = fv_bytes.decode("utf-8", errors="ignore")
-            if serial_bytes:
-                info["serial_number"] = serial_bytes.decode("utf-8", errors="ignore")
-            if company_bytes and not info["manufacturer"]:
-                info["manufacturer"] = company_bytes.decode("utf-8", errors="ignore")
-        except Exception as e:
-            _LOGGER.debug(f"mDNS device discovery skipped: {e}")
-
-        return info
-
-    def probe_auth_methods(self, timeout=2.0):
+    def probe_auth_methods(self, timeout: float = 2.0) -> dict[str, Any]:
         """Probes TV MQTT broker with various auth algorithms to diagnose compatibility."""
-        import threading
-
         results = {
             "legacy_static": {"rc": None, "supported": False},
             "standard_dynamic": {"rc": None, "supported": False},
@@ -474,7 +335,7 @@ class HisenseTvClient:
             results["legacy_static"]["rc"] = leg_rc[0]
             results["legacy_static"]["supported"] = (leg_rc[0] == 0)
         except Exception as e:
-            _LOGGER.debug(f"Legacy static probe error: {e}")
+            _LOGGER.debug("Legacy static probe error: %s", e)
 
         # 2. Standard dynamic pairing (his$<timestamp>)
         try:
@@ -492,7 +353,7 @@ class HisenseTvClient:
             results["standard_dynamic"]["rc"] = std_rc[0]
             results["standard_dynamic"]["supported"] = (std_rc[0] == 0)
         except Exception as e:
-            _LOGGER.debug(f"Standard dynamic probe error: {e}")
+            _LOGGER.debug("Standard dynamic probe error: %s", e)
 
         # 3. Modern XOR dynamic pairing (his$<timestamp ^ XOR>)
         try:
@@ -510,12 +371,12 @@ class HisenseTvClient:
             results["modern_dynamic"]["rc"] = mod_rc[0]
             results["modern_dynamic"]["supported"] = (mod_rc[0] == 0)
         except Exception as e:
-            _LOGGER.debug(f"Modern dynamic probe error: {e}")
+            _LOGGER.debug("Modern dynamic probe error: %s", e)
 
         return results
 
-    def ping(self, timeout=3.0):
-        """Quickly tests if the TV MQTT broker is listening, accepting TLS, and responding to MQTT packets."""
+    def ping(self, timeout: float = 3.0) -> dict[str, Any]:
+        """Quickly tests if TV broker is listening, accepting TLS, and responding to MQTT packets."""
         results = {
             "tcp_port_open": False,
             "tls_handshake": False,
@@ -548,11 +409,8 @@ class HisenseTvClient:
 
         # 3. Test MQTT Broker Response (if credentials available)
         if self.access_token and self.client_id and self.username:
-            import threading
-
             lock = threading.Event()
             rc_holder = [None]
-
             client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
 
             def on_conn(c, userdata, flags, rc):
@@ -582,7 +440,7 @@ class HisenseTvClient:
         else:
             results["mqtt_status"] = "Ready for pairing (no stored credentials)"
 
-        # 4. Probe Auth Methods (Legacy, Standard Dynamic, Modern Dynamic)
+        # 4. Probe Auth Methods
         auth_probe = self.probe_auth_methods(timeout=1.5)
         results["auth_probe"] = auth_probe
 
@@ -590,87 +448,42 @@ class HisenseTvClient:
             results["auth_model"] = "legacy_static"
             results["auth_recommendation"] = (
                 "Your TV accepts legacy static credentials ('hisenseservice'). "
-                "See the README (https://github.com/stevene1919/hisense_vidaa#which-integration-should-you-use) "
-                "for recommended legacy integrations or use this integration without PIN pairing."
+                "See the README for recommended legacy integrations."
             )
         elif auth_probe["modern_dynamic"]["supported"] or auth_probe["standard_dynamic"]["supported"]:
             results["auth_model"] = "modern_vidaa"
             results["auth_recommendation"] = (
-                "Your TV enforces modern VIDAA OS authentication (dynamic PIN pairing supported). "
-                "See README (https://github.com/stevene1919/hisense_vidaa#readme) for setup."
+                "Your TV enforces modern VIDAA OS authentication (dynamic PIN pairing supported)."
             )
         else:
             results["auth_model"] = "unknown"
             results["auth_recommendation"] = (
-                "The TV broker rejected all initial probe connection attempts. "
-                "Ensure TV is awake, connected to WiFi/LAN, and not blocked by firewall or ad-blockers."
+                "The TV broker rejected initial connection attempts. Ensure TV is awake and connected."
             )
 
-        # 5. Retrieve device fingerprint metadata
+        # 5. Device fingerprint
         results["device_info"] = self.get_device_fingerprint(timeout=1.5)
-
         return results
 
-    def _safe_set_future_result(self, future, result):
+    def _safe_set_future_result(self, future: asyncio.Future | None, result: Any) -> None:
         if future and not future.done():
             if self._loop and self._loop.is_running():
                 self._loop.call_soon_threadsafe(future.set_result, result)
             else:
                 future.set_result(result)
 
-    def _safe_set_future_exception(self, future, exc):
+    def _safe_set_future_exception(self, future: asyncio.Future | None, exc: Exception) -> None:
         if future and not future.done():
             if self._loop and self._loop.is_running():
                 self._loop.call_soon_threadsafe(future.set_exception, exc)
             else:
                 future.set_exception(exc)
 
-    def define_topic_paths(self):
-        self.topicTVUIBasepath = f"/remoteapp/tv/ui_service/{self.client_id}/"
-        self.topicTVPSBasepath = f"/remoteapp/tv/platform_service/{self.client_id}/"
-        self.topicMobiBasepath = f"/remoteapp/mobile/{self.client_id}/"
-        self.topicRemoBasepath = f"/remoteapp/tv/remote_service/{self.client_id}/"
-
-    def generate_initial_creds(self, use_new_auth=False):
-        timestamp = int(time.time())
-        # Use provided MAC if available, otherwise generate a random MAC
-        if self.mac and len(self.mac.replace(":", "").replace("-", "")) == 12:
-            cleaned = self.mac.replace("-", ":").upper()
-            mac = cleaned
-        else:
-            mac = ':'.join(f'{random.randint(0, 255):02x}' for _ in range(6)).upper()
-
-        second_hash = hashlib.md5(f"38D65DC30F45109A369A86FCE866A85B${mac}".encode()).hexdigest().upper()
-        last_digit_of_cross_sum = sum(int(digit) for digit in str(timestamp)) % 10
-        third_hash = hashlib.md5(f"his{last_digit_of_cross_sum}h*i&s%e!r^v0i1c9".encode()).hexdigest().upper()
-        fourth_hash = hashlib.md5(f"{timestamp}${third_hash[:6]}".encode()).hexdigest().upper()
-
-        if use_new_auth:
-            self.username = f"his${timestamp ^ 6239759785777146216}"
-        else:
-            self.username = f"his${timestamp}"
-
-        self.password = fourth_hash
-        self.client_id = f"{mac}$his${second_hash[:6]}_vidaacommon_001"
-        self.define_topic_paths()
-        _LOGGER.debug(f"Generated initial creds - Client ID: {self.client_id}, Username: {self.username}")
-
-    def create_mqtt_client(self, client_id, username, password):
-        client = mqtt.Client(client_id=client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
-        client.tls_set(ca_certs=None, certfile=self.certfile, keyfile=self.keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
-        client.tls_insecure_set(True)
-        client.username_pw_set(username=username, password=password)
-
-        client.on_connect = self._on_connect
-        client.on_message = self._on_message
-        client.on_disconnect = self._on_disconnect
-        return client
-
-    def _on_connect(self, client, userdata, flags, rc):
+    def _on_connect(self, client: mqtt.Client, userdata: Any, flags: Any, rc: int) -> None:
         if rc == 0:
             self.connected = True
             _LOGGER.info("Connected to TV MQTT Broker")
-            if hasattr(self, 'topicBrcsBasepath'):
+            if hasattr(self, "topicBrcsBasepath"):
                 client.subscribe([
                     (self.topicBrcsBasepath + "ui_service/state", 0),
                     (self.topicBrcsBasepath + "platform_service/actions/volumechange", 0),
@@ -681,12 +494,14 @@ class HisenseTvClient:
                     (self.topicMobiBasepath + "platform_service/data/getvolume", 0),
                 ])
                 if self.on_state_update:
-                    import threading
                     threading.Timer(1.0, self.query_initial_state).start()
         else:
-            _LOGGER.error(f"Failed to connect to TV MQTT Broker, rc: {rc}")
+            _LOGGER.error("Failed to connect to TV MQTT Broker, rc: %d", rc)
             if self._auth_future and not self._auth_future.done():
-                self._safe_set_future_exception(self._auth_future, Exception(f"MQTT connection rejected with code {rc} (Not authorized / invalid credentials)"))
+                self._safe_set_future_exception(
+                    self._auth_future,
+                    Exception(f"MQTT connection rejected with code {rc} (Not authorized / invalid credentials)"),
+                )
                 return
 
             if rc in (4, 5) and self.refresh_token:
@@ -695,13 +510,11 @@ class HisenseTvClient:
                     should_refresh = not self._refreshing_token and (current_time - self._last_refresh_attempt > 10)
                 if should_refresh:
                     _LOGGER.info("Authentication failed on connect. Refreshing token in background...")
-                    import threading
                     threading.Thread(target=self._refresh_token_and_update_creds, daemon=True).start()
 
-    def _refresh_token_and_update_creds(self):
+    def _refresh_token_and_update_creds(self) -> None:
         with self._refresh_lock:
             if self._refreshing_token or not self.refresh_token:
-                _LOGGER.debug("Token refresh already in progress or no refresh token, skipping spawn.")
                 return
             self._refreshing_token = True
             self._last_refresh_attempt = time.time()
@@ -709,32 +522,33 @@ class HisenseTvClient:
         try:
             if self.check_and_refresh_token(force=True):
                 _LOGGER.info("Token successfully refreshed on connection failure. Updating client credentials.")
-                self.mqtt_client.username_pw_set(username=self.username, password=self.access_token)
-                self.mqtt_client.reconnect()
+                if self.mqtt_client:
+                    self.mqtt_client.username_pw_set(username=self.username, password=self.access_token)
+                    self.mqtt_client.reconnect()
             else:
                 _LOGGER.warning("Token refresh failed. Waiting before next attempt.")
         except Exception as e:
-            _LOGGER.error(f"Error during background token refresh: {e}")
+            _LOGGER.error("Error during background token refresh: %s", e)
         finally:
             with self._refresh_lock:
                 self._refreshing_token = False
 
-    def _on_disconnect(self, client, userdata, rc):
+    def _on_disconnect(self, client: mqtt.Client, userdata: Any, rc: int) -> None:
         self.connected = False
-        _LOGGER.info(f"Disconnected from TV MQTT Broker, rc: {rc}")
+        _LOGGER.info("Disconnected from TV MQTT Broker, rc: %d", rc)
         self._dispatch_disconnected()
 
-    def _on_message(self, client, userdata, msg):
+    def _on_message(self, client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
         topic = msg.topic
-        payload = msg.payload.decode('utf-8')
-        _LOGGER.debug(f"Message received: {payload} on topic {topic}")
+        payload = msg.payload.decode("utf-8", errors="ignore")
+        _LOGGER.debug("Message received: %s on topic %s", payload, topic)
 
         # Check authentication futures
-        if self._auth_future and topic == self.topicMobiBasepath + 'ui_service/data/authentication':
+        if self._auth_future and topic == self.topicMobiBasepath + "ui_service/data/authentication":
             self._safe_set_future_result(self._auth_future, payload)
-        elif self._auth_code_future and topic == self.topicMobiBasepath + 'ui_service/data/authenticationcode':
+        elif self._auth_code_future and topic == self.topicMobiBasepath + "ui_service/data/authenticationcode":
             self._safe_set_future_result(self._auth_code_future, payload)
-        elif self._token_future and topic == self.topicMobiBasepath + 'platform_service/data/tokenissuance':
+        elif self._token_future and topic == self.topicMobiBasepath + "platform_service/data/tokenissuance":
             self._safe_set_future_result(self._token_future, payload)
 
         # Handle state push callbacks
@@ -743,13 +557,13 @@ class HisenseTvClient:
                 data = json.loads(payload)
                 self._dispatch_state_update(data)
             except Exception as e:
-                _LOGGER.error(f"Error parsing state: {e}")
+                _LOGGER.error("Error parsing state: %s", e)
         elif topic in (self.topicBrcsBasepath + "platform_service/actions/volumechange", self.topicMobiBasepath + "platform_service/data/getvolume"):
             try:
                 data = json.loads(payload)
                 self._dispatch_volume_update(data)
             except Exception as e:
-                _LOGGER.error(f"Error parsing volume: {e}")
+                _LOGGER.error("Error parsing volume: %s", e)
         elif topic == self.topicBrcsBasepath + "platform_service/actions/tvsleep":
             self._dispatch_state_update({"statetype": "fake_sleep_0"})
         elif topic == self.topicMobiBasepath + "ui_service/data/sourcelist":
@@ -757,26 +571,32 @@ class HisenseTvClient:
                 data = json.loads(payload)
                 self._dispatch_sourcelist_update(data)
             except Exception as e:
-                _LOGGER.error(f"Error parsing sourcelist: {e}")
+                _LOGGER.error("Error parsing sourcelist: %s", e)
         elif topic == self.topicMobiBasepath + "ui_service/data/applist":
             try:
                 data = json.loads(payload)
                 self._dispatch_applist_update(data)
             except Exception as e:
-                _LOGGER.error(f"Error parsing applist: {e}")
+                _LOGGER.error("Error parsing applist: %s", e)
 
-    async def async_start_auth(self):
+    async def async_start_auth(self) -> None:
         """Starts the authentication handshake and triggers the TV to show PIN."""
-        try:
+        if self.auth_profile in ("modern", "vidaa_2024", "vidaa"):
+            await self._async_start_auth_internal(use_new_auth=True)
+        elif self.auth_profile in ("remotenow", "remotenow_2018", "standard"):
             await self._async_start_auth_internal(use_new_auth=False)
-        except Exception as e:
-            if "code 5" in str(e):
-                _LOGGER.info("Standard auth failed with rc 5, trying new auth method...")
-                await self._async_start_auth_internal(use_new_auth=True)
-            else:
-                raise
+        else:  # auto
+            try:
+                await self._async_start_auth_internal(use_new_auth=False)
+            except Exception as e:
+                err_msg = str(e)
+                if "code 5" in err_msg or "code 4" in err_msg or "Not authorized" in err_msg:
+                    _LOGGER.info("Standard auth failed (%s), auto-falling back to modern VIDAA auth...", err_msg)
+                    await self._async_start_auth_internal(use_new_auth=True)
+                else:
+                    raise
 
-    async def _async_start_auth_internal(self, use_new_auth=False):
+    async def _async_start_auth_internal(self, use_new_auth: bool = False) -> None:
         self.generate_initial_creds(use_new_auth=use_new_auth)
         loop = asyncio.get_running_loop()
         self._loop = loop
@@ -785,7 +605,6 @@ class HisenseTvClient:
         )
 
         self._auth_future = loop.create_future()
-
         self.mqtt_client.connect_async(self.ip, 36669, 60)
         self.mqtt_client.loop_start()
 
@@ -794,52 +613,62 @@ class HisenseTvClient:
             if self.connected:
                 break
             if self._auth_future.done() and self._auth_future.exception():
-                self.mqtt_client.loop_stop()
-                self.mqtt_client.disconnect()
+                self.disconnect()
                 raise self._auth_future.exception()
             await asyncio.sleep(0.2)
 
         if not self.connected:
-            self.mqtt_client.loop_stop()
-            self.mqtt_client.disconnect()
+            self.disconnect()
             raise Exception("Cannot connect to TV MQTT Broker (connection timeout)")
 
         self.mqtt_client.subscribe([
-            (self.topicTVUIBasepath + 'actions/vidaa_app_connect', 0),
-            (self.topicMobiBasepath + 'ui_service/data/authentication', 0),
-            (self.topicMobiBasepath + 'ui_service/data/authenticationcode', 0),
-            (self.topicMobiBasepath + 'platform_service/data/tokenissuance', 0),
+            (self.topicTVUIBasepath + "actions/vidaa_app_connect", 0),
+            (self.topicMobiBasepath + "ui_service/data/authentication", 0),
+            (self.topicMobiBasepath + "ui_service/data/authenticationcode", 0),
+            (self.topicMobiBasepath + "platform_service/data/tokenissuance", 0),
         ])
 
-        # Publish connection message to trigger PIN
-        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/vidaa_app_connect",
-                                  '{"app_version":2,"connect_result":0,"device_type":"Mobile App"}')
+        # Allow broker time to register subscriptions before publishing
+        await asyncio.sleep(0.5)
 
-        # Wait for TV response triggering PIN
-        try:
-            await asyncio.wait_for(self._auth_future, timeout=15)
-        except TimeoutError:
-            self.mqtt_client.loop_stop()
-            self.mqtt_client.disconnect()
-            raise Exception("TV authentication request timed out")
-        finally:
-            self._auth_future = None
+        # Publish connection message to trigger PIN with retry if TV dropped first frame
+        for attempt in range(3):
+            self.mqtt_client.publish(
+                self.topicTVUIBasepath + "actions/vidaa_app_connect",
+                '{"app_version":2,"connect_result":0,"device_type":"Mobile App"}',
+            )
+            try:
+                await asyncio.wait_for(asyncio.shield(self._auth_future), timeout=4.0)
+                break
+            except TimeoutError:
+                if attempt < 2 and not self._auth_future.done():
+                    _LOGGER.debug("No response to vidaa_app_connect on attempt %d, retrying...", attempt + 1)
+                    await asyncio.sleep(0.5)
+                else:
+                    self.disconnect()
+                    raise Exception("TV authentication request timed out (TV did not show PIN)")
+        self._auth_future = None
 
-    async def async_submit_pin(self, pin_code):
-        """Submits the PIN code entered by the user."""
+    async def async_submit_pin(self, pin_code: str) -> dict[str, Any]:
+        """Submits the PIN code entered by the user and retrieves token pair."""
         loop = asyncio.get_running_loop()
         self._loop = loop
         self._auth_code_future = loop.create_future()
 
-        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/authenticationcode",
-                                  json.dumps({"authNum": int(pin_code)}))
+        if not self.mqtt_client:
+            raise Exception("MQTT client not initialized")
+
+        self.mqtt_client.publish(
+            self.topicTVUIBasepath + "actions/authenticationcode",
+            json.dumps({"authNum": int(pin_code)}),
+        )
 
         try:
             payload_str = await asyncio.wait_for(self._auth_code_future, timeout=15)
-            _LOGGER.debug(f"Received PIN response payload: {payload_str}")
+            _LOGGER.debug("Received PIN response payload: %s", payload_str)
             payload = json.loads(payload_str)
             if payload.get("result") != 1:
-                _LOGGER.error(f"PIN validation rejected with payload: {payload_str}")
+                _LOGGER.error("PIN validation rejected with payload: %s", payload_str)
                 raise Exception(f"Incorrect PIN code (TV response: {payload_str})")
         except TimeoutError:
             raise Exception("Timeout waiting for PIN validation")
@@ -867,72 +696,63 @@ class HisenseTvClient:
             raise Exception("Timeout waiting for tokens")
         finally:
             self._token_future = None
-            self.mqtt_client.loop_stop()
-            self.mqtt_client.disconnect()
+            self.disconnect()
 
-    def check_and_refresh_token(self, force=False):
-        """Checks if access token is expired (valid for 2 hours) and refreshes it synchronously."""
+    def check_and_refresh_token(self, force: bool = False) -> bool:
+        """Checks if access token is expired (valid for 2 days) and refreshes it synchronously."""
         if not self.refresh_token:
             _LOGGER.debug("No refresh token available, skipping refresh.")
             return False
 
         current_time = time.time()
-        expiration_time = self.access_token_time + (2 * 60 * 60) # 2 hours duration
+        expiration_time = self.access_token_time + (2 * 60 * 60)
 
-        # If token is still valid, return (unless forced)
-        if not force and current_time <= expiration_time - 300: # 5 minutes buffer
+        if not force and current_time <= expiration_time - 300:
             return False
 
         _LOGGER.info("Access token expired or close to expiry, refreshing...")
-
-        # We must use the exact registered client ID because the TV broker validates it against the pairing whitelist
         client = mqtt.Client(client_id=self.client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
         client.tls_set(ca_certs=None, certfile=self.certfile, keyfile=self.keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
         client.tls_insecure_set(True)
         client.username_pw_set(username=self.username, password=self.refresh_token)
 
-        # Synchronous wait wrapper
-        import threading
         lock = threading.Event()
-        updated_data = {}
+        updated_data: dict[str, Any] = {}
         connect_rc = [None]
 
         def on_refresh_connect(client, userdata, flags, rc):
-            _LOGGER.debug(f"Refresh client connection result: {rc}")
             connect_rc[0] = rc
             if rc == 0:
-                client.subscribe(self.topicMobiBasepath + 'platform_service/data/tokenissuance')
-                client.publish(f"/remoteapp/tv/platform_service/{self.client_id}/data/gettoken",
-                               json.dumps({"refreshtoken": self.refresh_token}))
+                _LOGGER.info("Refresh client connected successfully. Requesting new access token.")
+                client.publish(self.topicTVPSBasepath + "data/gettoken", '{"refreshtoken": ""}')
             else:
+                _LOGGER.error("Refresh client connection failed, rc: %d", rc)
                 lock.set()
 
         def on_token(client, userdata, msg):
             nonlocal updated_data
-            _LOGGER.debug(f"Refresh client received token payload: {msg.payload}")
             try:
-                updated_data = json.loads(msg.payload.decode('utf-8'))
+                updated_data = json.loads(msg.payload.decode("utf-8"))
             except Exception as e:
-                _LOGGER.error(f"Error parsing refreshed token: {e}")
+                _LOGGER.error("Error parsing refreshed token: %s", e)
             lock.set()
 
         client.on_connect = on_refresh_connect
         client.on_message = None
-        client.on_disconnect = lambda client, userdata, rc: _LOGGER.debug(f"Refresh client disconnected: {rc}")
-        client.message_callback_add(self.topicMobiBasepath + 'platform_service/data/tokenissuance', on_token)
+        client.on_disconnect = lambda client, userdata, rc: _LOGGER.debug("Refresh client disconnected: %d", rc)
+        client.message_callback_add(self.topicMobiBasepath + "platform_service/data/tokenissuance", on_token)
 
         try:
             client.connect(self.ip, 36669, 60)
             client.loop_start()
 
-            # Wait up to 10 seconds
             start = time.time()
             while not lock.is_set() and time.time() - start < 10:
                 time.sleep(0.1)
         except (OSError, TimeoutError) as e:
-            _LOGGER.debug(f"TV is offline or unreachable during token refresh: {e}")
+            _LOGGER.debug("TV is offline or unreachable during token refresh: %s", e)
         except Exception as e:
-            _LOGGER.error(f"Unexpected error during refresh client connection/loop: {e}")
+            _LOGGER.error("Unexpected error during refresh client connection: %s", e)
         finally:
             client.loop_stop()
             client.disconnect()
@@ -948,23 +768,28 @@ class HisenseTvClient:
             return True
 
         if connect_rc[0] is not None:
-            _LOGGER.error(f"Failed to refresh token. Connect RC: {connect_rc[0]}")
+            _LOGGER.error("Failed to refresh token. Connect RC: %d", connect_rc[0])
         return False
 
-    def connect_and_run(self):
+    def connect_and_run(self) -> None:
         """Main client connection loop using the access token as password."""
         try:
             self.check_and_refresh_token()
         except Exception as e:
-            _LOGGER.debug(f"Could not refresh token during startup (TV may be in standby): {e}")
+            _LOGGER.debug("Could not refresh token during startup (TV may be in standby): %s", e)
+
+        if not self.access_token or not self.client_id or not self.username:
+            _LOGGER.error("Cannot connect to TV: missing credentials (client_id, username, or access_token)")
+            return
 
         self.mqtt_client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
-        _LOGGER.info("Starting background MQTT connection loop to TV")
+        _LOGGER.info("Starting background MQTT connection loop to TV at %s", self.ip)
         self.mqtt_client.connect_async(self.ip, 36669, 60)
         self.mqtt_client.loop_start()
 
-    def query_initial_state(self):
-        if self.connected:
+    def query_initial_state(self) -> None:
+        """Queries initial state, volume, source list, and app list from TV."""
+        if self.connected and self.mqtt_client:
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/gettvstate", "")
             time.sleep(0.1)
             self.mqtt_client.publish(self.topicTVPSBasepath + "actions/getvolume", "")
@@ -993,8 +818,9 @@ class HisenseTvClient:
             _LOGGER.warning("Failed to send Wake-on-LAN packet to %s: %s", mac, e)
             return False
 
-    def send_key(self, key):
-        if self.connected:
+    def send_key(self, key: str) -> None:
+        """Publishes a raw keypress event to the TV."""
+        if self.connected and self.mqtt_client:
             self.mqtt_client.publish(self.topicRemoBasepath + "actions/sendkey", key)
 
     def send_command(self, command: str) -> bool:
@@ -1006,21 +832,25 @@ class HisenseTvClient:
         self.send_key(key_to_send)
         return True
 
-    def set_volume(self, volume):
-        if self.connected:
+    def set_volume(self, volume: int) -> None:
+        """Sets the absolute volume on the TV (0–100)."""
+        if self.connected and self.mqtt_client:
             self.mqtt_client.publish(self.topicTVPSBasepath + "actions/changevolume", str(volume))
 
-    def change_source(self, source_id):
-        if self.connected:
+    def change_source(self, source_id: str) -> None:
+        """Switches the active input source on the TV."""
+        if self.connected and self.mqtt_client:
             payload = json.dumps({"sourceid": source_id})
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/changesource", payload)
 
-    def launch_app(self, app_id, app_name, url):
-        if self.connected:
+    def launch_app(self, app_id: str, app_name: str, url: str) -> None:
+        """Launches an installed Smart TV application."""
+        if self.connected and self.mqtt_client:
             payload = json.dumps({"appId": app_id, "name": app_name, "url": url})
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/launchapp", payload)
 
-    async def async_query(self, pub_topic, sub_topic, payload=None):
+    async def async_query(self, pub_topic: str, sub_topic: str, payload: str | None = None) -> Any:
+        """Publishes a query to the TV and asynchronously awaits the response topic."""
         if not self.mqtt_client:
             raise Exception("MQTT client not initialized")
 
@@ -1028,7 +858,7 @@ class HisenseTvClient:
         future = loop.create_future()
 
         def on_msg(client, userdata, msg):
-            loop.call_soon_threadsafe(future.set_result, msg.payload.decode('utf-8'))
+            loop.call_soon_threadsafe(future.set_result, msg.payload.decode("utf-8"))
 
         self.mqtt_client.message_callback_add(sub_topic, on_msg)
         self.mqtt_client.subscribe(sub_topic)
@@ -1038,13 +868,23 @@ class HisenseTvClient:
             result = await asyncio.wait_for(future, timeout=10)
             return json.loads(result)
         except Exception as e:
-            _LOGGER.error(f"Error querying {pub_topic}: {e}")
+            _LOGGER.error("Error querying %s: %s", pub_topic, e)
             raise e
         finally:
             self.mqtt_client.unsubscribe(sub_topic)
             self.mqtt_client.message_callback_remove(sub_topic)
 
-    def disconnect(self):
+    def disconnect(self) -> None:
+        """Cleanly disconnects the MQTT client and stops the background network thread."""
         if self.mqtt_client:
-            self.mqtt_client.loop_stop()
-            self.mqtt_client.disconnect()
+            try:
+                self.mqtt_client.on_connect = None
+                self.mqtt_client.on_disconnect = None
+                self.mqtt_client.on_message = None
+                self.mqtt_client.loop_stop()
+                self.mqtt_client.disconnect()
+            except Exception as e:
+                _LOGGER.debug("Error during client disconnect: %s", e)
+            finally:
+                self.mqtt_client = None
+                self.connected = False

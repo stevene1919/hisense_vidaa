@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import voluptuous as vol
@@ -6,9 +7,11 @@ from homeassistant.core import callback
 
 from .client import HisenseTvClient
 from .const import (
+    AUTH_PROFILES,
     CONF_ACCESS_TOKEN,
     CONF_ACCESS_TOKEN_DURATION,
     CONF_ACCESS_TOKEN_TIME,
+    CONF_AUTH_PROFILE,
     CONF_CLIENT_ID,
     CONF_ENABLE_REMOTE,
     CONF_ENABLE_WOL,
@@ -20,11 +23,14 @@ from .const import (
     CONF_REFRESH_TOKEN_DURATION,
     CONF_REFRESH_TOKEN_TIME,
     CONF_USERNAME,
+    DEFAULT_AUTH_PROFILE,
     DEFAULT_ENABLE_REMOTE,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
     DOMAIN,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -33,6 +39,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self.ip_address: str | None = None
         self.mac_address: str | None = None
+        self.auth_profile: str = DEFAULT_AUTH_PROFILE
         self.client: HisenseTvClient | None = None
         self.discovered_title: str | None = None
 
@@ -50,6 +57,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             self.ip_address = user_input[CONF_IP_ADDRESS]
+            self.auth_profile = user_input.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
 
             # Attempt automatic MAC address resolution from ARP cache
             try:
@@ -67,7 +75,9 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.mac_address = None
 
             # Start the client connection to TV
-            self.client = HisenseTvClient(self.ip_address, self.mac_address)
+            self.client = HisenseTvClient(
+                self.ip_address, self.mac_address, auth_profile=self.auth_profile
+            )
             try:
                 await self.client.async_start_auth()
 
@@ -87,13 +97,17 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._abort_if_unique_id_configured()
 
                 return await self.async_step_auth()
-            except Exception:
+            except Exception as e:
+                _LOGGER.exception("Failed to connect or initiate auth with TV at %s: %s", self.ip_address, e)
                 errors["base"] = "cannot_connect"
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required(CONF_IP_ADDRESS): str,
+                vol.Optional(
+                    CONF_AUTH_PROFILE, default=DEFAULT_AUTH_PROFILE
+                ): vol.In(AUTH_PROFILES),
             }),
             errors=errors,
         )
@@ -124,7 +138,8 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     pass
 
                 return await self.async_step_options()
-            except Exception:
+            except Exception as e:
+                _LOGGER.exception("Failed to validate PIN or retrieve tokens from TV: %s", e)
                 errors["base"] = "invalid_auth"
 
         return self.async_show_form(
@@ -145,6 +160,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data={
                     CONF_IP_ADDRESS: self.ip_address,
                     CONF_MAC_ADDRESS: self.mac_address,
+                    CONF_AUTH_PROFILE: self.auth_profile,
                     CONF_CLIENT_ID: self.client.client_id,
                     CONF_USERNAME: self.client.username,
                     CONF_PASSWORD: self.client.password,

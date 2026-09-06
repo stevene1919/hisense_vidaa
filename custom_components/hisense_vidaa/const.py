@@ -17,7 +17,71 @@ DEFAULT_NAME = "Hisense TV"
 CONF_ENABLE_REMOTE = "enable_remote"
 CONF_ENABLE_WOL = "enable_wol"
 CONF_INCLUDE_APPS_IN_SOURCES = "include_apps_in_sources"
+CONF_AUTH_PROFILE = "auth_profile"
 
 DEFAULT_ENABLE_REMOTE = True
 DEFAULT_ENABLE_WOL = False
 DEFAULT_INCLUDE_APPS_IN_SOURCES = True
+DEFAULT_AUTH_PROFILE = "auto"
+
+AUTH_PROFILES = {
+    "auto": "Auto Detect (Recommended)",
+    "modern": "VIDAA 2.0 (Newer Firmware / 2024+)",
+    "remotenow": "RemoteNOW (Standard / 2018–2023)",
+}
+
+KEY_ALIASES = {
+    "power": "KEY_POWER",
+    "up": "KEY_UP",
+    "down": "KEY_DOWN",
+    "left": "KEY_LEFT",
+    "right": "KEY_RIGHT",
+    "ok": "KEY_OK",
+    "enter": "KEY_OK",
+    "select": "KEY_OK",
+    "back": "KEY_RETURNS",
+    "return": "KEY_RETURNS",
+    "returns": "KEY_RETURNS",
+    "home": "KEY_HOME",
+    "menu": "KEY_MENU",
+    "exit": "KEY_EXIT",
+    "info": "KEY_INFO",
+    "volume_up": "KEY_VOLUMEUP",
+    "volumeup": "KEY_VOLUMEUP",
+    "volume_down": "KEY_VOLUMEDOWN",
+    "volumedown": "KEY_VOLUMEDOWN",
+    "mute": "KEY_MUTE",
+    "channel_up": "KEY_CHANNELUP",
+    "channelup": "KEY_CHANNELUP",
+    "channel_down": "KEY_CHANNELDOWN",
+    "channeldown": "KEY_CHANNELDOWN",
+    "play": "KEY_PLAY",
+    "pause": "KEY_PAUSE",
+    "stop": "KEY_STOP",
+    "fast_forward": "KEY_FORWARDS",
+    "fastforward": "KEY_FORWARDS",
+    "forwards": "KEY_FORWARDS",
+    "rewind": "KEY_BACK",
+    "subtitle": "KEY_SUBTITLE",
+    "subtitles": "KEY_SUBTITLE",
+    "guide": "KEY_EPG",
+    "epg": "KEY_EPG",
+    "red": "KEY_RED",
+    "green": "KEY_GREEN",
+    "yellow": "KEY_YELLOW",
+    "blue": "KEY_BLUE",
+    "netflix": "KEY_NETFLIX",
+    "youtube": "KEY_YOUTUBE",
+    "prime": "KEY_PRIME",
+    "disney": "KEY_DISNEY",
+    "0": "KEY_0",
+    "1": "KEY_1",
+    "2": "KEY_2",
+    "3": "KEY_3",
+    "4": "KEY_4",
+    "5": "KEY_5",
+    "6": "KEY_6",
+    "7": "KEY_7",
+    "8": "KEY_8",
+    "9": "KEY_9",
+}
