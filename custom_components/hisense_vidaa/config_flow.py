@@ -42,7 +42,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
-        return HisenseVidaaOptionsFlowHandler(config_entry)
+        return HisenseVidaaOptionsFlowHandler()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -185,9 +185,6 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle Hisense VIDAA options."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
