@@ -2,6 +2,12 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [1.4.0] - 2026-09-06
+
+### Added
+- **NEW VIDAA FIRMWARE AUTHENTICATION FALLBACK**: Added support for newer VIDAA OS firmware versions (e.g. `V0000.09.09U.P1027`) where the internal broker rejects pairing with MQTT `rc: 5`. The integration now automatically falls back to XOR timestamp credential hashing (`his${timestamp ^ 6239759785777146216}`) on `rc: 5` pairing failures.
+- **IMPROVED CONNECTION CLEANUP**: Ensured MQTT client disconnect and loop termination on failed initial pairing attempts.
+
 ## [1.3.1] - 2026-09-04
 
 ### Changed
