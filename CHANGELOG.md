@@ -2,6 +2,13 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [1.4.1] - 2026-09-06
+
+### Added
+- **GITHUB ISSUE DIAGNOSTIC REPORT (`report`)**: Added `python3 test_client.py report --ip <IP>` command generating a pre-formatted, redacted Markdown diagnostic block with hardware specs, firmware indicators, and auth capabilities ready to paste into GitHub issues.
+- **ACTIVE MULTI-TIER AUTH PROBING**: Enhanced `ping` and `report` with live compatibility testing for standard dynamic (`his$<timestamp>`), modern dynamic (XOR), and legacy static (`hisenseservice`) pairing handshakes.
+- **AUTOMATED DEVICE FINGERPRINTING**: Added UPnP/DLNA XML parser and mDNS discovery to automatically identify TV model names, VIDAA platform capabilities, and Wi-Fi / Ethernet MAC addresses.
+
 ## [1.4.0] - 2026-09-06
 
 ### Added

@@ -84,25 +84,54 @@ def do_ping(ip, creds, certfile, keyfile):
 
     try:
         res = client.ping()
+        dev = res.get("device_info") or {}
+        auth_probe = res.get("auth_probe") or {}
+
         print("\n📡 Connection Probe Results:")
-        print(f"  • [1] TCP Port 36669:    {'✅ OPEN' if res['tcp_port_open'] else '❌ CLOSED / UNREACHABLE'}")
-        print(f"  • [2] TLS Handshake:     {'✅ SUCCESS' if res['tls_handshake'] else '❌ FAILED'} ({res.get('tls_version') or 'N/A'}, {res.get('cipher') or 'N/A'})")
+        print(f"  • [1] TCP Port 36669:         {'✅ OPEN' if res['tcp_port_open'] else '❌ CLOSED / UNREACHABLE'}")
+        print(f"  • [2] TLS Handshake:          {'✅ SUCCESS' if res['tls_handshake'] else '❌ FAILED'} ({res.get('tls_version') or 'N/A'}, {res.get('cipher') or 'N/A'})")
 
         if res.get("mqtt_rc") is not None:
             if res["mqtt_connected"]:
-                print("  • [3] MQTT Broker Auth:  ✅ ACCEPTED (rc=0, broker is actively listening and responsive)")
+                print("  • [3] Stored Credentials:     ✅ ACCEPTED (rc=0, broker is actively listening and responsive)")
             else:
-                print(f"  • [3] MQTT Broker Auth:  ⚠️ {res['mqtt_status']}")
+                print(f"  • [3] Stored Credentials:     ⚠️ {res['mqtt_status']}")
         else:
-            print(f"  • [3] MQTT Broker State: ℹ️ {res['mqtt_status']}")
+            print(f"  • [3] Stored Credentials:     ℹ️ {res['mqtt_status']}")
+
+        print("\n🔐 Initial Pairing Auth Compatibility:")
+        std = auth_probe.get("standard_dynamic", {})
+        modern = auth_probe.get("modern_dynamic", {})
+        legacy = auth_probe.get("legacy_static", {})
+
+        std_p_str = "✅ ACCEPTED (rc=0)" if std.get("supported") else f"❌ REJECTED (rc={std.get('rc')})"
+        mod_p_str = "✅ ACCEPTED (rc=0)" if modern.get("supported") else f"❌ REJECTED (rc={modern.get('rc')})"
+        leg_p_str = "✅ ACCEPTED (rc=0)" if legacy.get("supported") else f"❌ REJECTED (rc={legacy.get('rc')})"
+
+        print(f"  • Standard Dynamic Auth:      {std_p_str}")
+        print(f"  • Modern XOR Dynamic Auth:    {mod_p_str}")
+        print(f"  • Legacy Static Auth:         {leg_p_str}")
+
+        if dev.get("model_code") or dev.get("model_name") or dev.get("friendly_name"):
+            mfg = dev.get("manufacturer") or dev.get("brand") or "Hisense"
+            model = dev.get("model_code") or dev.get("model_name") or dev.get("friendly_name")
+            print(f"\n📺 Discovered TV Profile: {mfg} {model}")
+            if dev.get("firmware_version"):
+                print(f"  • Firmware Build:             {dev['firmware_version']}")
+            if dev.get("platform"):
+                print(f"  • Platform Indicator:         Platform {dev['platform']}")
+
+        arp_mac = get_arp_mac(ip)
+        if arp_mac:
+            print(f"  • Discovered MAC (ARP):       {arp_mac}")
+        if dev.get("mac_wifi"):
+            print(f"  • Wi-Fi MAC (UPnP):           {dev['mac_wifi']}")
+        if dev.get("mac_ethernet"):
+            print(f"  • Ethernet MAC (UPnP):        {dev['mac_ethernet']}")
 
         if res.get("auth_recommendation"):
             print("\n💡 Firmware Compatibility & Integration Recommendation:")
             print(f"  • {res['auth_recommendation']}")
-
-        arp_mac = get_arp_mac(ip)
-        if arp_mac:
-            print(f"\n🔍 Discovered Hardware MAC: {arp_mac}")
 
         if res.get("error"):
             print(f"\n⚠️ Notice: {res['error']}")
@@ -111,6 +140,98 @@ def do_ping(ip, creds, certfile, keyfile):
         sys.exit(1)
     except Exception as e:
         print(f"\n❌ Probe Failed: {e}")
+        sys.exit(1)
+
+
+def do_report(ip, mac, creds, certfile, keyfile):
+    print(f"\n🔍 [REPORT] Collecting diagnostics and generating GitHub issue report for {ip}...\n")
+
+    access_token = None
+    client_id = None
+    username = None
+    if creds:
+        access_token = creds.get("accesstoken") or creds.get("access_token")
+        client_id = creds.get("client_id")
+        username = creds.get("username")
+
+    client = HisenseTvClient(
+        ip=ip,
+        mac=mac,
+        client_id=client_id,
+        username=username,
+        access_token=access_token,
+        certfile=certfile,
+        keyfile=keyfile
+    )
+
+    try:
+        res = client.ping(timeout=3.0)
+        dev = res.get("device_info") or {}
+        auth_probe = res.get("auth_probe") or {}
+        arp_mac = mac or get_arp_mac(ip)
+
+        version = "Unknown"
+        manifest_path = os.path.join(COMP_DIR, "manifest.json")
+        if os.path.exists(manifest_path):
+            try:
+                with open(manifest_path) as f:
+                    version = json.load(f).get("version", "Unknown")
+            except Exception:
+                pass
+
+        print("=" * 70)
+        print("📋 Copy & Paste the Markdown below into your GitHub Issue report:")
+        print("=" * 70 + "\n")
+
+        print("### 📺 Hardware & System Information")
+        model_str = dev.get("model_code") or dev.get("model_name") or dev.get("friendly_name") or "Unknown"
+        mfg_str = dev.get("manufacturer") or dev.get("brand") or "Hisense"
+        fv_str = dev.get("firmware_version") or "N/A"
+        print(f"- **TV Model:** {mfg_str} {model_str}")
+        if dev.get("model_number"):
+            print(f"- **Model Number:** {dev['model_number']}")
+        if dev.get("platform"):
+            print(f"- **VIDAA Platform Indicator:** Platform {dev['platform']} (Voice: {dev.get('voice', 'N/A')}, Transport: {dev.get('transport_protocol', 'N/A')})")
+        print(f"- **Discovered Firmware Build:** {fv_str}")
+        if arp_mac:
+            print(f"- **Discovered MAC (ARP):** `{arp_mac}`")
+        if dev.get("mac_wifi"):
+            print(f"- **Wi-Fi MAC (UPnP):** `{dev['mac_wifi']}`")
+        if dev.get("mac_ethernet"):
+            print(f"- **Ethernet MAC (UPnP):** `{dev['mac_ethernet']}`")
+
+        print("\n### 📡 Connectivity & TLS Status")
+        tcp_status = "✅ OPEN" if res.get("tcp_port_open") else "❌ CLOSED"
+        tls_status = "✅ SUCCESS" if res.get("tls_handshake") else "❌ FAILED"
+        print(f"- **Port 36669 (TCP):** {tcp_status}")
+        print(f"- **TLS Handshake:** {tls_status} ({res.get('tls_version') or 'N/A'}, {res.get('cipher') or 'N/A'})")
+
+        print("\n### 🔐 MQTT Authentication Capabilities")
+        legacy = auth_probe.get("legacy_static", {})
+        std = auth_probe.get("standard_dynamic", {})
+        modern = auth_probe.get("modern_dynamic", {})
+
+        leg_str = "✅ ACCEPTED (rc=0)" if legacy.get("supported") else f"❌ REJECTED (rc={legacy.get('rc')})"
+        std_str = "✅ ACCEPTED (rc=0)" if std.get("supported") else f"❌ REJECTED (rc={std.get('rc')})"
+        mod_str = "✅ ACCEPTED (rc=0)" if modern.get("supported") else f"❌ REJECTED (rc={modern.get('rc')})"
+
+        print(f"- **Legacy Static Auth (`hisenseservice`):** {leg_str}")
+        print(f"- **Standard Dynamic Auth (`his$<timestamp>`):** {std_str}")
+        print(f"- **Modern Dynamic Auth (`his$<timestamp ^ XOR>`):** {mod_str}")
+
+        if res.get("mqtt_rc") is not None:
+            stored_str = "✅ ACCEPTED (rc=0)" if res.get("mqtt_connected") else f"❌ REJECTED (rc={res.get('mqtt_rc')})"
+            print(f"- **Stored Credentials Auth:** {stored_str}")
+
+        print("\n### 📦 Integration Environment")
+        print(f"- **Integration Version:** `{version}`")
+        print(f"- **Python Version:** `{sys.version.split()[0]}`")
+        print("\n" + "=" * 70)
+    except FileNotFoundError as e:
+        print(f"\n❌ Certificate Error: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n❌ Report Generation Failed: {e}")
         sys.exit(1)
 
 
@@ -305,6 +426,9 @@ def main():
         description="Hisense VIDAA Integration CLI Test Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Examples:
+  # Generate Markdown diagnostics report for GitHub issues:
+  python3 test_client.py report --ip 192.168.50.12
+
   # Quick 3-tier connectivity & MQTT broker listening probe:
   python3 test_client.py ping --ip 192.168.50.12
 
@@ -328,9 +452,9 @@ def main():
 """
     )
 
-    parser.add_argument("action", choices=["ping", "test-ssl", "auth", "listen", "refresh", "send-key"], help="Action to perform")
+    parser.add_argument("action", choices=["ping", "report", "test-ssl", "auth", "listen", "refresh", "send-key"], help="Action to perform")
     parser.add_argument("key", nargs="?", help="Key to send (for send-key action, e.g. KEY_POWER, KEY_VOLUMEUP)")
-    parser.add_argument("--ip", help="IP address of the TV (required for ping/test-ssl/auth if not in config)")
+    parser.add_argument("--ip", help="IP address of the TV (required for ping/report/test-ssl/auth if not in config)")
     parser.add_argument("--mac", help="MAC address of the TV")
     parser.add_argument("--cert", help="Path to custom client certificate file (e.g. cert.pem)")
     parser.add_argument("--key", dest="key_file", help="Path to custom client private key file (e.g. key.pem)")
@@ -355,6 +479,20 @@ def main():
             print("Error: --ip <IP> is required for 'ping' action (or valid credentials.json).")
             sys.exit(1)
         do_ping(ip, creds, args.cert, args.key_file)
+
+    elif args.action == "report":
+        creds = None
+        if os.path.exists(args.config):
+            try:
+                with open(args.config) as f:
+                    creds = json.load(f)
+            except Exception:
+                pass
+        ip = args.ip or (creds.get("ip_address") if creds else None)
+        if not ip:
+            print("Error: --ip <IP> is required for 'report' action (or valid credentials.json).")
+            sys.exit(1)
+        do_report(ip, args.mac, creds, args.cert, args.key_file)
 
     elif args.action == "test-ssl":
         if not args.ip:

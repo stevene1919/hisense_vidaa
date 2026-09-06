@@ -124,6 +124,194 @@ class HisenseTvClient:
                 "keyfile": self.keyfile,
             }
 
+    def get_device_fingerprint(self, timeout=2.0):
+        """Fetches UPnP, DLNA, and mDNS device metadata for model and capability identification."""
+        info = {
+            "friendly_name": None,
+            "model_name": None,
+            "model_number": None,
+            "model_code": None,
+            "manufacturer": None,
+            "brand": None,
+            "platform": None,
+            "vidaa_support": None,
+            "voice": None,
+            "transport_protocol": None,
+            "mac_wifi": None,
+            "mac_ethernet": None,
+            "firmware_version": None,
+            "serial_number": None,
+            "upnp_raw": None,
+        }
+        # 1. Query UPnP / DLNA descriptor on port 38400
+        try:
+            import urllib.request
+            import xml.etree.ElementTree as ET
+
+            url = f"http://{self.ip}:38400/MediaServer/rendererdevicedesc.xml"
+            req = urllib.request.Request(url, headers={"User-Agent": "HisenseVIDAATestClient"})
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                content = response.read().decode("utf-8", errors="ignore")
+                root = ET.fromstring(content)
+                ns = {"d": "urn:schemas-upnp-org:device-1-0"}
+                device = root.find("d:device", ns)
+                if device is not None:
+                    fn = device.find("d:friendlyName", ns)
+                    mn = device.find("d:modelName", ns)
+                    mnum = device.find("d:modelNumber", ns)
+                    mfg = device.find("d:manufacturer", ns)
+                    desc = device.find("d:modelDescription", ns)
+
+                    if fn is not None:
+                        info["friendly_name"] = fn.text
+                    if mn is not None:
+                        info["model_name"] = mn.text
+                    if mnum is not None:
+                        info["model_number"] = mnum.text
+                    if mfg is not None:
+                        info["manufacturer"] = mfg.text
+
+                    if desc is not None and desc.text:
+                        info["upnp_raw"] = desc.text.strip()
+                        for line in desc.text.strip().splitlines():
+                            if "=" in line:
+                                k, v = line.split("=", 1)
+                                k, v = k.strip(), v.strip()
+                                if k == "macWifi":
+                                    info["mac_wifi"] = v
+                                elif k == "macEthernet":
+                                    info["mac_ethernet"] = v
+                                elif k == "brand":
+                                    info["brand"] = v
+                                elif k == "platform":
+                                    info["platform"] = v
+                                elif k == "vidaa_support":
+                                    info["vidaa_support"] = v
+                                elif k == "voice":
+                                    info["voice"] = v
+                                elif k == "transport_protocol":
+                                    info["transport_protocol"] = v
+        except Exception as e:
+            _LOGGER.debug(f"UPnP device description query failed: {e}")
+
+        # 2. Query mDNS / Zeroconf if available
+        try:
+            from zeroconf import ServiceBrowser, Zeroconf
+
+            discovered = {}
+            target_ip = self.ip
+
+            class MDNSListener:
+                def add_service(self, zc, type_, name):
+                    try:
+                        s_info = zc.get_service_info(type_, name)
+                        if s_info:
+                            addrs = [socket.inet_ntoa(a) for a in s_info.addresses]
+                            if target_ip in addrs or "Smart TV" in name:
+                                discovered[type_] = s_info.properties
+                    except Exception:
+                        pass
+
+                def update_service(self, zc, type_, name):
+                    pass
+
+                def remove_service(self, zc, type_, name):
+                    pass
+
+            zc = Zeroconf()
+            ServiceBrowser(zc, ["_airplay._tcp.local.", "_hap._tcp.local."], MDNSListener())
+            time.sleep(1.0)
+            zc.close()
+
+            airplay = discovered.get("_airplay._tcp.local.", {})
+            hap = discovered.get("_hap._tcp.local.", {})
+
+            model_bytes = airplay.get(b"model") or hap.get(b"md")
+            fv_bytes = airplay.get(b"fv")
+            serial_bytes = airplay.get(b"serialNumber")
+            company_bytes = airplay.get(b"company") or airplay.get(b"manufacturer")
+
+            if model_bytes:
+                info["model_code"] = model_bytes.decode("utf-8", errors="ignore")
+            if fv_bytes:
+                info["firmware_version"] = fv_bytes.decode("utf-8", errors="ignore")
+            if serial_bytes:
+                info["serial_number"] = serial_bytes.decode("utf-8", errors="ignore")
+            if company_bytes and not info["manufacturer"]:
+                info["manufacturer"] = company_bytes.decode("utf-8", errors="ignore")
+        except Exception as e:
+            _LOGGER.debug(f"mDNS device discovery skipped: {e}")
+
+        return info
+
+    def probe_auth_methods(self, timeout=2.0):
+        """Probes TV MQTT broker with various auth algorithms to diagnose compatibility."""
+        import threading
+
+        results = {
+            "legacy_static": {"rc": None, "supported": False},
+            "standard_dynamic": {"rc": None, "supported": False},
+            "modern_dynamic": {"rc": None, "supported": False},
+        }
+
+        # 1. Legacy static ('hisenseservice')
+        try:
+            leg_rc = [None]
+            leg_lock = threading.Event()
+            leg_client = mqtt.Client(client_id="hisenseservice", clean_session=True, protocol=mqtt.MQTTv311)
+            leg_client.tls_set(ca_certs=None, certfile=self.certfile, keyfile=self.keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
+            leg_client.tls_insecure_set(True)
+            leg_client.username_pw_set(username="hisenseservice", password="multimqttservice")
+            leg_client.on_connect = lambda c, u, f, rc: (leg_rc.__setitem__(0, rc), leg_lock.set())
+            leg_client.on_disconnect = lambda c, u, rc: leg_lock.set()
+            leg_client.connect_async(self.ip, 36669, 5)
+            leg_client.loop_start()
+            leg_lock.wait(timeout=timeout)
+            leg_client.loop_stop()
+            leg_client.disconnect()
+            results["legacy_static"]["rc"] = leg_rc[0]
+            results["legacy_static"]["supported"] = (leg_rc[0] == 0)
+        except Exception as e:
+            _LOGGER.debug(f"Legacy static probe error: {e}")
+
+        # 2. Standard dynamic pairing (his$<timestamp>)
+        try:
+            self.generate_initial_creds(use_new_auth=False)
+            std_rc = [None]
+            std_lock = threading.Event()
+            std_client = self.create_mqtt_client(self.client_id, self.username, self.password)
+            std_client.on_connect = lambda c, u, f, rc: (std_rc.__setitem__(0, rc), std_lock.set())
+            std_client.on_disconnect = lambda c, u, rc: std_lock.set()
+            std_client.connect_async(self.ip, 36669, 5)
+            std_client.loop_start()
+            std_lock.wait(timeout=timeout)
+            std_client.loop_stop()
+            std_client.disconnect()
+            results["standard_dynamic"]["rc"] = std_rc[0]
+            results["standard_dynamic"]["supported"] = (std_rc[0] == 0)
+        except Exception as e:
+            _LOGGER.debug(f"Standard dynamic probe error: {e}")
+
+        # 3. Modern XOR dynamic pairing (his$<timestamp ^ XOR>)
+        try:
+            self.generate_initial_creds(use_new_auth=True)
+            mod_rc = [None]
+            mod_lock = threading.Event()
+            mod_client = self.create_mqtt_client(self.client_id, self.username, self.password)
+            mod_client.on_connect = lambda c, u, f, rc: (mod_rc.__setitem__(0, rc), mod_lock.set())
+            mod_client.on_disconnect = lambda c, u, rc: mod_lock.set()
+            mod_client.connect_async(self.ip, 36669, 5)
+            mod_client.loop_start()
+            mod_lock.wait(timeout=timeout)
+            mod_client.loop_stop()
+            mod_client.disconnect()
+            results["modern_dynamic"]["rc"] = mod_rc[0]
+            results["modern_dynamic"]["supported"] = (mod_rc[0] == 0)
+        except Exception as e:
+            _LOGGER.debug(f"Modern dynamic probe error: {e}")
+
+        return results
+
     def ping(self, timeout=3.0):
         """Quickly tests if the TV MQTT broker is listening, accepting TLS, and responding to MQTT packets."""
         results = {
@@ -134,6 +322,8 @@ class HisenseTvClient:
             "mqtt_connected": False,
             "mqtt_rc": None,
             "mqtt_status": None,
+            "auth_probe": None,
+            "device_info": None,
             "error": None,
         }
         # 1. Test TCP port
@@ -157,6 +347,7 @@ class HisenseTvClient:
         # 3. Test MQTT Broker Response (if credentials available)
         if self.access_token and self.client_id and self.username:
             import threading
+
             lock = threading.Event()
             rc_holder = [None]
 
@@ -189,47 +380,32 @@ class HisenseTvClient:
         else:
             results["mqtt_status"] = "Ready for pairing (no stored credentials)"
 
-        # 4. Probe Legacy Static Authentication Compatibility
-        import threading
-        legacy_rc = [None]
-        leg_lock = threading.Event()
-        leg_client = mqtt.Client(client_id="hisenseservice", clean_session=True, protocol=mqtt.MQTTv311)
-        leg_client.tls_set(ca_certs=None, certfile=self.certfile, keyfile=self.keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
-        leg_client.tls_insecure_set(True)
-        leg_client.username_pw_set(username="hisenseservice", password="multimqttservice")
+        # 4. Probe Auth Methods (Legacy, Standard Dynamic, Modern Dynamic)
+        auth_probe = self.probe_auth_methods(timeout=1.5)
+        results["auth_probe"] = auth_probe
 
-        def on_leg_conn(c, userdata, flags, rc):
-            legacy_rc[0] = rc
-            leg_lock.set()
-
-        leg_client.on_connect = on_leg_conn
-        leg_client.on_disconnect = lambda c, u, rc: leg_lock.set()
-
-        try:
-            leg_client.connect_async(self.ip, 36669, 5)
-            leg_client.loop_start()
-            leg_lock.wait(timeout=1.5)
-        except Exception:
-            pass
-        finally:
-            leg_client.loop_stop()
-            leg_client.disconnect()
-
-        results["legacy_rc"] = legacy_rc[0]
-        if legacy_rc[0] == 0:
+        if auth_probe["legacy_static"]["supported"]:
             results["auth_model"] = "legacy_static"
             results["auth_recommendation"] = (
                 "Your TV accepts legacy static credentials ('hisenseservice'). "
                 "See the README (https://github.com/stevene1919/hisense_vidaa#which-integration-should-you-use) "
                 "for recommended legacy integrations or use this integration without PIN pairing."
             )
-        else:
+        elif auth_probe["modern_dynamic"]["supported"] or auth_probe["standard_dynamic"]["supported"]:
             results["auth_model"] = "modern_vidaa"
             results["auth_recommendation"] = (
-                "Your TV enforces modern VIDAA OS authentication (static 'hisenseservice' logins rejected). "
-                "Dynamic PIN pairing via this 'hisense_vidaa' integration is required. "
+                "Your TV enforces modern VIDAA OS authentication (dynamic PIN pairing supported). "
                 "See README (https://github.com/stevene1919/hisense_vidaa#readme) for setup."
             )
+        else:
+            results["auth_model"] = "unknown"
+            results["auth_recommendation"] = (
+                "The TV broker rejected all initial probe connection attempts. "
+                "Ensure TV is awake, connected to WiFi/LAN, and not blocked by firewall or ad-blockers."
+            )
+
+        # 5. Retrieve device fingerprint metadata
+        results["device_info"] = self.get_device_fingerprint(timeout=1.5)
 
         return results
 

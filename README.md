@@ -74,8 +74,14 @@ VIDAA OS requires a client SSL certificate and private key to communicate with p
 
 The integration includes a standalone CLI test utility [`test_client.py`](test_client.py) that imports and executes the exact same [`HisenseTvClient`](client.py) logic used by Home Assistant.
 
-### 1. Diagnostic Probe & Firmware Detection (`ping`)
-Tests TCP port reachability, TLS handshake, broker response, and suggests which integration style your TV firmware requires:
+### 1. Generate GitHub Issue Diagnostic Report (`report`)
+Generates a pre-formatted Markdown diagnostics block with hardware details, firmware profile, and multi-tier authentication capabilities ready to paste directly into GitHub issues:
+```bash
+python3 test_client.py report --ip <TV_IP>
+```
+
+### 2. Diagnostic Probe & Firmware Detection (`ping`)
+Tests TCP port reachability, TLS handshake, broker response, multi-tier auth capabilities, and suggests which integration style your TV firmware requires:
 ```bash
 python3 test_client.py ping --ip <TV_IP>
 ```
