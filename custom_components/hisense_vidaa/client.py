@@ -253,7 +253,7 @@ class HisenseTvClient:
         self.topicMobiBasepath = f"/remoteapp/mobile/{self.client_id}/"
         self.topicRemoBasepath = f"/remoteapp/tv/remote_service/{self.client_id}/"
 
-    def generate_initial_creds(self):
+    def generate_initial_creds(self, use_new_auth=False):
         timestamp = int(time.time())
         # Use provided MAC if available, otherwise generate a random MAC
         if self.mac and len(self.mac.replace(":", "").replace("-", "")) == 12:
@@ -267,7 +267,11 @@ class HisenseTvClient:
         third_hash = hashlib.md5(f"his{last_digit_of_cross_sum}h*i&s%e!r^v0i1c9".encode()).hexdigest().upper()
         fourth_hash = hashlib.md5(f"{timestamp}${third_hash[:6]}".encode()).hexdigest().upper()
 
-        self.username = f"his${timestamp}"
+        if use_new_auth:
+            self.username = f"his${timestamp ^ 6239759785777146216}"
+        else:
+            self.username = f"his${timestamp}"
+
         self.password = fourth_hash
         self.client_id = f"{mac}$his${second_hash[:6]}_vidaacommon_001"
         self.define_topic_paths()
@@ -391,7 +395,17 @@ class HisenseTvClient:
 
     async def async_start_auth(self):
         """Starts the authentication handshake and triggers the TV to show PIN."""
-        self.generate_initial_creds()
+        try:
+            await self._async_start_auth_internal(use_new_auth=False)
+        except Exception as e:
+            if "code 5" in str(e):
+                _LOGGER.info("Standard auth failed with rc 5, trying new auth method...")
+                await self._async_start_auth_internal(use_new_auth=True)
+            else:
+                raise
+
+    async def _async_start_auth_internal(self, use_new_auth=False):
+        self.generate_initial_creds(use_new_auth=use_new_auth)
         loop = asyncio.get_running_loop()
         self._loop = loop
         self.mqtt_client = await loop.run_in_executor(
@@ -409,11 +423,13 @@ class HisenseTvClient:
                 break
             if self._auth_future.done() and self._auth_future.exception():
                 self.mqtt_client.loop_stop()
+                self.mqtt_client.disconnect()
                 raise self._auth_future.exception()
             await asyncio.sleep(0.2)
 
         if not self.connected:
             self.mqtt_client.loop_stop()
+            self.mqtt_client.disconnect()
             raise Exception("Cannot connect to TV MQTT Broker (connection timeout)")
 
         self.mqtt_client.subscribe([
@@ -432,6 +448,7 @@ class HisenseTvClient:
             await asyncio.wait_for(self._auth_future, timeout=15)
         except TimeoutError:
             self.mqtt_client.loop_stop()
+            self.mqtt_client.disconnect()
             raise Exception("TV authentication request timed out")
         finally:
             self._auth_future = None
