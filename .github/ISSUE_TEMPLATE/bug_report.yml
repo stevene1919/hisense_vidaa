@@ -1,47 +1,100 @@
 name: 🐛 Bug Report
-description: Report a bug to help us improve the integration.
+description: Report a bug or issue with Hisense VIDAA TV integration.
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report!
+        Thanks for taking the time to report an issue!
+
+        ### 🧪 Diagnostic Test Commands
+        Before opening a bug report, running the built-in diagnostic tool can often pinpoint the exact issue (firmware compatibility, certificate error, or network block):
+
+        ```bash
+        # 1. Full Diagnostic Report (Recommended - Paste output below):
+        python3 test_client.py report --ip <YOUR_TV_IP>
+
+        # 2. Quick 3-Tier Connectivity & MQTT Broker Probe:
+        python3 test_client.py ping --ip <YOUR_TV_IP>
+
+        # 3. Test Raw SSL/TLS Negotiation & Certificates:
+        python3 test_client.py test-ssl --ip <YOUR_TV_IP>
+        ```
+
   - type: checkboxes
     id: checks
     attributes:
       label: Prerequisites
       description: Please check the following before submitting:
       options:
+        - label: The TV is powered ON and connected to the same local network / subnet as Home Assistant.
+          required: true
+        - label: Outbound WAN / Internet & DNS resolution are unblocked on the TV (required by VIDAA OS for token handshakes).
+          required: true
+        - label: I have verified client certificates (`cert.pem` and `key.pem`) are present in `certs/`.
+          required: true
         - label: I have restarted Home Assistant and verified the issue persists.
           required: true
-        - label: I have checked the integration logs and included any error tracebacks below.
-          required: true
+
   - type: input
     id: ha-version
     attributes:
       label: Home Assistant Version
-      placeholder: e.g. 2026.7.1
+      placeholder: e.g. 2026.5.4
     validations:
       required: true
+
+  - type: input
+    id: integration-version
+    attributes:
+      label: Integration Version
+      placeholder: e.g. v1.5.0
+    validations:
+      required: true
+
   - type: input
     id: tv-model
     attributes:
-      label: TV Model
-      placeholder: e.g. 65U7G / VIDAA U5
+      label: TV Model & Firmware Build
+      placeholder: e.g. 65U7G / VIDAA U6 / Build V0000.09.09U.P1027
     validations:
       required: false
+
   - type: textarea
     id: description
     attributes:
       label: Describe the Bug
-      description: A clear and concise description of what the bug is.
+      description: A clear and concise description of what the issue is.
     validations:
       required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the problem.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. See error
+    validations:
+      required: false
+
+  - type: textarea
+    id: diagnostics-output
+    attributes:
+      label: CLI Diagnostics Report Output (`test_client.py report`)
+      description: Paste the Markdown output generated from `python3 test_client.py report --ip <TV_IP>` here.
+      placeholder: |
+        Paste the output from `python3 test_client.py report --ip <TV_IP>` here...
+    validations:
+      required: false
+
   - type: textarea
     id: logs
     attributes:
-      label: Integration Logs / Traceback
-      description: Please paste any relevant logs from Home Assistant. Wrap code blocks in triple backticks.
+      label: Home Assistant Logs / Tracebacks
+      description: Please paste any relevant Home Assistant logs or traceback errors.
       render: bash
     validations:
       required: false
