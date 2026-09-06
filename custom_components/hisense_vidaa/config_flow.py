@@ -84,8 +84,21 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             pin_code = user_input["pin_code"]
             try:
                 await self.client.async_submit_pin(pin_code)
+
+                # Discover actual device friendly name from UPnP/mDNS
+                title = f"Hisense TV ({self.ip_address})"
+                try:
+                    fp = await self.hass.async_add_executor_job(
+                        self.client.get_device_fingerprint, 1.5
+                    )
+                    discovered_name = fp.get("friendly_name") or fp.get("model_code")
+                    if discovered_name and discovered_name.strip() and discovered_name.strip() != "Renderer":
+                        title = discovered_name.strip()
+                except Exception:
+                    pass
+
                 return self.async_create_entry(
-                    title=f"Hisense TV ({self.ip_address})",
+                    title=title,
                     data={
                         CONF_IP_ADDRESS: self.ip_address,
                         CONF_MAC_ADDRESS: self.mac_address,

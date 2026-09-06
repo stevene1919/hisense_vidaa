@@ -2,6 +2,11 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [1.4.2] - 2026-09-06
+
+### Added
+- **DYNAMIC TV DEVICE & ENTITY NAMING**: Config flow now automatically detects the TV's broadcast friendly name (e.g. `Smart TV`, custom name from TV settings, or model code) via UPnP/mDNS and names the Home Assistant device and entity accordingly upon pairing.
+
 ## [1.4.1] - 2026-09-06
 
 ### Added
