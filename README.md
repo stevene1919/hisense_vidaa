@@ -78,37 +78,6 @@ VIDAA OS requires a client SSL certificate and private key to communicate with p
 | **RemoteNOW (Standard)** | VIDAA U4 / U5 / U6 (2018–2023) | `remotenow_2018_cert.pem` | `remotenow_2018_key.pem` |
 | **Generic / Custom** | Standard fallback for any profile | `cert.pem` | `key.pem` |
 
-### 🔍 How to Obtain & Extract Certificates from Official Apps
-
-If you do not already have the `.pem` files, you can extract them from the official Android APK bundles using OpenSSL:
-
-#### Option A: VIDAA Smart Remote App (`com.universal.remote.multi.apk`)
-1. Download or extract the APK for the official **VIDAA Smart TV Remote** app (`com.universal.remote.multi`).
-2. Extract the PKCS#12 bundle located in `res/raw/client_mobile_android.p12` (or `res/3R.p12` if obfuscated):
-   ```bash
-   unzip -q com.universal.remote.multi.apk "res/raw/client_mobile_android.p12" -d /tmp/vidaa_extract
-   ```
-3. Extract the certificate and private key using the official PKCS#12 passphrase (`186e990688070325a1c4b0ce275d2388`):
-   ```bash
-   # Extract Client Certificate (X.509 PEM):
-   openssl pkcs12 -in /tmp/vidaa_extract/res/raw/client_mobile_android.p12 \
-     -clcerts -nokeys -out custom_components/hisense_vidaa/certs/vidaa_2024_cert.pem \
-     -passin pass:186e990688070325a1c4b0ce275d2388 -legacy
-
-   # Extract Private Key (RSA PEM):
-   openssl pkcs12 -in /tmp/vidaa_extract/res/raw/client_mobile_android.p12 \
-     -nocerts -nodes -out custom_components/hisense_vidaa/certs/vidaa_2024_key.pem \
-     -passin pass:186e990688070325a1c4b0ce275d2388 -legacy
-   ```
-
-#### Option B: RemoteNOW App (`com.hisense.hitv.remotenow.apk`)
-1. Download or extract the APK for the legacy **RemoteNOW** app (`com.hisense.hitv.remotenow`).
-2. Extract the certificate bundle from `assets/client.p12` with passphrase `hisenseremote`:
-   ```bash
-   openssl pkcs12 -in client.p12 -clcerts -nokeys -out remotenow_2018_cert.pem -passin pass:hisenseremote -legacy
-   openssl pkcs12 -in client.p12 -nocerts -nodes -out remotenow_2018_key.pem -passin pass:hisenseremote -legacy
-   ```
-
 ---
 
 ## 🔬 Under the Hood: VIDAA Protocol & Cryptographic Architecture
