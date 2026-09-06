@@ -9,6 +9,7 @@ from .const import (
     CONF_ACCESS_TOKEN_DURATION,
     CONF_ACCESS_TOKEN_TIME,
     CONF_CLIENT_ID,
+    CONF_ENABLE_REMOTE,
     CONF_IP_ADDRESS,
     CONF_MAC_ADDRESS,
     CONF_PASSWORD,
@@ -16,10 +17,14 @@ from .const import (
     CONF_REFRESH_TOKEN_DURATION,
     CONF_REFRESH_TOKEN_TIME,
     CONF_USERNAME,
+    DEFAULT_ENABLE_REMOTE,
     DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+PLATFORMS: list[str] = ["media_player", "remote"]
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Hisense VIDAA TV from a config entry."""
@@ -40,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass.config_entries.async_update_entry(
                     entry,
                     data={**entry.data, CONF_MAC_ADDRESS: mac},
-                    unique_id=entry.unique_id or mac
+                    unique_id=entry.unique_id or mac,
                 )
         except Exception:
             pass
@@ -56,21 +61,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         access_token_duration=data[CONF_ACCESS_TOKEN_DURATION],
         refresh_token=data[CONF_REFRESH_TOKEN],
         refresh_token_time=data[CONF_REFRESH_TOKEN_TIME],
-        refresh_token_duration=data[CONF_REFRESH_TOKEN_DURATION]
+        refresh_token_duration=data[CONF_REFRESH_TOKEN_DURATION],
     )
 
     # Callback to persist token updates in Home Assistant config entry
-    def update_entry_tokens(refreshed_client):
-        hass.config_entries.async_update_entry(entry, data={
-            **entry.data,
-            CONF_ACCESS_TOKEN: refreshed_client.access_token,
-            CONF_ACCESS_TOKEN_TIME: refreshed_client.access_token_time,
-            CONF_ACCESS_TOKEN_DURATION: refreshed_client.access_token_duration,
-            CONF_REFRESH_TOKEN: refreshed_client.refresh_token,
-            CONF_REFRESH_TOKEN_TIME: refreshed_client.refresh_token_time,
-            CONF_REFRESH_TOKEN_DURATION: refreshed_client.refresh_token_duration,
-        })
-    client.on_token_refreshed = lambda c: hass.loop.call_soon_threadsafe(update_entry_tokens, c)
+    def update_entry_tokens(refreshed_client: HisenseTvClient) -> None:
+        hass.config_entries.async_update_entry(
+            entry,
+            data={
+                **entry.data,
+                CONF_ACCESS_TOKEN: refreshed_client.access_token,
+                CONF_ACCESS_TOKEN_TIME: refreshed_client.access_token_time,
+                CONF_ACCESS_TOKEN_DURATION: refreshed_client.access_token_duration,
+                CONF_REFRESH_TOKEN: refreshed_client.refresh_token,
+                CONF_REFRESH_TOKEN_TIME: refreshed_client.refresh_token_time,
+                CONF_REFRESH_TOKEN_DURATION: refreshed_client.refresh_token_duration,
+            },
+        )
+
+    client.on_token_refreshed = lambda c: hass.loop.call_soon_threadsafe(
+        update_entry_tokens, c
+    )
 
     # Check and refresh tokens, run client loop in executor
     updated = await hass.async_add_executor_job(client.check_and_refresh_token)
@@ -83,12 +94,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = client
 
-    await hass.config_entries.async_forward_entry_setups(entry, ["media_player"])
+    platforms_to_setup = ["media_player"]
+    if entry.options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE):
+        platforms_to_setup.append("remote")
+
+    await hass.config_entries.async_forward_entry_setups(entry, platforms_to_setup)
+    entry.async_on_unload(entry.add_update_listener(update_listener))
     return True
+
+
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["media_player"])
+    unload_ok = await hass.config_entries.async_unload_platforms(
+        entry, PLATFORMS
+    )
     if unload_ok:
         client = hass.data[DOMAIN].pop(entry.entry_id)
         client.disconnect()

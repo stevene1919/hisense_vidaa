@@ -12,6 +12,63 @@ import paho.mqtt.client as mqtt
 
 _LOGGER = logging.getLogger(__name__)
 
+KEY_ALIASES = {
+    "power": "KEY_POWER",
+    "up": "KEY_UP",
+    "down": "KEY_DOWN",
+    "left": "KEY_LEFT",
+    "right": "KEY_RIGHT",
+    "ok": "KEY_OK",
+    "enter": "KEY_OK",
+    "select": "KEY_OK",
+    "back": "KEY_RETURNS",
+    "return": "KEY_RETURNS",
+    "returns": "KEY_RETURNS",
+    "home": "KEY_HOME",
+    "menu": "KEY_MENU",
+    "exit": "KEY_EXIT",
+    "info": "KEY_INFO",
+    "volume_up": "KEY_VOLUMEUP",
+    "volumeup": "KEY_VOLUMEUP",
+    "volume_down": "KEY_VOLUMEDOWN",
+    "volumedown": "KEY_VOLUMEDOWN",
+    "mute": "KEY_MUTE",
+    "channel_up": "KEY_CHANNELUP",
+    "channelup": "KEY_CHANNELUP",
+    "channel_down": "KEY_CHANNELDOWN",
+    "channeldown": "KEY_CHANNELDOWN",
+    "play": "KEY_PLAY",
+    "pause": "KEY_PAUSE",
+    "stop": "KEY_STOP",
+    "fast_forward": "KEY_FORWARDS",
+    "fastforward": "KEY_FORWARDS",
+    "forwards": "KEY_FORWARDS",
+    "rewind": "KEY_BACK",
+    "subtitle": "KEY_SUBTITLE",
+    "subtitles": "KEY_SUBTITLE",
+    "guide": "KEY_EPG",
+    "epg": "KEY_EPG",
+    "red": "KEY_RED",
+    "green": "KEY_GREEN",
+    "yellow": "KEY_YELLOW",
+    "blue": "KEY_BLUE",
+    "netflix": "KEY_NETFLIX",
+    "youtube": "KEY_YOUTUBE",
+    "prime": "KEY_PRIME",
+    "disney": "KEY_DISNEY",
+    "0": "KEY_0",
+    "1": "KEY_1",
+    "2": "KEY_2",
+    "3": "KEY_3",
+    "4": "KEY_4",
+    "5": "KEY_5",
+    "6": "KEY_6",
+    "7": "KEY_7",
+    "8": "KEY_8",
+    "9": "KEY_9",
+}
+
+
 class HisenseTvClient:
     def __init__(self, ip, mac=None, client_id=None, username=None, password=None,
                  access_token=None, access_token_time=0, access_token_duration=0,
@@ -64,12 +121,12 @@ class HisenseTvClient:
 
         self.mqtt_client = None
         self.connected = False
-        self.on_state_update = None
-        self.on_volume_update = None
-        self.on_sourcelist_update = None
-        self.on_applist_update = None
-        self.on_disconnected_callback = None
-        self.on_token_refreshed = None
+        self._state_callbacks = []
+        self._volume_callbacks = []
+        self._sourcelist_callbacks = []
+        self._applist_callbacks = []
+        self._disconnected_callbacks = []
+        self._token_refreshed_callbacks = []
 
         self._auth_future = None
         self._auth_code_future = None
@@ -88,6 +145,151 @@ class HisenseTvClient:
 
         if self.client_id:
             self.define_topic_paths()
+
+    @property
+    def on_state_update(self):
+        return self._state_callbacks[0] if self._state_callbacks else None
+
+    @on_state_update.setter
+    def on_state_update(self, cb):
+        if cb and cb not in self._state_callbacks:
+            self._state_callbacks.append(cb)
+
+    @property
+    def on_volume_update(self):
+        return self._volume_callbacks[0] if self._volume_callbacks else None
+
+    @on_volume_update.setter
+    def on_volume_update(self, cb):
+        if cb and cb not in self._volume_callbacks:
+            self._volume_callbacks.append(cb)
+
+    @property
+    def on_sourcelist_update(self):
+        return self._sourcelist_callbacks[0] if self._sourcelist_callbacks else None
+
+    @on_sourcelist_update.setter
+    def on_sourcelist_update(self, cb):
+        if cb and cb not in self._sourcelist_callbacks:
+            self._sourcelist_callbacks.append(cb)
+
+    @property
+    def on_applist_update(self):
+        return self._applist_callbacks[0] if self._applist_callbacks else None
+
+    @on_applist_update.setter
+    def on_applist_update(self, cb):
+        if cb and cb not in self._applist_callbacks:
+            self._applist_callbacks.append(cb)
+
+    @property
+    def on_disconnected_callback(self):
+        return self._disconnected_callbacks[0] if self._disconnected_callbacks else None
+
+    @on_disconnected_callback.setter
+    def on_disconnected_callback(self, cb):
+        if cb and cb not in self._disconnected_callbacks:
+            self._disconnected_callbacks.append(cb)
+
+    @property
+    def on_token_refreshed(self):
+        return self._token_refreshed_callbacks[0] if self._token_refreshed_callbacks else None
+
+    @on_token_refreshed.setter
+    def on_token_refreshed(self, cb):
+        if cb and cb not in self._token_refreshed_callbacks:
+            self._token_refreshed_callbacks.append(cb)
+
+    def register_state_callback(self, cb):
+        if cb and cb not in self._state_callbacks:
+            self._state_callbacks.append(cb)
+
+    def unregister_state_callback(self, cb):
+        if cb in self._state_callbacks:
+            self._state_callbacks.remove(cb)
+
+    def register_volume_callback(self, cb):
+        if cb and cb not in self._volume_callbacks:
+            self._volume_callbacks.append(cb)
+
+    def unregister_volume_callback(self, cb):
+        if cb in self._volume_callbacks:
+            self._volume_callbacks.remove(cb)
+
+    def register_sourcelist_callback(self, cb):
+        if cb and cb not in self._sourcelist_callbacks:
+            self._sourcelist_callbacks.append(cb)
+
+    def unregister_sourcelist_callback(self, cb):
+        if cb in self._sourcelist_callbacks:
+            self._sourcelist_callbacks.remove(cb)
+
+    def register_applist_callback(self, cb):
+        if cb and cb not in self._applist_callbacks:
+            self._applist_callbacks.append(cb)
+
+    def unregister_applist_callback(self, cb):
+        if cb in self._applist_callbacks:
+            self._applist_callbacks.remove(cb)
+
+    def register_disconnected_callback(self, cb):
+        if cb and cb not in self._disconnected_callbacks:
+            self._disconnected_callbacks.append(cb)
+
+    def unregister_disconnected_callback(self, cb):
+        if cb in self._disconnected_callbacks:
+            self._disconnected_callbacks.remove(cb)
+
+    def register_token_refreshed_callback(self, cb):
+        if cb and cb not in self._token_refreshed_callbacks:
+            self._token_refreshed_callbacks.append(cb)
+
+    def unregister_token_refreshed_callback(self, cb):
+        if cb in self._token_refreshed_callbacks:
+            self._token_refreshed_callbacks.remove(cb)
+
+    def _dispatch_state_update(self, data):
+        for cb in list(self._state_callbacks):
+            try:
+                cb(data)
+            except Exception as e:
+                _LOGGER.error("Error in state callback: %s", e)
+
+    def _dispatch_volume_update(self, data):
+        for cb in list(self._volume_callbacks):
+            try:
+                cb(data)
+            except Exception as e:
+                _LOGGER.error("Error in volume callback: %s", e)
+
+    def _dispatch_sourcelist_update(self, data):
+        for cb in list(self._sourcelist_callbacks):
+            try:
+                cb(data)
+            except Exception as e:
+                _LOGGER.error("Error in sourcelist callback: %s", e)
+
+    def _dispatch_applist_update(self, data):
+        for cb in list(self._applist_callbacks):
+            try:
+                cb(data)
+            except Exception as e:
+                _LOGGER.error("Error in applist callback: %s", e)
+
+    def _dispatch_disconnected(self):
+        for cb in list(self._disconnected_callbacks):
+            try:
+                cb()
+            except Exception as e:
+                _LOGGER.error("Error in disconnect callback: %s", e)
+
+    def _dispatch_token_refreshed(self):
+        for cb in list(self._token_refreshed_callbacks):
+            try:
+                cb(self)
+            except Exception as e:
+                _LOGGER.error("Error in token refreshed callback: %s", e)
+
 
     def validate_certificates(self):
         """Verifies that the SSL certificate and private key files exist and are readable."""
@@ -520,8 +722,7 @@ class HisenseTvClient:
     def _on_disconnect(self, client, userdata, rc):
         self.connected = False
         _LOGGER.info(f"Disconnected from TV MQTT Broker, rc: {rc}")
-        if self.on_disconnected_callback:
-            self.on_disconnected_callback()
+        self._dispatch_disconnected()
 
     def _on_message(self, client, userdata, msg):
         topic = msg.topic
@@ -540,32 +741,27 @@ class HisenseTvClient:
         if topic in (self.topicBrcsBasepath + "ui_service/state", self.topicMobiBasepath + "ui_service/data/gettvstate"):
             try:
                 data = json.loads(payload)
-                if self.on_state_update:
-                    self.on_state_update(data)
+                self._dispatch_state_update(data)
             except Exception as e:
                 _LOGGER.error(f"Error parsing state: {e}")
         elif topic in (self.topicBrcsBasepath + "platform_service/actions/volumechange", self.topicMobiBasepath + "platform_service/data/getvolume"):
             try:
                 data = json.loads(payload)
-                if self.on_volume_update:
-                    self.on_volume_update(data)
+                self._dispatch_volume_update(data)
             except Exception as e:
                 _LOGGER.error(f"Error parsing volume: {e}")
         elif topic == self.topicBrcsBasepath + "platform_service/actions/tvsleep":
-            if self.on_state_update:
-                self.on_state_update({"statetype": "fake_sleep_0"})
+            self._dispatch_state_update({"statetype": "fake_sleep_0"})
         elif topic == self.topicMobiBasepath + "ui_service/data/sourcelist":
             try:
                 data = json.loads(payload)
-                if self.on_sourcelist_update:
-                    self.on_sourcelist_update(data)
+                self._dispatch_sourcelist_update(data)
             except Exception as e:
                 _LOGGER.error(f"Error parsing sourcelist: {e}")
         elif topic == self.topicMobiBasepath + "ui_service/data/applist":
             try:
                 data = json.loads(payload)
-                if self.on_applist_update:
-                    self.on_applist_update(data)
+                self._dispatch_applist_update(data)
             except Exception as e:
                 _LOGGER.error(f"Error parsing applist: {e}")
 
@@ -748,8 +944,7 @@ class HisenseTvClient:
             self.refresh_token = updated_data["refreshtoken"]
             self.refresh_token_time = int(updated_data["refreshtoken_time"])
             self.refresh_token_duration = int(updated_data["refreshtoken_duration_day"])
-            if self.on_token_refreshed:
-                self.on_token_refreshed(self)
+            self._dispatch_token_refreshed()
             return True
 
         if connect_rc[0] is not None:
@@ -778,9 +973,38 @@ class HisenseTvClient:
             time.sleep(0.1)
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/applist", "")
 
+    @staticmethod
+    def send_wake_on_lan(mac: str, broadcast_ip: str = "255.255.255.255", port: int = 9) -> bool:
+        """Sends a standard Wake-on-LAN magic packet UDP broadcast."""
+        if not mac:
+            return False
+        cleaned_mac = mac.replace(":", "").replace("-", "").replace(".", "").strip()
+        if len(cleaned_mac) != 12:
+            return False
+        try:
+            mac_bytes = bytes.fromhex(cleaned_mac)
+            magic_packet = b"\xff" * 6 + mac_bytes * 16
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                sock.sendto(magic_packet, (broadcast_ip, port))
+            _LOGGER.debug("Sent Wake-on-LAN magic packet to %s", mac)
+            return True
+        except Exception as e:
+            _LOGGER.warning("Failed to send Wake-on-LAN packet to %s: %s", mac, e)
+            return False
+
     def send_key(self, key):
         if self.connected:
             self.mqtt_client.publish(self.topicRemoBasepath + "actions/sendkey", key)
+
+    def send_command(self, command: str) -> bool:
+        """Sends a key command to the TV, automatically resolving known key aliases."""
+        if not command:
+            return False
+        cmd_clean = command.strip().lower()
+        key_to_send = KEY_ALIASES.get(cmd_clean, command.strip().upper())
+        self.send_key(key_to_send)
+        return True
 
     def set_volume(self, volume):
         if self.connected:

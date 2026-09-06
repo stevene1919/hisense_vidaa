@@ -1,5 +1,8 @@
+from typing import Any
+
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.core import callback
 
 from .client import HisenseTvClient
 from .const import (
@@ -7,6 +10,9 @@ from .const import (
     CONF_ACCESS_TOKEN_DURATION,
     CONF_ACCESS_TOKEN_TIME,
     CONF_CLIENT_ID,
+    CONF_ENABLE_REMOTE,
+    CONF_ENABLE_WOL,
+    CONF_INCLUDE_APPS_IN_SOURCES,
     CONF_IP_ADDRESS,
     CONF_MAC_ADDRESS,
     CONF_PASSWORD,
@@ -14,6 +20,9 @@ from .const import (
     CONF_REFRESH_TOKEN_DURATION,
     CONF_REFRESH_TOKEN_TIME,
     CONF_USERNAME,
+    DEFAULT_ENABLE_REMOTE,
+    DEFAULT_ENABLE_WOL,
+    DEFAULT_INCLUDE_APPS_IN_SOURCES,
     DOMAIN,
 )
 
@@ -21,12 +30,23 @@ from .const import (
 class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
-    def __init__(self):
-        self.ip_address = None
-        self.mac_address = None
-        self.client = None
+    def __init__(self) -> None:
+        self.ip_address: str | None = None
+        self.mac_address: str | None = None
+        self.client: HisenseTvClient | None = None
+        self.discovered_title: str | None = None
 
-    async def async_step_user(self, user_input=None):
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        """Get the options flow for this handler."""
+        return HisenseVidaaOptionsFlowHandler(config_entry)
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         errors = {}
         if user_input is not None:
             self.ip_address = user_input[CONF_IP_ADDRESS]
@@ -75,44 +95,35 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required(CONF_IP_ADDRESS): str,
             }),
-            errors=errors
+            errors=errors,
         )
 
-    async def async_step_auth(self, user_input=None):
+    async def async_step_auth(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         errors = {}
-        if user_input is not None:
+        if user_input is not None and self.client:
             pin_code = user_input["pin_code"]
             try:
                 await self.client.async_submit_pin(pin_code)
 
                 # Discover actual device friendly name from UPnP/mDNS
-                title = f"Hisense TV ({self.ip_address})"
+                self.discovered_title = f"Hisense TV ({self.ip_address})"
                 try:
                     fp = await self.hass.async_add_executor_job(
                         self.client.get_device_fingerprint, 1.5
                     )
                     discovered_name = fp.get("friendly_name") or fp.get("model_code")
-                    if discovered_name and discovered_name.strip() and discovered_name.strip() != "Renderer":
-                        title = discovered_name.strip()
+                    if (
+                        discovered_name
+                        and discovered_name.strip()
+                        and discovered_name.strip() != "Renderer"
+                    ):
+                        self.discovered_title = discovered_name.strip()
                 except Exception:
                     pass
 
-                return self.async_create_entry(
-                    title=title,
-                    data={
-                        CONF_IP_ADDRESS: self.ip_address,
-                        CONF_MAC_ADDRESS: self.mac_address,
-                        CONF_CLIENT_ID: self.client.client_id,
-                        CONF_USERNAME: self.client.username,
-                        CONF_PASSWORD: self.client.password,
-                        CONF_ACCESS_TOKEN: self.client.access_token,
-                        CONF_ACCESS_TOKEN_TIME: self.client.access_token_time,
-                        CONF_ACCESS_TOKEN_DURATION: self.client.access_token_duration,
-                        CONF_REFRESH_TOKEN: self.client.refresh_token,
-                        CONF_REFRESH_TOKEN_TIME: self.client.refresh_token_time,
-                        CONF_REFRESH_TOKEN_DURATION: self.client.refresh_token_duration,
-                    }
-                )
+                return await self.async_step_options()
             except Exception:
                 errors["base"] = "invalid_auth"
 
@@ -121,5 +132,88 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required("pin_code"): str,
             }),
-            errors=errors
+            errors=errors,
+        )
+
+    async def async_step_options(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Allow configuring initial options during setup."""
+        if user_input is not None and self.client:
+            return self.async_create_entry(
+                title=self.discovered_title or f"Hisense TV ({self.ip_address})",
+                data={
+                    CONF_IP_ADDRESS: self.ip_address,
+                    CONF_MAC_ADDRESS: self.mac_address,
+                    CONF_CLIENT_ID: self.client.client_id,
+                    CONF_USERNAME: self.client.username,
+                    CONF_PASSWORD: self.client.password,
+                    CONF_ACCESS_TOKEN: self.client.access_token,
+                    CONF_ACCESS_TOKEN_TIME: self.client.access_token_time,
+                    CONF_ACCESS_TOKEN_DURATION: self.client.access_token_duration,
+                    CONF_REFRESH_TOKEN: self.client.refresh_token,
+                    CONF_REFRESH_TOKEN_TIME: self.client.refresh_token_time,
+                    CONF_REFRESH_TOKEN_DURATION: self.client.refresh_token_duration,
+                },
+                options={
+                    CONF_ENABLE_REMOTE: user_input.get(
+                        CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE
+                    ),
+                    CONF_ENABLE_WOL: user_input.get(
+                        CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL
+                    ),
+                    CONF_INCLUDE_APPS_IN_SOURCES: user_input.get(
+                        CONF_INCLUDE_APPS_IN_SOURCES, DEFAULT_INCLUDE_APPS_IN_SOURCES
+                    ),
+                },
+            )
+
+        return self.async_show_form(
+            step_id="options",
+            data_schema=vol.Schema({
+                vol.Optional(
+                    CONF_ENABLE_REMOTE, default=DEFAULT_ENABLE_REMOTE
+                ): bool,
+                vol.Optional(CONF_ENABLE_WOL, default=DEFAULT_ENABLE_WOL): bool,
+                vol.Optional(
+                    CONF_INCLUDE_APPS_IN_SOURCES,
+                    default=DEFAULT_INCLUDE_APPS_IN_SOURCES,
+                ): bool,
+            }),
+        )
+
+
+class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle Hisense VIDAA options."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        options = self.config_entry.options
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Optional(
+                    CONF_ENABLE_REMOTE,
+                    default=options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE),
+                ): bool,
+                vol.Optional(
+                    CONF_ENABLE_WOL,
+                    default=options.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL),
+                ): bool,
+                vol.Optional(
+                    CONF_INCLUDE_APPS_IN_SOURCES,
+                    default=options.get(
+                        CONF_INCLUDE_APPS_IN_SOURCES,
+                        DEFAULT_INCLUDE_APPS_IN_SOURCES,
+                    ),
+                ): bool,
+            }),
         )

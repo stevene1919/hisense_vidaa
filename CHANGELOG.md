@@ -2,6 +2,16 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [1.5.0] - 2026-09-06
+
+### Added
+- **OPTIONS FLOW SUPPORT**: Added `OptionsFlowHandler` allowing full configuration of features and device behaviors via **Settings -> Devices & Services -> Configure** on existing TVs without re-pairing.
+- **DEDICATED REMOTE ENTITY PLATFORM (`remote`)**: Added native `remote` entity (`remote.<tv_name>`) supporting D-pad navigation, numeric keypad, channel switching, media controls, color buttons, and app shortcuts.
+- **MEDIA CONTROLS EXPANSION**: Added `PLAY`, `PAUSE`, `STOP`, `NEXT_TRACK`, `PREVIOUS_TRACK`, and `PLAY_MEDIA` support to the `media_player` entity.
+- **SMART TV APPS IN SOURCE LIST**: Configurable option (`include_apps_in_sources`) to dynamically include installed Smart TV apps (Netflix, YouTube, Prime, Plex, etc.) in the `media_player` source dropdown alongside hardware HDMI/TV inputs.
+- **WAKE-ON-LAN POWER ON**: Configurable option (`enable_wol`) to broadcast a UDP magic packet on `turn_on` to wake TVs from deep standby.
+- **KEY ALIAS RESOLUTION**: Added alias normalizer supporting friendly command names (`up`, `down`, `home`, `menu`, `back`, `netflix`, `youtube`, etc.) across `remote.send_command` and CLI `test_client.py`.
+
 ## [1.4.2] - 2026-09-06
 
 ### Added

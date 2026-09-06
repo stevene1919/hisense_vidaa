@@ -33,12 +33,20 @@ Hisense changed the MQTT authentication model across firmware revisions:
 
 - **Direct Secure Connection**: Native SSL communication directly to port `36669`.
 - **Dynamic PIN Pairing**: Automated challenge-response pairing flow in the Home Assistant UI.
-- **Standby Power Control**: Power on/off the TV using secure MQTT keys.
-- **Media Player Entity**:
+- **Standby Power & Wake-on-LAN**: Power on/off via secure MQTT keys, with optional Wake-on-LAN magic packet support.
+- **Dedicated Remote Entity (`remote`)**:
+  - Full remote control platform (`remote.<tv_name>`).
+  - Key alias resolution (`up`, `down`, `home`, `menu`, `back`, `netflix`, `youtube`, etc.).
+  - Direct command dispatching with repeat and delay controls.
+- **Media Player Entity (`media_player`)**:
   - Power toggle and standby control.
   - Volume adjustment, stepping, and mute toggle.
-  - Unified input source selector (HDMI, TV, AV inputs, and installed VIDAA apps).
+  - Playback controls (`PLAY`, `PAUSE`, `STOP`, `NEXT_TRACK`, `PREVIOUS_TRACK`, `PLAY_MEDIA`).
+  - Unified input source selector with configurable app inclusions (HDMI, TV, AV, Netflix, YouTube, Plex, etc.).
   - Instant local push updates for volume and power state.
+- **Full Options Flow**:
+  - Configure device behavior via **Settings -> Devices & Services -> Configure** without re-pairing.
+  - Toggle dedicated remote entity, Wake-on-LAN, and Smart TV app listing in sources.
 - **Robust Connection Handlers**:
   - Non-blocking startup ensures Home Assistant boots cleanly even when the TV is powered off.
   - Mutex locks and rate limits to prevent background thread storms during network disconnects.

@@ -412,7 +412,7 @@ def do_send_key(creds, key_name, certfile, keyfile):
         time.sleep(0.1)
 
     if client.connected:
-        client.send_key(key_name)
+        client.send_command(key_name)
         print(f"✅ Sent '{key_name}' successfully.")
         time.sleep(0.5)
     else:
