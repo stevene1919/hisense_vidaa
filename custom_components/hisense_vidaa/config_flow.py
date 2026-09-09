@@ -79,6 +79,11 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.ip_address, self.mac_address, auth_profile=self.auth_profile
             )
             try:
+                probe = await self.hass.async_add_executor_job(self.client.probe_auth_methods, 1.5)
+                if self.auth_profile == "auto" and probe.get("auth_model") == "legacy_static":
+                    self.auth_profile = "legacy"
+                    self.client.auth_profile = "legacy"
+
                 await self.client.async_start_auth()
 
                 # If MAC was not in ARP before, try again now that TCP connection was established
@@ -95,6 +100,44 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if self.mac_address:
                     await self.async_set_unique_id(self.mac_address)
                     self._abort_if_unique_id_configured()
+
+                if self.auth_profile == "legacy":
+                    self.discovered_title = f"Hisense TV ({self.ip_address})"
+                    try:
+                        fp = await self.hass.async_add_executor_job(
+                            self.client.get_device_fingerprint, 1.5
+                        )
+                        discovered_name = fp.get("friendly_name") or fp.get("model_code")
+                        if (
+                            discovered_name
+                            and discovered_name.strip()
+                            and discovered_name.strip() != "Renderer"
+                        ):
+                            self.discovered_title = discovered_name.strip()
+                    except Exception:
+                        pass
+                    return self.async_create_entry(
+                        title=self.discovered_title or f"Hisense TV ({self.ip_address})",
+                        data={
+                            CONF_IP_ADDRESS: self.ip_address,
+                            CONF_MAC_ADDRESS: self.mac_address,
+                            CONF_AUTH_PROFILE: self.auth_profile,
+                            CONF_CLIENT_ID: self.client.client_id,
+                            CONF_USERNAME: self.client.username,
+                            CONF_PASSWORD: self.client.password,
+                            CONF_ACCESS_TOKEN: self.client.access_token,
+                            CONF_ACCESS_TOKEN_TIME: self.client.access_token_time,
+                            CONF_ACCESS_TOKEN_DURATION: self.client.access_token_duration,
+                            CONF_REFRESH_TOKEN: self.client.refresh_token,
+                            CONF_REFRESH_TOKEN_TIME: self.client.refresh_token_time,
+                            CONF_REFRESH_TOKEN_DURATION: self.client.refresh_token_duration,
+                        },
+                        options={
+                            CONF_ENABLE_REMOTE: DEFAULT_ENABLE_REMOTE,
+                            CONF_ENABLE_WOL: DEFAULT_ENABLE_WOL,
+                            CONF_INCLUDE_APPS_IN_SOURCES: DEFAULT_INCLUDE_APPS_IN_SOURCES,
+                        },
+                    )
 
                 return await self.async_step_auth()
             except Exception as e:

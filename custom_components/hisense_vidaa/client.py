@@ -581,6 +581,14 @@ class HisenseTvClient:
 
     async def async_start_auth(self) -> None:
         """Starts the authentication handshake and triggers the TV to show PIN."""
+        if self.auth_profile == "legacy":
+            self.client_id = "hisenseservice"
+            self.username = "hisenseservice"
+            self.password = "multimqttservice"
+            self.access_token = "multimqttservice"
+            self.define_topic_paths()
+            return
+
         if self.auth_profile in ("modern", "vidaa_2024", "vidaa"):
             await self._async_start_auth_internal(use_new_auth=True)
         elif self.auth_profile in ("remotenow", "remotenow_2018", "standard"):
@@ -700,6 +708,9 @@ class HisenseTvClient:
 
     def check_and_refresh_token(self, force: bool = False) -> bool:
         """Checks if access token is expired (valid for 2 days) and refreshes it synchronously."""
+        if self.auth_profile == "legacy":
+            return False
+
         if not self.refresh_token:
             _LOGGER.debug("No refresh token available, skipping refresh.")
             return False
