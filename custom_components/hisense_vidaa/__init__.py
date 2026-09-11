@@ -198,7 +198,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {"client": client}
 
-    platforms_to_setup = ["media_player", "sensor", "binary_sensor", "button"]
+    platforms_to_setup = [
+        "media_player",
+        "sensor",
+        "binary_sensor",
+        "button",
+        "notify",
+        "select",
+    ]
     if entry.options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE):
         platforms_to_setup.append("remote")
 
