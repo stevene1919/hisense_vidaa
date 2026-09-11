@@ -178,24 +178,24 @@ def test_source_cycling_and_command_helpers():
 
     # 1. Input cycling from TV -> HDMI1
     assert client.send_command("input") is True
-    client.change_source.assert_called_with("3")
+    client.change_source.assert_called_with("3", "HDMI1")
 
-    # 2. Cycling from HDMI1 -> HDMI2
+    # 2. Cycling from HDMI1 -> HDMI2 with KEY_INPUT
     client.current_source = "HDMI1"
-    assert client.send_command("cycle_source") is True
-    client.change_source.assert_called_with("4")
+    assert client.send_command("KEY_INPUT") is True
+    client.change_source.assert_called_with("4", "HDMI2")
 
     # 3. Cycling from HDMI2 -> TV (wraparound)
     client.current_source = "HDMI2"
     assert client.send_command("source") is True
-    client.change_source.assert_called_with("0")
+    client.change_source.assert_called_with("0", "TV")
 
     # 4. Direct source targeting
     assert client.send_command("source:HDMI2") is True
-    client.change_source.assert_called_with("4")
+    client.change_source.assert_called_with("4", "HDMI2")
 
-    # 5. App targeting via app: prefix
-    assert client.send_command("app:Stan") is True
+    # 5. App targeting via app: prefix (case-insensitive and normalized)
+    assert client.send_command("app:stan") is True
     client.launch_app.assert_called_with("123", "Stan", "stan://")
 
     # 6. Built-in app shortcuts

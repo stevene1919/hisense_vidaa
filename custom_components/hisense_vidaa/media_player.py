@@ -307,13 +307,18 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         # Determine if it's an app
         app = self._app_dict.get(source)
         if app:
-            self._client.launch_app(app["appId"], app["name"], app["url"])
+            self._client.launch_app(app.get("appId", ""), app.get("name", ""), app.get("url", ""))
             return
 
         # Input source
         src = self._source_dict.get(source)
         if src:
-            self._client.change_source(src["sourceid"])
+            sid = str(src.get("sourceid") or src.get("sourcename") or "")
+            sname = str(src.get("sourcename") or source)
+            self._client.change_source(sid, sname)
+            return
+
+        self._client.change_source(source)
 
     def _handle_state_update(self, data: dict[str, Any]) -> None:
         statetype = data.get("statetype")

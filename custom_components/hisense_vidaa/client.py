@@ -5,6 +5,7 @@ import ipaddress
 import json
 import logging
 import os
+import re
 import socket
 import ssl
 import threading
@@ -812,9 +813,17 @@ class HisenseTvClient:
         if cmd_clean.startswith("source:"):
             src_target = command.split(":", 1)[1].strip()
             return self._change_source_by_name_or_id(src_target)
-        if cmd_clean in ("input", "source", "cycle_source", "input_cycle", "source_cycle"):
+        if cmd_clean in (
+            "input",
+            "source",
+            "cycle_source",
+            "input_cycle",
+            "source_cycle",
+            "key_input",
+            "key_source",
+        ):
             return self.cycle_source()
-        if cmd_clean in ("input_menu", "source_menu"):
+        if cmd_clean in ("input_menu", "source_menu", "key_input_menu", "key_source_menu"):
             self.send_key("KEY_MENU")
             return True
 
@@ -829,24 +838,31 @@ class HisenseTvClient:
             self.send_key("KEY_MENU")
             return True
 
-        valid_sources = [s for s in self.sources if isinstance(s, dict) and s.get("sourceid") is not None]
+        valid_sources = [
+            s
+            for s in self.sources
+            if isinstance(s, dict)
+            and (s.get("sourceid") is not None or s.get("sourcename") is not None)
+        ]
         if not valid_sources:
             self.send_key("KEY_MENU")
             return True
 
-        curr_clean = str(self.current_source or "").lower()
+        curr_clean = str(self.current_source or "").strip().lower()
         curr_idx = -1
         for idx, src in enumerate(valid_sources):
-            sname = (src.get("sourcename") or "").lower()
-            dname = (src.get("displayname") or "").lower()
-            sid = str(src.get("sourceid") or "").lower()
-            if curr_clean in (sname, dname, sid):
+            sname = str(src.get("sourcename") or "").strip().lower()
+            dname = str(src.get("displayname") or "").strip().lower()
+            sid = str(src.get("sourceid") or "").strip().lower()
+            if curr_clean and (curr_clean in (sname, dname, sid)):
                 curr_idx = idx
                 break
 
         next_idx = (curr_idx + 1) % len(valid_sources)
         next_source = valid_sources[next_idx]
-        self.change_source(str(next_source["sourceid"]))
+        sid = str(next_source.get("sourceid") or next_source.get("sourcename") or "")
+        sname = str(next_source.get("sourcename") or next_source.get("displayname") or sid)
+        self.change_source(sid, sname)
         return True
 
     def _launch_app_by_name(self, name_or_id: str) -> bool:
@@ -862,13 +878,36 @@ class HisenseTvClient:
             self.send_key("KEY_PRIME")
             return True
 
+        def _normalize(s: str) -> str:
+            return re.sub(r"[^a-z0-9]", "", s.lower())
+
+        target_norm = _normalize(target)
+
         if self.apps:
+            # 1. Exact match
             for app in self.apps:
                 if isinstance(app, dict):
                     aname = (app.get("name") or "").lower()
                     aid = str(app.get("appId") or app.get("id") or "").lower()
-                    if target in (aname, aid) or target in aname:
-                        self.launch_app(app.get("appId", ""), app.get("name", ""), app.get("url", ""))
+                    if target in (aname, aid):
+                        self.launch_app(str(app.get("appId", "")), app.get("name", ""), app.get("url", ""))
+                        return True
+
+            # 2. Normalized alphanumeric match (ignores punctuation, case, spacing)
+            for app in self.apps:
+                if isinstance(app, dict):
+                    aname = app.get("name") or ""
+                    aid = str(app.get("appId") or app.get("id") or "")
+                    if target_norm and (target_norm == _normalize(aname) or target_norm == _normalize(aid)):
+                        self.launch_app(str(app.get("appId", "")), aname, app.get("url", ""))
+                        return True
+
+            # 3. Substring match
+            for app in self.apps:
+                if isinstance(app, dict):
+                    aname = (app.get("name") or "").lower()
+                    if target in aname or (target_norm and target_norm in _normalize(aname)):
+                        self.launch_app(str(app.get("appId", "")), app.get("name", ""), app.get("url", ""))
                         return True
         return False
 
@@ -882,7 +921,7 @@ class HisenseTvClient:
                     dname = (src.get("displayname") or "").lower()
                     sid = str(src.get("sourceid") or "")
                     if clean in (sname, dname, sid.lower()):
-                        self.change_source(sid)
+                        self.change_source(sid, src.get("sourcename"))
                         return True
         self.change_source(target.strip())
         return True
@@ -892,11 +931,46 @@ class HisenseTvClient:
         if self.connected and self.mqtt_client:
             self.mqtt_client.publish(self.topicTVPSBasepath + "actions/changevolume", str(volume))
 
-    def change_source(self, source_id: str) -> None:
+    def change_source(self, source_id: str, source_name: str | None = None) -> None:
         """Switches the active input source on the TV."""
-        if self.connected and self.mqtt_client:
-            payload = json.dumps({"sourceid": source_id})
-            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/changesource", payload)
+        if not self.connected or not self.mqtt_client:
+            return
+
+        sid = str(source_id)
+        sname = source_name
+
+        # Resolve against cached sources if possible
+        if self.sources:
+            clean = str(source_id).strip().lower()
+            for s in self.sources:
+                if isinstance(s, dict):
+                    curr_sid = str(s.get("sourceid") or "")
+                    curr_sname = str(s.get("sourcename") or "")
+                    curr_dname = str(s.get("displayname") or "")
+                    if clean in (curr_sid.lower(), curr_sname.lower(), curr_dname.lower()):
+                        sid = curr_sid or curr_sname
+                        sname = curr_sname or curr_sid
+                        break
+
+        payload_dict: dict[str, Any] = {}
+        if sid:
+            payload_dict["sourceid"] = sid
+        if sname:
+            payload_dict["sourcename"] = sname
+        if not payload_dict:
+            payload_dict = {"sourceid": source_id}
+
+        payload = json.dumps(payload_dict)
+        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/changesource", payload)
+
+        # For modern VIDAA firmware where numeric IDs are ignored in favor of string sourcename
+        if sname and sid != sname and str(sid).isdigit():
+            payload_modern = json.dumps({"sourceid": sname, "sourcename": sname})
+            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/changesource", payload_modern)
+
+        # If switching to broadcast TV, also send KEY_LIVETV as fallback for models requiring channel tuner trigger
+        if str(sid).upper() == "TV" or (sname and str(sname).upper() == "TV") or str(source_id).lower() == "tv":
+            self.send_key("KEY_LIVETV")
 
     def launch_app(self, app_id: str, app_name: str, url: str) -> None:
         """Launches an installed Smart TV application."""
