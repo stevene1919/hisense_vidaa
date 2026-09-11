@@ -110,7 +110,15 @@ if "homeassistant" not in sys.modules:
 
     # media_player
     media_player = types.ModuleType("homeassistant.components.media_player")
+    class MediaPlayerDeviceClass:
+        TV = "tv"
+        RECEIVER = "receiver"
+        SPEAKER = "speaker"
     class MediaPlayerEntity:
+        _attr_device_class = None
+        @property
+        def device_class(self):
+            return getattr(self, "_attr_device_class", None)
         def schedule_update_ha_state(self): pass
         def async_write_ha_state(self): pass
     class MediaPlayerEntityFeature:
@@ -128,6 +136,7 @@ if "homeassistant" not in sys.modules:
         STOP = 4096
         PLAY = 16384
     media_player.MediaPlayerEntity = MediaPlayerEntity
+    media_player.MediaPlayerDeviceClass = MediaPlayerDeviceClass
     media_player.MediaPlayerEntityFeature = MediaPlayerEntityFeature
     components.media_player = media_player
     sys.modules["homeassistant.components.media_player"] = media_player

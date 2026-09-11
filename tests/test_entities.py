@@ -4,6 +4,9 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from homeassistant.components.media_player import (
+    MediaPlayerDeviceClass,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -139,6 +142,7 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
         sw_version=mock_entry.data["sw_version"],
     )
     dev_info = mp.device_info
+    assert mp.device_class == MediaPlayerDeviceClass.TV
     assert dev_info["identifiers"] == {("hisense_vidaa", "test_entry_id")}
     assert dev_info["model"] == "65U7G"
     assert dev_info["manufacturer"] == "Hisense"

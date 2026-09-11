@@ -4,6 +4,7 @@ import time
 from typing import Any
 
 from homeassistant.components.media_player import (
+    MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
 )
@@ -33,6 +34,7 @@ _LOGGER = logging.getLogger(__name__)
 class HisenseVidaaMediaPlayer(MediaPlayerEntity):
     _attr_has_entity_name = True
     _attr_name = None
+    _attr_device_class = MediaPlayerDeviceClass.TV
 
     def __init__(
         self,
