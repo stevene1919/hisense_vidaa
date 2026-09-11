@@ -22,6 +22,7 @@ elif SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
 from client import HisenseTvClient
+from discovery import get_arp_mac
 
 DEFAULT_CREDS_FILE = os.path.join(SCRIPT_DIR, "credentials.json")
 
@@ -38,28 +39,6 @@ def save_credentials(file_path, creds):
     with open(file_path, "w") as f:
         json.dump(creds, f, indent=4)
     print(f"Credentials successfully saved to '{file_path}'")
-
-
-def get_arp_mac(ip):
-    try:
-        from getmac import get_mac_address
-        mac = get_mac_address(ip=ip)
-        if mac:
-            return mac
-    except Exception:
-        pass
-    try:
-        if os.path.exists("/proc/net/arp"):
-            with open("/proc/net/arp") as f:
-                for line in f:
-                    parts = line.split()
-                    if len(parts) >= 4 and parts[0] == ip:
-                        mac = parts[3]
-                        if mac != "00:00:00:00:00:00":
-                            return mac
-    except Exception:
-        pass
-    return None
 
 
 def do_ping(ip, creds, certfile, keyfile, profile="auto"):
@@ -267,6 +246,26 @@ async def do_auth(ip, mac, certfile, keyfile, save_path, profile="auto"):
     client = HisenseTvClient(ip=ip, mac=mac, certfile=certfile, keyfile=keyfile, auth_profile=profile)
     try:
         await client.async_start_auth()
+
+        if profile == "legacy" or client.auth_profile == "legacy":
+            print("\n✅ Legacy static credentials active (no PIN required)!")
+            creds = {
+                "ip_address": ip,
+                "mac_address": mac,
+                "auth_profile": "legacy",
+                "client_id": client.client_id,
+                "username": client.username,
+                "password": client.password,
+                "accesstoken": client.access_token,
+                "accesstoken_time": 0,
+                "accesstoken_duration_day": 0,
+                "refreshtoken": None,
+                "refreshtoken_time": 0,
+                "refreshtoken_duration_day": 0,
+            }
+            save_credentials(save_path, creds)
+            return
+
         print("\n✅ Initial connection established!")
         print("📺 Look at your TV screen. A 4-digit PIN should now be visible.")
         pin = input("👉 Enter the 4-digit PIN: ").strip()
@@ -458,7 +457,7 @@ def main():
     parser.add_argument("key", nargs="?", help="Key to send (for send-key action, e.g. KEY_POWER, KEY_VOLUMEUP)")
     parser.add_argument("--ip", help="IP address of the TV (required for ping/report/test-ssl/auth if not in config)")
     parser.add_argument("--mac", help="MAC address of the TV")
-    parser.add_argument("--profile", choices=["auto", "modern", "remotenow", "vidaa_2024", "remotenow_2018"], default="auto", help="Authentication profile and cert selector (default: auto)")
+    parser.add_argument("--profile", choices=["auto", "modern", "remotenow", "legacy", "vidaa_2024", "remotenow_2018"], default="auto", help="Authentication profile and cert selector (default: auto)")
     parser.add_argument("--cert", help="Path to custom client certificate file (e.g. cert.pem)")
     parser.add_argument("--key", dest="key_file", help="Path to custom client private key file (e.g. key.pem)")
     parser.add_argument("--config", default=DEFAULT_CREDS_FILE, help=f"Path to credentials file (default: {DEFAULT_CREDS_FILE})")

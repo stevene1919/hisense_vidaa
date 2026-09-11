@@ -33,13 +33,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     mac = data.get(CONF_MAC_ADDRESS)
     if not mac:
         try:
-            from functools import partial
-
-            from getmac import get_mac_address
             from homeassistant.helpers.device_registry import format_mac
 
+            from .discovery import get_arp_mac
+
             raw_mac = await hass.async_add_executor_job(
-                partial(get_mac_address, ip=data[CONF_IP_ADDRESS])
+                get_arp_mac, data[CONF_IP_ADDRESS]
             )
             if raw_mac:
                 mac = format_mac(raw_mac)
@@ -83,6 +82,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     client.on_token_refreshed = lambda c: hass.loop.call_soon_threadsafe(
         update_entry_tokens, c
+    )
+    client.register_auth_failed_callback(
+        lambda c: hass.loop.call_soon_threadsafe(entry.async_start_reauth, hass)
     )
 
     # Check and refresh tokens, run client loop in executor

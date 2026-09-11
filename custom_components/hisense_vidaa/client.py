@@ -15,11 +15,17 @@ import paho.mqtt.client as mqtt
 try:
     from .const import KEY_ALIASES
     from .crypto import generate_initial_credentials, resolve_certificates
-    from .discovery import get_device_fingerprint as discover_device_fingerprint
+    from .discovery import (
+        get_device_fingerprint as discover_device_fingerprint,
+        get_tv_timestamp,
+    )
 except ImportError:
     from const import KEY_ALIASES
     from crypto import generate_initial_credentials, resolve_certificates
-    from discovery import get_device_fingerprint as discover_device_fingerprint
+    from discovery import (
+        get_device_fingerprint as discover_device_fingerprint,
+        get_tv_timestamp,
+    )
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,6 +77,7 @@ class HisenseTvClient:
         self._applist_callbacks = []
         self._disconnected_callbacks = []
         self._token_refreshed_callbacks = []
+        self._auth_failed_callbacks = []
 
         self._auth_future: asyncio.Future | None = None
         self._auth_code_future: asyncio.Future | None = None
@@ -192,6 +199,21 @@ class HisenseTvClient:
         if cb in self._token_refreshed_callbacks:
             self._token_refreshed_callbacks.remove(cb)
 
+    def register_auth_failed_callback(self, cb):
+        if cb and cb not in self._auth_failed_callbacks:
+            self._auth_failed_callbacks.append(cb)
+
+    def unregister_auth_failed_callback(self, cb):
+        if cb in self._auth_failed_callbacks:
+            self._auth_failed_callbacks.remove(cb)
+
+    def _dispatch_auth_failed(self):
+        for cb in list(self._auth_failed_callbacks):
+            try:
+                cb(self)
+            except Exception as e:
+                _LOGGER.error("Error in auth failed callback: %s", e)
+
     def _dispatch_state_update(self, data):
         for cb in list(self._state_callbacks):
             try:
@@ -280,18 +302,24 @@ class HisenseTvClient:
         self.topicMobiBasepath = f"/remoteapp/mobile/{self.client_id}/"
         self.topicRemoBasepath = f"/remoteapp/tv/remote_service/{self.client_id}/"
 
-    def generate_initial_creds(self, use_new_auth: bool | None = None) -> None:
+    def generate_initial_creds(
+        self, use_new_auth: bool | None = None, timestamp: int | None = None
+    ) -> None:
         """Generates initial dynamic credentials for challenge-response pairing."""
+        if timestamp is None and self.ip:
+            timestamp = get_tv_timestamp(self.ip, timeout=1.5)
         self.client_id, self.username, self.password = generate_initial_credentials(
             mac=self.mac,
+            timestamp=timestamp,
             auth_profile=self.auth_profile,
             use_new_auth=use_new_auth,
         )
         self.define_topic_paths()
         _LOGGER.debug(
-            "Generated initial creds (profile=%s, use_new_auth=%s) - Client ID: %s, Username: %s",
+            "Generated initial creds (profile=%s, use_new_auth=%s, ts=%s) - Client ID: %s, Username: %s",
             self.auth_profile,
             use_new_auth,
+            timestamp,
             self.client_id,
             self.username,
         )
@@ -527,6 +555,7 @@ class HisenseTvClient:
                     self.mqtt_client.reconnect()
             else:
                 _LOGGER.warning("Token refresh failed. Waiting before next attempt.")
+                self._dispatch_auth_failed()
         except Exception as e:
             _LOGGER.error("Error during background token refresh: %s", e)
         finally:
@@ -581,6 +610,14 @@ class HisenseTvClient:
 
     async def async_start_auth(self) -> None:
         """Starts the authentication handshake and triggers the TV to show PIN."""
+        if self.auth_profile == "legacy":
+            self.client_id = "hisenseservice"
+            self.username = "hisenseservice"
+            self.password = "multimqttservice"
+            self.access_token = "multimqttservice"
+            self.define_topic_paths()
+            return
+
         if self.auth_profile in ("modern", "vidaa_2024", "vidaa"):
             await self._async_start_auth_internal(use_new_auth=True)
         elif self.auth_profile in ("remotenow", "remotenow_2018", "standard"):
@@ -597,9 +634,10 @@ class HisenseTvClient:
                     raise
 
     async def _async_start_auth_internal(self, use_new_auth: bool = False) -> None:
-        self.generate_initial_creds(use_new_auth=use_new_auth)
         loop = asyncio.get_running_loop()
         self._loop = loop
+        tv_ts = await loop.run_in_executor(None, get_tv_timestamp, self.ip, 1.5)
+        self.generate_initial_creds(use_new_auth=use_new_auth, timestamp=tv_ts)
         self.mqtt_client = await loop.run_in_executor(
             None, self.create_mqtt_client, self.client_id, self.username, self.password
         )
@@ -700,12 +738,16 @@ class HisenseTvClient:
 
     def check_and_refresh_token(self, force: bool = False) -> bool:
         """Checks if access token is expired (valid for 2 days) and refreshes it synchronously."""
+        if self.auth_profile == "legacy":
+            return False
+
         if not self.refresh_token:
             _LOGGER.debug("No refresh token available, skipping refresh.")
             return False
 
-        current_time = time.time()
-        expiration_time = self.access_token_time + (2 * 60 * 60)
+        current_time = get_tv_timestamp(self.ip, timeout=1.0) or int(time.time())
+        duration_days = self.access_token_duration or 2
+        expiration_time = self.access_token_time + (duration_days * 86400)
 
         if not force and current_time <= expiration_time - 300:
             return False

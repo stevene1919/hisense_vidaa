@@ -67,7 +67,7 @@ class HisenseVidaaRemote(RemoteEntity):
     @property
     def available(self) -> bool:
         """Return true if remote is available."""
-        return self._client.connected
+        return bool(self._entry_id and (self._client.access_token or self._mac))
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the TV on."""

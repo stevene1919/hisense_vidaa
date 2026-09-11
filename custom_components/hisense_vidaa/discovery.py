@@ -1,5 +1,4 @@
-"""Device discovery and fingerprinting utilities for Hisense VIDAA TV."""
-
+import email.utils
 import logging
 import socket
 import time
@@ -8,6 +7,49 @@ import xml.etree.ElementTree as ET
 from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def get_tv_timestamp(ip: str, timeout: float = 2.0) -> int | None:
+    """Fetches the live timestamp from the TV's UPnP HTTP Date header."""
+    try:
+        url = f"http://{ip}:38400/MediaServer/rendererdevicedesc.xml"
+        req = urllib.request.Request(url, headers={"User-Agent": "HisenseVIDAAClient"})
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            date_str = response.headers.get("Date")
+            if date_str:
+                dt = email.utils.parsedate_to_datetime(date_str)
+                return int(dt.timestamp())
+    except Exception as e:
+        _LOGGER.debug("Could not fetch TV clock from HTTP Date header: %s", e)
+    return None
+
+
+def get_arp_mac(ip: str) -> str | None:
+    """Discovers hardware MAC address via getmac or Linux ARP table."""
+    try:
+        from getmac import get_mac_address
+
+        mac = get_mac_address(ip=ip)
+        if mac:
+            return mac.lower()
+    except Exception:
+        pass
+
+    try:
+        import os
+
+        if os.path.exists("/proc/net/arp"):
+            with open("/proc/net/arp") as f:
+                for line in f:
+                    parts = line.split()
+                    if len(parts) >= 4 and parts[0] == ip:
+                        mac = parts[3]
+                        if mac != "00:00:00:00:00:00":
+                            return mac.lower()
+    except Exception:
+        pass
+
+    return None
 
 
 def get_device_fingerprint(ip: str, timeout: float = 2.0) -> dict[str, Any]:
@@ -28,10 +70,12 @@ def get_device_fingerprint(ip: str, timeout: float = 2.0) -> dict[str, Any]:
         "firmware_version": None,
         "serial_number": None,
         "upnp_raw": None,
+        "tv_timestamp": None,
     }
 
     # 1. Query UPnP / DLNA descriptor on port 38400
     try:
+        info["tv_timestamp"] = get_tv_timestamp(ip, timeout=timeout)
         url = f"http://{ip}:38400/MediaServer/rendererdevicedesc.xml"
         req = urllib.request.Request(url, headers={"User-Agent": "HisenseVIDAATestClient"})
         with urllib.request.urlopen(req, timeout=timeout) as response:

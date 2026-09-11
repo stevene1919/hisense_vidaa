@@ -11,28 +11,33 @@ A custom Home Assistant integration for Hisense TVs running modern VIDAA OS.
 
 This integration connects **directly** to the TV's internal MQTT broker (SSL port `36669`) using client certificates, without requiring external Mosquitto bridges or system-level configuration.
 
-## 🧭 Which Integration Should You Use?
+## 🧭 Supported Authentication Profiles
 
-Hisense changed the MQTT authentication model across firmware revisions:
+This integration automatically detects and natively supports all generations of Hisense smart TVs:
 
-| TV Firmware / Model | MQTT Authentication Model | Recommended Integration |
-| :--- | :--- | :--- |
-| **Modern VIDAA OS (VIDAA U5, U6, U7, 2022+)** | **Dynamic PIN Pairing** (`actions/vidaa_app_connect`) | **👉 This Integration (`hisense_vidaa`)** |
-| **Legacy Hisense / Older VIDAA (Pre-2022)** | **Static Credentials** (`hisenseservice` / `multimqttservice`) | [sehaas/ha_hisense_tv](https://github.com/sehaas/ha_hisense_tv) |
+| TV Generation / Firmware | Auth Profile | Authentication Model | Pairing Method |
+| :--- | :--- | :--- | :--- |
+| **Modern VIDAA OS (2024+ / U7, U8, Q0704+)** | `modern` | **Modern VIDAA 2.0** (`libmqttcrypt` XOR mask) | 4-Digit Screen PIN (`actions/vidaa_app_connect`) |
+| **Standard VIDAA OS (2018–2023 / U4, U5, U6)** | `remotenow` | **RemoteNOW Dynamic** (`his$<timestamp>`) | 4-Digit Screen PIN (`actions/vidaa_app_connect`) |
+| **Legacy Hisense / Older VIDAA (Pre-2022)** | `legacy` | **Legacy Static** (`hisenseservice`) | Instant Setup (No PIN / Static Credentials) |
 
 > [!TIP]
-> Not sure which firmware your TV has? Run the built-in diagnostic probe:
+> **Auto-Detection (`auto`)**: The integration automatically probes your TV's MQTT broker capabilities during setup and selects the optimal authentication handshake for your specific firmware.
+>
+> You can also run the built-in diagnostic probe from the command line:
 > ```bash
 > python3 test_client.py ping --ip <YOUR_TV_IP>
 > ```
-> The tool will automatically test if your TV accepts legacy static logins or enforces modern dynamic pairing and recommend the right integration.
 
 ---
 
 ## ✨ Features
 
-- **Direct Secure Connection**: Native SSL communication directly to port `36669`.
-- **Dynamic PIN Pairing**: Automated challenge-response pairing flow in the Home Assistant UI.
+- **Multi-Generation Authentication**: Native support for Modern VIDAA 2.0 (XOR hashing), Standard RemoteNOW dynamic pairing, and Legacy Static credentials (`hisenseservice`).
+- **Direct Secure Connection**: Native SSL communication directly to port `36669` without external Mosquitto bridges.
+- **Automatic TV Clock Synchronization**: Automatically extracts HTTP `Date` headers from the TV's internal UPnP/DLNA service to prevent hash mismatches during clock drift.
+- **Native Reauthentication & Reconfigure**: Full UI support for Home Assistant re-auth notifications and reconfigure actions without needing to re-add the integration.
+- **Accurate State & Standby Handling**: Entities cleanly report `state = "off"` (with `available = True`) during standby, keeping UI power toggles and automations fully functional.
 - **Standby Power & Wake-on-LAN**: Power on/off via secure MQTT keys, with optional Wake-on-LAN magic packet support.
 - **Dedicated Remote Entity (`remote`)**:
   - Full remote control platform (`remote.<tv_name>`).
@@ -49,9 +54,8 @@ Hisense changed the MQTT authentication model across firmware revisions:
   - Toggle dedicated remote entity, Wake-on-LAN, and Smart TV app listing in sources.
 - **Robust Connection Handlers**:
   - Non-blocking startup ensures Home Assistant boots cleanly even when the TV is powered off.
-  - Mutex locks and rate limits to prevent background thread storms during network disconnects.
-  - Automatic background token refresh when 2-day session tokens expire.
-  - Refreshed tokens are dynamically persisted to Config Entry to survive restarts.
+  - Exponential reconnect backoff (`min_delay=2, max_delay=30`) preventing thread storms.
+  - Automatic background token refresh when 2-day session tokens expire (persisted directly to Config Entry).
 - **Zero-Duplication CLI Diagnostic Tool**: Built-in test suite (`test_client.py`) sharing 100% of its backend logic with the Home Assistant integration code.
 
 ---

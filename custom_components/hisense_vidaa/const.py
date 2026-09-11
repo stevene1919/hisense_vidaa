@@ -28,6 +28,7 @@ AUTH_PROFILES = {
     "auto": "Auto Detect (Recommended)",
     "modern": "VIDAA 2.0 (Newer Firmware / 2024+)",
     "remotenow": "RemoteNOW (Standard / 2018–2023)",
+    "legacy": "Legacy Static (Pre-2022 / Static Credentials)",
 }
 
 KEY_ALIASES = {

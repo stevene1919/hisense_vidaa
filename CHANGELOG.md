@@ -2,6 +2,18 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.2.0] - 2026-09-11
+
+### Added
+- **LEGACY STATIC AUTHENTICATION PROFILE (`legacy`)**: Added native support for pre-2022 Hisense TVs using static MQTT credentials (`hisenseservice` / `multimqttservice`). Automatically probes TV capabilities, bypasses PIN pairing, and disables token refresh loops for legacy devices.
+- **AUTOMATIC TV CLOCK SYNCHRONIZATION**: Added UPnP/DLNA HTTP `Date` header extraction to synchronize pairing timestamp calculations directly with the TV's internal clock, preventing `rc: 5` / `rc: 4` authentication rejections during clock drift or offline time rollover.
+- **NATIVE HOME ASSISTANT REAUTH & RECONFIGURE FLOWS**: Implemented `async_step_reauth`, `async_step_reauth_confirm`, and `async_step_reconfigure` (`supports_reconfigure: true`) with automated reauth triggering upon expired sessions and one-click PIN regeneration.
+- **CLI DIAGNOSTIC PROBE ENHANCEMENTS**: Updated `test_client.py` with `--profile legacy`, dynamic 3-tier auth compatibility probing (Legacy Static, Standard Dynamic, Modern Dynamic), and Markdown issue reporting.
+
+### Fixed
+- **ENTITY STATE & AVAILABILITY OVERHAUL**: Media player and remote entities now correctly report `state = STATE_OFF` (`"off"`) with `available = True` while the TV is in standby/disconnected, preserving UI power toggles and automation triggers.
+- **CODE DEDUPLICATION & ARCHITECTURAL REFACTORING**: Extracted options flow into dedicated `options_flow.py`, centralized ARP hardware MAC resolution in `discovery.py`, and ensured 100% logic sharing between the HA integration and `test_client.py`.
+
 ## [2.0.0] - 2026-09-06
 
 ### Added

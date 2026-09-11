@@ -16,6 +16,18 @@
           "pin_code": "PIN Code"
         }
       },
+      "reauth_confirm": {
+        "title": "Reauthenticate Hisense TV",
+        "description": "Home Assistant needs to pair with your Hisense TV ({ip_address}) again. Press Submit to display the PIN on your TV screen."
+      },
+      "reconfigure": {
+        "title": "Reconfigure Hisense VIDAA TV",
+        "description": "Update the connection settings or re-pair with your Hisense TV.",
+        "data": {
+          "ip_address": "IP Address",
+          "auth_profile": "Authentication / Certificate Profile"
+        }
+      },
       "options": {
         "title": "Device Features & Options",
         "description": "Customize features for your Hisense VIDAA TV.",
@@ -30,6 +42,10 @@
       "cannot_connect": "Failed to connect to the TV.",
       "invalid_auth": "Invalid PIN code. Please try again.",
       "unknown": "An unknown error occurred."
+    },
+    "abort": {
+      "reauth_successful": "Re-authentication was successful.",
+      "already_configured": "This device is already configured."
     }
   },
   "options": {

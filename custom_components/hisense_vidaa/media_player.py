@@ -85,11 +85,24 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 
     @property
     def state(self) -> str:
+        if not self._client.connected:
+            return STATE_OFF
         return self._state
 
     @property
     def available(self) -> bool:
-        return self._client.connected
+        return bool(self._entry_id and (self._client.access_token or self._mac))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return device-specific attributes."""
+        attrs = {
+            "mqtt_connected": self._client.connected,
+            "auth_profile": self._client.auth_profile,
+        }
+        if self._mac:
+            attrs["mac_address"] = self._mac
+        return attrs
 
     @property
     def volume_level(self) -> float:
