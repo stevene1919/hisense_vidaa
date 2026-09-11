@@ -14,12 +14,14 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, Device
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
+    CONF_ENABLE_MEDIA_CONTROLS,
     CONF_ENABLE_WOL,
     CONF_INCLUDE_APPS_IN_SOURCES,
     CONF_MAC_ADDRESS,
     CONF_MANUFACTURER,
     CONF_MODEL,
     CONF_SW_VERSION,
+    DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
     DOMAIN,
@@ -163,20 +165,26 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
-        return (
+        base = (
             MediaPlayerEntityFeature.TURN_ON
             | MediaPlayerEntityFeature.TURN_OFF
             | MediaPlayerEntityFeature.VOLUME_SET
             | MediaPlayerEntityFeature.VOLUME_STEP
             | MediaPlayerEntityFeature.VOLUME_MUTE
             | MediaPlayerEntityFeature.SELECT_SOURCE
-            | MediaPlayerEntityFeature.PLAY
-            | MediaPlayerEntityFeature.PAUSE
-            | MediaPlayerEntityFeature.STOP
-            | MediaPlayerEntityFeature.NEXT_TRACK
-            | MediaPlayerEntityFeature.PREVIOUS_TRACK
             | MediaPlayerEntityFeature.PLAY_MEDIA
         )
+        enable_controls = self._options.get(
+            CONF_ENABLE_MEDIA_CONTROLS, DEFAULT_ENABLE_MEDIA_CONTROLS
+        )
+        if enable_controls:
+            base |= (
+                MediaPlayerEntityFeature.PLAY_PAUSE
+                | MediaPlayerEntityFeature.STOP
+                | MediaPlayerEntityFeature.NEXT_TRACK
+                | MediaPlayerEntityFeature.PREVIOUS_TRACK
+            )
+        return base
 
     def turn_on(self) -> None:
         # Send Wake-on-LAN magic packet if enabled in options
@@ -229,11 +237,8 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
     def mute_volume(self, mute: bool) -> None:
         self._client.send_key("KEY_MUTE")
 
-    def media_play(self) -> None:
+    def media_play_pause(self) -> None:
         self._client.send_key("KEY_PLAY")
-
-    def media_pause(self) -> None:
-        self._client.send_key("KEY_PAUSE")
 
     def media_stop(self) -> None:
         self._client.send_key("KEY_STOP")

@@ -5,11 +5,13 @@ from homeassistant import config_entries
 
 from .const import (
     CONF_CERTFILE,
+    CONF_ENABLE_MEDIA_CONTROLS,
     CONF_ENABLE_REMOTE,
     CONF_ENABLE_WOL,
     CONF_INCLUDE_APPS_IN_SOURCES,
     CONF_KEYFILE,
     CONF_USE_SSL,
+    DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
@@ -45,6 +47,13 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
                     default=options.get(
                         CONF_INCLUDE_APPS_IN_SOURCES,
                         DEFAULT_INCLUDE_APPS_IN_SOURCES,
+                    ),
+                ): bool,
+                vol.Optional(
+                    CONF_ENABLE_MEDIA_CONTROLS,
+                    default=options.get(
+                        CONF_ENABLE_MEDIA_CONTROLS,
+                        DEFAULT_ENABLE_MEDIA_CONTROLS,
                     ),
                 ): bool,
                 vol.Optional(

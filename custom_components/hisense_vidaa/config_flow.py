@@ -18,6 +18,7 @@ from .const import (
     CONF_AUTH_PROFILE,
     CONF_CERTFILE,
     CONF_CLIENT_ID,
+    CONF_ENABLE_MEDIA_CONTROLS,
     CONF_ENABLE_REMOTE,
     CONF_ENABLE_WOL,
     CONF_INCLUDE_APPS_IN_SOURCES,
@@ -36,6 +37,7 @@ from .const import (
     DEFAULT_AUTH_PROFILE,
     DEFAULT_CERT_DIR,
     DEFAULT_CERT_FILENAME,
+    DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
@@ -643,6 +645,10 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_INCLUDE_APPS_IN_SOURCES,
                         DEFAULT_INCLUDE_APPS_IN_SOURCES,
                     ),
+                    CONF_ENABLE_MEDIA_CONTROLS: user_input.get(
+                        CONF_ENABLE_MEDIA_CONTROLS,
+                        DEFAULT_ENABLE_MEDIA_CONTROLS,
+                    ),
                 },
             )
 
@@ -656,6 +662,10 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     CONF_INCLUDE_APPS_IN_SOURCES,
                     default=DEFAULT_INCLUDE_APPS_IN_SOURCES,
+                ): bool,
+                vol.Optional(
+                    CONF_ENABLE_MEDIA_CONTROLS,
+                    default=DEFAULT_ENABLE_MEDIA_CONTROLS,
                 ): bool,
             }),
         )

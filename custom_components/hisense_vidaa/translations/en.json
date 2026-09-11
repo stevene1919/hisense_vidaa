@@ -47,7 +47,8 @@
         "data": {
           "enable_remote": "Enable dedicated Remote entity",
           "enable_wol": "Enable Wake-on-LAN power on",
-          "include_apps_in_sources": "Include Smart TV Apps in Media Player source list"
+          "include_apps_in_sources": "Include Smart TV Apps in Media Player source list",
+          "enable_media_controls": "Enable media transport controls (play/pause, stop, skip)"
         }
       }
     },
@@ -73,6 +74,7 @@
           "enable_remote": "Enable dedicated Remote entity",
           "enable_wol": "Enable Wake-on-LAN power on",
           "include_apps_in_sources": "Include Smart TV Apps in Media Player source list",
+          "enable_media_controls": "Enable media transport controls (play/pause, stop, skip)",
           "use_ssl": "Use Encrypted SSL/TLS Connection",
           "certfile": "Certificate File Path (.crt / .pem)",
           "keyfile": "Private Key File Path (.key / .pem)"

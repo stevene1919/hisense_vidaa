@@ -17,6 +17,7 @@ DEFAULT_NAME = "Hisense TV"
 CONF_ENABLE_REMOTE = "enable_remote"
 CONF_ENABLE_WOL = "enable_wol"
 CONF_INCLUDE_APPS_IN_SOURCES = "include_apps_in_sources"
+CONF_ENABLE_MEDIA_CONTROLS = "enable_media_controls"
 CONF_AUTH_PROFILE = "auth_profile"
 CONF_MODEL = "model"
 CONF_SW_VERSION = "sw_version"
@@ -40,6 +41,7 @@ ATTR_DELAY = "delay"
 DEFAULT_ENABLE_REMOTE = True
 DEFAULT_ENABLE_WOL = False
 DEFAULT_INCLUDE_APPS_IN_SOURCES = True
+DEFAULT_ENABLE_MEDIA_CONTROLS = True
 DEFAULT_AUTH_PROFILE = "auto"
 
 AUTH_PROFILES = {
