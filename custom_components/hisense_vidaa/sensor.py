@@ -91,6 +91,16 @@ class HisenseVidaaTokenExpiresSensor(HisenseVidaaBaseSensor):
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_token_expires"
+        self._update_state()
+
+    @property
+    def available(self) -> bool:
+        """Return True only if dynamic token expiration data exists."""
+        return bool(
+            self._client.auth_profile != "legacy"
+            and self._client.access_token_time
+            and self._client.access_token_duration
+        )
 
     async def async_added_to_hass(self) -> None:
         self._client.register_token_refreshed_callback(self._handle_token_refreshed)
@@ -104,7 +114,9 @@ class HisenseVidaaTokenExpiresSensor(HisenseVidaaBaseSensor):
         self.async_write_ha_state()
 
     def _update_state(self) -> None:
-        if self._client.access_token_time and self._client.access_token_duration:
+        if self._client.auth_profile == "legacy":
+            self._attr_native_value = None
+        elif self._client.access_token_time and self._client.access_token_duration:
             exp_ts = self._client.access_token_time + (self._client.access_token_duration * 86400)
             self._attr_native_value = datetime.fromtimestamp(exp_ts, tz=UTC)
         else:
@@ -133,28 +145,53 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaBaseSensor):
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_active_app"
-        self._attr_native_value = None
+        self._attr_native_value = "Off" if not client.connected else "Standby"
         self._app_dict: dict[str, str] = {}
 
     async def async_added_to_hass(self) -> None:
         self._client.register_state_callback(self._handle_state_update)
         self._client.register_applist_callback(self._handle_applist_update)
+        self._client.register_disconnected_callback(self._handle_disconnected)
 
     async def async_will_remove_from_hass(self) -> None:
         self._client.unregister_state_callback(self._handle_state_update)
+        self._client.unregister_applist_callback(self._handle_applist_update)
+        self._client.unregister_disconnected_callback(self._handle_disconnected)
 
     def _handle_applist_update(self, apps: list[dict[str, Any]]) -> None:
-        self._app_dict = {a.get("appId", ""): a.get("appName", "") for a in apps if isinstance(a, dict)}
+        if not apps:
+            return
+        self._app_dict = {
+            str(a.get("appId") or a.get("app_id", "")): (a.get("appName") or a.get("name", ""))
+            for a in apps
+            if isinstance(a, dict) and (a.get("appId") or a.get("app_id"))
+        }
         self.async_write_ha_state()
 
     def _handle_state_update(self, state: dict[str, Any]) -> None:
-        app_id = state.get("appId") or state.get("activeAppId")
-        if app_id and app_id in self._app_dict:
-            self._attr_native_value = self._app_dict[app_id]
-        elif app_id:
-            self._attr_native_value = app_id
-        elif state.get("statetype") == "fake_sleep_0":
+        statetype = state.get("statetype")
+        if statetype == "fake_sleep_0" or not self._client.connected:
             self._attr_native_value = "Off"
+        elif statetype == "app":
+            app_name = state.get("name") or state.get("appName")
+            app_id = str(state.get("appId") or state.get("activeAppId") or "")
+            self._attr_native_value = app_name or self._app_dict.get(app_id, "App")
+        elif statetype == "livetv":
+            self._attr_native_value = "Live TV"
+        elif statetype == "sourceswitch":
+            self._attr_native_value = "TV Input"
+        elif statetype == "launcher":
+            self._attr_native_value = "Home Launcher"
+        else:
+            app_id = str(state.get("appId") or state.get("activeAppId") or "")
+            if app_id and app_id in self._app_dict:
+                self._attr_native_value = self._app_dict[app_id]
+            elif app_id:
+                self._attr_native_value = app_id
+        self.async_write_ha_state()
+
+    def _handle_disconnected(self) -> None:
+        self._attr_native_value = "Off"
         self.async_write_ha_state()
 
 
@@ -167,14 +204,42 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaBaseSensor):
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_active_source"
-        self._attr_native_value = None
+        self._attr_native_value = "Off" if not client.connected else "None"
 
     async def async_added_to_hass(self) -> None:
         self._client.register_sourcelist_callback(self._handle_sourcelist_update)
+        self._client.register_state_callback(self._handle_state_update)
+        self._client.register_disconnected_callback(self._handle_disconnected)
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_sourcelist_callback(self._handle_sourcelist_update)
+        self._client.unregister_state_callback(self._handle_state_update)
+        self._client.unregister_disconnected_callback(self._handle_disconnected)
+
+    def _handle_state_update(self, state: dict[str, Any]) -> None:
+        statetype = state.get("statetype")
+        if statetype == "fake_sleep_0" or not self._client.connected:
+            self._attr_native_value = "Off"
+        elif statetype == "sourceswitch":
+            self._attr_native_value = (
+                state.get("sourcename")
+                or state.get("sourceName")
+                or state.get("displayname")
+                or "HDMI"
+            )
+        elif statetype == "livetv":
+            self._attr_native_value = "TV"
+        elif state.get("sourcename") or state.get("sourceName"):
+            self._attr_native_value = state.get("sourcename") or state.get("sourceName")
+        self.async_write_ha_state()
 
     def _handle_sourcelist_update(self, sources: list[dict[str, Any]]) -> None:
         for s in sources:
-            if isinstance(s, dict) and s.get("is_active"):
-                self._attr_native_value = s.get("sourceName") or s.get("sourcename")
+            if isinstance(s, dict) and (s.get("is_active") or s.get("isactive") or s.get("active")):
+                self._attr_native_value = s.get("sourceName") or s.get("sourcename") or s.get("name")
                 break
+        self.async_write_ha_state()
+
+    def _handle_disconnected(self) -> None:
+        self._attr_native_value = "Off"
         self.async_write_ha_state()
