@@ -55,3 +55,7 @@ This document tracks planned features, new platforms, technical debt, and archit
 ### 6. Automated Testing & CI
 - [x] **Mock TV MQTT Test Suite**:
   - Added in-process mock protocol test suite (`tests/test_client_auth.py`, `tests/test_client_state.py`, `tests/test_crypto.py`, `tests/test_discovery.py`) and GitHub Actions test workflow (`.github/workflows/test.yml`).
+
+### 7. Security Hardening & Best Practices
+- [ ] **Safe XML Parsing with `defusedxml` ([Issue #14](https://github.com/stevene1919/hisense_vidaa/issues/14))**:
+  - Import `defusedxml.ElementTree` with fallback to standard `xml.etree.ElementTree` in `discovery.py` to guard against XML entity expansion on UPnP port 38400.
