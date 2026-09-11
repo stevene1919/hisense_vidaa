@@ -187,6 +187,8 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaMqttTrackingSensor):
         super().__init__(client, entry, default_on="Standby", default_off="Off")
         self._attr_unique_id = f"{self._entry_id}_active_app"
         self._app_dict: dict[str, str] = {}
+        self._app_icons: dict[str, str] = {}
+        self._favorite_apps: list[str] = []
 
     def _register_custom_callbacks(self) -> None:
         self._client.register_applist_callback(self._handle_applist_update)
@@ -197,11 +199,22 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaMqttTrackingSensor):
     def _handle_applist_update(self, apps: list[dict[str, Any]]) -> None:
         if not apps:
             return
-        self._app_dict = {
-            str(a.get("appId") or a.get("app_id", "")): (a.get("appName") or a.get("name", ""))
-            for a in apps
-            if isinstance(a, dict) and (a.get("appId") or a.get("app_id"))
-        }
+        self._app_dict = {}
+        self._app_icons = {}
+        self._favorite_apps = []
+        for a in apps:
+            if isinstance(a, dict) and (a.get("appId") or a.get("app_id")):
+                a_id = str(a.get("appId") or a.get("app_id", ""))
+                name = a.get("appName") or a.get("name", "")
+                if name:
+                    self._app_dict[a_id] = name
+                    if a.get("isFav") in (True, "true", 1, "1"):
+                        self._favorite_apps.append(name)
+                    icon_raw = a.get("httpIcon")
+                    if icon_raw and "http" in icon_raw:
+                        clean_url = "http" + icon_raw.split("http", 1)[1]
+                        self._app_icons[name] = clean_url
+                        self._app_icons[a_id] = clean_url
         self._schedule_state_update()
 
     def _handle_state_update(self, state: dict[str, Any]) -> None:
@@ -215,7 +228,7 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaMqttTrackingSensor):
         elif statetype == "livetv":
             self._attr_native_value = "Live TV"
         elif statetype == "sourceswitch":
-            self._attr_native_value = "None"
+            self._attr_native_value = "TV Input"
         elif statetype == "launcher":
             self._attr_native_value = "Home Launcher"
         else:
@@ -223,6 +236,53 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaMqttTrackingSensor):
             if app_id:
                 self._attr_native_value = self._app_dict.get(app_id, app_id)
         self._schedule_state_update()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return sensor attributes."""
+        attrs: dict[str, Any] = {
+            "total_installed_apps": len(self._app_dict),
+        }
+        if self._favorite_apps:
+            attrs["favorite_apps"] = self._favorite_apps
+        if self._attr_native_value and self._attr_native_value in self._app_icons:
+            attrs["icon_url"] = self._app_icons[self._attr_native_value]
+        return attrs
+
+    @property
+    def entity_picture(self) -> str | None:
+        """Return dynamic high-res app artwork from VIDAA CDN."""
+        if self._attr_native_value and self._attr_native_value in self._app_icons:
+            return self._app_icons[self._attr_native_value]
+        return None
+
+    @property
+    def icon(self) -> str:
+        """Return dynamic MDI icon for the active app or state."""
+        val = (self._attr_native_value or "").lower()
+        if "netflix" in val:
+            return "mdi:netflix"
+        if "youtube" in val:
+            return "mdi:youtube"
+        if "spotify" in val:
+            return "mdi:spotify"
+        if "plex" in val:
+            return "mdi:plex"
+        if "disney" in val:
+            return "mdi:movie-open"
+        if "prime" in val or "amazon" in val:
+            return "mdi:video"
+        if "live tv" in val or val == "tv":
+            return "mdi:television-box"
+        if "home launcher" in val or "launcher" in val:
+            return "mdi:view-dashboard"
+        if "tv input" in val or "none" in val:
+            return "mdi:video-input-hdmi"
+        if "standby" in val:
+            return "mdi:television-ambient-light"
+        if "off" in val:
+            return "mdi:television-off"
+        return "mdi:application"
 
 
 class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
@@ -234,6 +294,9 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry, default_on="None", default_off="Off")
         self._attr_unique_id = f"{self._entry_id}_active_source"
+        self._available_sources: list[str] = []
+        self._connected_inputs: list[str] = []
+        self._custom_labels: dict[str, str] = {}
 
     def _register_custom_callbacks(self) -> None:
         self._client.register_sourcelist_callback(self._handle_sourcelist_update)
@@ -261,13 +324,51 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
         self._schedule_state_update()
 
     def _handle_sourcelist_update(self, sources: list[dict[str, Any]]) -> None:
+        self._available_sources = []
+        self._connected_inputs = []
+        self._custom_labels = {}
         for s in sources:
-            if isinstance(s, dict) and (
-                s.get("is_signal") in ("1", 1, True)
-                or s.get("is_active")
-                or s.get("isactive")
-                or s.get("active")
-            ):
-                self._attr_native_value = s.get("sourcename") or s.get("sourceName") or s.get("displayname") or s.get("name")
-                break
+            if isinstance(s, dict):
+                src_name = s.get("sourcename") or s.get("sourceName") or s.get("displayname") or s.get("name")
+                if src_name:
+                    self._available_sources.append(src_name)
+                    if s.get("has_signal") in ("1", 1, True):
+                        self._connected_inputs.append(src_name)
+                    custom_label = s.get("displayname2")
+                    if custom_label and str(custom_label).strip():
+                        self._custom_labels[src_name] = str(custom_label).strip()
+
+                if (
+                    s.get("is_signal") in ("1", 1, True)
+                    or s.get("is_active")
+                    or s.get("isactive")
+                    or s.get("active")
+                ):
+                    self._attr_native_value = src_name
         self._schedule_state_update()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return sensor attributes."""
+        attrs: dict[str, Any] = {}
+        if self._available_sources:
+            attrs["available_sources"] = self._available_sources
+        if self._connected_inputs:
+            attrs["connected_inputs"] = self._connected_inputs
+        if self._custom_labels:
+            attrs["custom_labels"] = self._custom_labels
+        return attrs
+
+    @property
+    def icon(self) -> str:
+        """Return dynamic MDI icon based on active input source."""
+        val = (self._attr_native_value or "").lower()
+        if "hdmi" in val:
+            return "mdi:video-input-hdmi"
+        if "tv" in val:
+            return "mdi:television-classic"
+        if "av" in val:
+            return "mdi:video-input-component"
+        if "off" in val:
+            return "mdi:power-plug-off"
+        return "mdi:video-input-hdmi"

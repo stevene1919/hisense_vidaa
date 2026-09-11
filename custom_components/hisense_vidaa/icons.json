@@ -1,0 +1,42 @@
+{
+  "entity": {
+    "sensor": {
+      "token_expires_in": {
+        "default": "mdi:clock-end"
+      },
+      "auth_profile": {
+        "default": "mdi:shield-key-outline"
+      },
+      "active_app": {
+        "default": "mdi:application"
+      },
+      "active_source": {
+        "default": "mdi:video-input-hdmi"
+      }
+    },
+    "binary_sensor": {
+      "mqtt_connected": {
+        "default": "mdi:lan-connect"
+      }
+    },
+    "button": {
+      "refresh_token": {
+        "default": "mdi:refresh-circle"
+      },
+      "force_reconnect": {
+        "default": "mdi:lan-connect"
+      },
+      "sync_clock": {
+        "default": "mdi:clock-sync-outline"
+      }
+    }
+  },
+  "services": {
+    "send_key": {
+      "service": "mdi:remote"
+    },
+    "launch_app": {
+      "service": "mdi:play-box-multiple"
+    }
+  }
+}

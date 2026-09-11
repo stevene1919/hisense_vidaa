@@ -134,6 +134,16 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         return self._source
 
     @property
+    def media_image_url(self) -> str | None:
+        """Return dynamic artwork URL for currently playing app."""
+        if self._source and self._source in self._app_dict:
+            app_info = self._app_dict[self._source]
+            icon = app_info.get("httpIcon")
+            if icon and "http" in icon:
+                return "http" + icon.split("http", 1)[1]
+        return None
+
+    @property
     def source_list(self) -> list[str]:
         # Filter physical inputs (HDMI, TV, AV)
         sources = [
