@@ -2,12 +2,19 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
-## [2.7.1] - 2026-09-11
+## [2.7.5] - 2026-09-11
 
 ### Added
-- **INPUT & SOURCE CYCLING SUPPORT**: `remote.send_command` now supports `"input"`, `"source"`, and `"cycle_source"`, automatically cycling to the next active TV input source (`TV` → `HDMI1` → `HDMI2` → `HDMI3` → `TV`) via MQTT `changesource`.
+- **LOVELACE REMOTE CARDS & PHYSICAL REMOTE CONFIGURATIONS**: Added 5 ready-to-use Lovelace remote card example configurations in [`examples/`](examples/):
+  - `lovelace-australian-remote-card.yaml`: Pixel-accurate 12-app EN2G30H Australian physical remote layout with streaming quick-launch buttons.
+  - `lovelace-classic-remote-card.yaml`: Traditional Free-to-Air remote layout without streaming app shortcuts, focusing on D-pad navigation, volume/channel rockers, full 12-key numpad, and media transport controls.
+  - `lovelace-button-card-remote.yaml`: Modular vertical stack remote layout with standard button cards.
+  - `lovelace-android-tv-card.yaml`: Custom integration profile for `android-tv-card`.
+  - `lovelace-tv-card.yaml`: Clean layout for `tv-card`.
+- **WORLDWIDE & REGIONAL SMART APP SHORTCUTS**: Added comprehensive alias mappings and normalized regex/fuzzy matching in `_launch_app_by_name` across Australia/NZ (ABC iview, SBS On Demand, 7plus, 9Now, 10 play, Stan, Kayo, Binge, Foxtel, Optus Sport, TVNZ+, ThreeNow, Neon), UK/Europe (BBC iPlayer, ITVX, Channel 4, My5, NOW, Discovery+, RTL+, Joyn, RaiPlay, RTVE Play), North America (Peacock, Hulu, Sling TV, FuboTV, Philo, Roku, Vudu, Crackle, Freevee, CBC Gem, Crave), and Global services (Disney+, Apple TV, Max/HBO, Paramount+, Spotify, Tidal, Plex, Crunchyroll, DAZN, Tubi, Pluto TV, Rakuten, MUBI, UFC, NBA, UEFA.tv, F1 TV).
+- **DUAL-COMPATIBILITY INPUT CYCLING & LIVE TV TUNER FIX**: Resolved input cycling stall on broadcast TV (`livetv`) by passing both `sourceid` and string `sourcename` (dual-publishing for older numeric and modern string firmware compatibility). Added fallback `KEY_LIVETV` trigger when switching to Live TV mode.
 - **DIRECT `source:<name>` & `app:<name>` TARGETING**: Added direct prefix targeting in `send_command` (`source:HDMI2`, `app:Stan`) to allow one-shot switching from remote keypads and scripts.
-- **EXTENDED KEY ALIASES**: Added `KEY_ALIASES` entries for `input`, `source`, `input_menu`, `source_menu`, `livetv`, `live_tv`, `tv`, `media`, `apps`, and `chlist`.
+- **EXTENDED KEY ALIASES**: Added comprehensive key aliases across all international and model variants including `text` / `teletext` / `txt`, `guide` / `epg`, `chlist` / `channel_list`, `key_input`, `key_source`, `key_input_menu`, and color keys.
 
 ## [2.7.0] - 2026-09-11
 

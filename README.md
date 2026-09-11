@@ -77,6 +77,30 @@ This integration automatically detects and natively supports all generations of 
 
 ---
 
+## 📱 Lovelace Remote Cards & Dashboard Examples
+
+Ready-to-use Lovelace dashboard remote configurations are available in the [`examples/`](examples/) directory:
+
+1. **[Australian Physical Remote (EN2G30H)](examples/lovelace-australian-remote-card.yaml)**:
+   - Pixel-accurate recreation of the physical 12-app Australian remote control (`button-card`).
+   - Includes custom SVGs/badges for Netflix, YouTube, Prime Video, Disney+, Stan, Kayo, Binge, Foxtel, ABC iview, SBS On Demand, 7plus, 9Now, and 10 play.
+   - Dual vertical pill rockers for Volume (`+`/`-`) and Channel (`+`/`-`), full D-pad wheel with center OK, and 12-key numpad.
+
+2. **[Classic Free-to-Air Remote (No Smart Apps)](examples/lovelace-classic-remote-card.yaml)**:
+   - Traditional TV remote layout designed for broadcast TV and clean media setups without streaming app clutter.
+   - Dedicated Power, Input cycle, Subtitle, Teletext, Guide/EPG, Channel List, Volume/Channel rockers, Full Numpad, and Color Keys.
+
+3. **[Standard Modular Button Card Remote](examples/lovelace-button-card-remote.yaml)**:
+   - Modular vertical stack layout using standard `custom:button-card`.
+
+4. **[Android TV Card Profile](examples/lovelace-android-tv-card.yaml)**:
+   - Pre-configured profile for `custom:android-tv-card`.
+
+5. **[Classic TV Card Profile](examples/lovelace-tv-card.yaml)**:
+   - Compact profile for `custom:tv-card`.
+
+---
+
 ## 🌐 Network Requirements & Best Practices
 
 > [!IMPORTANT]
