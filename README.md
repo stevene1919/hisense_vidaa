@@ -83,25 +83,13 @@ This integration automatically detects and natively supports all generations of 
   <img src="assets/screenshots/ha_australian_remote.png" alt="Hisense Australian Remote Card" width="320" />
 </p>
 
-Ready-to-use Lovelace dashboard remote configurations are available in the [`examples/`](examples/) directory:
+Ready-to-use Lovelace dashboard remote configurations are available in the [`examples/`](examples/) directory. For full setup instructions and requirements, see the **[Lovelace Remote Cards & Dashboard Guide](docs/lovelace_cards.md)**.
 
-1. **[Australian Physical Remote (EN2G30H)](examples/lovelace-australian-remote-card.yaml)**:
-   - Pixel-accurate recreation of the physical 12-app Australian remote control (`custom:button-card`).
-   - Includes custom SVGs/badges for Netflix, YouTube, Prime Video, Disney+, Stan, Kayo, Binge, Foxtel, ABC iview, SBS On Demand, 7plus, 9Now, and 10 play.
-   - Dual vertical pill rockers for Volume (`+`/`-`) and Channel (`+`/`-`), full D-pad wheel with center OK, and 12-key numpad.
-
-2. **[Classic Free-to-Air Remote (No Smart Apps)](examples/lovelace-classic-remote-card.yaml)**:
-   - Traditional TV remote layout designed for broadcast TV and clean media setups without streaming app clutter.
-   - Dedicated Power, Input cycle, Subtitle, Teletext, Guide/EPG, Channel List, Volume/Channel rockers, Full Numpad, and Color Keys.
-
-3. **[Standard Modular Button Card Remote](examples/lovelace-button-card-remote.yaml)**:
-   - Modular vertical stack layout using standard `custom:button-card`.
-
-4. **[Android TV Card Profile](examples/lovelace-android-tv-card.yaml)**:
-   - Pre-configured profile for `custom:android-tv-card`.
-
-5. **[Classic TV Card Profile](examples/lovelace-tv-card.yaml)**:
-   - Compact profile for `custom:tv-card`.
+- **[Australian Physical Remote (EN2G30H)](examples/lovelace-australian-remote-card.yaml)** — Pixel-accurate 12-app remote recreation (`custom:button-card`) with Netflix, YouTube, Stan, Kayo, Binge, ABC iview, SBS On Demand, 9Now, 10 play, Foxtel, 7plus, and Prime Video.
+- **[Classic Free-to-Air Remote](examples/lovelace-classic-remote-card.yaml)** — Traditional TV remote layout designed for broadcast TV without streaming app clutter.
+- **[Standard Modular Button Card Remote](examples/lovelace-button-card-remote.yaml)** — Modular vertical stack layout using standard `custom:button-card`.
+- **[Android TV Card Profile](examples/lovelace-android-tv-card.yaml)** — Pre-configured profile for `custom:android-tv-card`.
+- **[Classic TV Card Profile](examples/lovelace-tv-card.yaml)** — Compact profile for `custom:tv-card`.
 
 ---
 
@@ -152,9 +140,10 @@ Ready-to-use Lovelace dashboard remote configurations are available in the [`exa
 
 VIDAA OS requires a client SSL certificate and private key to communicate with port `36669`. Certificates are excluded from this repository and must be provided locally.
 
-The integration supports both **extracted `.pem` / `.crt` / `.key` files** and **direct PKCS#12 bundles (`.p12` / `.pfx`)**:
+Place your certificate files into `/config/custom_components/hisense_vidaa/certs/` (or `/config/certs/`, `/config/ssl/`, `/ssl/`). The integration natively supports extracted `.pem` / `.crt` / `.key` files as well as direct PKCS#12 bundles (`.p12` / `.pfx`):
 
-1. Place your certificate and private key files in `/config/certs/`, `/config/ssl/`, `/ssl/`, or `custom_components/hisense_vidaa/certs/`:
+<details>
+<summary><b>📋 Certificate Filename Matrix & Search Paths</b></summary>
 
 | Format / Profile | Firmware / Generation | Certificate / Bundle Filename | Private Key Filename |
 | :--- | :--- | :--- | :--- |
@@ -164,11 +153,18 @@ The integration supports both **extracted `.pem` / `.crt` / `.key` files** and *
 | **Generic / Custom PEM** | Standard fallback for any profile | `cert.pem` | `key.pem` |
 | **Optional Root CA** | Optional TLS server verification | `remote_ca.pem` or `RemoteCA.crt` | *(Public root CA)* |
 
+</details>
+
 ---
 
-## 🔬 Under the Hood: VIDAA Protocol & Cryptographic Architecture
+## 🔬 Under the Hood: VIDAA Protocol & Architecture
 
-The Hisense VIDAA smart TV runs an internal MQTT broker listening on TLS port `36669`. Reverse-engineering of `libmqttcrypt.so` and the official VIDAA Android client reveals the following multi-tier challenge-response architecture:
+The Hisense VIDAA smart TV hosts an internal MQTT broker on TLS port `36669` using a challenge-response authentication handshake with dynamic salted MD5/XOR hashing and session token auto-renewal.
+
+For the full cryptographic specification, sequence diagram, and MQTT topic dictionary, see **[VIDAA Protocol & Cryptographic Architecture](docs/protocol_architecture.md)**.
+
+<details>
+<summary><b>📐 Protocol Flow & Authentication Formulas Summary</b></summary>
 
 ```mermaid
 sequenceDiagram
@@ -176,64 +172,31 @@ sequenceDiagram
     participant HA as Home Assistant (Client)
     participant TV as Hisense VIDAA TV (:36669)
     
-    Note over HA,TV: 1. TLS v1.2 Mutual Handshake (Client Cert & Key)
+    Note over HA,TV: 1. TLS v1.2 Handshake (Client Cert & Key)
     HA->>TV: Connect MQTT (Dynamic Username + Salt Hash)
     TV-->>HA: CONNACK (rc: 0)
     
     Note over HA,TV: 2. Challenge-Response PIN Handshake
-    HA->>TV: Subscribe: /remoteapp/mobile/<client_id>/ui_service/data/#
-    HA->>TV: Publish: .../actions/vidaa_app_connect
-    TV-->>HA: Display 4-digit PIN on screen & publish authentication challenge
-    HA->>TV: Publish: .../actions/authenticationcode {"authNum": <PIN>}
-    TV-->>HA: Publish: {"result": 1} (PIN Accepted)
+    HA->>TV: Publish actions/vidaa_app_connect
+    TV-->>HA: Display 4-digit PIN & challenge
+    HA->>TV: Submit PIN {"authNum": <PIN>}
+    TV-->>HA: PIN Accepted (result: 1)
     
     Note over HA,TV: 3. Session Token Issuance
-    HA->>TV: Publish: .../platform_service/<client_id>/data/gettoken
-    TV-->>HA: Publish: Token Payload (Access Token [2 days], Refresh Token [30 days])
+    HA->>TV: Request Token (platform_service/data/gettoken)
+    TV-->>HA: Tokens (Access [48h], Refresh [30d])
     
-    Note over HA,TV: 4. Normal Runtime Operations
-    HA->>TV: Reconnect with Access Token as MQTT password
-    HA->>TV: Publish Commands (actions/sendkey, actions/changesource, etc.)
-    TV-->>HA: Push State Broadcasts (volumechange, tvsleep, ui_service/state)
+    Note over HA,TV: 4. Runtime Operations & Auto-Renew
+    HA->>TV: Runtime Commands (sendkey, launchapp, changesource)
+    TV-->>HA: Push State Broadcasts (volumechange, state)
 ```
 
-### 1. Dual-Tier Authentication Formulas
-The TV's internal MQTT broker (`libmqttcrypt`) enforces a strict client ID whitelist format during initial pairing: `${mac}$his${md5_prefix}_vidaacommon_001`. The suffix must be `_vidaacommon_001` or the connection is immediately rejected (`rc: 2`).
+- **Modern VIDAA 2.0 (`Q0704`+)**: 64-bit XOR timestamp mask (`0x5689ab4102ef1908`) + modern salt `h!i@s#$v%i^d&a*a`.
+- **RemoteNOW Standard (`P1027` and older)**: Unix timestamp + salt `h*i&s%e!r^v0i1c9`.
+- **Legacy Static (Pre-2022)**: Static credentials (`hisenseservice` / `multimqttservice`).
+- **Token Auto-Renewal**: 48h access tokens automatically renewed in background using 30-day refresh tokens.
 
-#### 🟢 Generation 2: Modern VIDAA 2.0 (`libmqttcrypt.so` / Firmware `Q0704`+)
-- **Pattern:** `PATTERN = "38D65DC30F45109A369A86FCE866A85B"`
-- **Client ID:** `f"{mac}$his${md5(f'{PATTERN}${mac}')[:6]}_vidaacommon_001"`
-- **Username:** `f"his${timestamp ^ 6239759785777146216}"` *(XOR 64-bit mask `0x5689ab4102ef1908`)*
-- **Cross-Sum:** `sum_digit = sum(int(d) for d in str(timestamp)) % 10`
-- **Modern Salt:** `h!i@s#$v%i^d&a*a` *("hisvidaa")*
-- **Password Hash:** `md5(f"{timestamp}${md5(f'his{sum_digit}h!i@s#$v%i^d&a*a')[:6]}").upper()`
-
-#### 🟡 Generation 1: RemoteNOW (Standard / Firmware `P1027` and older)
-- **Client ID:** `f"{mac}$his${md5(f'{PATTERN}${mac}')[:6]}_vidaacommon_001"`
-- **Username:** `f"his${timestamp}"`
-- **Standard Salt:** `h*i&s%e!r^v0i1c9` *("hiserv0i1c9")*
-- **Password Hash:** `md5(f"{timestamp}${md5(f'his{sum_digit}h*i&s%e!r^v0i1c9')[:6]}").upper()`
-
-### 2. Session Token Lifecycle & Auto-Renewal
-- **Access Token (`accesstoken`):** Valid for **48 hours (2 days)**. Used directly as the MQTT password for all runtime commands and queries.
-- **Refresh Token (`refreshtoken`):** Valid for **30 days**. When the access token expires or connection receives `rc: 4`/`5`, the integration connects using the refresh token to topic `platform_service/data/tokenissuance`, requests a new 48-hour access token, and persists it to Home Assistant's config entries.
-
-### 3. MQTT Topic Hierarchy Reference
-
-| Topic Path | Direction | Purpose |
-| :--- | :--- | :--- |
-| `/remoteapp/tv/ui_service/{client_id}/actions/vidaa_app_connect` | `Publish` | Initiate pairing handshake & trigger on-screen PIN |
-| `/remoteapp/tv/ui_service/{client_id}/actions/authenticationcode` | `Publish` | Submit user-entered 4-digit PIN |
-| `/remoteapp/tv/ui_service/{client_id}/actions/authenticationcodeclose` | `Publish` | Dismiss PIN modal on TV screen |
-| `/remoteapp/tv/platform_service/{client_id}/data/gettoken` | `Publish` | Request initial access/refresh token pair |
-| `/remoteapp/tv/remote_service/{client_id}/actions/sendkey` | `Publish` | Dispatch remote keypress (e.g. `KEY_POWER`, `KEY_HOME`) |
-| `/remoteapp/tv/ui_service/{client_id}/actions/changesource` | `Publish` | Switch input source (`{"sourceid": "HDMI1"}`) |
-| `/remoteapp/tv/ui_service/{client_id}/actions/launchapp` | `Publish` | Launch installed Smart TV application |
-| `/remoteapp/tv/ps_service/{client_id}/actions/changevolume` | `Publish` | Set absolute volume level (`0`–`100`) |
-| `/remoteapp/mobile/{client_id}/ui_service/data/authentication` | `Subscribe` | Receive TV pairing challenge response |
-| `/remoteapp/mobile/{client_id}/platform_service/data/tokenissuance` | `Subscribe` | Receive issued / refreshed authentication tokens |
-| `/remoteapp/mobile/broadcast/ui_service/state` | `Subscribe` | Real-time push notifications for TV power and UI state |
-| `/remoteapp/mobile/broadcast/platform_service/actions/volumechange`| `Subscribe` | Real-time push notifications for volume and mute changes |
+</details>
 
 ---
 
@@ -252,100 +215,41 @@ The integration is built around modular, single-responsibility components:
 
 ## 🧪 Testing & Diagnostics
 
-The integration ships with two standalone CLI tools that share 100% of the backend logic with the Home Assistant integration — no mocking, no stubs.
+The integration ships with two standalone CLI tools that share 100% backend logic with the Home Assistant integration:
 
----
+- **[`test_client.py`](test_client.py)** — Auth probe, pairing, firmware detection, WoL, and GitHub issue report generation.
+- **[`debug_tv.py`](debug_tv.py)** — Live state dump, real-time MQTT event monitoring, keypress/app/source control, and clock drift inspection.
 
-### 🔬 `test_client.py` — Auth Probe & Pairing Tool
+For complete documentation and command options, see the **[CLI Tools Reference Guide](docs/cli_tools.md)**.
 
-[`test_client.py`](test_client.py) is focused on **authentication, pairing, and issue reporting**. Use it when setting up for the first time, debugging auth failures, or generating a GitHub diagnostic report.
+<details>
+<summary><b>💻 Quick CLI Command Reference</b></summary>
 
-#### 1. Generate GitHub Issue Diagnostic Report (`report`)
-Generates a pre-formatted Markdown diagnostics block with hardware details, firmware profile, and multi-tier authentication capabilities ready to paste directly into GitHub issues:
 ```bash
+# 1. Generate GitHub Issue Diagnostic Report
 python3 test_client.py report --ip <TV_IP>
-```
 
-#### 2. Diagnostic Probe & Firmware Detection (`ping`)
-Tests TCP port reachability, TLS handshake, broker response, and multi-tier auth capabilities — suggests which integration profile your firmware requires:
-```bash
+# 2. Diagnostic Probe & Firmware Detection
 python3 test_client.py ping --ip <TV_IP>
 
-# Test specific authentication profile:
-python3 test_client.py ping --ip <TV_IP> --profile modern
-```
-
-#### 3. Test Raw SSL/TLS Connection & Cert Validity (`test-ssl`)
-Verifies TLS cipher negotiation and certificate validity without initiating pairing:
-```bash
+# 3. Test Raw SSL/TLS Connection
 python3 test_client.py test-ssl --ip <TV_IP>
-python3 test_client.py test-ssl --ip <TV_IP> --profile modern
-python3 test_client.py test-ssl --ip <TV_IP> --cert /path/to/cert.pem --key /path/to/key.pem
-```
 
-#### 4. Test Pairing & Retrieve Tokens (`auth`)
-Initiates the full challenge handshake, prompts for the on-screen PIN, and saves tokens to `credentials.json`:
-```bash
+# 4. Pair TV and Retrieve Tokens
 python3 test_client.py auth --ip <TV_IP>
-python3 test_client.py auth --ip <TV_IP> --profile modern
-```
 
-#### 5. Test Token Refresh (`refresh`)
-Tests synchronous renewal of the 2-day access token using the 30-day refresh token:
-```bash
-python3 test_client.py refresh
-```
-
-#### 6. Listen to Real-Time TV Events (`listen`)
-Subscribes to live state changes, volume updates, source list, and app list:
-```bash
-python3 test_client.py listen
-```
-
-#### 7. Send Remote Control Keys (`send-key`)
-Dispatches a keypress directly to the TV:
-```bash
-python3 test_client.py send-key KEY_VOLUMEUP
-python3 test_client.py send-key KEY_POWER
-```
-
----
-
-### 🛠️ `debug_tv.py` — Live Runtime Debugger
-
-[`debug_tv.py`](debug_tv.py) is focused on **live runtime interaction and state inspection** — ideal for debugging a paired TV, testing commands, monitoring MQTT event streams, or checking clock drift. It reads credentials automatically from `credentials.json`.
-
-```bash
-# Dump current state, sources, apps, and volume:
+# 5. Live State Dump (via debug_tv.py)
 python3 debug_tv.py --dump-state
 
-# Continuously stream live MQTT events from the TV:
+# 6. Monitor Real-Time MQTT Events
 python3 debug_tv.py --monitor
 
-# Send a keypress:
+# 7. Send Keypress or Launch App
 python3 debug_tv.py --send-key KEY_HOME
-python3 debug_tv.py --send-key KEY_VOLUMEUP
-
-# Launch an app by name or App ID:
 python3 debug_tv.py --launch-app Netflix
-python3 debug_tv.py --launch-app YouTube
-
-# Switch input source:
-python3 debug_tv.py --change-source HDMI1
-python3 debug_tv.py --change-source TV
-
-# Inspect UPnP Date header and calculate TV clock drift:
-python3 debug_tv.py --sync-clock
-
-# Override TV IP (default: from credentials.json):
-python3 debug_tv.py --ip 192.168.50.12 --monitor
-
-# Verbose debug logging:
-python3 debug_tv.py --dump-state -v
 ```
 
-> [!TIP]
-> Run `python3 debug_tv.py` with no arguments to get a full state dump — equivalent to `--dump-state`. Useful as a quick sanity check after pairing.
+</details>
 
 ---
 
@@ -386,6 +290,9 @@ python3 debug_tv.py --dump-state -v
 
 ## 🛠️ Custom Services & Example Automations
 
+<details>
+<summary><b>📋 Example Service Calls & Automations (YAML)</b></summary>
+
 ### 1. `hisense_vidaa.launch_app`
 Launch an installed Smart TV application by name or direct URL:
 ```yaml
@@ -422,11 +329,7 @@ data:
   delay_secs: 0.3
 ```
 
----
-
-## 📱 Dashboard / Lovelace Card Examples
-
-### Smart TV App Launcher Buttons
+### 4. Smart TV App Launcher Buttons
 ```yaml
 type: horizontal-stack
 cards:
@@ -461,6 +364,8 @@ cards:
       data:
         app: Prime Video
 ```
+
+</details>
 
 ---
 
