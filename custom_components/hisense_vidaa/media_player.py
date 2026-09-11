@@ -63,6 +63,10 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         self._app_list = []
         self._app_dict = {}
         self._channel_infos = {}
+        self._connected_device = None
+        self._channel_name = None
+        self._channel_num = None
+        self._volume_type = 0
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks and query initial state when entity is added."""
@@ -115,13 +119,28 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return device-specific attributes."""
-        attrs = {
+        attrs: dict[str, Any] = {
             "mqtt_connected": self._client.connected,
             "auth_profile": self._client.auth_profile,
         }
         if self._mac:
             attrs["mac_address"] = self._mac
+        if self._connected_device:
+            attrs["connected_device"] = self._connected_device
+        if self._channel_name:
+            attrs["channel_name"] = self._channel_name
+        if self._channel_num:
+            attrs["channel_num"] = self._channel_num
+        if self._volume_type is not None:
+            attrs["audio_output"] = "ARC / eARC" if self._volume_type == 1 else "TV Speakers"
         return attrs
+
+    @property
+    def media_channel(self) -> str | None:
+        """Channel currently tuned to for TV tuner sources."""
+        if self._channel_name and self._channel_num:
+            return f"{self._channel_num} {self._channel_name}"
+        return self._channel_name or self._channel_num
 
     @property
     def volume_level(self) -> float:
@@ -254,22 +273,31 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         self._client.send_key("KEY_BACK")
 
     def play_media(self, media_type: str, media_id: str, **kwargs: Any) -> None:
-        """Launch an app, tune to channel, or execute key command."""
+        """Launch an app, tune to channel, open URL/deep-link, or execute key command."""
         type_lower = media_type.lower()
-        if type_lower in ("app", "application") or media_id in self._app_dict:
+        if type_lower in ("app", "application", "url", "deep_link", "video", "music") or "://" in media_id:
+            # Check app dictionary for direct match or scheme match
             app = self._app_dict.get(media_id)
             if app:
                 self._client.launch_app(app["appId"], app["name"], app["url"])
                 return
             for a_name, a_info in self._app_dict.items():
-                if a_name.lower() == media_id.lower():
+                if a_name.lower() == media_id.lower() or a_info.get("url", "").lower() == media_id.lower():
                     self._client.launch_app(a_info["appId"], a_info["name"], a_info["url"])
                     return
+
+            # Direct URL / deep-link launch
+            if "://" in media_id or type_lower in ("url", "deep_link"):
+                self._client.launch_app("", media_id, media_id)
+                return
 
         if type_lower in ("channel", "tvshow"):
             for char in str(media_id):
                 if char.isdigit():
                     self._client.send_key(f"KEY_{char}")
+                    time.sleep(0.1)
+                elif char in (".", "-"):
+                    self._client.send_key("KEY_CHANNELDOT")
                     time.sleep(0.1)
             return
 
@@ -293,15 +321,27 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 
         if statetype == "fake_sleep_0":
             self._state = STATE_OFF
+            self._connected_device = None
+            self._channel_name = None
+            self._channel_num = None
         else:
             was_off = (self._state == STATE_OFF)
             self._state = STATE_ON
             if statetype == "sourceswitch":
                 self._source = data.get("sourcename") or data.get("displayname")
+                self._connected_device = data.get("displayname2") or data.get("source_detail")
+                self._channel_name = None
+                self._channel_num = None
             elif statetype == "app":
                 self._source = data.get("name")
+                self._connected_device = None
+                self._channel_name = None
+                self._channel_num = None
             elif statetype == "livetv":
                 self._source = "TV"
+                self._connected_device = None
+                self._channel_name = data.get("channel_name")
+                self._channel_num = data.get("channel_num")
 
             if was_off or not self._source_dict or not self._app_dict:
                 self.hass.add_job(self._client.query_initial_state)
@@ -310,9 +350,12 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 
     def _handle_volume_update(self, data: dict[str, Any]) -> None:
         self._state = STATE_ON
-        if data.get("volume_type") == 0:
-            self._volume = data.get("volume_value", 0)
-        elif data.get("volume_type") == 2:
+        vol_type = data.get("volume_type")
+        if vol_type is not None:
+            self._volume_type = int(vol_type)
+        if vol_type in (0, 1):
+            self._volume = data.get("volume_value", self._volume)
+        elif vol_type == 2:
             self._muted = (data.get("volume_value") == 1)
 
         self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)

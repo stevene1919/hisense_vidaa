@@ -205,11 +205,13 @@ def get_device_fingerprint(ip: str, timeout: float = 2.0, zc: Any = None) -> dic
 
 def test_tv_ssl_connection(
     ip: str,
-    certfile: str | None,
-    keyfile: str | None,
-    timeout: float = 5.0,
+    certfile: str,
+    keyfile: str,
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
+    timeout: float = 3.0,
 ) -> dict[str, Any]:
-    """Tests the raw TLS handshake with the TV on port 36669 without authenticating."""
+    """Tests the TLS handshake against the TV MQTT broker on port 36669."""
     import ssl
 
     if not certfile or not os.path.isfile(certfile):
@@ -219,7 +221,11 @@ def test_tv_ssl_connection(
 
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
+    if verify_ssl and ca_cert and os.path.isfile(ca_cert):
+        context.verify_mode = ssl.CERT_REQUIRED
+        context.load_verify_locations(cafile=ca_cert)
+    else:
+        context.verify_mode = ssl.CERT_NONE
     context.load_cert_chain(certfile=certfile, keyfile=keyfile)
 
     with (
@@ -234,6 +240,7 @@ def test_tv_ssl_connection(
             "bits": bits,
             "certfile": certfile,
             "keyfile": keyfile,
+            "ca_cert": ca_cert if verify_ssl else None,
         }
 
 
@@ -241,6 +248,8 @@ def probe_tv_auth_methods(
     ip: str,
     certfile: str | None = None,
     keyfile: str | None = None,
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
     mac: str | None = None,
     timeout: float = 2.0,
 ) -> dict[str, Any]:
@@ -261,14 +270,20 @@ def probe_tv_auth_methods(
         "modern_dynamic": {"rc": None, "supported": False},
     }
 
+    def _setup_tls(c: mqtt.Client) -> None:
+        if certfile and keyfile and os.path.isfile(certfile) and os.path.isfile(keyfile):
+            if verify_ssl and ca_cert and os.path.isfile(ca_cert):
+                c.tls_set(ca_certs=ca_cert, certfile=certfile, keyfile=keyfile, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS)
+            else:
+                c.tls_set(ca_certs=None, certfile=certfile, keyfile=keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
+            c.tls_insecure_set(True)
+
     # 1. Legacy static ('hisenseservice')
     try:
         leg_rc = [None]
         leg_lock = threading.Event()
         leg_client = mqtt.Client(client_id="hisenseservice", clean_session=True, protocol=mqtt.MQTTv311)
-        if certfile and keyfile and os.path.isfile(certfile) and os.path.isfile(keyfile):
-            leg_client.tls_set(ca_certs=None, certfile=certfile, keyfile=keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
-            leg_client.tls_insecure_set(True)
+        _setup_tls(leg_client)
         leg_client.username_pw_set(username="hisenseservice", password="multimqttservice")
         leg_client.on_connect = lambda c, u, f, rc: (leg_rc.__setitem__(0, rc), leg_lock.set())
         leg_client.on_disconnect = lambda c, u, rc: leg_lock.set()
@@ -288,9 +303,7 @@ def probe_tv_auth_methods(
         std_rc = [None]
         std_lock = threading.Event()
         std_client = mqtt.Client(client_id=cid, clean_session=True, protocol=mqtt.MQTTv311)
-        if certfile and keyfile and os.path.isfile(certfile) and os.path.isfile(keyfile):
-            std_client.tls_set(ca_certs=None, certfile=certfile, keyfile=keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
-            std_client.tls_insecure_set(True)
+        _setup_tls(std_client)
         std_client.username_pw_set(username=user, password=pwd)
         std_client.on_connect = lambda c, u, f, rc: (std_rc.__setitem__(0, rc), std_lock.set())
         std_client.on_disconnect = lambda c, u, rc: std_lock.set()
@@ -310,9 +323,7 @@ def probe_tv_auth_methods(
         mod_rc = [None]
         mod_lock = threading.Event()
         mod_client = mqtt.Client(client_id=cid, clean_session=True, protocol=mqtt.MQTTv311)
-        if certfile and keyfile and os.path.isfile(certfile) and os.path.isfile(keyfile):
-            mod_client.tls_set(ca_certs=None, certfile=certfile, keyfile=keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
-            mod_client.tls_insecure_set(True)
+        _setup_tls(mod_client)
         mod_client.username_pw_set(username=user, password=pwd)
         mod_client.on_connect = lambda c, u, f, rc: (mod_rc.__setitem__(0, rc), mod_lock.set())
         mod_client.on_disconnect = lambda c, u, rc: mod_lock.set()
@@ -333,6 +344,8 @@ def ping_tv(
     ip: str,
     certfile: str | None = None,
     keyfile: str | None = None,
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
     client_id: str | None = None,
     username: str | None = None,
     password: str | None = None,
@@ -369,7 +382,7 @@ def ping_tv(
     # 2. Test TLS Handshake
     if certfile and keyfile:
         try:
-            ssl_info = test_tv_ssl_connection(ip, certfile, keyfile, timeout=timeout)
+            ssl_info = test_tv_ssl_connection(ip, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl, timeout=timeout)
             results["tls_handshake"] = ssl_info.get("connected", False)
             results["tls_version"] = ssl_info.get("tls_version")
             results["cipher"] = ssl_info.get("cipher")
@@ -389,7 +402,10 @@ def ping_tv(
 
             c = mqtt.Client(client_id=client_id, clean_session=True, protocol=mqtt.MQTTv311)
             if certfile and keyfile and os.path.isfile(certfile) and os.path.isfile(keyfile):
-                c.tls_set(ca_certs=None, certfile=certfile, keyfile=keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
+                if verify_ssl and ca_cert and os.path.isfile(ca_cert):
+                    c.tls_set(ca_certs=ca_cert, certfile=certfile, keyfile=keyfile, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS)
+                else:
+                    c.tls_set(ca_certs=None, certfile=certfile, keyfile=keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
                 c.tls_insecure_set(True)
             c.username_pw_set(username=username, password=password)
             c.on_connect = on_conn

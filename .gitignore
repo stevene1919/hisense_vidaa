@@ -37,6 +37,10 @@ certs/
 *.cer
 *.crt
 *.pkcs8
+*.p12
+*.pfx
+*.bks
+*.jks
 credentials.json
 
 # Backups & Temp files

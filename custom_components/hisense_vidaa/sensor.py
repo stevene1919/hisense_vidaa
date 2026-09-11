@@ -46,6 +46,7 @@ async def async_setup_entry(
         HisenseVidaaAuthProfileSensor(client, entry),
         HisenseVidaaActiveAppSensor(client, entry),
         HisenseVidaaActiveSourceSensor(client, entry),
+        HisenseVidaaAudioOutputSensor(client, entry),
     ])
 
 
@@ -297,6 +298,9 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
         self._available_sources: list[str] = []
         self._connected_inputs: list[str] = []
         self._custom_labels: dict[str, str] = {}
+        self._connected_device: str | None = None
+        self._channel_name: str | None = None
+        self._channel_num: str | None = None
 
     def _register_custom_callbacks(self) -> None:
         self._client.register_sourcelist_callback(self._handle_sourcelist_update)
@@ -308,6 +312,9 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
         statetype = state.get("statetype")
         if statetype == "fake_sleep_0" or not self._client.connected:
             self._attr_native_value = "Off"
+            self._connected_device = None
+            self._channel_name = None
+            self._channel_num = None
         elif statetype == "sourceswitch":
             self._attr_native_value = (
                 state.get("sourcename")
@@ -315,12 +322,22 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
                 or state.get("displayname")
                 or "HDMI"
             )
+            self._connected_device = state.get("displayname2") or state.get("source_detail")
+            self._channel_name = None
+            self._channel_num = None
         elif statetype == "livetv":
             self._attr_native_value = "TV"
+            self._connected_device = None
+            self._channel_name = state.get("channel_name")
+            self._channel_num = state.get("channel_num")
         elif statetype in ("app", "launcher"):
             self._attr_native_value = "None"
+            self._connected_device = None
+            self._channel_name = None
+            self._channel_num = None
         elif state.get("sourcename") or state.get("sourceName"):
             self._attr_native_value = state.get("sourcename") or state.get("sourceName")
+            self._connected_device = state.get("displayname2") or state.get("source_detail")
         self._schedule_state_update()
 
     def _handle_sourcelist_update(self, sources: list[dict[str, Any]]) -> None:
@@ -357,6 +374,12 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
             attrs["connected_inputs"] = self._connected_inputs
         if self._custom_labels:
             attrs["custom_labels"] = self._custom_labels
+        if self._connected_device:
+            attrs["connected_device"] = self._connected_device
+        if self._channel_name:
+            attrs["channel_name"] = self._channel_name
+        if self._channel_num:
+            attrs["channel_num"] = self._channel_num
         return attrs
 
     @property
@@ -372,3 +395,35 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
         if "off" in val:
             return "mdi:power-plug-off"
         return "mdi:video-input-hdmi"
+
+
+class HisenseVidaaAudioOutputSensor(HisenseVidaaMqttTrackingSensor):
+    """Sensor reporting active audio output (TV Speakers vs ARC/eARC)."""
+
+    _attr_translation_key = "audio_output"
+    _attr_icon = "mdi:audio-video"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+        super().__init__(client, entry, default_on="TV Speakers", default_off="Off")
+        self._attr_unique_id = f"{self._entry_id}_audio_output"
+        self._attr_native_value = "TV Speakers" if client.connected else "Off"
+
+    def _register_custom_callbacks(self) -> None:
+        self._client.register_volume_callback(self._handle_volume_update)
+
+    def _unregister_custom_callbacks(self) -> None:
+        self._client.unregister_volume_callback(self._handle_volume_update)
+
+    def _handle_volume_update(self, data: dict[str, Any]) -> None:
+        vol_type = data.get("volume_type")
+        if vol_type == 1:
+            self._attr_native_value = "ARC / eARC"
+        elif vol_type == 0:
+            self._attr_native_value = "TV Speakers"
+        self._schedule_state_update()
+
+    def _handle_state_update(self, state: dict[str, Any]) -> None:
+        if state.get("statetype") == "fake_sleep_0" or not self._client.connected:
+            self._attr_native_value = "Off"
+            self._schedule_state_update()

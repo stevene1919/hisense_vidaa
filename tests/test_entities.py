@@ -20,6 +20,7 @@ from custom_components.hisense_vidaa.remote import HisenseVidaaRemote
 from custom_components.hisense_vidaa.sensor import (
     HisenseVidaaActiveAppSensor,
     HisenseVidaaActiveSourceSensor,
+    HisenseVidaaAudioOutputSensor,
     HisenseVidaaAuthProfileSensor,
     HisenseVidaaTokenExpiresSensor,
 )
@@ -75,6 +76,25 @@ async def test_sensor_entities(mock_client, mock_entry):
     s_source = HisenseVidaaActiveSourceSensor(mock_client, mock_entry)
     s_source._handle_sourcelist_update([{"sourceName": "HDMI 1", "is_active": True}])
     assert s_source.native_value == "HDMI 1"
+    s_source._handle_state_update({
+        "statetype": "sourceswitch",
+        "sourcename": "HDMI 1",
+        "displayname2": "PlayStation 5",
+    })
+    assert s_source.extra_state_attributes["connected_device"] == "PlayStation 5"
+
+    s_source._handle_state_update({
+        "statetype": "livetv",
+        "channel_name": "ABC HD",
+        "channel_num": "20",
+    })
+    assert s_source.extra_state_attributes["channel_name"] == "ABC HD"
+    assert s_source.extra_state_attributes["channel_num"] == "20"
+
+    s_audio = HisenseVidaaAudioOutputSensor(mock_client, mock_entry)
+    assert s_audio.native_value == "TV Speakers"
+    s_audio._handle_volume_update({"volume_type": 1, "volume_value": 20})
+    assert s_audio.native_value == "ARC / eARC"
 
 
 def test_binary_sensor_entities(mock_client, mock_entry):
@@ -137,3 +157,48 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
     rem_info = rem.device_info
     assert rem_info["identifiers"] == {("hisense_vidaa", "test_entry_id")}
     assert rem_info["model"] == "65U7G"
+
+
+@pytest.mark.anyio
+async def test_remote_send_command(mock_client, mock_entry):
+    rem = HisenseVidaaRemote(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+    )
+    # Standard command
+    await rem.async_send_command(["home", "ok"], delay_secs=0.01)
+    assert mock_client.send_command.call_count == 2
+
+    # Hold secs for OK long press
+    await rem.async_send_command(["ok"], hold_secs=0.5)
+    mock_client.send_key.assert_called_with("KEY_OK_LONG_PRESS")
+
+    # Hold secs for arbitrary key burst
+    mock_client.send_command.reset_mock()
+    await rem.async_send_command(["up"], hold_secs=0.3)
+    assert mock_client.send_command.call_count == 3
+
+
+def test_media_player_play_media(mock_client, mock_entry):
+    mp = HisenseVidaaMediaPlayer(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+    )
+    mp._app_dict = {"Netflix": {"appId": "1", "name": "Netflix", "url": "netflix://"}}
+
+    # App launch by name
+    mp.play_media("app", "Netflix")
+    mock_client.launch_app.assert_called_with("1", "Netflix", "netflix://")
+
+    # Deep link URL
+    mp.play_media("url", "https://youtube.com/watch?v=123")
+    mock_client.launch_app.assert_called_with("", "https://youtube.com/watch?v=123", "https://youtube.com/watch?v=123")
+
+    # Channel tuning with dot
+    mock_client.send_key.reset_mock()
+    mp.play_media("channel", "7.1")
+    assert mock_client.send_key.call_count == 3

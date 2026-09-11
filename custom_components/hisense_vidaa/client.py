@@ -17,7 +17,7 @@ import paho.mqtt.client as mqtt
 
 try:
     from .const import KEY_ALIASES
-    from .crypto import generate_initial_credentials, resolve_certificates
+    from .crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
     from .discovery import (
         get_device_fingerprint as discover_device_fingerprint,
         get_tv_timestamp,
@@ -27,7 +27,7 @@ try:
     )
 except ImportError:
     from const import KEY_ALIASES
-    from crypto import generate_initial_credentials, resolve_certificates
+    from crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
     from discovery import (
         get_device_fingerprint as discover_device_fingerprint,
         get_tv_timestamp,
@@ -57,8 +57,10 @@ class HisenseTvClient:
         refresh_token_duration: int = 0,
         certfile: str | None = None,
         keyfile: str | None = None,
+        ca_cert: str | None = None,
         auth_profile: str = "auto",
         use_ssl: bool = True,
+        verify_ssl: bool = False,
     ) -> None:
         self.ip = ip
         self.mac = mac
@@ -73,6 +75,7 @@ class HisenseTvClient:
         self.refresh_token_duration = refresh_token_duration
         self.auth_profile = (auth_profile or "auto").lower()
         self.use_ssl = use_ssl
+        self.verify_ssl = verify_ssl
 
         if self.use_ssl:
             self.certfile, self.keyfile = resolve_certificates(
@@ -80,8 +83,9 @@ class HisenseTvClient:
                 certfile=certfile,
                 keyfile=keyfile,
             )
+            self.ca_cert = resolve_ca_certificate(ca_cert)
         else:
-            self.certfile, self.keyfile = None, None
+            self.certfile, self.keyfile, self.ca_cert = None, None, None
 
         self.mqtt_client: mqtt.Client | None = None
         self.connected = False
@@ -262,7 +266,14 @@ class HisenseTvClient:
     def test_ssl_connection(self, timeout: float = 5.0) -> dict[str, Any]:
         """Tests the raw TLS handshake with the TV on port 36669 without authenticating."""
         self.validate_certificates()
-        return test_tv_ssl_connection(self.ip, self.certfile, self.keyfile, timeout=timeout)
+        return test_tv_ssl_connection(
+            self.ip,
+            self.certfile,
+            self.keyfile,
+            ca_cert=self.ca_cert,
+            verify_ssl=self.verify_ssl,
+            timeout=timeout,
+        )
 
     def get_device_fingerprint(self, timeout: float = 2.0) -> dict[str, Any]:
         """Fetches UPnP, DLNA, and mDNS device metadata for model and capability identification."""
@@ -274,6 +285,8 @@ class HisenseTvClient:
             self.ip,
             certfile=self.certfile,
             keyfile=self.keyfile,
+            ca_cert=self.ca_cert,
+            verify_ssl=self.verify_ssl,
             mac=self.mac,
             timeout=timeout,
         )
@@ -284,6 +297,8 @@ class HisenseTvClient:
             ip=self.ip,
             certfile=self.certfile,
             keyfile=self.keyfile,
+            ca_cert=self.ca_cert,
+            verify_ssl=self.verify_ssl,
             client_id=self.client_id,
             username=self.username,
             password=self.access_token,
@@ -320,11 +335,21 @@ class HisenseTvClient:
             self.username,
         )
 
-    def create_mqtt_client(self, client_id: str, username: str, password: str) -> mqtt.Client:
-        """Creates and configures an authenticated MQTT client."""
-        client = mqtt.Client(client_id=client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
-        client.reconnect_delay_set(min_delay=2, max_delay=30)
-        if self.use_ssl and self.certfile and self.keyfile:
+    def _apply_tls(self, client: mqtt.Client) -> None:
+        """Applies TLS certificate configuration to an MQTT client instance."""
+        if not self.use_ssl or not self.certfile or not self.keyfile:
+            return
+
+        if self.verify_ssl and self.ca_cert and os.path.isfile(self.ca_cert):
+            client.tls_set(
+                ca_certs=self.ca_cert,
+                certfile=self.certfile,
+                keyfile=self.keyfile,
+                cert_reqs=ssl.CERT_REQUIRED,
+                tls_version=ssl.PROTOCOL_TLS,
+            )
+            client.tls_insecure_set(True)  # Hostname validation skipped as TV cert CN is RemoteCA
+        else:
             client.tls_set(
                 ca_certs=None,
                 certfile=self.certfile,
@@ -333,6 +358,12 @@ class HisenseTvClient:
                 tls_version=ssl.PROTOCOL_TLS,
             )
             client.tls_insecure_set(True)
+
+    def create_mqtt_client(self, client_id: str, username: str, password: str) -> mqtt.Client:
+        """Creates and configures an authenticated MQTT client."""
+        client = mqtt.Client(client_id=client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
+        client.reconnect_delay_set(min_delay=2, max_delay=30)
+        self._apply_tls(client)
         client.username_pw_set(username=username, password=password)
 
         client.on_connect = self._on_connect
@@ -619,8 +650,7 @@ class HisenseTvClient:
 
         _LOGGER.info("Access token expired or close to expiry, refreshing...")
         client = mqtt.Client(client_id=self.client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
-        client.tls_set(ca_certs=None, certfile=self.certfile, keyfile=self.keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
-        client.tls_insecure_set(True)
+        self._apply_tls(client)
         client.username_pw_set(username=self.username, password=self.refresh_token)
 
         lock = threading.Event()

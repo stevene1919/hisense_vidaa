@@ -2,6 +2,19 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.7.0] - 2026-09-11
+
+### Added
+- **MULTI-FORMAT CERTIFICATE & PKCS#12 BUNDLE SUPPORT**: Native support for direct PKCS#12 keystore archives (`.p12`, `.pfx` such as `client_mobile_android.p12` or `rcamobile.p12`) with automatic certificate and private key extraction using standard cryptography, eliminating the need to execute manual `openssl` CLI extraction commands.
+- **OPTIONAL SERVER ROOT CA VERIFICATION**: Added support for custom root CA files (`remote_ca.pem`, `RemoteCA.crt`) with `verify_ssl` opt-in while keeping default `CERT_NONE` matching official VIDAA mobile app behavior.
+- **AUDIO OUTPUT TYPE SENSOR (`sensor.{tv}_audio_output`)**: Dedicated sensor tracking live audio output mode (`TV Speakers`, `ARC / eARC`, `Muted`) parsed in real-time from TV volume state broadcasts (`volume_type`).
+- **HDMI-CEC DEVICE & LIVE TV CHANNEL METADATA**: Media player and active source sensor now track connected HDMI-CEC device name (`connected_device` attribute, e.g. Apple TV, PlayStation 5, Chromecast) and Live TV channel metadata (`channel_name`, `channel_number`).
+- **`KEY_AUDIO` SCREEN-OFF HARDWARE COMMAND**: Added key alias mappings (`audio_only`, `screen_off`) to `KEY_AUDIO` allowing users to turn off the TV display panel while keeping background audio playback active.
+- **REMOTE HOLD & RAPID BURST KEY SUPPORT**: Added `hold_secs` duration support in `remote.send_command`, mapping to `KEY_OK_LONG_PRESS` / `KEY_MUTE_LONG_PRESS` and high-speed key repetitions.
+- **DEEP LINK & DIRECT CHANNEL NUMBER TUNING**: `play_media` now handles direct URI schemes (`netflix://`, `youtube://`, `https://...`) and numeric / decimal channel tuning sequences (e.g. `"70"`, `"7.1"` sending `KEY_CHANNELDOT`).
+- **EXTENDED CLI DIAGNOSTICS & TESTING**: Added `launch-app`, `wake`, `--p12`, `--ca`, and `--verify-ssl` subcommands/flags to `test_client.py`.
+- **STATIC DHCP & ETHERNET GUIDELINES**: Added network best practices documentation detailing fixed IP reservations and wired Ethernet for reliable Wake-on-LAN (WoL) from deep standby.
+
 ## [2.6.0] - 2026-09-11
 
 ### Added

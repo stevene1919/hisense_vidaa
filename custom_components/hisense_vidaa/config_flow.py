@@ -90,6 +90,45 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get the options flow for this handler."""
         return HisenseVidaaOptionsFlowHandler()
 
+    def _resolve_ssl_certs(self) -> bool:
+        """Attempts to resolve certificates from disk or profile. Returns True if certs exist or not needed."""
+        if self.auth_profile == "legacy":
+            self.use_ssl = False
+            self.certfile, self.keyfile = None, None
+            return True
+        resolved_cert, resolved_key = resolve_certificates(self.auth_profile)
+        if check_certs_exist(resolved_cert, resolved_key):
+            self.certfile = resolved_cert
+            self.keyfile = resolved_key
+            self.use_ssl = True
+            return True
+        return False
+
+    async def _async_discover_device_name(self) -> None:
+        """Discovers friendly device name and model info from UPnP/DLNA."""
+        self.discovered_title = f"Hisense TV ({self.ip_address})"
+        if not self.client:
+            return
+        try:
+            fp = await self.hass.async_add_executor_job(
+                self.client.get_device_fingerprint, 1.5
+            )
+            discovered_name = fp.get("friendly_name") or fp.get("model_code")
+            if (
+                discovered_name
+                and discovered_name.strip()
+                and discovered_name.strip() != "Renderer"
+            ):
+                self.discovered_title = discovered_name.strip()
+            if fp.get("model_code") or fp.get("model_name"):
+                self.model = fp.get("model_code") or fp.get("model_name")
+            if fp.get("manufacturer") or fp.get("brand"):
+                self.manufacturer = fp.get("manufacturer") or fp.get("brand")
+            if fp.get("firmware_version"):
+                self.sw_version = fp.get("firmware_version")
+        except Exception:
+            pass
+
     async def _async_init_client_and_auth(self) -> config_entries.ConfigFlowResult:
         """Helper to initialize client, perform static auth check, and route to PIN or options."""
         self.client = HisenseTvClient(
@@ -131,21 +170,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
         if self.auth_profile == "legacy":
-            # Discover actual device friendly name from UPnP/mDNS
-            self.discovered_title = f"Hisense TV ({self.ip_address})"
-            try:
-                fp = await self.hass.async_add_executor_job(
-                    self.client.get_device_fingerprint, 1.5
-                )
-                discovered_name = fp.get("friendly_name") or fp.get("model_code")
-                if (
-                    discovered_name
-                    and discovered_name.strip()
-                    and discovered_name.strip() != "Renderer"
-                ):
-                    self.discovered_title = discovered_name.strip()
-            except Exception:
-                pass
+            await self._async_discover_device_name()
             return await self.async_step_options()
 
         return await self.async_step_auth()
@@ -165,30 +190,17 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 self.mac_address = format_mac(raw_mac)
 
-            # Auto profile checks if certificates exist automatically
-            if self.auth_profile == "auto":
-                resolved_cert, resolved_key = resolve_certificates(self.auth_profile)
-                if check_certs_exist(resolved_cert, resolved_key):
-                    self.certfile = resolved_cert
-                    self.keyfile = resolved_key
-                    self.use_ssl = True
+            if self.auth_profile == "auto" or self.auth_profile == "legacy":
+                if self._resolve_ssl_certs():
                     try:
                         return await self._async_init_client_and_auth()
                     except Exception as e:
                         _LOGGER.exception("Failed to connect or initiate auth with TV at %s: %s", self.ip_address, e)
                         errors["base"] = "cannot_connect"
                 else:
-                    # Certificates not found on disk: prompt user in certs step
                     return await self.async_step_certs()
-            elif self.auth_profile == "legacy":
-                self.use_ssl = False
-                try:
-                    return await self._async_init_client_and_auth()
-                except Exception as e:
-                    _LOGGER.exception("Failed to connect or initiate auth with TV at %s: %s", self.ip_address, e)
-                    errors["base"] = "cannot_connect"
             else:
-                # Explicit model selected (modern / remotenow) -> route to certs configuration step
+                # Explicit profile selected (modern / remotenow) -> route to certs configuration step
                 return await self.async_step_certs()
 
         return self.async_show_form(
@@ -251,22 +263,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
                     return self.async_abort(reason="reauth_successful")
 
-                # Discover actual device friendly name from UPnP/mDNS
-                self.discovered_title = f"Hisense TV ({self.ip_address})"
-                try:
-                    fp = await self.hass.async_add_executor_job(
-                        self.client.get_device_fingerprint, 1.5
-                    )
-                    discovered_name = fp.get("friendly_name") or fp.get("model_code")
-                    if (
-                        discovered_name
-                        and discovered_name.strip()
-                        and discovered_name.strip() != "Renderer"
-                    ):
-                        self.discovered_title = discovered_name.strip()
-                except Exception:
-                    pass
-
+                await self._async_discover_device_name()
                 return await self.async_step_options()
             except Exception as e:
                 _LOGGER.exception("Failed to validate PIN or retrieve tokens from TV: %s", e)
@@ -353,16 +350,9 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.auth_profile = user_input.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
             self.mac_address = current_data.get(CONF_MAC_ADDRESS)
 
-            if self.auth_profile == "auto":
-                resolved_cert, resolved_key = resolve_certificates(self.auth_profile)
-                if check_certs_exist(resolved_cert, resolved_key):
-                    self.certfile = resolved_cert
-                    self.keyfile = resolved_key
-                    self.use_ssl = True
-                else:
+            if self.auth_profile == "auto" or self.auth_profile == "legacy":
+                if not self._resolve_ssl_certs():
                     return await self.async_step_certs()
-            elif self.auth_profile == "legacy":
-                self.use_ssl = False
             else:
                 return await self.async_step_certs()
 
@@ -517,11 +507,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Confirm discovery setup with user."""
         errors = {}
         if user_input is not None:
-            resolved_cert, resolved_key = resolve_certificates(self.auth_profile)
-            if check_certs_exist(resolved_cert, resolved_key):
-                self.certfile = resolved_cert
-                self.keyfile = resolved_key
-                self.use_ssl = True
+            if self._resolve_ssl_certs():
                 try:
                     return await self._async_init_client_and_auth()
                 except Exception as e:

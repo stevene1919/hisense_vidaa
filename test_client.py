@@ -41,7 +41,7 @@ def save_credentials(file_path, creds):
     print(f"Credentials successfully saved to '{file_path}'")
 
 
-def do_ping(ip, creds, certfile, keyfile, profile="auto"):
+def do_ping(ip, creds, certfile, keyfile, profile="auto", ca_cert=None, verify_ssl=False):
     print(f"\n[PING] Probing TV connectivity and MQTT broker at {ip}:36669 (Profile: {profile})...")
 
     access_token = None
@@ -59,7 +59,9 @@ def do_ping(ip, creds, certfile, keyfile, profile="auto"):
         access_token=access_token,
         certfile=certfile,
         keyfile=keyfile,
+        ca_cert=ca_cert,
         auth_profile=profile,
+        verify_ssl=verify_ssl,
     )
 
     try:
@@ -123,7 +125,7 @@ def do_ping(ip, creds, certfile, keyfile, profile="auto"):
         sys.exit(1)
 
 
-def do_report(ip, mac, creds, certfile, keyfile, profile="auto"):
+def do_report(ip, mac, creds, certfile, keyfile, profile="auto", ca_cert=None, verify_ssl=False):
     print(f"\n🔍 [REPORT] Collecting diagnostics and generating GitHub issue report for {ip}...\n")
 
     access_token = None
@@ -142,7 +144,9 @@ def do_report(ip, mac, creds, certfile, keyfile, profile="auto"):
         access_token=access_token,
         certfile=certfile,
         keyfile=keyfile,
+        ca_cert=ca_cert,
         auth_profile=profile,
+        verify_ssl=verify_ssl,
     )
 
     try:
@@ -216,9 +220,9 @@ def do_report(ip, mac, creds, certfile, keyfile, profile="auto"):
         sys.exit(1)
 
 
-def do_test_ssl(ip, certfile, keyfile, profile="auto"):
+def do_test_ssl(ip, certfile, keyfile, profile="auto", ca_cert=None, verify_ssl=False):
     print(f"\n[SSL] Testing raw TLS connection to Hisense TV at {ip}:36669 (Profile: {profile})...")
-    client = HisenseTvClient(ip=ip, certfile=certfile, keyfile=keyfile, auth_profile=profile)
+    client = HisenseTvClient(ip=ip, certfile=certfile, keyfile=keyfile, ca_cert=ca_cert, auth_profile=profile, verify_ssl=verify_ssl)
     try:
         res = client.test_ssl_connection()
         print("\n✅ TLS Connection Successful!")
@@ -227,6 +231,8 @@ def do_test_ssl(ip, certfile, keyfile, profile="auto"):
         print(f"  • Cipher Suite:  {res['cipher']} ({res['bits']} bits)")
         print(f"  • Certificate:   {res['certfile']}")
         print(f"  • Private Key:   {res['keyfile']}")
+        if res.get("ca_cert"):
+            print(f"  • Root CA:       {res['ca_cert']}")
         print("\n💡 The provided certificate and key negotiate SSL properly with the TV broker.")
     except FileNotFoundError as e:
         print(f"\n❌ Certificate Error: {e}")
@@ -237,13 +243,13 @@ def do_test_ssl(ip, certfile, keyfile, profile="auto"):
         sys.exit(1)
 
 
-async def do_auth(ip, mac, certfile, keyfile, save_path, profile="auto"):
+async def do_auth(ip, mac, certfile, keyfile, save_path, profile="auto", ca_cert=None, verify_ssl=False):
     if not mac:
         mac = get_arp_mac(ip)
         if mac:
             print(f"🔍 Auto-discovered Hardware MAC via ARP: {mac}")
     print(f"\n[AUTH] Connecting to Hisense TV at {ip} on port 36669 (TLS, Profile: {profile})...")
-    client = HisenseTvClient(ip=ip, mac=mac, certfile=certfile, keyfile=keyfile, auth_profile=profile)
+    client = HisenseTvClient(ip=ip, mac=mac, certfile=certfile, keyfile=keyfile, ca_cert=ca_cert, auth_profile=profile, verify_ssl=verify_ssl)
     try:
         await client.async_start_auth()
 
@@ -304,12 +310,10 @@ async def do_auth(ip, mac, certfile, keyfile, save_path, profile="auto"):
         sys.exit(1)
 
 
-async def do_listen(creds, certfile, keyfile, save_path):
-    ip = creds.get("ip_address")
-    print(f"\n[LISTEN] Connecting to TV at {ip} with stored credentials...")
-
-    client = HisenseTvClient(
-        ip=ip,
+def client_from_creds(creds, certfile=None, keyfile=None, ca_cert=None, verify_ssl=False):
+    """Creates a configured HisenseTvClient instance from a credentials dictionary."""
+    return HisenseTvClient(
+        ip=creds.get("ip_address"),
         mac=creds.get("mac_address"),
         client_id=creds.get("client_id"),
         username=creds.get("username"),
@@ -322,7 +326,16 @@ async def do_listen(creds, certfile, keyfile, save_path):
         refresh_token_duration=int(creds.get("refreshtoken_duration_day") or creds.get("refresh_token_duration", 30)),
         certfile=certfile,
         keyfile=keyfile,
+        ca_cert=ca_cert,
+        verify_ssl=verify_ssl,
     )
+
+
+async def do_listen(creds, certfile, keyfile, save_path, ca_cert=None, verify_ssl=False):
+    ip = creds.get("ip_address")
+    print(f"\n[LISTEN] Connecting to TV at {ip} with stored credentials...")
+
+    client = client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl)
 
     def on_token_refreshed(c):
         print(f"\n🔄 [TOKEN REFRESHED] New access token: {c.access_token[:15]}...")
@@ -351,26 +364,11 @@ async def do_listen(creds, certfile, keyfile, save_path):
         client.disconnect()
 
 
-def do_refresh(creds, certfile, keyfile, save_path):
+def do_refresh(creds, certfile, keyfile, save_path, ca_cert=None, verify_ssl=False):
     ip = creds.get("ip_address")
     print(f"\n[REFRESH] Testing synchronous token refresh against TV at {ip}...")
 
-    client = HisenseTvClient(
-        ip=ip,
-        mac=creds.get("mac_address"),
-        client_id=creds.get("client_id"),
-        username=creds.get("username"),
-        password=creds.get("password"),
-        access_token=creds.get("accesstoken") or creds.get("access_token"),
-        access_token_time=int(creds.get("accesstoken_time") or creds.get("access_token_time", 0)),
-        access_token_duration=int(creds.get("accesstoken_duration_day") or creds.get("access_token_duration", 2)),
-        refresh_token=creds.get("refreshtoken") or creds.get("refresh_token"),
-        refresh_token_time=int(creds.get("refreshtoken_time") or creds.get("refresh_token_time", 0)),
-        refresh_token_duration=int(creds.get("refreshtoken_duration_day") or creds.get("refresh_token_duration", 30)),
-        certfile=certfile,
-        keyfile=keyfile,
-    )
-
+    client = client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl)
     success = client.check_and_refresh_token(force=True)
     if success:
         print("✅ Token refreshed successfully!")
@@ -385,28 +383,12 @@ def do_refresh(creds, certfile, keyfile, save_path):
         print("❌ Token refresh failed. Check TV connectivity and broker logs.")
 
 
-def do_send_key(creds, key_name, certfile, keyfile):
+def do_send_key(creds, key_name, certfile, keyfile, ca_cert=None, verify_ssl=False):
     ip = creds.get("ip_address")
     print(f"\n[KEY] Sending key '{key_name}' to TV at {ip}...")
 
-    client = HisenseTvClient(
-        ip=ip,
-        mac=creds.get("mac_address"),
-        client_id=creds.get("client_id"),
-        username=creds.get("username"),
-        password=creds.get("password"),
-        access_token=creds.get("accesstoken") or creds.get("access_token"),
-        access_token_time=int(creds.get("accesstoken_time") or creds.get("access_token_time", 0)),
-        access_token_duration=int(creds.get("accesstoken_duration_day") or creds.get("access_token_duration", 2)),
-        refresh_token=creds.get("refreshtoken") or creds.get("refresh_token"),
-        refresh_token_time=int(creds.get("refreshtoken_time") or creds.get("refresh_token_time", 0)),
-        refresh_token_duration=int(creds.get("refreshtoken_duration_day") or creds.get("refresh_token_duration", 30)),
-        certfile=certfile,
-        keyfile=keyfile,
-    )
-
+    client = client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl)
     client.connect_and_run()
-    # Wait for connection
     for _ in range(30):
         if client.connected:
             break
@@ -420,6 +402,36 @@ def do_send_key(creds, key_name, certfile, keyfile):
         print("❌ Could not connect to TV to send key.")
 
     client.disconnect()
+
+
+def do_launch_app(creds, app_name, app_id=None, app_url=None, certfile=None, keyfile=None, ca_cert=None, verify_ssl=False):
+    ip = creds.get("ip_address")
+    print(f"\n[APP] Launching application '{app_name or app_id}' on TV at {ip}...")
+
+    client = client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl)
+    client.connect_and_run()
+    for _ in range(30):
+        if client.connected:
+            break
+        time.sleep(0.1)
+
+    if client.connected:
+        client.launch_app(app_id=app_id, app_name=app_name, url=app_url)
+        print(f"✅ Sent launch command for '{app_name or app_id}' (url: {app_url or 'default'}).")
+        time.sleep(0.5)
+    else:
+        print("❌ Could not connect to TV to launch app.")
+
+    client.disconnect()
+
+
+def do_wake(ip, mac):
+    print(f"\n[WOL] Sending Wake-on-LAN magic packet to {mac} (Target IP: {ip})...")
+    success = HisenseTvClient.send_wake_on_lan(mac=mac, ip=ip)
+    if success:
+        print(f"✅ Wake-on-LAN magic packet successfully broadcast for MAC {mac}.")
+    else:
+        print(f"❌ Failed to send Wake-on-LAN packet for MAC {mac}.")
 
 
 def main():
@@ -436,8 +448,9 @@ def main():
   # Test raw SSL/TLS certificate connection to TV:
   python3 test_client.py test-ssl --ip 192.168.50.12
 
-  # Test custom certificate files:
+  # Test custom certificate files or PKCS#12 bundle:
   python3 test_client.py test-ssl --ip 192.168.50.12 --cert /path/to/cert.pem --key /path/to/key.pem
+  python3 test_client.py test-ssl --ip 192.168.50.12 --p12 /path/to/client_mobile_android.p12
 
   # Pair with TV and save credentials:
   python3 test_client.py auth --ip 192.168.50.12
@@ -448,18 +461,29 @@ def main():
   # Test token refresh:
   python3 test_client.py refresh
 
-  # Send a remote key (e.g. KEY_POWER, KEY_VOLUMEUP, KEY_HOME):
+  # Send a remote key (e.g. KEY_POWER, KEY_VOLUMEUP, KEY_HOME, KEY_AUDIO):
   python3 test_client.py send-key KEY_POWER
+
+  # Launch an app on the TV:
+  python3 test_client.py launch-app "Netflix"
+
+  # Send Wake-on-LAN magic packet:
+  python3 test_client.py wake --mac E8:51:77:EC:98:1C --ip 192.168.50.12
 """
     )
 
-    parser.add_argument("action", choices=["ping", "report", "test-ssl", "auth", "listen", "refresh", "send-key"], help="Action to perform")
-    parser.add_argument("key", nargs="?", help="Key to send (for send-key action, e.g. KEY_POWER, KEY_VOLUMEUP)")
-    parser.add_argument("--ip", help="IP address of the TV (required for ping/report/test-ssl/auth if not in config)")
+    parser.add_argument("action", choices=["ping", "report", "test-ssl", "auth", "listen", "refresh", "send-key", "launch-app", "wake"], help="Action to perform")
+    parser.add_argument("key", nargs="?", help="Key name (for send-key) or App name (for launch-app)")
+    parser.add_argument("--ip", help="IP address of the TV (required for ping/report/test-ssl/auth/wake if not in config)")
     parser.add_argument("--mac", help="MAC address of the TV")
     parser.add_argument("--profile", choices=["auto", "modern", "remotenow", "legacy", "vidaa_2024", "remotenow_2018"], default="auto", help="Authentication profile and cert selector (default: auto)")
     parser.add_argument("--cert", help="Path to custom client certificate file (e.g. cert.pem)")
     parser.add_argument("--key", dest="key_file", help="Path to custom client private key file (e.g. key.pem)")
+    parser.add_argument("--p12", help="Path to PKCS#12 certificate archive (e.g. client_mobile_android.p12)")
+    parser.add_argument("--ca", "--ca-cert", dest="ca_cert", help="Path to custom root CA certificate (e.g. remote_ca.pem)")
+    parser.add_argument("--verify-ssl", action="store_true", help="Enable strict TLS server certificate verification")
+    parser.add_argument("--app-id", help="App ID for launch-app action")
+    parser.add_argument("--url", help="Deep link URL for launch-app action (e.g. netflix://)")
     parser.add_argument("--config", default=DEFAULT_CREDS_FILE, help=f"Path to credentials file (default: {DEFAULT_CREDS_FILE})")
     parser.add_argument("-v", "--debug", action="store_true", help="Enable verbose debug logging")
 
@@ -467,6 +491,8 @@ def main():
 
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(level=log_level, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+
+    cert_path = args.p12 or args.cert
 
     if args.action == "ping":
         creds = None
@@ -480,7 +506,7 @@ def main():
         if not ip:
             print("Error: --ip <IP> is required for 'ping' action (or valid credentials.json).")
             sys.exit(1)
-        do_ping(ip, creds, args.cert, args.key_file, profile=args.profile)
+        do_ping(ip, creds, cert_path, args.key_file, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
 
     elif args.action == "report":
         creds = None
@@ -494,31 +520,31 @@ def main():
         if not ip:
             print("Error: --ip <IP> is required for 'report' action (or valid credentials.json).")
             sys.exit(1)
-        do_report(ip, args.mac, creds, args.cert, args.key_file, profile=args.profile)
+        do_report(ip, args.mac, creds, cert_path, args.key_file, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
 
     elif args.action == "test-ssl":
         if not args.ip:
             print("Error: --ip <IP> is required for 'test-ssl' action.")
             sys.exit(1)
-        do_test_ssl(args.ip, args.cert, args.key_file, profile=args.profile)
+        do_test_ssl(args.ip, cert_path, args.key_file, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
 
     elif args.action == "auth":
         if not args.ip:
             print("Error: --ip <IP> is required for 'auth' action.")
             sys.exit(1)
-        asyncio.run(do_auth(args.ip, args.mac, args.cert, args.key_file, args.config, profile=args.profile))
+        asyncio.run(do_auth(args.ip, args.mac, cert_path, args.key_file, args.config, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl))
 
     elif args.action == "listen":
         creds = load_credentials(args.config)
         ip = args.ip or creds.get("ip_address")
         creds["ip_address"] = ip
-        asyncio.run(do_listen(creds, args.cert, args.key_file, args.config))
+        asyncio.run(do_listen(creds, cert_path, args.key_file, args.config, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl))
 
     elif args.action == "refresh":
         creds = load_credentials(args.config)
         ip = args.ip or creds.get("ip_address")
         creds["ip_address"] = ip
-        do_refresh(creds, args.cert, args.key_file, args.config)
+        do_refresh(creds, cert_path, args.key_file, args.config, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
 
     elif args.action == "send-key":
         if not args.key:
@@ -527,7 +553,34 @@ def main():
         creds = load_credentials(args.config)
         ip = args.ip or creds.get("ip_address")
         creds["ip_address"] = ip
-        do_send_key(creds, args.key, args.cert, args.key_file)
+        do_send_key(creds, args.key, cert_path, args.key_file, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
+
+    elif args.action == "launch-app":
+        app_name = args.key
+        if not app_name and not args.app_id:
+            print("Error: Specify app name or --app-id to launch, e.g. python3 test_client.py launch-app 'Netflix'")
+            sys.exit(1)
+        creds = load_credentials(args.config)
+        ip = args.ip or creds.get("ip_address")
+        creds["ip_address"] = ip
+        do_launch_app(creds, app_name, app_id=args.app_id, app_url=args.url, certfile=cert_path, keyfile=args.key_file, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
+
+    elif args.action == "wake":
+        creds = {}
+        if os.path.exists(args.config):
+            try:
+                with open(args.config) as f:
+                    creds = json.load(f)
+            except Exception:
+                pass
+        ip = args.ip or creds.get("ip_address")
+        mac = args.mac or creds.get("mac_address")
+        if not mac and ip:
+            mac = get_arp_mac(ip)
+        if not mac:
+            print("Error: --mac <MAC> (or valid IP with ARP cache entry) is required for 'wake' action.")
+            sys.exit(1)
+        do_wake(ip, mac)
 
 
 if __name__ == "__main__":

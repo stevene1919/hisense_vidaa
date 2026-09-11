@@ -133,10 +133,24 @@ class HisenseVidaaRemote(RemoteEntity):
         """Send a list of commands to the TV."""
         num_repeats = kwargs.get("num_repeats", 1)
         delay_secs = kwargs.get("delay_secs", 0.4)
+        hold_secs = kwargs.get("hold_secs", 0.0)
 
         for _ in range(num_repeats):
             for single_cmd in command:
-                self._client.send_command(single_cmd)
+                if hold_secs and hold_secs > 0:
+                    cmd_lower = single_cmd.strip().lower()
+                    if cmd_lower in ("ok", "enter", "select", "key_ok"):
+                        self._client.send_key("KEY_OK_LONG_PRESS")
+                    elif cmd_lower in ("mute", "key_mute"):
+                        self._client.send_key("KEY_MUTE_LONG_PRESS")
+                    else:
+                        # Emulate key hold by rapid repetition over hold_secs
+                        steps = max(1, round(hold_secs / 0.1))
+                        for _ in range(steps):
+                            self._client.send_command(single_cmd)
+                            await asyncio.sleep(0.1)
+                else:
+                    self._client.send_command(single_cmd)
                 if delay_secs > 0:
                     await asyncio.sleep(delay_secs)
 

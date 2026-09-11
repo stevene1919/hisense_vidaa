@@ -19,6 +19,8 @@ def test_key_aliases():
     assert KEY_ALIASES["voice_up"] == "KEY_VOICEUP"
     assert KEY_ALIASES["dot"] == "KEY_CHANNELDOT"
     assert KEY_ALIASES["mouse_up"] == "KEY_UDULEFTMOUSEKEYS"
+    assert KEY_ALIASES["audio_only"] == "KEY_AUDIO"
+    assert KEY_ALIASES["screen_off"] == "KEY_AUDIO"
 
 
 def test_state_dispatch_callbacks():

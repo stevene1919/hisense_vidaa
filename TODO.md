@@ -38,9 +38,9 @@ This document tracks planned features, new platforms, technical debt, and archit
   - `hisense_vidaa.launch_app`: App launcher by name or direct deep link URL.
 
 ### 4. Advanced Remote & Media Controls
-- [ ] **Long-Press & Key Hold Support**:
+- [x] **Long-Press & Key Hold Support**:
   - Support `hold_secs` or repeated burst keypresses in `remote.send_command` for fast menu scrolling and long-press actions (e.g. holding `KEY_HOME` for app switcher or holding `KEY_POWER` for full shutdown).
-- [ ] **App Deep Linking (`media_player.play_media`)**:
+- [x] **App Deep Linking (`media_player.play_media`)**:
   - Support launching specific apps or video URLs directly (e.g. YouTube / Netflix deep links) via VIDAA app launcher topics.
 - [ ] **On-Screen Toast Notifications (`notify` platform)**:
   - Explore reverse-engineered VIDAA UI topics to display on-screen text banners (e.g., doorbell/camera alerts).

@@ -78,16 +78,22 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
                 # Search app dict for matching app or send directly as url
                 matched_app = None
                 for a in getattr(client, "_app_list", []):
-                    if isinstance(a, dict) and a.get("appName", "").lower() == app.lower():
+                    if isinstance(a, dict) and (
+                        a.get("appName", "").lower() == app.lower()
+                        or a.get("appId", "").lower() == app.lower()
+                    ):
                         matched_app = a
                         break
 
                 if matched_app:
                     await hass.async_add_executor_job(
-                        client.change_source, matched_app.get("appName"), matched_app.get("appUrl")
+                        client.launch_app,
+                        matched_app.get("appId", ""),
+                        matched_app.get("appName", ""),
+                        matched_app.get("appUrl", ""),
                     )
                 else:
-                    await hass.async_add_executor_job(client.change_source, app, app)
+                    await hass.async_add_executor_job(client.launch_app, "", app, app)
 
     if not hass.services.has_service(DOMAIN, SERVICE_SEND_KEY):
         hass.services.async_register(DOMAIN, SERVICE_SEND_KEY, handle_send_key)

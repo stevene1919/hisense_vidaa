@@ -34,6 +34,8 @@ This integration automatically detects and natively supports all generations of 
 ## ✨ Features
 
 - **Multi-Generation Authentication**: Native support for Modern VIDAA 2.0 (XOR hashing), Standard RemoteNOW dynamic pairing, and Legacy Static credentials (`hisenseservice`).
+- **Flexible Certificate Formats & Auto-Extraction**: Native support for split PEM pairs (`.pem`, `.crt`, `.key`) and direct PKCS#12 keystore archives (`.p12`, `.pfx` e.g. `client_mobile_android.p12`, `rcamobile.p12`) with automatic key/cert extraction.
+- **Optional Root CA Validation**: Configurable root CA verification (`ca_cert` / `remote_ca.pem`) with `CERT_NONE` default matching official VIDAA app behavior.
 - **Direct Secure Connection**: Native SSL communication directly to port `36669` with TLS bypass support for unencrypted brokers and automatic fallback routing.
 - **Security Hardened**: Protected against XML Entity Expansion (Billion Laughs) and DTD injection using `defusedxml` parsers during UPnP/DLNA discovery.
 - **Automatic TV Clock Synchronization**: Extracts HTTP `Date` headers from the TV's internal UPnP/DLNA services on candidate ports (`38400` and `18400`) to prevent hash mismatches during clock drift.
@@ -42,18 +44,21 @@ This integration automatically detects and natively supports all generations of 
 - **Subnet-Aware Wake-on-LAN**: Broadcasts magic packets to both the target `/24` subnet directed broadcast and `255.255.255.255` for reliable cross-VLAN wake-up.
 - **Dedicated Remote Entity (`remote`)**:
   - Full remote control platform (`remote.<tv_name>`).
-  - Key alias resolution (`up`, `down`, `home`, `menu`, `back`, `ok_long`, `mute_long`, `netflix`, `youtube`, etc.).
-  - Direct command dispatching with repeat and delay controls.
+  - Key alias resolution (`up`, `down`, `home`, `menu`, `back`, `ok_long`, `mute_long`, `audio_only`, `screen_off`, `netflix`, `youtube`, etc.).
+  - Direct command dispatching with `hold_secs` duration, repeat, and delay controls.
 - **Media Player Entity (`media_player`)**:
   - Power toggle and standby control.
   - Volume adjustment, stepping, and mute toggle.
   - Configurable media transport controls (`PLAY`, `PAUSE`, `STOP`, `NEXT_TRACK`, `PREVIOUS_TRACK`, `PLAY_MEDIA`) — toggle via options (works natively in streaming apps and via HDMI-CEC on connected devices).
+  - Deep link URI schemes (`netflix://`, `youtube://`, `https://...`) and numeric / decimal channel tuning (e.g. `"70"`, `"7.1"` sending `KEY_CHANNELDOT`).
+  - Active HDMI-CEC connected device tracking (`connected_device`) and Live TV channel metadata (`channel_name`, `channel_number`).
   - Unified input source selector with configurable app inclusions (HDMI, TV, AV, Netflix, YouTube, Plex, etc.).
   - Dynamic app CDN artwork in the media player card for the currently active app.
   - Instant local push updates for volume and power state across multiple firmware topic variants.
 - **Sensors & Diagnostic Entities**:
-  - **Active Source sensor** (`sensor.{tv}_active_source`): tracks current physical input or app with available/connected sources as attributes.
+  - **Active Source sensor** (`sensor.{tv}_active_source`): tracks current physical input or app with available/connected sources and HDMI-CEC device name as attributes.
   - **Active App sensor** (`sensor.{tv}_active_app`): tracks the running Smart TV app with installed app list as attributes.
+  - **Audio Output sensor** (`sensor.{tv}_audio_output`): detects whether audio is outputting through `"TV Speakers"`, external receiver (`"ARC / eARC"`), or is muted.
   - **MQTT Connected binary sensor** (`binary_sensor.{tv}_mqtt_connected`): real-time broker connectivity state.
   - Auth profile, token expiry, and other diagnostic sensors.
   - **Sync Clock button** (`button.{tv}_sync_clock`): manual TV clock synchronization via UPnP/DLNA.
@@ -67,17 +72,28 @@ This integration automatically detects and natively supports all generations of 
   - Fully structured for HACS with `hacs.json` and `integration_type: "device"`.
   - Dual CI validation pipelines (`hassfest` + `hacs/action`) for Home Assistant standards compliance.
 - **Zero-Duplication CLI Tools**: Two standalone diagnostic scripts sharing 100% backend logic with the integration:
-  - [`test_client.py`](test_client.py) — auth probe, pairing, firmware detection, and GitHub issue report generation.
+  - [`test_client.py`](test_client.py) — auth probe, pairing, firmware detection, app launcher, WoL, and GitHub issue report generation.
   - [`debug_tv.py`](debug_tv.py) — live state dump, real-time MQTT event monitoring, keypress/app/source control, and clock drift inspection.
 
 ---
 
-## 🌐 Important Network Requirement
+## 🌐 Network Requirements & Best Practices
 
 > [!IMPORTANT]
 > **Internet Connectivity Required**: The TV **must have active internet connectivity and unblocked DNS resolution** for pairing, token exchange, and token refresh to succeed.
 > 
-> If the TV is isolated on an offline IoT VLAN or blocked by network-level ad blockers / firewalls (e.g., AdGuard Home, Pi-hole), VIDAA OS will refuse to complete the pairing handshake or refresh tokens. We are investigating the exact cloud endpoints and domains required so specific whitelist rules can be documented in the future, but in the meantime, ensure the TV has outbound WAN access.
+> If the TV is isolated on an offline IoT VLAN or blocked by network-level ad blockers / firewalls (e.g., AdGuard Home, Pi-hole), VIDAA OS will refuse to complete the pairing handshake or refresh tokens. Ensure the TV has outbound WAN access during pairing and token renewal.
+
+### 📌 Recommended Network Setup
+
+1. **Static DHCP Reservation (Fixed IP)**:
+   - It is strongly recommended to set a **static DHCP reservation** on your router/gateway for the TV's MAC address.
+   - While the integration supports dynamic IP migration via hardware MAC tracking, a fixed IP guarantees uninterrupted MQTT broker communication, avoids reconnect delays during lease renewals, and prevents connection drops across TV power cycles.
+
+2. **Wired Ethernet for Reliable Wake-on-LAN (WoL)**:
+   - For dependable Wake-on-LAN (powering the TV on from standby), connect the TV via a **wired Ethernet cable** rather than Wi-Fi whenever possible.
+   - Many Hisense / VIDAA TV models power down the Wi-Fi radio entirely in deep standby / eco mode to save power, whereas the Ethernet controller remains in low-power listening state for magic packets.
+   - Ensure Wake-on-LAN is enabled in your TV menu (**Settings → Network / System → Advanced Settings → Wake on LAN / Power on by Apps**), and toggle **Enable Wake-on-LAN** in the integration options (**Settings → Devices & Services → Configure**).
 
 ---
 
@@ -85,14 +101,17 @@ This integration automatically detects and natively supports all generations of 
 
 VIDAA OS requires a client SSL certificate and private key to communicate with port `36669`. Certificates are excluded from this repository and must be provided locally.
 
-1. Create a `certs/` directory inside `custom_components/hisense_vidaa/` (or place them in `/config/certs/` or `/config/ssl/`).
-2. Place your certificate and private key files according to your TV generation:
+The integration supports both **extracted `.pem` / `.crt` / `.key` files** and **direct PKCS#12 bundles (`.p12` / `.pfx`)**:
 
-| Profile | Firmware / Generation | Certificate Filename | Private Key Filename |
+1. Place your certificate and private key files in `/config/certs/`, `/config/ssl/`, `/ssl/`, or `custom_components/hisense_vidaa/certs/`:
+
+| Format / Profile | Firmware / Generation | Certificate / Bundle Filename | Private Key Filename |
 | :--- | :--- | :--- | :--- |
-| **VIDAA 2.0 (Modern)** | VIDAA U7 / U8 / OS 7.x+ (`Q0704`+) | `vidaa_2024_cert.pem` | `vidaa_2024_key.pem` |
-| **RemoteNOW (Standard)** | VIDAA U4 / U5 / U6 (2018–2023) | `remotenow_2018_cert.pem` | `remotenow_2018_key.pem` |
-| **Generic / Custom** | Standard fallback for any profile | `cert.pem` | `key.pem` |
+| **PKCS#12 Bundle (Auto-Extracted)** | Any Modern VIDAA / RemoteNOW | `client_mobile_android.p12` or `rcamobile.p12` | *(Bundled in .p12)* |
+| **VIDAA 2.0 (Modern PEM)** | VIDAA U7 / U8 / OS 7.x+ (`Q0704`+) | `vidaa_2024_cert.pem` or `vidaa_client.pem` | `vidaa_2024_key.pem` or `vidaa_client.key` |
+| **RemoteNOW (Standard PEM)** | VIDAA U4 / U5 / U6 (2018–2023) | `remotenow_2018_cert.pem` or `hisense.crt` | `remotenow_2018_key.pem` or `hisense.key` |
+| **Generic / Custom PEM** | Standard fallback for any profile | `cert.pem` | `key.pem` |
+| **Optional Root CA** | Optional TLS server verification | `remote_ca.pem` or `RemoteCA.crt` | *(Public root CA)* |
 
 ---
 
@@ -312,8 +331,85 @@ python3 debug_tv.py --dump-state -v
 3. Enter the TV's IP address and select your **Authentication / Certificate Profile** (default: `Auto Detect (Recommended)`).
 4. A 4-digit PIN code will appear on the TV screen — enter it into the prompt to complete setup.
 
-> [!IMPORTANT]
-> **Network Requirement**: VIDAA OS requires DNS / internet access on the TV during initial pairing to validate authentication tokens. Ensure the TV is not blocked from internet/DNS access on your local gateway.
+---
+
+## 🛠️ Custom Services & Example Automations
+
+### 1. `hisense_vidaa.launch_app`
+Launch an installed Smart TV application by name or direct URL:
+```yaml
+action: hisense_vidaa.launch_app
+target:
+  entity_id: media_player.living_room_tv
+data:
+  app: "Netflix" # e.g., Netflix, YouTube, Prime Video, Plex, Disney+
+```
+
+### 2. `hisense_vidaa.send_key`
+Send fast single or repeated key commands:
+```yaml
+action: hisense_vidaa.send_key
+target:
+  entity_id: remote.living_room_tv_remote
+data:
+  key: "home"
+  repeat: 1
+  delay: 0.2
+```
+
+### 3. Native Remote Key Sequences (`remote.send_command`)
+```yaml
+action: remote.send_command
+target:
+  entity_id: remote.living_room_tv_remote
+data:
+  command:
+    - home
+    - right
+    - right
+    - ok
+  delay_secs: 0.3
+```
+
+---
+
+## 📱 Dashboard / Lovelace Card Examples
+
+### Smart TV App Launcher Buttons
+```yaml
+type: horizontal-stack
+cards:
+  - type: button
+    name: Netflix
+    icon: mdi:netflix
+    tap_action:
+      action: perform-action
+      perform_action: hisense_vidaa.launch_app
+      target:
+        entity_id: media_player.living_room_tv
+      data:
+        app: Netflix
+  - type: button
+    name: YouTube
+    icon: mdi:youtube
+    tap_action:
+      action: perform-action
+      perform_action: hisense_vidaa.launch_app
+      target:
+        entity_id: media_player.living_room_tv
+      data:
+        app: YouTube
+  - type: button
+    name: Prime Video
+    icon: mdi:movie-open
+    tap_action:
+      action: perform-action
+      perform_action: hisense_vidaa.launch_app
+      target:
+        entity_id: media_player.living_room_tv
+      data:
+        app: Prime Video
+```
 
 ---
 

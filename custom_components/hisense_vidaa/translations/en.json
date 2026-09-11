@@ -95,6 +95,9 @@
       },
       "active_source": {
         "name": "Active Source"
+      },
+      "audio_output": {
+        "name": "Audio Output"
       }
     },
     "binary_sensor": {
