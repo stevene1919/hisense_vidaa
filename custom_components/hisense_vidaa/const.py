@@ -25,6 +25,7 @@ CONF_SECONDARY_MAC_ADDRESS = "secondary_mac_address"
 
 # Integration Options
 CONF_ENABLE_REMOTE = "enable_remote"
+CONF_ENABLE_NOTIFY = "enable_notify"
 CONF_ENABLE_WOL = "enable_wol"
 CONF_INCLUDE_APPS_IN_SOURCES = "include_apps_in_sources"
 CONF_ENABLE_MEDIA_CONTROLS = "enable_media_controls"
@@ -43,6 +44,7 @@ DEFAULT_CERT_FILENAME = "hisense.crt"
 DEFAULT_KEY_FILENAME = "hisense.key"
 
 DEFAULT_ENABLE_REMOTE = True
+DEFAULT_ENABLE_NOTIFY = False
 DEFAULT_ENABLE_WOL = False
 DEFAULT_INCLUDE_APPS_IN_SOURCES = True
 DEFAULT_ENABLE_MEDIA_CONTROLS = True

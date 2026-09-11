@@ -8,6 +8,7 @@ from .const import (
     CONF_CERTFILE,
     CONF_ENABLE_CEC_NAMES,
     CONF_ENABLE_MEDIA_CONTROLS,
+    CONF_ENABLE_NOTIFY,
     CONF_ENABLE_REMOTE,
     CONF_ENABLE_WOL,
     CONF_INCLUDE_APPS_IN_SOURCES,
@@ -18,6 +19,7 @@ from .const import (
     CONF_USE_SSL,
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
+    DEFAULT_ENABLE_NOTIFY,
     DEFAULT_ENABLE_REMOTE,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
@@ -61,6 +63,10 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_ENABLE_REMOTE,
                     default=options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE),
+                ): bool,
+                vol.Optional(
+                    CONF_ENABLE_NOTIFY,
+                    default=options.get(CONF_ENABLE_NOTIFY, DEFAULT_ENABLE_NOTIFY),
                 ): bool,
                 vol.Optional(
                     CONF_ENABLE_WOL,

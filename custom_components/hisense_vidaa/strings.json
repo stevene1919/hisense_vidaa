@@ -82,6 +82,7 @@
         "description": "Configure power on, WoL, and core device options.",
         "data": {
           "enable_remote": "Enable dedicated Remote entity",
+          "enable_notify": "Enable on-screen toast notifications (supported models only)",
           "enable_wol": "Enable Wake-on-LAN power on",
           "secondary_mac_address": "Secondary MAC Address (Wi-Fi or Ethernet)",
           "use_ssl": "Use Encrypted SSL/TLS Connection"

@@ -109,6 +109,7 @@ class HisenseTvClient:
         self.sources: list[dict[str, Any]] = []
         self.apps: list[dict[str, Any]] = []
         self.current_source: str | None = None
+        self.has_notifications: bool = False
 
         if self.client_id:
             self.define_topic_paths()
@@ -519,6 +520,16 @@ class HisenseTvClient:
                 self._dispatch_applist_update(data)
             except Exception as e:
                 _LOGGER.error("Error parsing applist: %s", e)
+        elif topic == self.topicMobiBasepath + "ui_service/data/capability":
+            try:
+                data = json.loads(payload)
+                if isinstance(data, dict):
+                    caps = str(data).lower()
+                    if "notify" in caps or "toast" in caps or "showmessage" in caps or "message" in caps:
+                        self.has_notifications = True
+                        _LOGGER.info("TV reported support for on-screen notifications: %s", data)
+            except Exception as e:
+                _LOGGER.debug("Error parsing capability descriptor: %s", e)
 
     async def async_start_auth(self) -> None:
         """Starts the authentication handshake and triggers the TV to show PIN."""

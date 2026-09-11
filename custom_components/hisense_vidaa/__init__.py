@@ -21,6 +21,7 @@ from .const import (
     CONF_AUTH_PROFILE,
     CONF_CERTFILE,
     CONF_CLIENT_ID,
+    CONF_ENABLE_NOTIFY,
     CONF_ENABLE_REMOTE,
     CONF_IP_ADDRESS,
     CONF_KEYFILE,
@@ -31,6 +32,7 @@ from .const import (
     CONF_REFRESH_TOKEN_TIME,
     CONF_USE_SSL,
     CONF_USERNAME,
+    DEFAULT_ENABLE_NOTIFY,
     DEFAULT_ENABLE_REMOTE,
     DEFAULT_USE_SSL,
     DOMAIN,
@@ -203,11 +205,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "sensor",
         "binary_sensor",
         "button",
-        "notify",
         "select",
     ]
     if entry.options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE):
         platforms_to_setup.append("remote")
+    if entry.options.get(
+        CONF_ENABLE_NOTIFY,
+        getattr(client, "has_notifications", DEFAULT_ENABLE_NOTIFY),
+    ):
+        platforms_to_setup.append("notify")
 
     await hass.config_entries.async_forward_entry_setups(entry, platforms_to_setup)
     entry.async_on_unload(entry.add_update_listener(update_listener))
