@@ -2,7 +2,22 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.6.0] - 2026-09-11
+
+### Added
+- **MEDIA TRANSPORT CONTROLS OPTION (`enable_media_controls`)**: Added new configurable option (default: enabled) to expose or suppress the media player transport control bar (play/pause, stop, skip). Useful for users who only need the TV as an input switcher without transport buttons cluttering the media player card.
+- **ACTIVE SOURCE SENSOR (`sensor.{tv}_active_source`)**: Dedicated sensor tracking the currently selected physical input or app (`HDMI1`, `HDMI2`, `TV`, `Netflix`, etc.), with extra attributes for all `available_sources`, `connected_inputs`, and user-defined custom HDMI labels.
+- **ACTIVE APP SENSOR (`sensor.{tv}_active_app`)**: Dedicated sensor tracking the currently running Smart TV application name, with extra attributes for `total_installed_apps` and `favorite_apps`.
+- **DYNAMIC APP ARTWORK**: `media_image_url` now resolves live CDN icon URLs from the TV's app registry for the currently active app, enabling rich media player card artwork in the HA UI.
+- **SYNC CLOCK BUTTON (`button.{tv}_sync_clock`)**: Diagnostic button to trigger manual TV clock synchronization via UPnP/DLNA `Date` header extraction, resolving pairing hash mismatches after NTP failures or offline periods.
+- **MQTT CONNECTED BINARY SENSOR (`binary_sensor.{tv}_mqtt_connected`)**: Connectivity sensor reflecting real-time MQTT broker connection state, distinct from TV power state.
+
+### Changed
+- **`PLAY` + `PAUSE` → `PLAY_PAUSE` FEATURE FLAG**: Replaced separate `PLAY` and `PAUSE` feature flags with the combined `PLAY_PAUSE` flag, which is the correct idiomatic approach for a TV that cannot report actual playback state. This renders a single toggle button in the HA media player card instead of two independent buttons, and correctly communicates to HA that the device toggles rather than tracking play/pause state independently. Pressing the button sends `KEY_PLAY` via MQTT (which also works via HDMI-CEC for connected devices).
+- **DYNAMIC `supported_features`**: The media player `supported_features` property is now computed dynamically based on the `enable_media_controls` option rather than being a fixed static bitmask.
+
 ## [2.5.0] - 2026-09-11
+
 
 ### Added
 - **HACS & HASSFEST CI VALIDATION**: Added complete HACS repository configuration (`hacs.json`) with minimum Home Assistant version requirements, `integration_type: "device"` in `manifest.json`, and configured dual-action CI validation (`hassfest` + `hacs/action`) on every pull request and push.

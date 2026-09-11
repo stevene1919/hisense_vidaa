@@ -47,16 +47,22 @@ This integration automatically detects and natively supports all generations of 
 - **Media Player Entity (`media_player`)**:
   - Power toggle and standby control.
   - Volume adjustment, stepping, and mute toggle.
-  - Playback controls (`PLAY`, `PAUSE`, `STOP`, `NEXT_TRACK`, `PREVIOUS_TRACK`, `PLAY_MEDIA`).
+  - Configurable media transport controls (`PLAY_PAUSE`, `STOP`, `NEXT_TRACK`, `PREVIOUS_TRACK`, `PLAY_MEDIA`) — toggle via options (works natively in streaming apps and via HDMI-CEC on connected devices).
   - Unified input source selector with configurable app inclusions (HDMI, TV, AV, Netflix, YouTube, Plex, etc.).
+  - Dynamic app CDN artwork in the media player card for the currently active app.
   - Instant local push updates for volume and power state across multiple firmware topic variants.
-- **Diagnostic Sensors & Controls**:
-  - Dedicated connectivity binary sensor, 4 diagnostic sensors, and 3 diagnostic buttons.
+- **Sensors & Diagnostic Entities**:
+  - **Active Source sensor** (`sensor.{tv}_active_source`): tracks current physical input or app with available/connected sources as attributes.
+  - **Active App sensor** (`sensor.{tv}_active_app`): tracks the running Smart TV app with installed app list as attributes.
+  - **MQTT Connected binary sensor** (`binary_sensor.{tv}_mqtt_connected`): real-time broker connectivity state.
+  - Auth profile, token expiry, and other diagnostic sensors.
+  - **Sync Clock button** (`button.{tv}_sync_clock`): manual TV clock synchronization via UPnP/DLNA.
+  - Refresh token and force reconnect diagnostic buttons.
   - Native Home Assistant Diagnostics integration (`diagnostics.py`) with sensitive token and IP/MAC redaction.
   - In-UI Repairs issue when certificates are missing or unreadable.
 - **Full Options Flow**:
-  - Configure device behavior via **Settings -> Devices & Services -> Configure** without re-pairing.
-  - Toggle dedicated remote entity, Wake-on-LAN, Smart TV app listing in sources, and SSL mode.
+  - Configure device behavior via **Settings → Devices & Services → Configure** without re-pairing.
+  - Toggle: dedicated remote entity, Wake-on-LAN, Smart TV app listing in sources, **media transport controls**, and SSL mode.
 - **HACS & CI Compliant**:
   - Fully structured for HACS with `hacs.json` and `integration_type: "device"`.
   - Dual CI validation pipelines (`hassfest` + `hacs/action`) for Home Assistant standards compliance.
