@@ -79,10 +79,14 @@ This integration automatically detects and natively supports all generations of 
 
 ## 📱 Lovelace Remote Cards & Dashboard Examples
 
+<p align="center">
+  <img src="assets/screenshots/ha_australian_remote.png" alt="Hisense Australian Remote Card" width="320" />
+</p>
+
 Ready-to-use Lovelace dashboard remote configurations are available in the [`examples/`](examples/) directory:
 
 1. **[Australian Physical Remote (EN2G30H)](examples/lovelace-australian-remote-card.yaml)**:
-   - Pixel-accurate recreation of the physical 12-app Australian remote control (`button-card`).
+   - Pixel-accurate recreation of the physical 12-app Australian remote control (`custom:button-card`).
    - Includes custom SVGs/badges for Netflix, YouTube, Prime Video, Disney+, Stan, Kayo, Binge, Foxtel, ABC iview, SBS On Demand, 7plus, 9Now, and 10 play.
    - Dual vertical pill rockers for Volume (`+`/`-`) and Channel (`+`/`-`), full D-pad wheel with center OK, and 12-key numpad.
 
@@ -98,6 +102,29 @@ Ready-to-use Lovelace dashboard remote configurations are available in the [`exa
 
 5. **[Classic TV Card Profile](examples/lovelace-tv-card.yaml)**:
    - Compact profile for `custom:tv-card`.
+
+---
+
+## 🖥️ Device Registry & UI Overview
+
+### Device Page & Controls
+<p align="center">
+  <img src="assets/screenshots/integration_device.png" alt="Hisense VIDAA Device Page in Home Assistant" width="100%" />
+</p>
+
+### Media Player & Source Selection
+<p align="center">
+  <img src="assets/screenshots/media_play_entity.png" alt="Media Player Dialog" width="48%" />
+  &nbsp;
+  <img src="assets/screenshots/media_play_entity_sources.png" alt="Source List Dropdown" width="48%" />
+</p>
+
+### Integration & Options
+<p align="center">
+  <img src="assets/screenshots/integration.png" alt="Integration Card" width="58%" />
+  &nbsp;
+  <img src="assets/screenshots/configuration_options.png" alt="Configuration Options" width="38%" />
+</p>
 
 ---
 
