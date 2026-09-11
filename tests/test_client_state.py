@@ -16,6 +16,9 @@ def test_key_aliases():
     assert KEY_ALIASES["menu"] == "KEY_MENU"
     assert KEY_ALIASES["back"] == "KEY_RETURNS"
     assert KEY_ALIASES["ok"] == "KEY_OK"
+    assert KEY_ALIASES["voice_up"] == "KEY_VOICEUP"
+    assert KEY_ALIASES["dot"] == "KEY_CHANNELDOT"
+    assert KEY_ALIASES["mouse_up"] == "KEY_UDULEFTMOUSEKEYS"
 
 
 def test_state_dispatch_callbacks():
