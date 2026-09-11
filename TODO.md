@@ -7,30 +7,35 @@ This document tracks planned features, new platforms, technical debt, and archit
 ## 🚀 Planned Enhancements & Roadmap
 
 ### 1. Device Registry & Metadata Integration
-- [ ] **Dynamic `DeviceInfo` Model & Firmware Binding**:
+- [x] **Dynamic `DeviceInfo` Model & Firmware Binding**:
   - Pipe discovered UPnP/mDNS `model_name` or `model_code` (e.g. `55U7G`, `65U8N`) into `device_info["model"]` instead of static `"VIDAA TV"`.
   - Pipe discovered `firmware_version` into `device_info["sw_version"]` so the exact build shows on Home Assistant's Device info card.
   - Pipe discovered `manufacturer` / `brand` into `device_info["manufacturer"]` (e.g. `Hisense`, `Toshiba`).
 
 ### 2. Auto-Discovery & Dynamic Network Migration (`ssdp` / `zeroconf`)
-- [ ] **Native Home Assistant SSDP / mDNS Auto-Discovery**:
+- [x] **Native Home Assistant SSDP / mDNS Auto-Discovery**:
   - Implement `async_step_ssdp` and `async_step_zeroconf` in `config_flow.py` for 1-click discovery notifications in Home Assistant UI when a new TV is detected.
-- [ ] **Dynamic IP Address Migration**:
+- [x] **Dynamic IP Address Migration**:
   - Automatically update Config Entry host IP when TV DHCP IP changes by tracking the hardware MAC address via ARP/mDNS without breaking entities.
 
 ### 3. Diagnostic & State Sensors (`sensor`, `binary_sensor`, `button`)
-- [ ] **Diagnostic Sensors (`sensor` / `binary_sensor`)**:
+- [x] **Diagnostic Sensors (`sensor` / `binary_sensor`)**:
   - `sensor.<tv>_token_expires_in`: Expiration timestamp / time remaining for the 48-hour access token (`device_class: timestamp`, `category: diagnostic`).
-  - `sensor.<tv>_clock_drift`: Difference between TV's internal UPnP/DLNA clock and HA system time to alert before auth failures (`category: diagnostic`).
   - `sensor.<tv>_auth_profile`: Active authentication profile name (`Modern VIDAA 2.0`, `RemoteNOW Standard`, or `Legacy Static`).
   - `binary_sensor.<tv>_mqtt_connected`: Real-time broker connectivity status (`device_class: connectivity`, `category: diagnostic`).
-- [ ] **Operational Media Sensors (`sensor`)**:
+- [x] **Operational Media Sensors (`sensor`)**:
   - `sensor.<tv>_active_app`: Dedicated sensor reporting currently active foreground app (e.g., `Netflix`, `YouTube`, `Prime Video`, `Live TV`).
   - `sensor.<tv>_active_source`: Currently active physical input (`HDMI 1`, `HDMI 2 (eARC)`, `TV`, etc.).
-- [ ] **Diagnostic Utility Buttons (`button`)**:
+- [x] **Diagnostic Utility Buttons (`button`)**:
   - `button.<tv>_refresh_token`: Manual trigger to synchronously refresh session tokens and persist to Config Entry (`category: diagnostic`).
   - `button.<tv>_force_reconnect`: Forces immediate MQTT reconnection and subscription re-registration (`category: diagnostic`).
   - `button.<tv>_sync_clock`: Probes UPnP `Date` header to verify and re-align TV clock time.
+- [x] **Native HA Diagnostics & Repairs Platforms (`diagnostics.py`, `repairs.py`)**:
+  - Downloadable redacted diagnostics json via HA device card.
+  - Automatic repair issue creation when client certificates are missing with guided in-UI fix flow.
+- [x] **Custom Services (`services.yaml`)**:
+  - `hisense_vidaa.send_key`: Fast burst keypresses with configurable repetition and delay.
+  - `hisense_vidaa.launch_app`: App launcher by name or direct deep link URL.
 
 ### 4. Advanced Remote & Media Controls
 - [ ] **Long-Press & Key Hold Support**:
@@ -53,9 +58,9 @@ This document tracks planned features, new platforms, technical debt, and archit
   - Improve error handling and diagnostic alerting when the TV internal clock desynchronizes from real time.
 
 ### 6. Automated Testing & CI
-- [x] **Mock TV MQTT Test Suite**:
-  - Added in-process mock protocol test suite (`tests/test_client_auth.py`, `tests/test_client_state.py`, `tests/test_crypto.py`, `tests/test_discovery.py`) and GitHub Actions test workflow (`.github/workflows/test.yml`).
+- [x] **Mock TV MQTT & Unit Test Suite**:
+  - Added in-process mock protocol test suite (`tests/test_client_auth.py`, `tests/test_client_state.py`, `tests/test_crypto.py`, `tests/test_discovery.py`, `tests/test_entities.py`, `tests/test_diagnostics.py`, `tests/test_repairs.py`, `tests/test_config_flow.py`) and GitHub Actions test workflow (`.github/workflows/test.yml`).
 
 ### 7. Security Hardening & Best Practices
-- [ ] **Safe XML Parsing with `defusedxml` ([Issue #14](https://github.com/stevene1919/hisense_vidaa/issues/14))**:
+- [x] **Safe XML Parsing with `defusedxml` ([Issue #14](https://github.com/stevene1919/hisense_vidaa/issues/14))**:
   - Import `defusedxml.ElementTree` with fallback to standard `xml.etree.ElementTree` in `discovery.py` to guard against XML entity expansion on UPnP port 38400.

@@ -9,6 +9,10 @@
           "auth_profile": "Authentication / Certificate Profile"
         }
       },
+      "discovery_confirm": {
+        "title": "Discovered Hisense VIDAA TV",
+        "description": "Do you want to set up {name} at {ip_address}?"
+      },
       "auth": {
         "title": "Enter TV PIN Code",
         "description": "A 4-digit PIN code should now be displayed on your TV screen. Please enter it below.",
@@ -45,7 +49,8 @@
     },
     "abort": {
       "reauth_successful": "Re-authentication was successful.",
-      "already_configured": "This device is already configured."
+      "already_configured": "This device is already configured.",
+      "not_vidaa_tv": "Discovered device is not a compatible Hisense VIDAA TV."
     }
   },
   "options": {
@@ -57,6 +62,85 @@
           "enable_remote": "Enable dedicated Remote entity",
           "enable_wol": "Enable Wake-on-LAN power on",
           "include_apps_in_sources": "Include Smart TV Apps in Media Player source list"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "token_expires_in": {
+        "name": "Token Expiry"
+      },
+      "auth_profile": {
+        "name": "Auth Profile"
+      },
+      "active_app": {
+        "name": "Active App"
+      },
+      "active_source": {
+        "name": "Active Source"
+      }
+    },
+    "binary_sensor": {
+      "mqtt_connected": {
+        "name": "MQTT Connected"
+      }
+    },
+    "button": {
+      "refresh_token": {
+        "name": "Refresh Access Token"
+      },
+      "force_reconnect": {
+        "name": "Force Reconnect"
+      },
+      "sync_clock": {
+        "name": "Sync Clock"
+      }
+    }
+  },
+  "services": {
+    "send_key": {
+      "name": "Send Key",
+      "description": "Send a key press or sequence of key presses to the TV.",
+      "fields": {
+        "key": {
+          "name": "Key",
+          "description": "Key code to send (e.g. KEY_POWER, KEY_HOME, KEY_VOLUMEUP)."
+        },
+        "repeat": {
+          "name": "Repeat",
+          "description": "Number of times to repeat the key press."
+        },
+        "delay": {
+          "name": "Delay",
+          "description": "Delay in seconds between repeated key presses."
+        }
+      }
+    },
+    "launch_app": {
+      "name": "Launch App",
+      "description": "Launch a Smart TV application by name or direct URL.",
+      "fields": {
+        "app": {
+          "name": "Application Name or URL",
+          "description": "The name of the app (e.g. Netflix, YouTube, Prime Video) or a deep link URL."
+        }
+      }
+    }
+  },
+  "issues": {
+    "certificate_missing": {
+      "title": "Missing VIDAA Client Certificates",
+      "description": "Client certificates (hisense.crt and hisense.key) were not found in Home Assistant configuration or ssl directory. Please place the required client certificate and private key in the /config or /ssl directory to enable encrypted communication.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Verify Client Certificates",
+            "description": "Once you have copied hisense.crt and hisense.key into /config or /ssl, submit this form to verify."
+          }
+        },
+        "error": {
+          "certificates_still_missing": "Certificates are still missing. Please ensure hisense.crt and hisense.key exist."
         }
       }
     }

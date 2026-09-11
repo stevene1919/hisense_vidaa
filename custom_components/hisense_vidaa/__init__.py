@@ -1,10 +1,19 @@
+"""Hisense VIDAA TV custom component integration."""
+
+import asyncio
 import logging
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers import issue_registry as ir
 
 from .client import HisenseTvClient
 from .const import (
+    ATTR_APP,
+    ATTR_DELAY,
+    ATTR_KEY,
+    ATTR_REPEAT,
     CONF_ACCESS_TOKEN,
     CONF_ACCESS_TOKEN_DURATION,
     CONF_ACCESS_TOKEN_TIME,
@@ -20,11 +29,66 @@ from .const import (
     CONF_USERNAME,
     DEFAULT_ENABLE_REMOTE,
     DOMAIN,
+    SERVICE_LAUNCH_APP,
+    SERVICE_SEND_KEY,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[str] = ["media_player", "remote"]
+PLATFORMS: list[str] = [
+    "media_player",
+    "remote",
+    "sensor",
+    "binary_sensor",
+    "button",
+]
+
+
+async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
+    """Set up the Hisense VIDAA TV integration services."""
+
+    async def handle_send_key(call: ServiceCall) -> None:
+        """Handle send_key service call."""
+        key = call.data.get(ATTR_KEY)
+        repeat = call.data.get(ATTR_REPEAT, 1)
+        delay = call.data.get(ATTR_DELAY, 0.2)
+
+        # Dispatch to target clients
+        for entry_id, data in hass.data.get(DOMAIN, {}).items():
+            client: HisenseTvClient = data.get("client") if isinstance(data, dict) else data
+            if client:
+                for i in range(repeat):
+                    if i > 0 and delay > 0:
+                        await asyncio.sleep(delay)
+                    await hass.async_add_executor_job(client.send_key, key)
+
+    async def handle_launch_app(call: ServiceCall) -> None:
+        """Handle launch_app service call."""
+        app = call.data.get(ATTR_APP)
+        for entry_id, data in hass.data.get(DOMAIN, {}).items():
+            client: HisenseTvClient = data.get("client") if isinstance(data, dict) else data
+            if client:
+                # Search app dict for matching app or send directly as url
+                matched_app = None
+                for a in getattr(client, "_app_list", []):
+                    if isinstance(a, dict) and a.get("appName", "").lower() == app.lower():
+                        matched_app = a
+                        break
+
+                if matched_app:
+                    await hass.async_add_executor_job(
+                        client.change_source, matched_app.get("appName"), matched_app.get("appUrl")
+                    )
+                else:
+                    await hass.async_add_executor_job(client.change_source, app, app)
+
+    if not hass.services.has_service(DOMAIN, SERVICE_SEND_KEY):
+        hass.services.async_register(DOMAIN, SERVICE_SEND_KEY, handle_send_key)
+
+    if not hass.services.has_service(DOMAIN, SERVICE_LAUNCH_APP):
+        hass.services.async_register(DOMAIN, SERVICE_LAUNCH_APP, handle_launch_app)
+
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -65,6 +129,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         auth_profile=data.get(CONF_AUTH_PROFILE, "auto"),
     )
 
+    # Check for missing certificates and manage Repairs issue
+    if not client.certfile or not client.keyfile:
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            f"certificate_missing_{entry.entry_id}",
+            is_fixable=True,
+            is_persistent=True,
+            severity=ir.IssueSeverity.ERROR,
+            translation_key="certificate_missing",
+        )
+    else:
+        ir.async_delete_issue(hass, DOMAIN, f"certificate_missing_{entry.entry_id}")
+
     # Callback to persist token updates in Home Assistant config entry
     def update_entry_tokens(refreshed_client: HisenseTvClient) -> None:
         hass.config_entries.async_update_entry(
@@ -87,7 +165,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         lambda c: hass.loop.call_soon_threadsafe(entry.async_start_reauth, hass)
     )
 
-    # Check and refresh tokens, run client loop in executor
+    # Check and refresh tokens in executor
     updated = await hass.async_add_executor_job(client.check_and_refresh_token)
     if updated:
         update_entry_tokens(client)
@@ -96,9 +174,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.async_add_executor_job(client.connect_and_run)
 
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = client
+    hass.data[DOMAIN][entry.entry_id] = {"client": client}
 
-    platforms_to_setup = ["media_player"]
+    platforms_to_setup = ["media_player", "sensor", "binary_sensor", "button"]
     if entry.options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE):
         platforms_to_setup.append("remote")
 
@@ -118,7 +196,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry, PLATFORMS
     )
     if unload_ok:
-        client = hass.data[DOMAIN].pop(entry.entry_id, None)
+        data = hass.data[DOMAIN].pop(entry.entry_id, None)
+        client = data.get("client") if isinstance(data, dict) else data
         if client:
             await hass.async_add_executor_job(client.disconnect)
     return unload_ok

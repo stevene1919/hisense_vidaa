@@ -18,6 +18,16 @@ CONF_ENABLE_REMOTE = "enable_remote"
 CONF_ENABLE_WOL = "enable_wol"
 CONF_INCLUDE_APPS_IN_SOURCES = "include_apps_in_sources"
 CONF_AUTH_PROFILE = "auth_profile"
+CONF_MODEL = "model"
+CONF_SW_VERSION = "sw_version"
+CONF_MANUFACTURER = "manufacturer"
+
+SERVICE_SEND_KEY = "send_key"
+SERVICE_LAUNCH_APP = "launch_app"
+ATTR_KEY = "key"
+ATTR_APP = "app"
+ATTR_REPEAT = "repeat"
+ATTR_DELAY = "delay"
 
 DEFAULT_ENABLE_REMOTE = True
 DEFAULT_ENABLE_WOL = False

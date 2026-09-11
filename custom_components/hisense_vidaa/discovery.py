@@ -3,8 +3,12 @@ import logging
 import socket
 import time
 import urllib.request
-import xml.etree.ElementTree as ET
 from typing import Any
+
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
 
 _LOGGER = logging.getLogger(__name__)
 

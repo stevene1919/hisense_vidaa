@@ -12,5 +12,10 @@
   "requirements": [
     "paho-mqtt>=1.6.1"
   ],
-  "version": "2.2.0"
+  "ssdp": [
+    {
+      "st": "urn:schemas-upnp-org:device:MediaRenderer:1"
+    }
+  ],
+  "version": "2.3.0"
 }
