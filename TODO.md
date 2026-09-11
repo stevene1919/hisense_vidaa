@@ -53,5 +53,5 @@ This document tracks planned features, new platforms, technical debt, and archit
   - Improve error handling and diagnostic alerting when the TV internal clock desynchronizes from real time.
 
 ### 6. Automated Testing & CI
-- [ ] **Mock TV MQTT Test Suite**:
-  - Add a lightweight mock VIDAA MQTT broker fixture in `pytest` for GitHub Actions to test pairing handshakes, token refresh loops, and command dispatching across CI runs.
+- [x] **Mock TV MQTT Test Suite**:
+  - Added in-process mock protocol test suite (`tests/test_client_auth.py`, `tests/test_client_state.py`, `tests/test_crypto.py`, `tests/test_discovery.py`) and GitHub Actions test workflow (`.github/workflows/test.yml`).
