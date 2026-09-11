@@ -278,6 +278,12 @@ If your TV accepts static credentials or you are running older Hisense hardware:
 
 ---
 
+## 📋 Roadmap & Planned Features
+
+See [`TODO.md`](TODO.md) for the active development backlog, planned features (e.g., dynamic model/firmware binding in device info), and network resilience investigations.
+
+---
+
 ## Credits & Acknowledgments
 
 This native integration adapts foundational reverse-engineering discoveries from the open-source community:
