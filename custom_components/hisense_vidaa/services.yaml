@@ -2,8 +2,6 @@ send_key:
   name: Send Key
   description: Send a remote control key command to the TV.
   target:
-    device:
-      integration: hisense_vidaa
     entity:
       integration: hisense_vidaa
       domain:
@@ -44,8 +42,6 @@ launch_app:
   name: Launch App
   description: Launch a smart TV application on the TV.
   target:
-    device:
-      integration: hisense_vidaa
     entity:
       integration: hisense_vidaa
       domain:

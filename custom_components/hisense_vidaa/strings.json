@@ -157,7 +157,6 @@
   "issues": {
     "certificate_missing": {
       "title": "Missing VIDAA Client Certificates",
-      "description": "Client certificates (hisense.crt and hisense.key) were not found in Home Assistant configuration or ssl directory. Please place the required client certificate and private key in the /config or /ssl directory to enable encrypted communication.",
       "fix_flow": {
         "step": {
           "confirm": {

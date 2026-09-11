@@ -254,6 +254,17 @@ if "homeassistant" not in sys.modules:
     helpers.issue_registry = issue_registry
     sys.modules["homeassistant.helpers.issue_registry"] = issue_registry
 
+    # helpers.config_validation
+    cv = types.ModuleType("homeassistant.helpers.config_validation")
+    def config_entry_only_config_schema(domain):
+        return lambda val: val
+    def empty_config_schema(domain):
+        return lambda val: val
+    cv.config_entry_only_config_schema = config_entry_only_config_schema
+    cv.empty_config_schema = empty_config_schema
+    helpers.config_validation = cv
+    sys.modules["homeassistant.helpers.config_validation"] = cv
+
     # helpers.service_info.ssdp
     service_info = types.ModuleType("homeassistant.helpers.service_info")
     ssdp = types.ModuleType("homeassistant.helpers.service_info.ssdp")
