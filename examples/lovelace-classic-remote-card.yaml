@@ -1,0 +1,934 @@
+# ==============================================================================
+# Hisense VIDAA - Classic Traditional Remote Card (No Smart App Buttons)
+# ==============================================================================
+# This configuration provides a traditional TV remote experience tailored for
+# Free-to-Air broadcast TV, cable, and core navigation without streaming app shortcuts.
+#
+# Requirements:
+#   - HACS: button-card (custom:button-card)
+#   - HACS: card-mod (optional, for enhanced styling)
+#
+# Replace 'remote.bedroom_smart_tv_remote' and 'media_player.bedroom_smart_tv'
+# with your actual Hisense VIDAA entity IDs.
+# ==============================================================================
+
+type: custom:button-card
+entity: media_player.bedroom_smart_tv
+show_name: false
+show_state: false
+show_icon: false
+styles:
+  card:
+    - background: "linear-gradient(180deg, #1e2024 0%, #15161a 50%, #0f1013 100%)"
+    - border-radius: 36px
+    - box-shadow: "0 20px 40px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.12)"
+    - padding: 22px 18px 26px
+    - max-width: 330px
+    - margin: "0 auto"
+    - border: "1px solid rgba(255,255,255,0.08)"
+custom_fields:
+  remote_chassis:
+    card:
+      type: vertical-stack
+      cards:
+        # ----------------------------------------------------------------------
+        # Top Header: Power & Input Selection
+        # ----------------------------------------------------------------------
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              icon: mdi:power
+              name: POWER
+              show_name: true
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_POWER
+              styles:
+                card:
+                  - background: "#e53935"
+                  - border-radius: 50%
+                  - width: 50px
+                  - height: 50px
+                  - box-shadow: "0 4px 10px rgba(229, 57, 53, 0.45)"
+                  - border: "none"
+                icon:
+                  - color: "#ffffff"
+                  - transform: scale(1.1)
+                name:
+                  - color: "rgba(255,255,255,0.85)"
+                  - font-size: 8px
+                  - font-weight: "bold"
+                  - margin-top: 2px
+
+            - type: custom:button-card
+              color_type: blank-card
+              styles:
+                card:
+                  - width: 120px
+
+            - type: custom:button-card
+              icon: mdi:import
+              name: INPUT
+              show_name: true
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_INPUT
+              styles:
+                card:
+                  - background: "#2a2d34"
+                  - border-radius: 50%
+                  - width: 50px
+                  - height: 50px
+                  - box-shadow: "0 4px 8px rgba(0,0,0,0.4)"
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                icon:
+                  - color: "#ffffff"
+                  - transform: scale(1.0)
+                name:
+                  - color: "rgba(255,255,255,0.7)"
+                  - font-size: 8px
+                  - font-weight: "bold"
+                  - margin-top: 2px
+
+        # ----------------------------------------------------------------------
+        # Status Badge
+        # ----------------------------------------------------------------------
+        - type: custom:button-card
+          entity: media_player.bedroom_smart_tv
+          show_name: true
+          show_state: true
+          show_icon: false
+          name: "[[[ return entity.attributes.friendly_name || 'Hisense TV' ]]]"
+          state_display: "[[[ return entity.state ? entity.state.toUpperCase() : 'OFF'; ]]]"
+          styles:
+            card:
+              - background: "rgba(0,0,0,0.25)"
+              - border-radius: 12px
+              - padding: 6px 12px
+              - margin: 12px 0 6px
+              - border: "1px solid rgba(255,255,255,0.04)"
+            name:
+              - color: "rgba(255,255,255,0.6)"
+              - font-size: 11px
+              - font-weight: 500
+              - text-transform: uppercase
+              - letter-spacing: 0.5px
+            state:
+              - color: "[[[ return entity.state === 'on' || entity.state === 'playing' ? '#4caf50' : '#888888' ]]]"
+              - font-size: 10px
+              - font-weight: bold
+              - letter-spacing: 1px
+
+        # ----------------------------------------------------------------------
+        # Quick System Buttons: Menu, Info, Exit, Subtitle
+        # ----------------------------------------------------------------------
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              name: MENU
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_MENU
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 10px
+                  - height: 32px
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                name:
+                  - color: "#dddddd"
+                  - font-size: 10px
+                  - font-weight: bold
+
+            - type: custom:button-card
+              name: INFO
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_INFO
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 10px
+                  - height: 32px
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                name:
+                  - color: "#dddddd"
+                  - font-size: 10px
+                  - font-weight: bold
+
+            - type: custom:button-card
+              name: SUBTITLE
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_SUBTITLE
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 10px
+                  - height: 32px
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                name:
+                  - color: "#dddddd"
+                  - font-size: 9px
+                  - font-weight: bold
+
+            - type: custom:button-card
+              name: EXIT
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_EXIT
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 10px
+                  - height: 32px
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                name:
+                  - color: "#dddddd"
+                  - font-size: 10px
+                  - font-weight: bold
+
+        # ----------------------------------------------------------------------
+        # D-Pad Navigation Wheel
+        # ----------------------------------------------------------------------
+        - type: custom:button-card
+          color_type: blank-card
+          styles:
+            card:
+              - height: 8px
+
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              color_type: blank-card
+            - type: custom:button-card
+              icon: mdi:chevron-up
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_UP
+              styles:
+                card:
+                  - background: "#2d3038"
+                  - border-radius: 20px 20px 8px 8px
+                  - height: 48px
+                  - width: 68px
+                  - box-shadow: "0 4px 6px rgba(0,0,0,0.3)"
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                icon:
+                  - color: "#ffffff"
+            - type: custom:button-card
+              color_type: blank-card
+
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              icon: mdi:chevron-left
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_LEFT
+              styles:
+                card:
+                  - background: "#2d3038"
+                  - border-radius: 20px 8px 8px 20px
+                  - height: 68px
+                  - width: 48px
+                  - box-shadow: "0 4px 6px rgba(0,0,0,0.3)"
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                icon:
+                  - color: "#ffffff"
+
+            - type: custom:button-card
+              name: OK
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_OK
+              styles:
+                card:
+                  - background: "linear-gradient(135deg, #3a3e47 0%, #292b31 100%)"
+                  - border-radius: 50%
+                  - height: 68px
+                  - width: 68px
+                  - box-shadow: "inset 0 2px 4px rgba(255,255,255,0.1), 0 4px 8px rgba(0,0,0,0.4)"
+                  - border: "2px solid rgba(255,255,255,0.12)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 16px
+                  - font-weight: bold
+                  - letter-spacing: 1px
+
+            - type: custom:button-card
+              icon: mdi:chevron-right
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_RIGHT
+              styles:
+                card:
+                  - background: "#2d3038"
+                  - border-radius: 8px 20px 20px 8px
+                  - height: 68px
+                  - width: 48px
+                  - box-shadow: "0 4px 6px rgba(0,0,0,0.3)"
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                icon:
+                  - color: "#ffffff"
+
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              color_type: blank-card
+            - type: custom:button-card
+              icon: mdi:chevron-down
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_DOWN
+              styles:
+                card:
+                  - background: "#2d3038"
+                  - border-radius: 8px 8px 20px 20px
+                  - height: 48px
+                  - width: 68px
+                  - box-shadow: "0 4px 6px rgba(0,0,0,0.3)"
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                icon:
+                  - color: "#ffffff"
+            - type: custom:button-card
+              color_type: blank-card
+
+        # ----------------------------------------------------------------------
+        # Back & Home Nav Bar
+        # ----------------------------------------------------------------------
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              icon: mdi:arrow-left
+              name: BACK
+              show_name: true
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_BACK
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 40px
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                icon:
+                  - color: "#ffffff"
+                  - transform: scale(0.85)
+                name:
+                  - color: "rgba(255,255,255,0.8)"
+                  - font-size: 9px
+                  - font-weight: bold
+
+            - type: custom:button-card
+              icon: mdi:home
+              name: HOME
+              show_name: true
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_HOME
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 40px
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                icon:
+                  - color: "#ffffff"
+                  - transform: scale(0.85)
+                name:
+                  - color: "rgba(255,255,255,0.8)"
+                  - font-size: 9px
+                  - font-weight: bold
+
+        # ----------------------------------------------------------------------
+        # Volume & Channel Rockers + Mute / Guide
+        # ----------------------------------------------------------------------
+        - type: custom:button-card
+          color_type: blank-card
+          styles:
+            card:
+              - height: 6px
+
+        - type: horizontal-stack
+          cards:
+            # Volume Rocker Column
+            - type: vertical-stack
+              cards:
+                - type: custom:button-card
+                  icon: mdi:plus
+                  name: VOL
+                  show_name: true
+                  tap_action:
+                    action: call-service
+                    service: remote.send_command
+                    service_data:
+                      entity_id: remote.bedroom_smart_tv_remote
+                      command: KEY_VOLUMEUP
+                  styles:
+                    card:
+                      - background: "#2d3038"
+                      - border-radius: 16px 16px 4px 4px
+                      - height: 46px
+                      - width: 56px
+                      - border: "1px solid rgba(255,255,255,0.06)"
+                    icon:
+                      - color: "#ffffff"
+                    name:
+                      - color: "rgba(255,255,255,0.5)"
+                      - font-size: 7px
+                      - font-weight: bold
+
+                - type: custom:button-card
+                  icon: mdi:minus
+                  show_name: false
+                  tap_action:
+                    action: call-service
+                    service: remote.send_command
+                    service_data:
+                      entity_id: remote.bedroom_smart_tv_remote
+                      command: KEY_VOLUMEDOWN
+                  styles:
+                    card:
+                      - background: "#2d3038"
+                      - border-radius: 4px 4px 16px 16px
+                      - height: 46px
+                      - width: 56px
+                      - border: "1px solid rgba(255,255,255,0.06)"
+                    icon:
+                      - color: "#ffffff"
+
+            # Center Helpers (Mute & Guide)
+            - type: vertical-stack
+              cards:
+                - type: custom:button-card
+                  icon: mdi:volume-mute
+                  name: MUTE
+                  show_name: true
+                  tap_action:
+                    action: call-service
+                    service: remote.send_command
+                    service_data:
+                      entity_id: remote.bedroom_smart_tv_remote
+                      command: KEY_MUTE
+                  styles:
+                    card:
+                      - background: "#25272e"
+                      - border-radius: 12px
+                      - height: 42px
+                      - border: "1px solid rgba(255,255,255,0.06)"
+                    icon:
+                      - color: "#e53935"
+                      - transform: scale(0.9)
+                    name:
+                      - color: "rgba(255,255,255,0.7)"
+                      - font-size: 8px
+                      - font-weight: bold
+
+                - type: custom:button-card
+                  icon: mdi:television-guide
+                  name: GUIDE
+                  show_name: true
+                  tap_action:
+                    action: call-service
+                    service: remote.send_command
+                    service_data:
+                      entity_id: remote.bedroom_smart_tv_remote
+                      command: KEY_GUIDE
+                  styles:
+                    card:
+                      - background: "#25272e"
+                      - border-radius: 12px
+                      - height: 42px
+                      - border: "1px solid rgba(255,255,255,0.06)"
+                    icon:
+                      - color: "#42a5f5"
+                      - transform: scale(0.9)
+                    name:
+                      - color: "rgba(255,255,255,0.7)"
+                      - font-size: 8px
+                      - font-weight: bold
+
+            # Channel Rocker Column
+            - type: vertical-stack
+              cards:
+                - type: custom:button-card
+                  icon: mdi:chevron-up
+                  name: CH
+                  show_name: true
+                  tap_action:
+                    action: call-service
+                    service: remote.send_command
+                    service_data:
+                      entity_id: remote.bedroom_smart_tv_remote
+                      command: KEY_CHANNELUP
+                  styles:
+                    card:
+                      - background: "#2d3038"
+                      - border-radius: 16px 16px 4px 4px
+                      - height: 46px
+                      - width: 56px
+                      - border: "1px solid rgba(255,255,255,0.06)"
+                    icon:
+                      - color: "#ffffff"
+                    name:
+                      - color: "rgba(255,255,255,0.5)"
+                      - font-size: 7px
+                      - font-weight: bold
+
+                - type: custom:button-card
+                  icon: mdi:chevron-down
+                  show_name: false
+                  tap_action:
+                    action: call-service
+                    service: remote.send_command
+                    service_data:
+                      entity_id: remote.bedroom_smart_tv_remote
+                      command: KEY_CHANNELDOWN
+                  styles:
+                    card:
+                      - background: "#2d3038"
+                      - border-radius: 4px 4px 16px 16px
+                      - height: 46px
+                      - width: 56px
+                      - border: "1px solid rgba(255,255,255,0.06)"
+                    icon:
+                      - color: "#ffffff"
+
+        # ----------------------------------------------------------------------
+        # Full 12-Key Number Pad (1-9, Dot, 0, CH.List)
+        # ----------------------------------------------------------------------
+        - type: custom:button-card
+          color_type: blank-card
+          styles:
+            card:
+              - height: 8px
+
+        # Row 1-2-3
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              name: "1"
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_1
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 14px
+                  - font-weight: 500
+
+            - type: custom:button-card
+              name: "2"
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_2
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 14px
+                  - font-weight: 500
+
+            - type: custom:button-card
+              name: "3"
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_3
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 14px
+                  - font-weight: 500
+
+        # Row 4-5-6
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              name: "4"
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_4
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 14px
+                  - font-weight: 500
+
+            - type: custom:button-card
+              name: "5"
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_5
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 14px
+                  - font-weight: 500
+
+            - type: custom:button-card
+              name: "6"
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_6
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 14px
+                  - font-weight: 500
+
+        # Row 7-8-9
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              name: "7"
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_7
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 14px
+                  - font-weight: 500
+
+            - type: custom:button-card
+              name: "8"
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_8
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 14px
+                  - font-weight: 500
+
+            - type: custom:button-card
+              name: "9"
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_9
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 14px
+                  - font-weight: 500
+
+        # Row Dot - 0 - CH.List
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              name: "•"
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_DOT
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 18px
+                  - font-weight: bold
+
+            - type: custom:button-card
+              name: "0"
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_0
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "#ffffff"
+                  - font-size: 14px
+                  - font-weight: 500
+
+            - type: custom:button-card
+              name: CH.LIST
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_CHLIST
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 12px
+                  - height: 38px
+                  - border: "1px solid rgba(255,255,255,0.05)"
+                name:
+                  - color: "rgba(255,255,255,0.8)"
+                  - font-size: 9px
+                  - font-weight: bold
+
+        # ----------------------------------------------------------------------
+        # Color Keys (Freeview Plus / HbbTV / Interactive)
+        # ----------------------------------------------------------------------
+        - type: custom:button-card
+          color_type: blank-card
+          styles:
+            card:
+              - height: 6px
+
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_RED
+              styles:
+                card:
+                  - background: "#e53935"
+                  - border-radius: 6px
+                  - height: 16px
+                  - box-shadow: "0 2px 5px rgba(229, 57, 53, 0.4)"
+
+            - type: custom:button-card
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_GREEN
+              styles:
+                card:
+                  - background: "#43a047"
+                  - border-radius: 6px
+                  - height: 16px
+                  - box-shadow: "0 2px 5px rgba(67, 160, 71, 0.4)"
+
+            - type: custom:button-card
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_YELLOW
+              styles:
+                card:
+                  - background: "#fdd835"
+                  - border-radius: 6px
+                  - height: 16px
+                  - box-shadow: "0 2px 5px rgba(253, 216, 53, 0.4)"
+
+            - type: custom:button-card
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_BLUE
+              styles:
+                card:
+                  - background: "#1e88e5"
+                  - border-radius: 6px
+                  - height: 16px
+                  - box-shadow: "0 2px 5px rgba(30, 136, 229, 0.4)"
+
+        # ----------------------------------------------------------------------
+        # Media Transport Controls (Rewind, Play/Pause, Stop, Fast Forward)
+        # ----------------------------------------------------------------------
+        - type: custom:button-card
+          color_type: blank-card
+          styles:
+            card:
+              - height: 6px
+
+        - type: horizontal-stack
+          cards:
+            - type: custom:button-card
+              icon: mdi:rewind
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_REWIND
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 10px
+                  - height: 36px
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                icon:
+                  - color: "#ffffff"
+                  - transform: scale(0.9)
+
+            - type: custom:button-card
+              icon: mdi:play-pause
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_PLAY
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 10px
+                  - height: 36px
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                icon:
+                  - color: "#4caf50"
+                  - transform: scale(1.0)
+
+            - type: custom:button-card
+              icon: mdi:stop
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_STOP
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 10px
+                  - height: 36px
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                icon:
+                  - color: "#e53935"
+                  - transform: scale(0.9)
+
+            - type: custom:button-card
+              icon: mdi:fast-forward
+              tap_action:
+                action: call-service
+                service: remote.send_command
+                service_data:
+                  entity_id: remote.bedroom_smart_tv_remote
+                  command: KEY_FORWARDS
+              styles:
+                card:
+                  - background: "#25272e"
+                  - border-radius: 10px
+                  - height: 36px
+                  - border: "1px solid rgba(255,255,255,0.06)"
+                icon:
+                  - color: "#ffffff"
+                  - transform: scale(0.9)
