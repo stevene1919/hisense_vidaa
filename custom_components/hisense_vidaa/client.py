@@ -754,48 +754,76 @@ class HisenseTvClient:
 
     @staticmethod
     def send_wake_on_lan(
-        mac: str,
+        mac: str | list[str] | tuple[str, ...],
         broadcast_ip: str | None = None,
         port: int = 9,
         ip: str | None = None,
     ) -> bool:
-        """Sends a standard Wake-on-LAN magic packet UDP broadcast (subnet directed and global)."""
+        """Sends standard Wake-on-LAN magic packet UDP broadcasts (subnet directed and global) for one or multiple MACs."""
         if not mac:
             return False
-        cleaned_mac = mac.replace(":", "").replace("-", "").replace(".", "").strip()
-        if len(cleaned_mac) != 12:
+
+        mac_list = [mac] if isinstance(mac, str) else list(mac)
+        success = False
+
+        for single_mac in mac_list:
+            if not single_mac or not isinstance(single_mac, str):
+                continue
+            cleaned_mac = single_mac.replace(":", "").replace("-", "").replace(".", "").strip()
+            if len(cleaned_mac) != 12:
+                continue
+            try:
+                mac_bytes = bytes.fromhex(cleaned_mac)
+                magic_packet = b"\xff" * 6 + mac_bytes * 16
+
+                broadcast_targets = set()
+                if broadcast_ip:
+                    broadcast_targets.add(broadcast_ip)
+                else:
+                    broadcast_targets.add("255.255.255.255")
+                    if ip:
+                        try:
+                            ip_obj = ipaddress.ip_address(ip)
+                            if isinstance(ip_obj, ipaddress.IPv4Address):
+                                subnet_broadcast = f"{ip.rsplit('.', 1)[0]}.255"
+                                broadcast_targets.add(subnet_broadcast)
+                        except ValueError:
+                            pass
+
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                    for target in broadcast_targets:
+                        for p in (port, 7 if port == 9 else port):
+                            try:
+                                sock.sendto(magic_packet, (target, p))
+                            except Exception as target_err:
+                                _LOGGER.debug("WoL target %s:%s send error: %s", target, p, target_err)
+
+                _LOGGER.debug("Sent Wake-on-LAN magic packet to %s (targets: %s)", single_mac, broadcast_targets)
+                success = True
+            except Exception as e:
+                _LOGGER.warning("Failed to send Wake-on-LAN packet to %s: %s", single_mac, e)
+
+        return success
+
+    def show_message(self, message: str, title: str | None = None, duration: int = 5) -> bool:
+        """Displays an on-screen toast popup notification on the TV."""
+        if not self.connected or not self.mqtt_client:
+            _LOGGER.debug("Cannot show toast message: TV MQTT client not connected")
             return False
-        try:
-            mac_bytes = bytes.fromhex(cleaned_mac)
-            magic_packet = b"\xff" * 6 + mac_bytes * 16
 
-            broadcast_targets = set()
-            if broadcast_ip:
-                broadcast_targets.add(broadcast_ip)
-            else:
-                broadcast_targets.add("255.255.255.255")
-                if ip:
-                    try:
-                        ip_obj = ipaddress.ip_address(ip)
-                        if isinstance(ip_obj, ipaddress.IPv4Address):
-                            subnet_broadcast = f"{ip.rsplit('.', 1)[0]}.255"
-                            broadcast_targets.add(subnet_broadcast)
-                    except ValueError:
-                        pass
+        payload_dict = {
+            "message": message,
+            "title": title or "",
+            "duration": duration,
+            "type": "notify",
+        }
+        payload = json.dumps(payload_dict)
 
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                for target in broadcast_targets:
-                    try:
-                        sock.sendto(magic_packet, (target, port))
-                    except Exception as target_err:
-                        _LOGGER.debug("WoL target %s send error: %s", target, target_err)
-
-            _LOGGER.debug("Sent Wake-on-LAN magic packet to %s (targets: %s)", mac, broadcast_targets)
-            return True
-        except Exception as e:
-            _LOGGER.warning("Failed to send Wake-on-LAN packet to %s: %s", mac, e)
-            return False
+        # Publish to both standard candidate action topics for max compatibility across firmware
+        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/showmessage", payload)
+        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/toast", payload)
+        return True
 
     def send_key(self, key: str) -> None:
         """Publishes a raw keypress event to the TV."""

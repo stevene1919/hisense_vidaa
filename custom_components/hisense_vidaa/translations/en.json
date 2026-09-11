@@ -69,14 +69,46 @@
     "step": {
       "init": {
         "title": "Hisense VIDAA TV Options",
-        "description": "Configure device features and behavior.",
+        "description": "Select an options category to configure:",
+        "menu_options": {
+          "general": "⚡ General & Power Options",
+          "sources": "📺 Sources & Media Controls",
+          "remote_keys": "🎮 Remote Key Timings & Repeats",
+          "certs": "🔒 SSL Certificates & Security"
+        }
+      },
+      "general": {
+        "title": "General & Power Options",
+        "description": "Configure power on, WoL, and core device options.",
         "data": {
           "enable_remote": "Enable dedicated Remote entity",
           "enable_wol": "Enable Wake-on-LAN power on",
+          "secondary_mac_address": "Secondary MAC Address (Wi-Fi or Ethernet)",
+          "use_ssl": "Use Encrypted SSL/TLS Connection"
+        }
+      },
+      "sources": {
+        "title": "Sources & Media Controls",
+        "description": "Configure input sources, app list, and media playback controls.",
+        "data": {
           "include_apps_in_sources": "Include Smart TV Apps in Media Player source list",
           "enable_media_controls": "Enable media transport controls (play/pause, stop, skip)",
-          "use_ssl": "Use Encrypted SSL/TLS Connection",
-          "certfile": "Certificate File Path (.crt / .pem)",
+          "enable_cec_names": "Show connected HDMI-CEC device names in sources (e.g. 'HDMI 2 (PlayStation 5)')"
+        }
+      },
+      "remote_keys": {
+        "title": "Remote Key Timings & Repeats",
+        "description": "Configure default command delays and burst repetitions for the remote control.",
+        "data": {
+          "key_delay": "Default Key Delay (seconds)",
+          "key_repeat": "Default Key Repeat Count"
+        }
+      },
+      "certs": {
+        "title": "SSL Certificates & Security",
+        "description": "Custom paths for SSL/TLS client certificate and private key.",
+        "data": {
+          "certfile": "Certificate File Path (.crt / .pem / .p12)",
           "keyfile": "Private Key File Path (.key / .pem)"
         }
       }
@@ -114,6 +146,16 @@
       },
       "sync_clock": {
         "name": "Sync Clock"
+      }
+    },
+    "notify": {
+      "notifications": {
+        "name": "Notifications"
+      }
+    },
+    "select": {
+      "audio_output": {
+        "name": "Audio Output Mode"
       }
     }
   },

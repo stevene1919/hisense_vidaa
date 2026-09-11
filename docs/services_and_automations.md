@@ -32,6 +32,35 @@ data:
 
 ---
 
+## 📢 On-Screen Toast Notifications (`notify.send_message`)
+
+Send on-screen alert notifications and toast banners directly onto the TV display:
+
+```yaml
+action: notify.send_message
+target:
+  entity_id: notify.living_room_tv
+data:
+  message: "Front Doorbell: Motion detected"
+  title: "Security Alert"
+```
+
+---
+
+## 🔊 Audio Output Mode Selection (`select.select_option`)
+
+Switch the TV sound output mode programmatically between internal speakers, ARC/eARC soundbar/receiver, headphones, or Bluetooth:
+
+```yaml
+action: select.select_option
+target:
+  entity_id: select.living_room_tv_audio_output
+data:
+  option: "ARC/eARC" # Options: "TV Speaker", "ARC/eARC", "Headphone", "Bluetooth"
+```
+
+---
+
 ## 🎮 Native Remote Key Sequences (`remote.send_command`)
 
 Home Assistant's native `remote.send_command` action can dispatch ordered key sequences with custom delays between presses:

@@ -32,12 +32,14 @@ The integration automatically detects and supports all generations of Hisense sm
 ## ✨ Features
 
 - **Local Push Updates**: Instant feedback for power state, volume, mute, source input, and active app.
-- **Media Player Platform**: Full power toggle, volume stepping, input source switcher, dynamic app artwork, deep linking, and configurable media transport controls.
-- **Dedicated Remote Platform**: Fast key command dispatching, key aliases (`home`, `menu`, `back`, `ok`, etc.), repeat counts, and hold durations.
-- **Rich Diagnostic Sensors**: Active source, active Smart TV app, audio output mode (TV Speakers vs. ARC/eARC receiver), MQTT connection state, and token lifecycle status.
-- **Network Resilience**: Subnet-directed Wake-on-LAN for reliable power-on from deep standby, clock synchronization via UPnP, and automatic 30-day token refresh.
+- **Media Player Platform**: Full power toggle, volume stepping, input source switcher, dynamic app artwork, deep linking, and configurable media transport controls. Exposes `MediaPlayerDeviceClass.TV` for native Apple HomeKit and iOS Control Center virtual remote integration.
+- **Dedicated Remote Platform**: Fast key command dispatching, key aliases (`home`, `menu`, `back`, `ok`, etc.), configurable repeat counts, and inter-key delay options.
+- **On-Screen Toast Notifications (`notify`)**: Send customized on-screen toast messages and alert banners directly to the TV screen via `notify.send_message`.
+- **Audio Output Selector (`select`)**: Switch real-time TV sound output modes (TV Speaker, ARC/eARC, Headphone, Bluetooth) directly from Home Assistant.
+- **Rich Diagnostic Sensors**: Active source (with dynamic HDMI-CEC device naming), active Smart TV app, audio output mode, MQTT connection state, and token lifecycle status.
+- **Network Resilience**: Subnet-directed Wake-on-LAN with dual-MAC fallback (Ethernet + Wi-Fi) for reliable power-on from deep standby, clock synchronization via UPnP, and automatic 30-day token refresh.
 - **Flexible SSL Handling**: Automatic in-memory extraction for PKCS#12 bundles (`.p12` / `.pfx`) and support for standard PEM pairs (`.pem`, `.crt`, `.key`).
-- **Configurable Options**: Fine-tune Wake-on-LAN, media transport controls, app listing in sources, and dedicated remote entities via UI options without re-pairing.
+- **Tabbed Options Flow**: Beautiful, categorized options menu (General & Power, Sources & Media, Remote Key Timings, SSL Certificates) for adjusting settings without re-pairing.
 
 ---
 

@@ -19,7 +19,9 @@ from custom_components.hisense_vidaa.button import (
     HisenseVidaaSyncClockButton,
 )
 from custom_components.hisense_vidaa.media_player import HisenseVidaaMediaPlayer
+from custom_components.hisense_vidaa.notify import HisenseVidaaNotifyEntity
 from custom_components.hisense_vidaa.remote import HisenseVidaaRemote
+from custom_components.hisense_vidaa.select import HisenseVidaaAudioOutputSelect
 from custom_components.hisense_vidaa.sensor import (
     HisenseVidaaActiveAppSensor,
     HisenseVidaaActiveSourceSensor,
@@ -206,3 +208,74 @@ def test_media_player_play_media(mock_client, mock_entry):
     mock_client.send_key.reset_mock()
     mp.play_media("channel", "7.1")
     assert mock_client.send_key.call_count == 3
+
+
+@pytest.mark.anyio
+async def test_notify_entity(mock_client, mock_entry):
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    notify = HisenseVidaaNotifyEntity(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+    )
+    notify.hass = hass
+    assert notify.available is True
+    assert notify.unique_id == "test_entry_id_notify"
+
+    await notify.async_send_message("Someone is at the front door!", "Doorbell")
+    mock_client.show_message.assert_called_with("Someone is at the front door!", "Doorbell")
+
+
+@pytest.mark.anyio
+async def test_select_entity(mock_client, mock_entry):
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    sel = HisenseVidaaAudioOutputSelect(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+    )
+    sel.hass = hass
+    assert sel.available is True
+    assert sel.unique_id == "test_entry_id_audio_output_select"
+    assert sel.current_option == "TV Speakers"
+
+    # Handle volume update to ARC
+    sel._handle_volume_update({"volume_type": 1})
+    assert sel.current_option == "ARC / eARC"
+
+    # Select TV Speakers
+    await sel.async_select_option("TV Speakers")
+    mock_client.send_key.assert_called_with("KEY_AUDIO_ONLY")
+    assert sel.current_option == "TV Speakers"
+
+
+def test_media_player_cec_source_naming(mock_client, mock_entry):
+    mock_entry.options = {"enable_cec_names": True, "include_apps_in_sources": True}
+    mp = HisenseVidaaMediaPlayer(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+        options=mock_entry.options,
+    )
+    mp.hass = MagicMock()
+    mp._source_dict = {
+        "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1"},
+        "HDMI2": {"sourceid": "HDMI2", "sourcename": "HDMI2"},
+    }
+    mp._source = "HDMI2"
+    mp._connected_device = "PlayStation 5"
+
+    assert mp.source == "HDMI2 (PlayStation 5)"
+    assert "HDMI2 (PlayStation 5)" in mp.source_list
+    assert "HDMI1" in mp.source_list
+
+    # Test select_source stripping HDMI-CEC device label
+    mp.select_source("HDMI2 (PlayStation 5)")
+    mock_client.change_source.assert_called_with("HDMI2", "HDMI2")

@@ -2,6 +2,21 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.8.0] - 2026-09-11
+
+### Added
+- **ON-SCREEN TOAST NOTIFICATIONS (`notify` platform)**: Added `notify.{tv}` platform entity implementing `NotifyEntity` and `async_send_message` to broadcast on-screen popup notification banners (doorbell alerts, timers, security warnings) via VIDAA MQTT topics (`actions/showmessage` / `actions/toast`).
+- **AUDIO OUTPUT MODE SELECTOR (`select` platform)**: Added `select.{tv}_audio_output` entity allowing users to view and select the TV's audio output routing (`TV Speakers`, `ARC / eARC`, `Headphone / Bluetooth`) from automations and dashboards.
+- **CATEGORIZED & TABBED OPTIONS FLOW**: Completely redesigned the Options Flow (**Configure**) into intuitive, categorized submenus:
+  - ⚡ **General & Power Options**: Dedicated remote entity toggle, Wake-on-LAN, Secondary MAC, and SSL encryption.
+  - 📺 **Sources & Media Controls**: Smart TV app listing, media transport controls, and HDMI-CEC source labeling.
+  - 🎮 **Remote Key Timings & Repeats**: Configurable keypress delay (seconds slider) and repeat count box.
+  - 🔒 **SSL Certificates & Security**: Custom certificate and private key paths.
+- **DYNAMIC HDMI-CEC SOURCE RENAMING**: Media player source list automatically shows connected HDMI-CEC device names (e.g. `"HDMI 2 (PlayStation 5)"`) with smart input stripping on selection.
+- **DUAL-MAC WAKE-ON-LAN FALLBACK**: WoL magic packet broadcasting now sends packets to both primary and secondary MAC addresses (Ethernet & Wi-Fi) across ports `9` and `7`.
+- **APPLE HOMEKIT TELEVISION ACCESSORY SUPPORT**: Explicitly configured `_attr_device_class = MediaPlayerDeviceClass.TV` for seamless bridging to Apple Home and the native iOS Control Center TV Remote widget.
+- **US EDITION LOVELACE REMOTE CARD**: Added pixel-accurate North American remote configuration ([`examples/lovelace-us-remote-card.yaml`](examples/lovelace-us-remote-card.yaml)) featuring Netflix, YouTube, Prime Video, Disney+, Hulu, Peacock, Max, and Tubi quick-launch buttons.
+
 ## [2.7.5] - 2026-09-11
 
 ### Added

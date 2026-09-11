@@ -1,0 +1,1075 @@
+# ==============================================================================
+# Hisense VIDAA TV - US Edition Custom Remote Card
+# ==============================================================================
+# This configuration creates a pixel-accurate replica of the North American / US
+# Hisense TV remote control with popular US streaming services (Netflix, YouTube,
+# Prime Video, Disney+, Hulu, Peacock, Max, Tubi), D-pad navigation, volume/channel
+# rockers, media controls, and Closed Captioning (CC) shortcuts.
+#
+# Prerequisites:
+# 1. Install 'button-card' from HACS (https://github.com/custom-cards/button-card)
+# 2. Install 'stack-in-card' from HACS (https://github.com/custom-cards/stack-in-card)
+# 3. Install 'card-mod' from HACS (https://github.com/thomasloven/lovelace-card-mod)
+# 4. Replace 'remote.living_room_tv_remote' and 'media_player.living_room_tv'
+#    with your entity IDs if needed.
+# ==============================================================================
+
+type: custom:stack-in-card
+mode: vertical
+card_mod:
+  style: |
+    ha-card {
+      background: linear-gradient(180deg, #22252c 0%, #16181b 35%, #0e0f12 100%) !important;
+      border-radius: 46px !important;
+      border: 2px solid #333742 !important;
+      box-shadow: 0 20px 48px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,255,0.18), inset 0 -3px 8px rgba(0,0,0,0.85) !important;
+      max-width: 320px;
+      margin: 0 auto;
+      padding: 22px 14px 24px 14px;
+    }
+cards:
+  # ----------------------------------------------------------------------------
+  # ROW 1: POWER, VOICE / MIC & INPUT
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:power
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: power
+        styles:
+          card:
+            - background-color: "#d32f2f"
+            - height: 44px
+            - width: 44px
+            - border-radius: 50%
+            - box-shadow: "0 3px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2)"
+            - border: "1px solid rgba(255,255,255,0.1)"
+            - padding: 0px
+            - margin: 2px
+          icon:
+            - color: "#ffffff"
+            - width: 22px
+            - height: 22px
+
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:microphone
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: voice
+        styles:
+          card:
+            - background-color: "#2c303a"
+            - height: 40px
+            - width: 40px
+            - border-radius: 50%
+            - box-shadow: "0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)"
+            - border: "1px solid rgba(255,255,255,0.1)"
+            - padding: 0px
+            - margin: 4px auto
+          icon:
+            - color: "#4285f4"
+            - width: 20px
+            - height: 20px
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: INPUT
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: input
+        styles:
+          card:
+            - background-color: "#2c303a"
+            - height: 36px
+            - width: 76px
+            - border-radius: 18px
+            - box-shadow: "0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)"
+            - border: "1px solid rgba(255,255,255,0.1)"
+            - padding: 0px
+            - margin: 4px 2px
+          name:
+            - color: "#e0e0e0"
+            - font-size: 11.5px
+            - font-weight: 800
+            - letter-spacing: 0.5px
+
+  # ----------------------------------------------------------------------------
+  # ROW 2: US APP GRID - NETFLIX & YOUTUBE
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: NETFLIX
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.living_room_tv
+          data:
+            source: "Netflix"
+        styles:
+          card:
+            - background-color: "#000000"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)"
+            - border: "1px solid rgba(255,255,255,0.08)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#E50914"
+            - font-size: 12px
+            - font-weight: 900
+            - letter-spacing: 1px
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: true
+        name: " "
+        icon: mdi:youtube
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.living_room_tv
+          data:
+            source: "YouTube"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          icon:
+            - color: "#ff0000"
+            - width: 28px
+            - height: 28px
+
+  # ----------------------------------------------------------------------------
+  # ROW 3: US APP GRID - PRIME VIDEO & DISNEY+
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: prime video
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.living_room_tv
+          data:
+            source: "Prime Video"
+        styles:
+          card:
+            - background-color: "#00a8e1"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#ffffff"
+            - font-size: 11px
+            - font-weight: 800
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: Disney+
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.living_room_tv
+          data:
+            source: "Disney+"
+        styles:
+          card:
+            - background-color: "#113ccf"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#ffffff"
+            - font-size: 11.5px
+            - font-weight: 900
+
+  # ----------------------------------------------------------------------------
+  # ROW 4: US APP GRID - HULU & PEACOCK
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: hulu
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.living_room_tv
+          data:
+            source: "Hulu"
+        styles:
+          card:
+            - background-color: "#1ce783"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#0b3b24"
+            - font-size: 13px
+            - font-weight: 900
+            - letter-spacing: 0.5px
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: peacock
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.living_room_tv
+          data:
+            source: "Peacock"
+        styles:
+          card:
+            - background-color: "#000000"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)"
+            - border: "1px solid rgba(255,255,255,0.1)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#00a3e0"
+            - font-size: 11.5px
+            - font-weight: 800
+            - letter-spacing: 0.5px
+
+  # ----------------------------------------------------------------------------
+  # ROW 5: US APP GRID - MAX & TUBI
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: MAX
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.living_room_tv
+          data:
+            source: "Max"
+        styles:
+          card:
+            - background-color: "#002be7"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#ffffff"
+            - font-size: 12px
+            - font-weight: 900
+            - letter-spacing: 1px
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: tubi
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.living_room_tv
+          data:
+            source: "Tubi"
+        styles:
+          card:
+            - background-color: "#ff4500"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#ffffff"
+            - font-size: 12px
+            - font-weight: 900
+            - letter-spacing: 0.5px
+
+  # ----------------------------------------------------------------------------
+  # NAVIGATION D-PAD CLUSTER
+  # ----------------------------------------------------------------------------
+  - type: custom:button-card
+    styles:
+      card:
+        - height: 12px
+        - background: transparent
+        - box-shadow: none
+        - border: none
+
+  # D-PAD: UP
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        color_type: blank-card
+        styles:
+          card:
+            - background: transparent
+            - box-shadow: none
+            - border: none
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:chevron-up
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: up
+        styles:
+          card:
+            - background: linear-gradient(180deg, #383e4a 0%, #292d36 100%)
+            - height: 50px
+            - width: 70px
+            - border-radius: 25px 25px 8px 8px
+            - box-shadow: "0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)"
+            - border: "1px solid rgba(255,255,255,0.12)"
+            - margin: 0 auto
+            - padding: 0px
+          icon:
+            - color: "#ffffff"
+            - width: 28px
+            - height: 28px
+      - type: custom:button-card
+        color_type: blank-card
+        styles:
+          card:
+            - background: transparent
+            - box-shadow: none
+            - border: none
+
+  # D-PAD: LEFT, OK, RIGHT
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:chevron-left
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: left
+        styles:
+          card:
+            - background: linear-gradient(90deg, #383e4a 0%, #292d36 100%)
+            - height: 70px
+            - width: 50px
+            - border-radius: 25px 8px 8px 25px
+            - box-shadow: "0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)"
+            - border: "1px solid rgba(255,255,255,0.12)"
+            - margin: 0 0 0 auto
+            - padding: 0px
+          icon:
+            - color: "#ffffff"
+            - width: 28px
+            - height: 28px
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: OK
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: ok
+        hold_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: ok_long
+        styles:
+          card:
+            - background: radial-gradient(circle, #444b59 0%, #2b303a 100%)
+            - height: 68px
+            - width: 68px
+            - border-radius: 50%
+            - box-shadow: "0 4px 10px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.3)"
+            - border: "2px solid rgba(255,255,255,0.15)"
+            - margin: 0 auto
+            - padding: 0px
+          name:
+            - color: "#ffffff"
+            - font-size: 15px
+            - font-weight: 900
+            - letter-spacing: 1px
+
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:chevron-right
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: right
+        styles:
+          card:
+            - background: linear-gradient(270deg, #383e4a 0%, #292d36 100%)
+            - height: 70px
+            - width: 50px
+            - border-radius: 8px 25px 25px 8px
+            - box-shadow: "0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)"
+            - border: "1px solid rgba(255,255,255,0.12)"
+            - margin: 0 auto 0 0
+            - padding: 0px
+          icon:
+            - color: "#ffffff"
+            - width: 28px
+            - height: 28px
+
+  # D-PAD: DOWN
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        color_type: blank-card
+        styles:
+          card:
+            - background: transparent
+            - box-shadow: none
+            - border: none
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:chevron-down
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: down
+        styles:
+          card:
+            - background: linear-gradient(0deg, #383e4a 0%, #292d36 100%)
+            - height: 50px
+            - width: 70px
+            - border-radius: 8px 8px 25px 25px
+            - box-shadow: "0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)"
+            - border: "1px solid rgba(255,255,255,0.12)"
+            - margin: 0 auto
+            - padding: 0px
+          icon:
+            - color: "#ffffff"
+            - width: 28px
+            - height: 28px
+      - type: custom:button-card
+        color_type: blank-card
+        styles:
+          card:
+            - background: transparent
+            - box-shadow: none
+            - border: none
+
+  # ----------------------------------------------------------------------------
+  # SYSTEM CONTROLS: BACK, HOME & MENU / SETTINGS
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:arrow-left
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: back
+        styles:
+          card:
+            - background-color: "#2c303a"
+            - height: 42px
+            - width: 42px
+            - border-radius: 50%
+            - box-shadow: "0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)"
+            - border: "1px solid rgba(255,255,255,0.1)"
+            - margin: 6px auto
+            - padding: 0px
+          icon:
+            - color: "#ffffff"
+            - width: 22px
+            - height: 22px
+
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:home
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: home
+        styles:
+          card:
+            - background-color: "#2c303a"
+            - height: 46px
+            - width: 46px
+            - border-radius: 50%
+            - box-shadow: "0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)"
+            - border: "1px solid rgba(255,255,255,0.1)"
+            - margin: 4px auto
+            - padding: 0px
+          icon:
+            - color: "#ffffff"
+            - width: 24px
+            - height: 24px
+
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:cog
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: menu
+        styles:
+          card:
+            - background-color: "#2c303a"
+            - height: 42px
+            - width: 42px
+            - border-radius: 50%
+            - box-shadow: "0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)"
+            - border: "1px solid rgba(255,255,255,0.1)"
+            - margin: 6px auto
+            - padding: 0px
+          icon:
+            - color: "#ffffff"
+            - width: 22px
+            - height: 22px
+
+  # ----------------------------------------------------------------------------
+  # VOLUME & CHANNEL ROCKERS WITH MUTE & CC (CLOSED CAPTIONS)
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      # VOLUME ROCKER
+      - type: vertical-stack
+        cards:
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:plus
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.living_room_tv_remote
+              data:
+                command: volume_up
+            styles:
+              card:
+                - background-color: "#2c303a"
+                - height: 40px
+                - width: 46px
+                - border-radius: 23px 23px 0 0
+                - box-shadow: "0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)"
+                - border: "1px solid rgba(255,255,255,0.08)"
+                - margin: 0 auto
+                - padding: 0px
+              icon:
+                - color: "#ffffff"
+                - width: 20px
+                - height: 20px
+          - type: custom:button-card
+            show_name: true
+            show_icon: false
+            name: VOL
+            styles:
+              card:
+                - background-color: "#242730"
+                - height: 20px
+                - width: 46px
+                - border-radius: 0
+                - border-left: "1px solid rgba(255,255,255,0.08)"
+                - border-right: "1px solid rgba(255,255,255,0.08)"
+                - margin: 0 auto
+                - padding: 0px
+              name:
+                - color: "#8a919e"
+                - font-size: 9.5px
+                - font-weight: 800
+                - letter-spacing: 0.5px
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:minus
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.living_room_tv_remote
+              data:
+                command: volume_down
+            styles:
+              card:
+                - background-color: "#2c303a"
+                - height: 40px
+                - width: 46px
+                - border-radius: 0 0 23px 23px
+                - box-shadow: "0 2px 4px rgba(0,0,0,0.3)"
+                - border: "1px solid rgba(255,255,255,0.08)"
+                - margin: 0 auto
+                - padding: 0px
+              icon:
+                - color: "#ffffff"
+                - width: 20px
+                - height: 20px
+
+      # CENTER: MUTE & CC (CLOSED CAPTIONS)
+      - type: vertical-stack
+        cards:
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:volume-mute
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.living_room_tv_remote
+              data:
+                command: mute
+            styles:
+              card:
+                - background-color: "#2c303a"
+                - height: 42px
+                - width: 42px
+                - border-radius: 50%
+                - box-shadow: "0 2px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)"
+                - border: "1px solid rgba(255,255,255,0.08)"
+                - margin: 2px auto
+                - padding: 0px
+              icon:
+                - color: "#ffffff"
+                - width: 20px
+                - height: 20px
+
+          - type: custom:button-card
+            show_name: true
+            show_icon: false
+            name: CC
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.living_room_tv_remote
+              data:
+                command: subtitle
+            styles:
+              card:
+                - background-color: "#2c303a"
+                - height: 42px
+                - width: 42px
+                - border-radius: 50%
+                - box-shadow: "0 2px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)"
+                - border: "1px solid rgba(255,255,255,0.08)"
+                - margin: 8px auto 2px auto
+                - padding: 0px
+              name:
+                - color: "#ffffff"
+                - font-size: 11.5px
+                - font-weight: 800
+
+      # CHANNEL ROCKER
+      - type: vertical-stack
+        cards:
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:chevron-up
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.living_room_tv_remote
+              data:
+                command: channel_up
+            styles:
+              card:
+                - background-color: "#2c303a"
+                - height: 40px
+                - width: 46px
+                - border-radius: 23px 23px 0 0
+                - box-shadow: "0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)"
+                - border: "1px solid rgba(255,255,255,0.08)"
+                - margin: 0 auto
+                - padding: 0px
+              icon:
+                - color: "#ffffff"
+                - width: 20px
+                - height: 20px
+          - type: custom:button-card
+            show_name: true
+            show_icon: false
+            name: CH
+            styles:
+              card:
+                - background-color: "#242730"
+                - height: 20px
+                - width: 46px
+                - border-radius: 0
+                - border-left: "1px solid rgba(255,255,255,0.08)"
+                - border-right: "1px solid rgba(255,255,255,0.08)"
+                - margin: 0 auto
+                - padding: 0px
+              name:
+                - color: "#8a919e"
+                - font-size: 9.5px
+                - font-weight: 800
+                - letter-spacing: 0.5px
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:chevron-down
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.living_room_tv_remote
+              data:
+                command: channel_down
+            styles:
+              card:
+                - background-color: "#2c303a"
+                - height: 40px
+                - width: 46px
+                - border-radius: 0 0 23px 23px
+                - box-shadow: "0 2px 4px rgba(0,0,0,0.3)"
+                - border: "1px solid rgba(255,255,255,0.08)"
+                - margin: 0 auto
+                - padding: 0px
+              icon:
+                - color: "#ffffff"
+                - width: 20px
+                - height: 20px
+
+  # ----------------------------------------------------------------------------
+  # MEDIA PLAYBACK CONTROLS
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:rewind
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: rewind
+        styles:
+          card:
+            - background-color: "#22252c"
+            - height: 34px
+            - width: 46px
+            - border-radius: 17px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 6px auto
+            - padding: 0px
+          icon:
+            - color: "#c0c4cc"
+            - width: 18px
+            - height: 18px
+
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:play-pause
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: play
+        styles:
+          card:
+            - background-color: "#2c303a"
+            - height: 38px
+            - width: 52px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)"
+            - border: "1px solid rgba(255,255,255,0.1)"
+            - margin: 4px auto
+            - padding: 0px
+          icon:
+            - color: "#ffffff"
+            - width: 20px
+            - height: 20px
+
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:fast-forward
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: fast_forward
+        styles:
+          card:
+            - background-color: "#22252c"
+            - height: 34px
+            - width: 46px
+            - border-radius: 17px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 6px auto
+            - padding: 0px
+          icon:
+            - color: "#c0c4cc"
+            - width: 18px
+            - height: 18px
+
+  # ----------------------------------------------------------------------------
+  # NUMERIC KEYPAD: 1-9, ., 0, INFO
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        name: "1"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: "1"
+        styles:
+          card: &num_style
+            - background-color: "#252830"
+            - height: 34px
+            - width: 46px
+            - border-radius: 17px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.3)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 3px auto
+            - padding: 0px
+          name: &num_name_style
+            - color: "#e0e0e0"
+            - font-size: 13px
+            - font-weight: 700
+
+      - type: custom:button-card
+        name: "2"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: "2"
+        styles:
+          card: *num_style
+          name: *num_name_style
+
+      - type: custom:button-card
+        name: "3"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: "3"
+        styles:
+          card: *num_style
+          name: *num_name_style
+
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        name: "4"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: "4"
+        styles:
+          card: *num_style
+          name: *num_name_style
+
+      - type: custom:button-card
+        name: "5"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: "5"
+        styles:
+          card: *num_style
+          name: *num_name_style
+
+      - type: custom:button-card
+        name: "6"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: "6"
+        styles:
+          card: *num_style
+          name: *num_name_style
+
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        name: "7"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: "7"
+        styles:
+          card: *num_style
+          name: *num_name_style
+
+      - type: custom:button-card
+        name: "8"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: "8"
+        styles:
+          card: *num_style
+          name: *num_name_style
+
+      - type: custom:button-card
+        name: "9"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: "9"
+        styles:
+          card: *num_style
+          name: *num_name_style
+
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        name: "•"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: "."
+        styles:
+          card: *num_style
+          name:
+            - color: "#a0a4b0"
+            - font-size: 15px
+            - font-weight: 900
+
+      - type: custom:button-card
+        name: "0"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: "0"
+        styles:
+          card: *num_style
+          name: *num_name_style
+
+      - type: custom:button-card
+        name: "INFO"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.living_room_tv_remote
+          data:
+            command: info
+        styles:
+          card: *num_style
+          name:
+            - color: "#a0a4b0"
+            - font-size: 10px
+            - font-weight: 800

@@ -22,7 +22,21 @@ This guide details the ready-to-use Home Assistant Lovelace dashboard remote con
 
 ---
 
-## 📺 2. Classic Free-to-Air Remote (No Smart Apps)
+## 🇺🇸 2. US Edition Physical Remote (North America)
+
+- **File:** [`examples/lovelace-us-remote-card.yaml`](../examples/lovelace-us-remote-card.yaml)
+- **Requirements:** `custom:button-card` (HACS)
+- **Features:**
+  - Pixel-accurate recreation of the North American / US Hisense TV remote control.
+  - Dedicated quick-launch buttons for **Netflix, YouTube, Prime Video, Disney+, Hulu, Peacock, Max, and Tubi**.
+  - Circular power button, Google/VIDAA Voice Microphone shortcut, and Input selector.
+  - Full D-pad navigation ring with center `OK` (supports long-press) and system navigation (`Back`, `Home`, `Menu`).
+  - Dual volume and channel rockers with center `Mute` and **CC (Closed Captions)** buttons.
+  - Full 10-key number pad with `INFO` and media playback controls.
+
+---
+
+## 📺 3. Classic Free-to-Air Remote (No Smart Apps)
 
 - **File:** [`examples/lovelace-classic-remote-card.yaml`](../examples/lovelace-classic-remote-card.yaml)
 - **Requirements:** `custom:button-card` (HACS)

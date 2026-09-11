@@ -46,6 +46,8 @@ PLATFORMS: list[str] = [
     "sensor",
     "binary_sensor",
     "button",
+    "notify",
+    "select",
 ]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)

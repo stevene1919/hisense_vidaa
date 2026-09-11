@@ -21,12 +21,16 @@ CONF_REFRESH_TOKEN_DURATION = "refresh_token_duration"
 CONF_MODEL = "model"
 CONF_MANUFACTURER = "manufacturer"
 CONF_SW_VERSION = "sw_version"
+CONF_SECONDARY_MAC_ADDRESS = "secondary_mac_address"
 
 # Integration Options
 CONF_ENABLE_REMOTE = "enable_remote"
 CONF_ENABLE_WOL = "enable_wol"
 CONF_INCLUDE_APPS_IN_SOURCES = "include_apps_in_sources"
 CONF_ENABLE_MEDIA_CONTROLS = "enable_media_controls"
+CONF_ENABLE_CEC_NAMES = "enable_cec_names"
+CONF_KEY_DELAY = "key_delay"
+CONF_KEY_REPEAT = "key_repeat"
 
 DEFAULT_PORT = 36669
 DEFAULT_NAME = "Hisense VIDAA TV"
@@ -42,6 +46,9 @@ DEFAULT_ENABLE_REMOTE = True
 DEFAULT_ENABLE_WOL = False
 DEFAULT_INCLUDE_APPS_IN_SOURCES = True
 DEFAULT_ENABLE_MEDIA_CONTROLS = True
+DEFAULT_ENABLE_CEC_NAMES = True
+DEFAULT_KEY_DELAY = 0.2
+DEFAULT_KEY_REPEAT = 1
 DEFAULT_AUTH_PROFILE = "auto"
 DEFAULT_USE_SSL = True
 

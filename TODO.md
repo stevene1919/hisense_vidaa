@@ -42,10 +42,16 @@ This document tracks planned features, new platforms, technical debt, and archit
   - Support `hold_secs` or repeated burst keypresses in `remote.send_command` for fast menu scrolling and long-press actions (e.g. holding `KEY_HOME` for app switcher or holding `KEY_POWER` for full shutdown).
 - [x] **App Deep Linking (`media_player.play_media`)**:
   - Support launching specific apps or video URLs directly (e.g. YouTube / Netflix deep links) via VIDAA app launcher topics.
-- [ ] **On-Screen Toast Notifications (`notify` platform)**:
-  - Explore reverse-engineered VIDAA UI topics to display on-screen text banners (e.g., doorbell/camera alerts).
-- [ ] **Sound Mode & Picture Mode Controls**:
-  - Explore reverse-engineered MQTT topics for TV picture preset and sound output mode selection.
+- [x] **On-Screen Toast Notifications (`notify` platform)**:
+  - Expose dedicated `notify.<tv>` entity for sending on-screen toast messages (`actions/toast` / `actions/showmessage`).
+- [x] **Audio Output Mode Controls (`select` platform)**:
+  - Support selecting audio output mode (`TV Speaker`, `ARC/eARC`, `Headphone`, `Bluetooth`, etc.).
+- [x] **Native Apple HomeKit Support (`MediaPlayerDeviceClass.TV`)**:
+  - Expose `MediaPlayerDeviceClass.TV` for Apple HomeKit integration and iOS Control Center virtual TV remote.
+- [x] **Dual-MAC Wake-on-LAN Fallback**:
+  - Support configuring multiple MAC addresses (e.g. Ethernet + Wi-Fi) with automatic multi-subnet WoL broadcast.
+- [x] **Categorized / Tabbed Options Flow**:
+  - Enhanced options flow menu with General & Power, Sources & Media, Remote Key Timings, and Certificate settings.
 
 ### 5. Network, Cloud Endpoints & Connectivity Resilience
 - [ ] **Cloud Endpoints & DNS Whitelist Investigation (as noted in README)**:

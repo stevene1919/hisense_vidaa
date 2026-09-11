@@ -209,19 +209,58 @@ async def test_options_flow():
     handler.config_entry = config_entry
 
     result = await handler.async_step_init()
-    assert result["type"] == "form"
+    assert result["type"] == "menu"
     assert result["step_id"] == "init"
+    assert "general" in result["menu_options"]
+    assert "sources" in result["menu_options"]
+    assert "remote_keys" in result["menu_options"]
+    assert "certs" in result["menu_options"]
 
-    result_submit = await handler.async_step_init(
+    # Test general step form and submission
+    result_gen_form = await handler.async_step_general()
+    assert result_gen_form["type"] == "form"
+    assert result_gen_form["step_id"] == "general"
+
+    result_gen_submit = await handler.async_step_general(
         user_input={
             "enable_remote": False,
             "enable_wol": True,
-            "include_apps_in_sources": True,
+            "secondary_mac_address": "AA:BB:CC:DD:EE:FF",
             "use_ssl": True,
+        }
+    )
+    assert result_gen_submit["type"] == "create_entry"
+    assert result_gen_submit["data"]["enable_remote"] is False
+    assert result_gen_submit["data"]["secondary_mac_address"] == "AA:BB:CC:DD:EE:FF"
+
+    # Test sources step
+    result_src_submit = await handler.async_step_sources(
+        user_input={
+            "include_apps_in_sources": True,
+            "enable_media_controls": True,
+            "enable_cec_names": True,
+        }
+    )
+    assert result_src_submit["type"] == "create_entry"
+    assert result_src_submit["data"]["enable_cec_names"] is True
+
+    # Test remote_keys step
+    result_keys_submit = await handler.async_step_remote_keys(
+        user_input={
+            "key_delay": 0.3,
+            "key_repeat": 2,
+        }
+    )
+    assert result_keys_submit["type"] == "create_entry"
+    assert result_keys_submit["data"]["key_delay"] == 0.3
+    assert result_keys_submit["data"]["key_repeat"] == 2
+
+    # Test certs step
+    result_certs_submit = await handler.async_step_certs(
+        user_input={
             "certfile": "/config/certs/custom.crt",
             "keyfile": "/config/certs/custom.key",
         }
     )
-    assert result_submit["type"] == "create_entry"
-    assert result_submit["data"]["enable_remote"] is False
-    assert result_submit["data"]["certfile"] == "/config/certs/custom.crt"
+    assert result_certs_submit["type"] == "create_entry"
+    assert result_certs_submit["data"]["certfile"] == "/config/certs/custom.crt"

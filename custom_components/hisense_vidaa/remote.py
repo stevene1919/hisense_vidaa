@@ -13,11 +13,15 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     CONF_ENABLE_WOL,
+    CONF_KEY_DELAY,
+    CONF_KEY_REPEAT,
     CONF_MAC_ADDRESS,
     CONF_MANUFACTURER,
     CONF_MODEL,
     CONF_SW_VERSION,
     DEFAULT_ENABLE_WOL,
+    DEFAULT_KEY_DELAY,
+    DEFAULT_KEY_REPEAT,
     DOMAIN,
 )
 
@@ -131,8 +135,10 @@ class HisenseVidaaRemote(RemoteEntity):
 
     async def async_send_command(self, command: Iterable[str], **kwargs: Any) -> None:
         """Send a list of commands to the TV."""
-        num_repeats = kwargs.get("num_repeats", 1)
-        delay_secs = kwargs.get("delay_secs", 0.4)
+        default_delay = self._options.get(CONF_KEY_DELAY, DEFAULT_KEY_DELAY)
+        default_repeats = self._options.get(CONF_KEY_REPEAT, DEFAULT_KEY_REPEAT)
+        num_repeats = kwargs.get("num_repeats", default_repeats)
+        delay_secs = kwargs.get("delay_secs", default_delay)
         hold_secs = kwargs.get("hold_secs", 0.0)
 
         for _ in range(num_repeats):

@@ -86,6 +86,8 @@ if "homeassistant" not in sys.modules:
         def async_abort(self, *, reason, description_placeholders=None):
             return {"type": "abort", "reason": reason, "description_placeholders": description_placeholders}
     class OptionsFlow:
+        def async_show_menu(self, *, step_id, menu_options):
+            return {"type": "menu", "step_id": step_id, "menu_options": menu_options}
         def async_show_form(self, *, step_id, data_schema=None, errors=None, description_placeholders=None):
             return {"type": "form", "step_id": step_id, "data_schema": data_schema, "errors": errors, "description_placeholders": description_placeholders}
         def async_create_entry(self, *, title="", data=None):
@@ -221,11 +223,64 @@ if "homeassistant" not in sys.modules:
     components.diagnostics = diagnostics
     sys.modules["homeassistant.components.diagnostics"] = diagnostics
 
+    # notify
+    notify = types.ModuleType("homeassistant.components.notify")
+    class NotifyEntity:
+        _attr_has_entity_name = True
+        def async_write_ha_state(self): pass
+    notify.NotifyEntity = NotifyEntity
+    components.notify = notify
+    sys.modules["homeassistant.components.notify"] = notify
+
+    # select
+    select = types.ModuleType("homeassistant.components.select")
+    class SelectEntity:
+        _attr_has_entity_name = True
+        _attr_should_poll = False
+        def schedule_update_ha_state(self): pass
+        def async_write_ha_state(self): pass
+        @property
+        def current_option(self):
+            return getattr(self, "_attr_current_option", None)
+        @property
+        def options(self):
+            return getattr(self, "_attr_options", [])
+    select.SelectEntity = SelectEntity
+    components.select = select
+    sys.modules["homeassistant.components.select"] = select
+
     ha.components = components
     sys.modules["homeassistant.components"] = components
 
     # helpers
     helpers = types.ModuleType("homeassistant.helpers")
+
+    # helpers.selector
+    selector = types.ModuleType("homeassistant.helpers.selector")
+    class NumberSelector:
+        def __init__(self, config): self.config = config
+    class NumberSelectorConfig:
+        def __init__(self, **kwargs): self.config = kwargs
+    class NumberSelectorMode:
+        SLIDER = "slider"
+        BOX = "box"
+    class SelectSelector:
+        def __init__(self, config): self.config = config
+    class SelectSelectorConfig:
+        def __init__(self, **kwargs): self.config = kwargs
+    class SelectSelectorMode:
+        DROPDOWN = "dropdown"
+    class SelectOptionDict(dict):
+        def __init__(self, value, label): super().__init__(value=value, label=label)
+    selector.NumberSelector = NumberSelector
+    selector.NumberSelectorConfig = NumberSelectorConfig
+    selector.NumberSelectorMode = NumberSelectorMode
+    selector.SelectSelector = SelectSelector
+    selector.SelectSelectorConfig = SelectSelectorConfig
+    selector.SelectSelectorMode = SelectSelectorMode
+    selector.SelectOptionDict = SelectOptionDict
+    helpers.selector = selector
+    sys.modules["homeassistant.helpers.selector"] = selector
 
     # helpers.device_registry
     device_registry = types.ModuleType("homeassistant.helpers.device_registry")

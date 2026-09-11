@@ -15,13 +15,16 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, Device
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
+    CONF_ENABLE_CEC_NAMES,
     CONF_ENABLE_MEDIA_CONTROLS,
     CONF_ENABLE_WOL,
     CONF_INCLUDE_APPS_IN_SOURCES,
     CONF_MAC_ADDRESS,
     CONF_MANUFACTURER,
     CONF_MODEL,
+    CONF_SECONDARY_MAC_ADDRESS,
     CONF_SW_VERSION,
+    DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
@@ -154,6 +157,9 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 
     @property
     def source(self) -> str | None:
+        enable_cec = self._options.get(CONF_ENABLE_CEC_NAMES, DEFAULT_ENABLE_CEC_NAMES)
+        if enable_cec and self._source and self._connected_device and "hdmi" in self._source.lower():
+            return f"{self._source} ({self._connected_device})"
         return self._source
 
     @property
@@ -168,11 +174,14 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 
     @property
     def source_list(self) -> list[str]:
-        # Filter physical inputs (HDMI, TV, AV)
-        sources = [
-            s for s in self._source_dict.keys()
-            if "hdmi" in s.lower() or s.lower() in ("tv", "av")
-        ]
+        enable_cec = self._options.get(CONF_ENABLE_CEC_NAMES, DEFAULT_ENABLE_CEC_NAMES)
+        sources = []
+        for s in self._source_dict.keys():
+            if "hdmi" in s.lower() or s.lower() in ("tv", "av"):
+                if enable_cec and s == self._source and self._connected_device and "hdmi" in s.lower():
+                    sources.append(f"{s} ({self._connected_device})")
+                else:
+                    sources.append(s)
 
         include_apps = self._options.get(
             CONF_INCLUDE_APPS_IN_SOURCES, DEFAULT_INCLUDE_APPS_IN_SOURCES
@@ -211,8 +220,15 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
     def turn_on(self) -> None:
         # Send Wake-on-LAN magic packet if enabled in options
         enable_wol = self._options.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL)
-        if enable_wol and self._mac:
-            self._client.send_wake_on_lan(self._mac, ip=getattr(self._client, "ip", None))
+        if enable_wol:
+            mac_targets = []
+            if self._mac:
+                mac_targets.append(self._mac)
+            sec_mac = self._options.get(CONF_SECONDARY_MAC_ADDRESS)
+            if sec_mac and sec_mac not in mac_targets:
+                mac_targets.append(sec_mac)
+            if mac_targets:
+                self._client.send_wake_on_lan(mac_targets, ip=getattr(self._client, "ip", None))
 
         # Send KEY_POWER via MQTT to wake/turn on the TV.
         if self._client.connected:
@@ -306,21 +322,24 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         self._client.send_command(media_id)
 
     def select_source(self, source: str) -> None:
-        # Determine if it's an app
-        app = self._app_dict.get(source)
+        # Strip HDMI-CEC device label if present (e.g., "HDMI 2 (PlayStation 5)" -> "HDMI 2")
+        clean_source = source.split(" (")[0].strip() if " (" in source else source
+
+        # Check app dictionary for direct match or cleaned match
+        app = self._app_dict.get(source) or self._app_dict.get(clean_source)
         if app:
             self._client.launch_app(app.get("appId", ""), app.get("name", ""), app.get("url", ""))
             return
 
-        # Input source
-        src = self._source_dict.get(source)
+        # Input source match
+        src = self._source_dict.get(source) or self._source_dict.get(clean_source)
         if src:
             sid = str(src.get("sourceid") or src.get("sourcename") or "")
-            sname = str(src.get("sourcename") or source)
+            sname = str(src.get("sourcename") or clean_source)
             self._client.change_source(sid, sname)
             return
 
-        self._client.change_source(source)
+        self._client.change_source(clean_source)
 
     def _handle_state_update(self, data: dict[str, Any]) -> None:
         statetype = data.get("statetype")
