@@ -47,7 +47,7 @@ This integration automatically detects and natively supports all generations of 
 - **Media Player Entity (`media_player`)**:
   - Power toggle and standby control.
   - Volume adjustment, stepping, and mute toggle.
-  - Configurable media transport controls (`PLAY_PAUSE`, `STOP`, `NEXT_TRACK`, `PREVIOUS_TRACK`, `PLAY_MEDIA`) — toggle via options (works natively in streaming apps and via HDMI-CEC on connected devices).
+  - Configurable media transport controls (`PLAY`, `PAUSE`, `STOP`, `NEXT_TRACK`, `PREVIOUS_TRACK`, `PLAY_MEDIA`) — toggle via options (works natively in streaming apps and via HDMI-CEC on connected devices).
   - Unified input source selector with configurable app inclusions (HDMI, TV, AV, Netflix, YouTube, Plex, etc.).
   - Dynamic app CDN artwork in the media player card for the currently active app.
   - Instant local push updates for volume and power state across multiple firmware topic variants.

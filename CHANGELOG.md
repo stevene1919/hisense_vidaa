@@ -13,8 +13,7 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 - **MQTT CONNECTED BINARY SENSOR (`binary_sensor.{tv}_mqtt_connected`)**: Connectivity sensor reflecting real-time MQTT broker connection state, distinct from TV power state.
 
 ### Changed
-- **`PLAY` + `PAUSE` → `PLAY_PAUSE` FEATURE FLAG**: Replaced separate `PLAY` and `PAUSE` feature flags with the combined `PLAY_PAUSE` flag, which is the correct idiomatic approach for a TV that cannot report actual playback state. This renders a single toggle button in the HA media player card instead of two independent buttons, and correctly communicates to HA that the device toggles rather than tracking play/pause state independently. Pressing the button sends `KEY_PLAY` via MQTT (which also works via HDMI-CEC for connected devices).
-- **DYNAMIC `supported_features`**: The media player `supported_features` property is now computed dynamically based on the `enable_media_controls` option rather than being a fixed static bitmask.
+- **DYNAMIC `supported_features`**: The media player `supported_features` property is now computed dynamically based on the `enable_media_controls` option rather than being a fixed static bitmask. Transport controls (`PLAY`, `PAUSE`, `STOP`, `NEXT_TRACK`, `PREVIOUS_TRACK`) are only advertised when the option is enabled (default: on).
 
 ## [2.5.0] - 2026-09-11
 

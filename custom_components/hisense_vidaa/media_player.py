@@ -179,7 +179,8 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         )
         if enable_controls:
             base |= (
-                MediaPlayerEntityFeature.PLAY_PAUSE
+                MediaPlayerEntityFeature.PLAY
+                | MediaPlayerEntityFeature.PAUSE
                 | MediaPlayerEntityFeature.STOP
                 | MediaPlayerEntityFeature.NEXT_TRACK
                 | MediaPlayerEntityFeature.PREVIOUS_TRACK
@@ -237,8 +238,11 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
     def mute_volume(self, mute: bool) -> None:
         self._client.send_key("KEY_MUTE")
 
-    def media_play_pause(self) -> None:
+    def media_play(self) -> None:
         self._client.send_key("KEY_PLAY")
+
+    def media_pause(self) -> None:
+        self._client.send_key("KEY_PAUSE")
 
     def media_stop(self) -> None:
         self._client.send_key("KEY_STOP")
