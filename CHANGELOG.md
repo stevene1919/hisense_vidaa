@@ -17,6 +17,11 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 - **APPLE HOMEKIT TELEVISION ACCESSORY SUPPORT**: Explicitly configured `_attr_device_class = MediaPlayerDeviceClass.TV` for seamless bridging to Apple Home and the native iOS Control Center TV Remote widget.
 - **US EDITION LOVELACE REMOTE CARD**: Added pixel-accurate North American remote configuration ([`examples/lovelace-us-remote-card.yaml`](examples/lovelace-us-remote-card.yaml)) featuring Netflix, YouTube, Prime Video, Disney+, Hulu, Peacock, Max, and Tubi quick-launch buttons.
 
+### Fixed
+- **REMOTE & MEDIA PLAYER POWER STATE SYNCHRONIZATION**: Remote entity now initializes state from active client connection and registers `connected_callback`, eliminating out-of-sync `off` state when Home Assistant starts while the TV is already running.
+- **IDEMPOTENT `turn_on` POWER PROTECTION**: Calling `turn_on` on the remote or media player when the TV is already connected and active is now safely idempotent and will NOT send `KEY_POWER`, preventing accidental TV shutdown caused by power toggle behavior.
+- **FAKE SLEEP RECOVERY**: Retained dedicated `KEY_POWER` display wake dispatch when turning on from low-power standby (`statetype == "fake_sleep_0"`).
+
 ## [2.7.5] - 2026-09-11
 
 ### Added

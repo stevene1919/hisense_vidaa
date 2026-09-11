@@ -279,3 +279,61 @@ def test_media_player_cec_source_naming(mock_client, mock_entry):
     # Test select_source stripping HDMI-CEC device label
     mp.select_source("HDMI2 (PlayStation 5)")
     mock_client.change_source.assert_called_with("HDMI2", "HDMI2")
+
+
+@pytest.mark.anyio
+async def test_remote_and_media_player_idempotent_power_control(mock_client, mock_entry):
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    rem = HisenseVidaaRemote(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+        options=mock_entry.options,
+    )
+    rem.hass = hass
+
+    # Mock client connected: initial state should be ON
+    mock_client.connected = True
+    assert rem.is_on is True
+
+    # Calling async_turn_on when already connected & ON must NOT send KEY_POWER
+    mock_client.send_key.reset_mock()
+    await rem.async_turn_on()
+    mock_client.send_key.assert_not_called()
+    assert rem.is_on is True
+
+    # Simulate TV entering fake sleep (screen off)
+    rem._handle_state_update({"statetype": "fake_sleep_0"})
+    assert rem.is_on is False
+
+    # Calling async_turn_on while in fake_sleep_0 MUST send KEY_POWER to wake screen
+    await rem.async_turn_on()
+    mock_client.send_key.assert_called_once_with("KEY_POWER")
+    assert rem.is_on is True
+
+    # Test media_player turn_on idempotence
+    mp = HisenseVidaaMediaPlayer(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+        options=mock_entry.options,
+    )
+    mp.hass = hass
+    assert mp.state == "on"
+
+    # Calling turn_on when already connected & on must NOT send KEY_POWER
+    mock_client.send_key.reset_mock()
+    mp.turn_on()
+    mock_client.send_key.assert_not_called()
+    assert mp.state == "on"
+
+    # In fake sleep, turn_on should wake display
+    mp._handle_state_update({"statetype": "fake_sleep_0"})
+    assert mp.state == "off"
+    mp.turn_on()
+    mock_client.send_key.assert_called_once_with("KEY_POWER")
+    assert mp.state == "on"

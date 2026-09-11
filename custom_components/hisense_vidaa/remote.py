@@ -18,6 +18,7 @@ from .const import (
     CONF_MAC_ADDRESS,
     CONF_MANUFACTURER,
     CONF_MODEL,
+    CONF_SECONDARY_MAC_ADDRESS,
     CONF_SW_VERSION,
     DEFAULT_ENABLE_WOL,
     DEFAULT_KEY_DELAY,
@@ -53,15 +54,22 @@ class HisenseVidaaRemote(RemoteEntity):
         self._model = model or "VIDAA TV"
         self._manufacturer = manufacturer or "Hisense"
         self._sw_version = sw_version
-        self._state = STATE_OFF
+        self._state = STATE_ON if getattr(client, "connected", False) else STATE_OFF
 
     async def async_added_to_hass(self) -> None:
-        """Register callbacks when entity is added to hass."""
+        """Register callbacks and query initial state when entity is added to hass."""
+        self._client.register_connected_callback(self._handle_connected)
         self._client.register_state_callback(self._handle_state_update)
         self._client.register_disconnected_callback(self._handle_disconnected)
 
+        # Sync state immediately if client is already connected
+        if getattr(self._client, "connected", False):
+            self._state = STATE_ON
+            await self.hass.async_add_executor_job(self._client.query_initial_state)
+
     async def async_will_remove_from_hass(self) -> None:
         """Unregister callbacks when entity is removed."""
+        self._client.unregister_connected_callback(self._handle_connected)
         self._client.unregister_state_callback(self._handle_state_update)
         self._client.unregister_disconnected_callback(self._handle_disconnected)
 
@@ -98,13 +106,30 @@ class HisenseVidaaRemote(RemoteEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the TV on."""
         enable_wol = self._options.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL)
-        if enable_wol and self._mac:
-            await self.hass.async_add_executor_job(
-                self._client.send_wake_on_lan, self._mac
-            )
+        if enable_wol:
+            mac_targets = []
+            if self._mac:
+                mac_targets.append(self._mac)
+            sec_mac = self._options.get(CONF_SECONDARY_MAC_ADDRESS)
+            if sec_mac and sec_mac not in mac_targets:
+                mac_targets.append(sec_mac)
+            if mac_targets:
+                await self.hass.async_add_executor_job(
+                    self._client.send_wake_on_lan,
+                    mac_targets,
+                    None,
+                    9,
+                    getattr(self._client, "ip", None),
+                )
 
         if self._client.connected:
-            self._client.send_key("KEY_POWER")
+            # If the TV is in fake_sleep_0 (screen off / standby), send KEY_POWER to wake it.
+            # If it is already ON, do NOT send KEY_POWER because KEY_POWER is a toggle and will turn it off!
+            if self._state == STATE_OFF:
+                _LOGGER.debug("TV connected in standby/fake sleep. Sending KEY_POWER to wake display")
+                self._client.send_key("KEY_POWER")
+            else:
+                _LOGGER.debug("TV already connected and running. Skipping KEY_POWER to prevent powering off")
         else:
             await self.hass.async_add_executor_job(self._send_power_reconnect)
 
@@ -129,7 +154,8 @@ class HisenseVidaaRemote(RemoteEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the TV off."""
-        self._client.send_key("KEY_POWER")
+        if self._client.connected and self._state != STATE_OFF:
+            self._client.send_key("KEY_POWER")
         self._state = STATE_OFF
         self.async_write_ha_state()
 
@@ -160,17 +186,31 @@ class HisenseVidaaRemote(RemoteEntity):
                 if delay_secs > 0:
                     await asyncio.sleep(delay_secs)
 
+    def _handle_connected(self) -> None:
+        """Handle MQTT connection established."""
+        self._state = STATE_ON
+        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
+            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        elif self.hass:
+            self.schedule_update_ha_state()
+
     def _handle_state_update(self, data: dict[str, Any]) -> None:
         statetype = data.get("statetype")
         if statetype == "fake_sleep_0":
             self._state = STATE_OFF
         else:
             self._state = STATE_ON
-        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
+            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        elif self.hass:
+            self.schedule_update_ha_state()
 
     def _handle_disconnected(self) -> None:
         self._state = STATE_OFF
-        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
+            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        elif self.hass:
+            self.schedule_update_ha_state()
 
 
 async def async_setup_entry(

@@ -72,20 +72,25 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         self._channel_name = None
         self._channel_num = None
         self._volume_type = 0
+        self._state = STATE_ON if getattr(client, "connected", False) else STATE_OFF
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks and query initial state when entity is added."""
+        self._client.register_connected_callback(self._handle_connected)
         self._client.register_state_callback(self._handle_state_update)
         self._client.register_volume_callback(self._handle_volume_update)
         self._client.register_sourcelist_callback(self._handle_sourcelist_update)
         self._client.register_applist_callback(self._handle_applist_update)
         self._client.register_disconnected_callback(self._handle_disconnected)
 
-        # Query initial state now that callbacks are registered and active
-        await self.hass.async_add_executor_job(self._client.query_initial_state)
+        # Sync state and query initial state now that callbacks are registered and active
+        if getattr(self._client, "connected", False):
+            self._state = STATE_ON
+            await self.hass.async_add_executor_job(self._client.query_initial_state)
 
     async def async_will_remove_from_hass(self) -> None:
         """Unregister callbacks when entity is removed."""
+        self._client.unregister_connected_callback(self._handle_connected)
         self._client.unregister_state_callback(self._handle_state_update)
         self._client.unregister_disconnected_callback(self._handle_disconnected)
 
@@ -230,10 +235,13 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             if mac_targets:
                 self._client.send_wake_on_lan(mac_targets, ip=getattr(self._client, "ip", None))
 
-        # Send KEY_POWER via MQTT to wake/turn on the TV.
+        # Send KEY_POWER via MQTT to wake/turn on the TV if in standby/fake sleep.
         if self._client.connected:
-            _LOGGER.debug("TV MQTT connected. Sending KEY_POWER to turn on")
-            self._client.send_key("KEY_POWER")
+            if self._state == STATE_OFF:
+                _LOGGER.debug("TV MQTT connected in standby/fake_sleep. Sending KEY_POWER to wake screen")
+                self._client.send_key("KEY_POWER")
+            else:
+                _LOGGER.debug("TV already connected and running. Skipping KEY_POWER to prevent powering down")
         else:
             _LOGGER.debug("TV MQTT not connected. Attempting background token refresh and reconnect to send KEY_POWER")
             def reconnect_and_send():
@@ -259,7 +267,8 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         self.schedule_update_ha_state()
 
     def turn_off(self) -> None:
-        self._client.send_key("KEY_POWER")
+        if self._client.connected and self._state != STATE_OFF:
+            self._client.send_key("KEY_POWER")
         self._state = STATE_OFF
         self.schedule_update_ha_state()
 
@@ -369,10 +378,13 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
                 self._channel_name = data.get("channel_name")
                 self._channel_num = data.get("channel_num")
 
-            if was_off or not self._source_dict or not self._app_dict:
+            if (was_off or not self._source_dict or not self._app_dict) and hasattr(self.hass, "add_job"):
                 self.hass.add_job(self._client.query_initial_state)
 
-        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
+            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        elif self.hass:
+            self.schedule_update_ha_state()
 
     def _handle_volume_update(self, data: dict[str, Any]) -> None:
         self._state = STATE_ON
@@ -384,24 +396,43 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         elif vol_type == 2:
             self._muted = (data.get("volume_value") == 1)
 
-        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
+            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        elif self.hass:
+            self.schedule_update_ha_state()
 
     def _handle_sourcelist_update(self, data: list[dict[str, Any]]) -> None:
         if not data:
             return
         self._source_dict = {item.get("sourcename"): item for item in data if item.get("sourcename")}
-        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
+            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        elif self.hass:
+            self.schedule_update_ha_state()
 
     def _handle_applist_update(self, data: list[dict[str, Any]]) -> None:
         if not data:
             return
         self._app_list = data
         self._app_dict = {item.get("name"): item for item in data if item.get("name")}
-        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
+            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        elif self.hass:
+            self.schedule_update_ha_state()
+
+    def _handle_connected(self) -> None:
+        self._state = STATE_ON
+        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
+            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        elif self.hass:
+            self.schedule_update_ha_state()
 
     def _handle_disconnected(self) -> None:
         self._state = STATE_OFF
-        self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
+            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        elif self.hass:
+            self.schedule_update_ha_state()
 
 
 async def async_setup_entry(
