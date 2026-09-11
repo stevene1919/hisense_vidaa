@@ -21,6 +21,14 @@ CONF_AUTH_PROFILE = "auth_profile"
 CONF_MODEL = "model"
 CONF_SW_VERSION = "sw_version"
 CONF_MANUFACTURER = "manufacturer"
+CONF_CERTFILE = "certfile"
+CONF_KEYFILE = "keyfile"
+CONF_USE_SSL = "use_ssl"
+
+DEFAULT_USE_SSL = True
+DEFAULT_CERT_DIR = "certs"
+DEFAULT_CERT_FILENAME = "hisense.crt"
+DEFAULT_KEY_FILENAME = "hisense.key"
 
 SERVICE_SEND_KEY = "send_key"
 SERVICE_LAUNCH_APP = "launch_app"
@@ -84,7 +92,14 @@ KEY_ALIASES = {
     "netflix": "KEY_NETFLIX",
     "youtube": "KEY_YOUTUBE",
     "prime": "KEY_PRIME",
-    "disney": "KEY_DISNEY",
+    "ok_long": "KEY_OK_LONG_PRESS",
+    "mute_long": "KEY_MUTE_LONG_PRESS",
+    "mouse": "KEY_LEFTMOUSEKEYS",
+    "left_mouse": "KEY_LEFTMOUSEKEYS",
+    "zoom_in": "KEY_ZOOMIN",
+    "zoomin": "KEY_ZOOMIN",
+    "zoom_out": "KEY_ZOOMOUT",
+    "zoomout": "KEY_ZOOMOUT",
     "0": "KEY_0",
     "1": "KEY_1",
     "2": "KEY_2",

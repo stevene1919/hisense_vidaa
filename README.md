@@ -34,28 +34,32 @@ This integration automatically detects and natively supports all generations of 
 ## ✨ Features
 
 - **Multi-Generation Authentication**: Native support for Modern VIDAA 2.0 (XOR hashing), Standard RemoteNOW dynamic pairing, and Legacy Static credentials (`hisenseservice`).
-- **Direct Secure Connection**: Native SSL communication directly to port `36669` without external Mosquitto bridges.
-- **Automatic TV Clock Synchronization**: Automatically extracts HTTP `Date` headers from the TV's internal UPnP/DLNA service to prevent hash mismatches during clock drift.
-- **Native Reauthentication & Reconfigure**: Full UI support for Home Assistant re-auth notifications and reconfigure actions without needing to re-add the integration.
+- **Direct Secure Connection**: Native SSL communication directly to port `36669` with TLS bypass support for unencrypted brokers and automatic fallback routing.
+- **Security Hardened**: Protected against XML Entity Expansion (Billion Laughs) and DTD injection using `defusedxml` parsers during UPnP/DLNA discovery.
+- **Automatic TV Clock Synchronization**: Extracts HTTP `Date` headers from the TV's internal UPnP/DLNA services on candidate ports (`38400` and `18400`) to prevent hash mismatches during clock drift.
+- **Native Reauthentication & Reconfigure**: Full UI support for Home Assistant re-auth notifications, reconfigure actions, and automated PIN sanitization.
 - **Accurate State & Standby Handling**: Entities cleanly report `state = "off"` (with `available = True`) during standby, keeping UI power toggles and automations fully functional.
-- **Standby Power & Wake-on-LAN**: Power on/off via secure MQTT keys, with optional Wake-on-LAN magic packet support.
+- **Subnet-Aware Wake-on-LAN**: Broadcasts magic packets to both the target `/24` subnet directed broadcast and `255.255.255.255` for reliable cross-VLAN wake-up.
 - **Dedicated Remote Entity (`remote`)**:
   - Full remote control platform (`remote.<tv_name>`).
-  - Key alias resolution (`up`, `down`, `home`, `menu`, `back`, `netflix`, `youtube`, etc.).
+  - Key alias resolution (`up`, `down`, `home`, `menu`, `back`, `ok_long`, `mute_long`, `netflix`, `youtube`, etc.).
   - Direct command dispatching with repeat and delay controls.
 - **Media Player Entity (`media_player`)**:
   - Power toggle and standby control.
   - Volume adjustment, stepping, and mute toggle.
   - Playback controls (`PLAY`, `PAUSE`, `STOP`, `NEXT_TRACK`, `PREVIOUS_TRACK`, `PLAY_MEDIA`).
   - Unified input source selector with configurable app inclusions (HDMI, TV, AV, Netflix, YouTube, Plex, etc.).
-  - Instant local push updates for volume and power state.
+  - Instant local push updates for volume and power state across multiple firmware topic variants.
+- **Diagnostic Sensors & Controls**:
+  - Dedicated connectivity binary sensor, 4 diagnostic sensors, and 3 diagnostic buttons.
+  - Native Home Assistant Diagnostics integration (`diagnostics.py`) with sensitive token and IP/MAC redaction.
+  - In-UI Repairs issue when certificates are missing or unreadable.
 - **Full Options Flow**:
   - Configure device behavior via **Settings -> Devices & Services -> Configure** without re-pairing.
-  - Toggle dedicated remote entity, Wake-on-LAN, and Smart TV app listing in sources.
-- **Robust Connection Handlers**:
-  - Non-blocking startup ensures Home Assistant boots cleanly even when the TV is powered off.
-  - Exponential reconnect backoff (`min_delay=2, max_delay=30`) preventing thread storms.
-  - Automatic background token refresh when 2-day session tokens expire (persisted directly to Config Entry).
+  - Toggle dedicated remote entity, Wake-on-LAN, Smart TV app listing in sources, and SSL mode.
+- **HACS & CI Compliant**:
+  - Fully structured for HACS with `hacs.json` and `integration_type: "device"`.
+  - Dual CI validation pipelines (`hassfest` + `hacs/action`) for Home Assistant standards compliance.
 - **Zero-Duplication CLI Diagnostic Tool**: Built-in test suite (`test_client.py`) sharing 100% of its backend logic with the Home Assistant integration code.
 
 ---

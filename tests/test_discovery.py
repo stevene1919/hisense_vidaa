@@ -64,3 +64,16 @@ def test_get_device_fingerprint():
         assert fp["mac_wifi"] == "E85177EC981C"
         assert fp["mac_ethernet"] == "E43BC957F14F"
         assert fp["platform"] == "1"
+
+
+def test_get_device_fingerprint_malformed_xml():
+    """Test graceful handling of invalid/malformed XML from network."""
+    mock_response = MagicMock()
+    mock_response.headers = {}
+    mock_response.read.return_value = b"<invalid><xml"
+    mock_response.__enter__.return_value = mock_response
+
+    with patch("urllib.request.urlopen", return_value=mock_response):
+        fp = get_device_fingerprint("192.168.50.12")
+        assert fp["friendly_name"] is None
+        assert fp["model_name"] is None

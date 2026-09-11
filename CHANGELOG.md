@@ -2,6 +2,18 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.5.0] - 2026-09-11
+
+### Added
+- **HACS & HASSFEST CI VALIDATION**: Added complete HACS repository configuration (`hacs.json`) with minimum Home Assistant version requirements, `integration_type: "device"` in `manifest.json`, and configured dual-action CI validation (`hassfest` + `hacs/action`) on every pull request and push.
+- **SECURITY HARDENING & DEFUSED XML PARSING**: Integrated `defusedxml` into UPnP/DLNA XML discovery parsers to protect against XML Entity Expansion (Billion Laughs) and external DTD vulnerabilities during discovery.
+- **CLIENT ARCHITECTURE REFACTORING**: Extracted socket and probe diagnostics to `discovery.py`, implemented centralized callback registry and thread-safe dispatching, reducing `client.py` footprint by ~60% while maintaining 100% backward compatibility.
+- **SUBNET-AWARE WAKE-ON-LAN**: Enhanced Wake-on-LAN magic packet transmission to broadcast to both the target `/24` subnet directed broadcast address (e.g. `192.168.50.255`) and `255.255.255.255` for maximum cross-VLAN/routed network reliability.
+- **CONFIG FLOW UX & SANITIZATION**: Added interactive `SelectSelector` dropdown with friendly descriptive profile labels (`Auto Detect`, `VIDAA 2.0 / 2024+`, `RemoteNOW / 2018–2023`, `Legacy Unencrypted`), smart certificate routing (skipping cert modal if valid certs exist on disk), and automatic PIN sanitization (stripping spaces/dashes).
+- **EXTENDED MQTT TOPIC COVERAGE**: Added subscription and dispatch handling for `/remoteapp/mobile/broadcast/ui_service/volume`, `/remoteapp/mobile/broadcast/ui_service/data/hotelmodechange`, `/remoteapp/mobile/{client}/platform_service/data/gettvinfo`, `/remoteapp/mobile/{client}/platform_service/data/getdeviceinfo`, `/remoteapp/mobile/{client}/ui_service/data/capability`, and direct state replies on `.../ui_service/data/state`.
+- **EXTENDED REMOTE KEY ALIASES**: Added aliases for `ok_long`, `mute_long`, `mouse`, `zoom_in`, `zoom_out` to `KEY_ALIASES`.
+- **EXPANDED TEST SUITE**: Added comprehensive unit tests covering subnet WoL broadcasting, volume topic variants, callback error isolation, and defused XML malformed data recovery (33 passing unit tests).
+
 ## [2.2.0] - 2026-09-11
 
 ### Added

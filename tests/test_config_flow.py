@@ -19,7 +19,7 @@ from custom_components.hisense_vidaa.const import (
 @pytest.mark.anyio
 async def test_ssdp_discovery_vidaa_tv(monkeypatch):
     hass = MagicMock(spec=HomeAssistant)
-    hass.async_add_executor_job = lambda func, *args: func(*args)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     flow = HisenseVidaaConfigFlow()
     flow.hass = hass
@@ -114,3 +114,114 @@ async def test_options_step_creates_entry():
     assert result["data"][CONF_MANUFACTURER] == "Hisense"
     assert result["data"][CONF_SW_VERSION] == "V1.0"
     assert result["options"]["enable_remote"] is True
+
+
+@pytest.mark.anyio
+async def test_user_step_auto_certs_missing_routes_to_certs(monkeypatch):
+    """When certificates are not present on disk, auto profile routes to certs step."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    flow.context = {}
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.config_flow.check_certs_exist",
+        lambda c, k: False,
+    )
+
+    result = await flow.async_step_user(
+        user_input={"ip_address": "192.168.50.12", "auth_profile": "auto"}
+    )
+    assert result["type"] == "form"
+    assert result["step_id"] == "certs"
+
+
+@pytest.mark.anyio
+async def test_user_step_explicit_model_routes_to_certs():
+    """When an explicit model profile is selected, it routes to certs step."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    flow.context = {}
+
+    result = await flow.async_step_user(
+        user_input={"ip_address": "192.168.50.12", "auth_profile": "modern"}
+    )
+    assert result["type"] == "form"
+    assert result["step_id"] == "certs"
+
+
+@pytest.mark.anyio
+async def test_certs_step_submission_valid(monkeypatch):
+    """Submitting valid cert paths connects and transitions to auth step."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    flow.context = {}
+    flow.ip_address = "192.168.50.12"
+    flow.auth_profile = "modern"
+    flow.async_set_unique_id = AsyncMock(return_value=None)
+    flow._abort_if_unique_id_configured = MagicMock()
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.config_flow.check_certs_exist",
+        lambda c, k: True,
+    )
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        AsyncMock(return_value=None),
+    )
+
+    result = await flow.async_step_certs(
+        user_input={
+            "use_ssl": True,
+            "certfile": "/config/certs/vidaa_2024_cert.pem",
+            "keyfile": "/config/certs/vidaa_2024_key.pem",
+        }
+    )
+    assert result["type"] == "form"
+    assert result["step_id"] == "auth"
+
+
+@pytest.mark.anyio
+async def test_options_flow():
+    """Test options flow handler."""
+    from custom_components.hisense_vidaa.options_flow import HisenseVidaaOptionsFlowHandler
+
+    config_entry = MagicMock()
+    config_entry.options = {
+        "enable_remote": True,
+        "enable_wol": True,
+        "include_apps_in_sources": True,
+        "use_ssl": True,
+        "certfile": "/config/certs/hisense.crt",
+        "keyfile": "/config/certs/hisense.key",
+    }
+    config_entry.data = {}
+
+    handler = HisenseVidaaOptionsFlowHandler()
+    handler.config_entry = config_entry
+
+    result = await handler.async_step_init()
+    assert result["type"] == "form"
+    assert result["step_id"] == "init"
+
+    result_submit = await handler.async_step_init(
+        user_input={
+            "enable_remote": False,
+            "enable_wol": True,
+            "include_apps_in_sources": True,
+            "use_ssl": True,
+            "certfile": "/config/certs/custom.crt",
+            "keyfile": "/config/certs/custom.key",
+        }
+    )
+    assert result_submit["type"] == "create_entry"
+    assert result_submit["data"]["enable_remote"] is False
+    assert result_submit["data"]["certfile"] == "/config/certs/custom.crt"

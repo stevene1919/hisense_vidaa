@@ -86,7 +86,10 @@ if "homeassistant" not in sys.modules:
         def async_abort(self, *, reason, description_placeholders=None):
             return {"type": "abort", "reason": reason, "description_placeholders": description_placeholders}
     class OptionsFlow:
-        pass
+        def async_show_form(self, *, step_id, data_schema=None, errors=None, description_placeholders=None):
+            return {"type": "form", "step_id": step_id, "data_schema": data_schema, "errors": errors, "description_placeholders": description_placeholders}
+        def async_create_entry(self, *, title="", data=None):
+            return {"type": "create_entry", "title": title, "data": data or {}}
     ConfigFlowResult = dict
     config_entries.ConfigEntry = ConfigEntry
     config_entries.ConfigFlow = ConfigFlow
@@ -279,6 +282,31 @@ if "homeassistant" not in sys.modules:
     zeroconf_info.ZeroconfServiceInfo = ZeroconfServiceInfo
     service_info.zeroconf = zeroconf_info
     sys.modules["homeassistant.helpers.service_info.zeroconf"] = zeroconf_info
+
+    # helpers.selector
+    selector_mod = types.ModuleType("homeassistant.helpers.selector")
+    class SelectSelector:
+        def __init__(self, config=None):
+            self.config = config
+        def __call__(self, val):
+            return val
+    class SelectSelectorConfig:
+        def __init__(self, options=None, mode=None, translation_key=None):
+            self.options = options
+            self.mode = mode
+            self.translation_key = translation_key
+    class SelectSelectorMode:
+        DROPDOWN = "dropdown"
+        LIST = "list"
+    class SelectOptionDict(dict):
+        def __init__(self, value, label):
+            super().__init__(value=value, label=label)
+    selector_mod.SelectSelector = SelectSelector
+    selector_mod.SelectSelectorConfig = SelectSelectorConfig
+    selector_mod.SelectSelectorMode = SelectSelectorMode
+    selector_mod.SelectOptionDict = SelectOptionDict
+    helpers.selector = selector_mod
+    sys.modules["homeassistant.helpers.selector"] = selector_mod
 
     helpers.service_info = service_info
     sys.modules["homeassistant.helpers.service_info"] = service_info

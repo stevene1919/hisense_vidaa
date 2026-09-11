@@ -32,6 +32,15 @@
           "auth_profile": "Authentication / Certificate Profile"
         }
       },
+      "certs": {
+        "title": "Client Certificates",
+        "description": "Configure TLS/SSL client certificates for communicating with your Hisense VIDAA TV. Place your certificates in {cert_dir} ({cert_file} and {key_file}).",
+        "data": {
+          "use_ssl": "Use Encrypted SSL/TLS Connection",
+          "certfile": "Certificate File Path (.crt / .pem)",
+          "keyfile": "Private Key File Path (.key / .pem)"
+        }
+      },
       "options": {
         "title": "Device Features & Options",
         "description": "Customize features for your Hisense VIDAA TV.",
@@ -45,10 +54,12 @@
     "error": {
       "cannot_connect": "Failed to connect to the TV.",
       "invalid_auth": "Invalid PIN code. Please try again.",
+      "certs_not_found": "Certificate or private key file was not found at the specified path. Please check the file location and permissions.",
       "unknown": "An unknown error occurred."
     },
     "abort": {
       "reauth_successful": "Re-authentication was successful.",
+      "reconfigure_successful": "Reconfiguration was successful.",
       "already_configured": "This device is already configured.",
       "not_vidaa_tv": "Discovered device is not a compatible Hisense VIDAA TV."
     }
@@ -61,7 +72,10 @@
         "data": {
           "enable_remote": "Enable dedicated Remote entity",
           "enable_wol": "Enable Wake-on-LAN power on",
-          "include_apps_in_sources": "Include Smart TV Apps in Media Player source list"
+          "include_apps_in_sources": "Include Smart TV Apps in Media Player source list",
+          "use_ssl": "Use Encrypted SSL/TLS Connection",
+          "certfile": "Certificate File Path (.crt / .pem)",
+          "keyfile": "Private Key File Path (.key / .pem)"
         }
       }
     }
@@ -125,6 +139,16 @@
           "name": "Application Name or URL",
           "description": "The name of the app (e.g. Netflix, YouTube, Prime Video) or a deep link URL."
         }
+      }
+    }
+  },
+  "selector": {
+    "auth_profile": {
+      "options": {
+        "auto": "Auto Detect (Recommended)",
+        "modern": "VIDAA 2.0 / 2024+ (vidaa_2024)",
+        "remotenow": "RemoteNOW / 2018–2023 (standard)",
+        "legacy": "Legacy Unencrypted (No SSL / static)"
       }
     }
   },

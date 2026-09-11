@@ -57,6 +57,18 @@ def generate_initial_credentials(
     return client_id, username, fourth_hash
 
 
+def check_certs_exist(certfile: str | None, keyfile: str | None) -> bool:
+    """Check if certificate and key files exist and are readable."""
+    return bool(
+        certfile
+        and keyfile
+        and os.path.isfile(certfile)
+        and os.path.isfile(keyfile)
+        and os.access(certfile, os.R_OK)
+        and os.access(keyfile, os.R_OK)
+    )
+
+
 def resolve_certificates(
     auth_profile: str = "auto",
     certfile: str | None = None,
@@ -76,28 +88,64 @@ def resolve_certificates(
             os.path.join(script_dir, "certs"),
             os.path.join(repo_root, "certs"),
             os.path.join(repo_root, "hisense_vidaa_certs"),
+            os.path.expanduser("~/.config/hisense_vidaa/certs"),
             "/config/certs",
             "/config/ssl",
+            "/config",
+            "/ssl",
             "/opt/usb/homeassistant/certs",
             "/opt/usb/homeassistant/ssl",
+            "/opt/usb/homeassistant",
         ]
 
     profile_clean = (auth_profile or "auto").lower()
 
     if profile_clean in ("modern", "vidaa_2024", "vidaa"):
-        cert_names = ["vidaa_2024_cert.pem", "vidaa2024_cert.pem", "cert.pem"]
-        key_names = ["vidaa_2024_key.pem", "vidaa2024_key.pem", "key.pem"]
+        cert_names = [
+            "vidaa_2024_cert.pem",
+            "vidaa2024_cert.pem",
+            "vidaa_client.pem",
+            "hisense.crt",
+            "client_cert.pem",
+            "cert.pem",
+        ]
+        key_names = [
+            "vidaa_2024_key.pem",
+            "vidaa2024_key.pem",
+            "vidaa_client.key",
+            "hisense.key",
+            "client_key.pem",
+            "key.pem",
+        ]
     elif profile_clean in ("remotenow", "remotenow_2018", "standard"):
-        cert_names = ["remotenow_2018_cert.pem", "cert.pem"]
-        key_names = ["remotenow_2018_key.pem", "key.pem"]
+        cert_names = [
+            "remotenow_2018_cert.pem",
+            "vidaa_client.pem",
+            "hisense.crt",
+            "client_cert.pem",
+            "cert.pem",
+        ]
+        key_names = [
+            "remotenow_2018_key.pem",
+            "vidaa_client.key",
+            "hisense.key",
+            "client_key.pem",
+            "key.pem",
+        ]
     else:  # auto
         cert_names = [
+            "vidaa_client.pem",
+            "hisense.crt",
+            "client_cert.pem",
             "vidaa_2024_cert.pem",
             "vidaa2024_cert.pem",
             "remotenow_2018_cert.pem",
             "cert.pem",
         ]
         key_names = [
+            "vidaa_client.key",
+            "hisense.key",
+            "client_key.pem",
             "vidaa_2024_key.pem",
             "vidaa2024_key.pem",
             "remotenow_2018_key.pem",
@@ -107,7 +155,7 @@ def resolve_certificates(
     resolved_cert = None
     resolved_key = None
 
-    if certfile:
+    if certfile and os.path.isfile(certfile):
         resolved_cert = os.path.abspath(certfile)
     else:
         for d in search_dirs:
@@ -119,7 +167,7 @@ def resolve_certificates(
             if resolved_cert:
                 break
 
-    if keyfile:
+    if keyfile and os.path.isfile(keyfile):
         resolved_key = os.path.abspath(keyfile)
     else:
         for d in search_dirs:

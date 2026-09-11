@@ -7,9 +7,11 @@
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/stevene1919/hisense_vidaa",
+  "integration_type": "device",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/stevene1919/hisense_vidaa/issues",
   "requirements": [
+    "defusedxml>=0.7.1",
     "paho-mqtt>=1.6.1"
   ],
   "ssdp": [
@@ -17,5 +19,5 @@
       "st": "urn:schemas-upnp-org:device:MediaRenderer:1"
     }
   ],
-  "version": "2.3.0"
+  "version": "2.5.0"
 }

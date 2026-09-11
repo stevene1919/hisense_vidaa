@@ -172,7 +172,7 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         # Send Wake-on-LAN magic packet if enabled in options
         enable_wol = self._options.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL)
         if enable_wol and self._mac:
-            self._client.send_wake_on_lan(self._mac)
+            self._client.send_wake_on_lan(self._mac, ip=getattr(self._client, "ip", None))
 
         # Send KEY_POWER via MQTT to wake/turn on the TV.
         if self._client.connected:

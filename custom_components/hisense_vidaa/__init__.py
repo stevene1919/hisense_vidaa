@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -18,16 +19,20 @@ from .const import (
     CONF_ACCESS_TOKEN_DURATION,
     CONF_ACCESS_TOKEN_TIME,
     CONF_AUTH_PROFILE,
+    CONF_CERTFILE,
     CONF_CLIENT_ID,
     CONF_ENABLE_REMOTE,
     CONF_IP_ADDRESS,
+    CONF_KEYFILE,
     CONF_MAC_ADDRESS,
     CONF_PASSWORD,
     CONF_REFRESH_TOKEN,
     CONF_REFRESH_TOKEN_DURATION,
     CONF_REFRESH_TOKEN_TIME,
+    CONF_USE_SSL,
     CONF_USERNAME,
     DEFAULT_ENABLE_REMOTE,
+    DEFAULT_USE_SSL,
     DOMAIN,
     SERVICE_LAUNCH_APP,
     SERVICE_SEND_KEY,
@@ -114,6 +119,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception:
             pass
 
+    use_ssl = entry.options.get(CONF_USE_SSL, data.get(CONF_USE_SSL, DEFAULT_USE_SSL))
+    certfile = entry.options.get(CONF_CERTFILE, data.get(CONF_CERTFILE))
+    keyfile = entry.options.get(CONF_KEYFILE, data.get(CONF_KEYFILE))
+
     client = HisenseTvClient(
         ip=data[CONF_IP_ADDRESS],
         mac=mac,
@@ -127,10 +136,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         refresh_token_time=data[CONF_REFRESH_TOKEN_TIME],
         refresh_token_duration=data[CONF_REFRESH_TOKEN_DURATION],
         auth_profile=data.get(CONF_AUTH_PROFILE, "auto"),
+        certfile=certfile,
+        keyfile=keyfile,
+        use_ssl=use_ssl,
     )
 
     # Check for missing certificates and manage Repairs issue
-    if not client.certfile or not client.keyfile:
+    if use_ssl and (not client.certfile or not client.keyfile or not os.path.isfile(client.certfile) or not os.path.isfile(client.keyfile)):
         ir.async_create_issue(
             hass,
             DOMAIN,

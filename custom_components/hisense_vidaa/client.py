@@ -1,6 +1,7 @@
 """Client for connecting to Hisense VIDAA TV MQTT broker over TLS."""
 
 import asyncio
+import ipaddress
 import json
 import logging
 import os
@@ -8,6 +9,8 @@ import socket
 import ssl
 import threading
 import time
+from collections import defaultdict
+from collections.abc import Callable
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -18,6 +21,9 @@ try:
     from .discovery import (
         get_device_fingerprint as discover_device_fingerprint,
         get_tv_timestamp,
+        ping_tv,
+        probe_tv_auth_methods,
+        test_tv_ssl_connection,
     )
 except ImportError:
     from const import KEY_ALIASES
@@ -25,6 +31,9 @@ except ImportError:
     from discovery import (
         get_device_fingerprint as discover_device_fingerprint,
         get_tv_timestamp,
+        ping_tv,
+        probe_tv_auth_methods,
+        test_tv_ssl_connection,
     )
 
 _LOGGER = logging.getLogger(__name__)
@@ -49,6 +58,7 @@ class HisenseTvClient:
         certfile: str | None = None,
         keyfile: str | None = None,
         auth_profile: str = "auto",
+        use_ssl: bool = True,
     ) -> None:
         self.ip = ip
         self.mac = mac
@@ -62,22 +72,20 @@ class HisenseTvClient:
         self.refresh_token_time = refresh_token_time
         self.refresh_token_duration = refresh_token_duration
         self.auth_profile = (auth_profile or "auto").lower()
+        self.use_ssl = use_ssl
 
-        self.certfile, self.keyfile = resolve_certificates(
-            auth_profile=self.auth_profile,
-            certfile=certfile,
-            keyfile=keyfile,
-        )
+        if self.use_ssl:
+            self.certfile, self.keyfile = resolve_certificates(
+                auth_profile=self.auth_profile,
+                certfile=certfile,
+                keyfile=keyfile,
+            )
+        else:
+            self.certfile, self.keyfile = None, None
 
         self.mqtt_client: mqtt.Client | None = None
         self.connected = False
-        self._state_callbacks = []
-        self._volume_callbacks = []
-        self._sourcelist_callbacks = []
-        self._applist_callbacks = []
-        self._disconnected_callbacks = []
-        self._token_refreshed_callbacks = []
-        self._auth_failed_callbacks = []
+        self._callbacks: dict[str, list[Callable]] = defaultdict(list)
 
         self._auth_future: asyncio.Future | None = None
         self._auth_code_future: asyncio.Future | None = None
@@ -97,173 +105,146 @@ class HisenseTvClient:
             self.define_topic_paths()
 
     # Callback properties and registrations
+    def _register_callback(self, event: str, cb: Callable) -> None:
+        if cb and cb not in self._callbacks[event]:
+            self._callbacks[event].append(cb)
+
+    def _unregister_callback(self, event: str, cb: Callable) -> None:
+        if cb in self._callbacks[event]:
+            self._callbacks[event].remove(cb)
+
+    def _dispatch(self, event: str, *args: Any) -> None:
+        for cb in list(self._callbacks[event]):
+            try:
+                cb(*args)
+            except Exception as e:
+                _LOGGER.error("Error in %s callback: %s", event, e)
+
     @property
-    def on_state_update(self):
-        return self._state_callbacks[0] if self._state_callbacks else None
+    def on_state_update(self) -> Callable | None:
+        cbs = self._callbacks["state"]
+        return cbs[0] if cbs else None
 
     @on_state_update.setter
-    def on_state_update(self, cb):
-        if cb and cb not in self._state_callbacks:
-            self._state_callbacks.append(cb)
+    def on_state_update(self, cb: Callable) -> None:
+        self._register_callback("state", cb)
 
     @property
-    def on_volume_update(self):
-        return self._volume_callbacks[0] if self._volume_callbacks else None
+    def on_volume_update(self) -> Callable | None:
+        cbs = self._callbacks["volume"]
+        return cbs[0] if cbs else None
 
     @on_volume_update.setter
-    def on_volume_update(self, cb):
-        if cb and cb not in self._volume_callbacks:
-            self._volume_callbacks.append(cb)
+    def on_volume_update(self, cb: Callable) -> None:
+        self._register_callback("volume", cb)
 
     @property
-    def on_sourcelist_update(self):
-        return self._sourcelist_callbacks[0] if self._sourcelist_callbacks else None
+    def on_sourcelist_update(self) -> Callable | None:
+        cbs = self._callbacks["sourcelist"]
+        return cbs[0] if cbs else None
 
     @on_sourcelist_update.setter
-    def on_sourcelist_update(self, cb):
-        if cb and cb not in self._sourcelist_callbacks:
-            self._sourcelist_callbacks.append(cb)
+    def on_sourcelist_update(self, cb: Callable) -> None:
+        self._register_callback("sourcelist", cb)
 
     @property
-    def on_applist_update(self):
-        return self._applist_callbacks[0] if self._applist_callbacks else None
+    def on_applist_update(self) -> Callable | None:
+        cbs = self._callbacks["applist"]
+        return cbs[0] if cbs else None
 
     @on_applist_update.setter
-    def on_applist_update(self, cb):
-        if cb and cb not in self._applist_callbacks:
-            self._applist_callbacks.append(cb)
+    def on_applist_update(self, cb: Callable) -> None:
+        self._register_callback("applist", cb)
 
     @property
-    def on_disconnected_callback(self):
-        return self._disconnected_callbacks[0] if self._disconnected_callbacks else None
+    def on_disconnected_callback(self) -> Callable | None:
+        cbs = self._callbacks["disconnected"]
+        return cbs[0] if cbs else None
 
     @on_disconnected_callback.setter
-    def on_disconnected_callback(self, cb):
-        if cb and cb not in self._disconnected_callbacks:
-            self._disconnected_callbacks.append(cb)
+    def on_disconnected_callback(self, cb: Callable) -> None:
+        self._register_callback("disconnected", cb)
 
     @property
-    def on_token_refreshed(self):
-        return self._token_refreshed_callbacks[0] if self._token_refreshed_callbacks else None
+    def on_token_refreshed(self) -> Callable | None:
+        cbs = self._callbacks["token_refreshed"]
+        return cbs[0] if cbs else None
 
     @on_token_refreshed.setter
-    def on_token_refreshed(self, cb):
-        if cb and cb not in self._token_refreshed_callbacks:
-            self._token_refreshed_callbacks.append(cb)
+    def on_token_refreshed(self, cb: Callable) -> None:
+        self._register_callback("token_refreshed", cb)
 
-    def register_state_callback(self, cb):
-        if cb and cb not in self._state_callbacks:
-            self._state_callbacks.append(cb)
+    def register_state_callback(self, cb: Callable) -> None:
+        self._register_callback("state", cb)
 
-    def unregister_state_callback(self, cb):
-        if cb in self._state_callbacks:
-            self._state_callbacks.remove(cb)
+    def unregister_state_callback(self, cb: Callable) -> None:
+        self._unregister_callback("state", cb)
 
-    def register_volume_callback(self, cb):
-        if cb and cb not in self._volume_callbacks:
-            self._volume_callbacks.append(cb)
+    def register_volume_callback(self, cb: Callable) -> None:
+        self._register_callback("volume", cb)
 
-    def unregister_volume_callback(self, cb):
-        if cb in self._volume_callbacks:
-            self._volume_callbacks.remove(cb)
+    def unregister_volume_callback(self, cb: Callable) -> None:
+        self._unregister_callback("volume", cb)
 
-    def register_sourcelist_callback(self, cb):
-        if cb and cb not in self._sourcelist_callbacks:
-            self._sourcelist_callbacks.append(cb)
+    def register_sourcelist_callback(self, cb: Callable) -> None:
+        self._register_callback("sourcelist", cb)
 
-    def unregister_sourcelist_callback(self, cb):
-        if cb in self._sourcelist_callbacks:
-            self._sourcelist_callbacks.remove(cb)
+    def unregister_sourcelist_callback(self, cb: Callable) -> None:
+        self._unregister_callback("sourcelist", cb)
 
-    def register_applist_callback(self, cb):
-        if cb and cb not in self._applist_callbacks:
-            self._applist_callbacks.append(cb)
+    def register_applist_callback(self, cb: Callable) -> None:
+        self._register_callback("applist", cb)
 
-    def unregister_applist_callback(self, cb):
-        if cb in self._applist_callbacks:
-            self._applist_callbacks.remove(cb)
+    def unregister_applist_callback(self, cb: Callable) -> None:
+        self._unregister_callback("applist", cb)
 
-    def register_disconnected_callback(self, cb):
-        if cb and cb not in self._disconnected_callbacks:
-            self._disconnected_callbacks.append(cb)
+    def register_disconnected_callback(self, cb: Callable) -> None:
+        self._register_callback("disconnected", cb)
 
-    def unregister_disconnected_callback(self, cb):
-        if cb in self._disconnected_callbacks:
-            self._disconnected_callbacks.remove(cb)
+    def unregister_disconnected_callback(self, cb: Callable) -> None:
+        self._unregister_callback("disconnected", cb)
 
-    def register_token_refreshed_callback(self, cb):
-        if cb and cb not in self._token_refreshed_callbacks:
-            self._token_refreshed_callbacks.append(cb)
+    def register_token_refreshed_callback(self, cb: Callable) -> None:
+        self._register_callback("token_refreshed", cb)
 
-    def unregister_token_refreshed_callback(self, cb):
-        if cb in self._token_refreshed_callbacks:
-            self._token_refreshed_callbacks.remove(cb)
+    def unregister_token_refreshed_callback(self, cb: Callable) -> None:
+        self._unregister_callback("token_refreshed", cb)
 
-    def register_auth_failed_callback(self, cb):
-        if cb and cb not in self._auth_failed_callbacks:
-            self._auth_failed_callbacks.append(cb)
+    def register_auth_failed_callback(self, cb: Callable) -> None:
+        self._register_callback("auth_failed", cb)
 
-    def unregister_auth_failed_callback(self, cb):
-        if cb in self._auth_failed_callbacks:
-            self._auth_failed_callbacks.remove(cb)
+    def unregister_auth_failed_callback(self, cb: Callable) -> None:
+        self._unregister_callback("auth_failed", cb)
 
-    def _dispatch_auth_failed(self):
-        for cb in list(self._auth_failed_callbacks):
-            try:
-                cb(self)
-            except Exception as e:
-                _LOGGER.error("Error in auth failed callback: %s", e)
+    def _dispatch_auth_failed(self) -> None:
+        self._dispatch("auth_failed", self)
 
-    def _dispatch_state_update(self, data):
-        for cb in list(self._state_callbacks):
-            try:
-                cb(data)
-            except Exception as e:
-                _LOGGER.error("Error in state callback: %s", e)
+    def _dispatch_state_update(self, data: Any) -> None:
+        self._dispatch("state", data)
 
-    def _dispatch_volume_update(self, data):
-        for cb in list(self._volume_callbacks):
-            try:
-                cb(data)
-            except Exception as e:
-                _LOGGER.error("Error in volume callback: %s", e)
+    def _dispatch_volume_update(self, data: Any) -> None:
+        self._dispatch("volume", data)
 
-    def _dispatch_sourcelist_update(self, data):
-        for cb in list(self._sourcelist_callbacks):
-            try:
-                cb(data)
-            except Exception as e:
-                _LOGGER.error("Error in sourcelist callback: %s", e)
+    def _dispatch_sourcelist_update(self, data: Any) -> None:
+        self._dispatch("sourcelist", data)
 
-    def _dispatch_applist_update(self, data):
-        for cb in list(self._applist_callbacks):
-            try:
-                cb(data)
-            except Exception as e:
-                _LOGGER.error("Error in applist callback: %s", e)
+    def _dispatch_applist_update(self, data: Any) -> None:
+        self._dispatch("applist", data)
 
-    def _dispatch_disconnected(self):
-        for cb in list(self._disconnected_callbacks):
-            try:
-                cb()
-            except Exception as e:
-                _LOGGER.error("Error in disconnect callback: %s", e)
+    def _dispatch_disconnected(self) -> None:
+        self._dispatch("disconnected")
 
-    def _dispatch_token_refreshed(self):
-        for cb in list(self._token_refreshed_callbacks):
-            try:
-                cb(self)
-            except Exception as e:
-                _LOGGER.error("Error in token refreshed callback: %s", e)
+    def _dispatch_token_refreshed(self) -> None:
+        self._dispatch("token_refreshed", self)
 
     def validate_certificates(self) -> None:
         """Verifies that the SSL certificate and private key files exist and are readable."""
-        if not os.path.isfile(self.certfile):
+        if not self.certfile or not os.path.isfile(self.certfile):
             raise FileNotFoundError(
                 f"SSL Certificate file not found: '{self.certfile}'. "
                 "Please place certificate files in 'certs/' or specify --cert."
             )
-        if not os.path.isfile(self.keyfile):
+        if not self.keyfile or not os.path.isfile(self.keyfile):
             raise FileNotFoundError(
                 f"SSL Private Key file not found: '{self.keyfile}'. "
                 "Please place key files in 'certs/' or specify --key."
@@ -272,28 +253,34 @@ class HisenseTvClient:
     def test_ssl_connection(self, timeout: float = 5.0) -> dict[str, Any]:
         """Tests the raw TLS handshake with the TV on port 36669 without authenticating."""
         self.validate_certificates()
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-        context.load_cert_chain(certfile=self.certfile, keyfile=self.keyfile)
-
-        with (
-            socket.create_connection((self.ip, 36669), timeout=timeout) as sock,
-            context.wrap_socket(sock) as ssock,
-        ):
-            cipher_name, _proto, bits = ssock.cipher()
-            return {
-                "connected": True,
-                "tls_version": ssock.version(),
-                "cipher": cipher_name,
-                "bits": bits,
-                "certfile": self.certfile,
-                "keyfile": self.keyfile,
-            }
+        return test_tv_ssl_connection(self.ip, self.certfile, self.keyfile, timeout=timeout)
 
     def get_device_fingerprint(self, timeout: float = 2.0) -> dict[str, Any]:
         """Fetches UPnP, DLNA, and mDNS device metadata for model and capability identification."""
         return discover_device_fingerprint(self.ip, timeout=timeout)
+
+    def probe_auth_methods(self, timeout: float = 2.0) -> dict[str, Any]:
+        """Probes TV MQTT broker with various auth algorithms to diagnose compatibility."""
+        return probe_tv_auth_methods(
+            self.ip,
+            certfile=self.certfile,
+            keyfile=self.keyfile,
+            mac=self.mac,
+            timeout=timeout,
+        )
+
+    def ping(self, timeout: float = 3.0) -> dict[str, Any]:
+        """Quickly tests if TV broker is listening, accepting TLS, and responding to MQTT packets."""
+        return ping_tv(
+            ip=self.ip,
+            certfile=self.certfile,
+            keyfile=self.keyfile,
+            client_id=self.client_id,
+            username=self.username,
+            password=self.access_token,
+            mac=self.mac,
+            timeout=timeout,
+        )
 
     def define_topic_paths(self) -> None:
         """Sets up topic paths for the specific client ID."""
@@ -325,173 +312,24 @@ class HisenseTvClient:
         )
 
     def create_mqtt_client(self, client_id: str, username: str, password: str) -> mqtt.Client:
-        """Creates and configures an authenticated MQTT client over TLS."""
+        """Creates and configures an authenticated MQTT client."""
         client = mqtt.Client(client_id=client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
         client.reconnect_delay_set(min_delay=2, max_delay=30)
-        client.tls_set(ca_certs=None, certfile=self.certfile, keyfile=self.keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
-        client.tls_insecure_set(True)
+        if self.use_ssl and self.certfile and self.keyfile:
+            client.tls_set(
+                ca_certs=None,
+                certfile=self.certfile,
+                keyfile=self.keyfile,
+                cert_reqs=ssl.CERT_NONE,
+                tls_version=ssl.PROTOCOL_TLS,
+            )
+            client.tls_insecure_set(True)
         client.username_pw_set(username=username, password=password)
 
         client.on_connect = self._on_connect
         client.on_message = self._on_message
         client.on_disconnect = self._on_disconnect
         return client
-
-    def probe_auth_methods(self, timeout: float = 2.0) -> dict[str, Any]:
-        """Probes TV MQTT broker with various auth algorithms to diagnose compatibility."""
-        results = {
-            "legacy_static": {"rc": None, "supported": False},
-            "standard_dynamic": {"rc": None, "supported": False},
-            "modern_dynamic": {"rc": None, "supported": False},
-        }
-
-        # 1. Legacy static ('hisenseservice')
-        try:
-            leg_rc = [None]
-            leg_lock = threading.Event()
-            leg_client = mqtt.Client(client_id="hisenseservice", clean_session=True, protocol=mqtt.MQTTv311)
-            leg_client.tls_set(ca_certs=None, certfile=self.certfile, keyfile=self.keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
-            leg_client.tls_insecure_set(True)
-            leg_client.username_pw_set(username="hisenseservice", password="multimqttservice")
-            leg_client.on_connect = lambda c, u, f, rc: (leg_rc.__setitem__(0, rc), leg_lock.set())
-            leg_client.on_disconnect = lambda c, u, rc: leg_lock.set()
-            leg_client.connect_async(self.ip, 36669, 5)
-            leg_client.loop_start()
-            leg_lock.wait(timeout=timeout)
-            leg_client.loop_stop()
-            leg_client.disconnect()
-            results["legacy_static"]["rc"] = leg_rc[0]
-            results["legacy_static"]["supported"] = (leg_rc[0] == 0)
-        except Exception as e:
-            _LOGGER.debug("Legacy static probe error: %s", e)
-
-        # 2. Standard dynamic pairing (his$<timestamp>)
-        try:
-            self.generate_initial_creds(use_new_auth=False)
-            std_rc = [None]
-            std_lock = threading.Event()
-            std_client = self.create_mqtt_client(self.client_id, self.username, self.password)
-            std_client.on_connect = lambda c, u, f, rc: (std_rc.__setitem__(0, rc), std_lock.set())
-            std_client.on_disconnect = lambda c, u, rc: std_lock.set()
-            std_client.connect_async(self.ip, 36669, 5)
-            std_client.loop_start()
-            std_lock.wait(timeout=timeout)
-            std_client.loop_stop()
-            std_client.disconnect()
-            results["standard_dynamic"]["rc"] = std_rc[0]
-            results["standard_dynamic"]["supported"] = (std_rc[0] == 0)
-        except Exception as e:
-            _LOGGER.debug("Standard dynamic probe error: %s", e)
-
-        # 3. Modern XOR dynamic pairing (his$<timestamp ^ XOR>)
-        try:
-            self.generate_initial_creds(use_new_auth=True)
-            mod_rc = [None]
-            mod_lock = threading.Event()
-            mod_client = self.create_mqtt_client(self.client_id, self.username, self.password)
-            mod_client.on_connect = lambda c, u, f, rc: (mod_rc.__setitem__(0, rc), mod_lock.set())
-            mod_client.on_disconnect = lambda c, u, rc: mod_lock.set()
-            mod_client.connect_async(self.ip, 36669, 5)
-            mod_client.loop_start()
-            mod_lock.wait(timeout=timeout)
-            mod_client.loop_stop()
-            mod_client.disconnect()
-            results["modern_dynamic"]["rc"] = mod_rc[0]
-            results["modern_dynamic"]["supported"] = (mod_rc[0] == 0)
-        except Exception as e:
-            _LOGGER.debug("Modern dynamic probe error: %s", e)
-
-        return results
-
-    def ping(self, timeout: float = 3.0) -> dict[str, Any]:
-        """Quickly tests if TV broker is listening, accepting TLS, and responding to MQTT packets."""
-        results = {
-            "tcp_port_open": False,
-            "tls_handshake": False,
-            "tls_version": None,
-            "cipher": None,
-            "mqtt_connected": False,
-            "mqtt_rc": None,
-            "mqtt_status": None,
-            "auth_probe": None,
-            "device_info": None,
-            "error": None,
-        }
-        # 1. Test TCP port
-        try:
-            with socket.create_connection((self.ip, 36669), timeout=timeout):
-                results["tcp_port_open"] = True
-        except Exception as e:
-            results["error"] = f"TCP connection failed (TV may be in deep sleep / off): {e}"
-            return results
-
-        # 2. Test TLS Handshake
-        try:
-            ssl_info = self.test_ssl_connection(timeout=timeout)
-            results["tls_handshake"] = ssl_info.get("connected", False)
-            results["tls_version"] = ssl_info.get("tls_version")
-            results["cipher"] = ssl_info.get("cipher")
-        except Exception as e:
-            results["error"] = f"TLS handshake failed: {e}"
-            return results
-
-        # 3. Test MQTT Broker Response (if credentials available)
-        if self.access_token and self.client_id and self.username:
-            lock = threading.Event()
-            rc_holder = [None]
-            client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
-
-            def on_conn(c, userdata, flags, rc):
-                rc_holder[0] = rc
-                lock.set()
-
-            client.on_connect = on_conn
-            client.on_message = None
-            client.on_disconnect = lambda c, u, rc: lock.set()
-
-            try:
-                client.connect_async(self.ip, 36669, 10)
-                client.loop_start()
-                lock.wait(timeout=timeout)
-            finally:
-                client.loop_stop()
-                client.disconnect()
-
-            results["mqtt_rc"] = rc_holder[0]
-            if rc_holder[0] == 0:
-                results["mqtt_connected"] = True
-                results["mqtt_status"] = "Connection Accepted"
-            elif rc_holder[0] is not None:
-                results["mqtt_status"] = f"Connection Rejected (rc={rc_holder[0]})"
-            else:
-                results["mqtt_status"] = "Connection Timeout"
-        else:
-            results["mqtt_status"] = "Ready for pairing (no stored credentials)"
-
-        # 4. Probe Auth Methods
-        auth_probe = self.probe_auth_methods(timeout=1.5)
-        results["auth_probe"] = auth_probe
-
-        if auth_probe["legacy_static"]["supported"]:
-            results["auth_model"] = "legacy_static"
-            results["auth_recommendation"] = (
-                "Your TV accepts legacy static credentials ('hisenseservice'). "
-                "See the README for recommended legacy integrations."
-            )
-        elif auth_probe["modern_dynamic"]["supported"] or auth_probe["standard_dynamic"]["supported"]:
-            results["auth_model"] = "modern_vidaa"
-            results["auth_recommendation"] = (
-                "Your TV enforces modern VIDAA OS authentication (dynamic PIN pairing supported)."
-            )
-        else:
-            results["auth_model"] = "unknown"
-            results["auth_recommendation"] = (
-                "The TV broker rejected initial connection attempts. Ensure TV is awake and connected."
-            )
-
-        # 5. Device fingerprint
-        results["device_info"] = self.get_device_fingerprint(timeout=1.5)
-        return results
 
     def _safe_set_future_result(self, future: asyncio.Future | None, result: Any) -> None:
         if future and not future.done():
@@ -515,11 +353,17 @@ class HisenseTvClient:
                 client.subscribe([
                     (self.topicBrcsBasepath + "ui_service/state", 0),
                     (self.topicBrcsBasepath + "platform_service/actions/volumechange", 0),
+                    (self.topicBrcsBasepath + "ui_service/volume", 0),
                     (self.topicBrcsBasepath + "platform_service/actions/tvsleep", 0),
+                    (self.topicBrcsBasepath + "ui_service/data/hotelmodechange", 0),
                     (self.topicMobiBasepath + "ui_service/data/sourcelist", 0),
                     (self.topicMobiBasepath + "ui_service/data/applist", 0),
                     (self.topicMobiBasepath + "ui_service/data/gettvstate", 0),
+                    (self.topicMobiBasepath + "ui_service/data/state", 0),
                     (self.topicMobiBasepath + "platform_service/data/getvolume", 0),
+                    (self.topicMobiBasepath + "platform_service/data/gettvinfo", 0),
+                    (self.topicMobiBasepath + "platform_service/data/getdeviceinfo", 0),
+                    (self.topicMobiBasepath + "ui_service/data/capability", 0),
                 ])
                 if self.on_state_update:
                     threading.Timer(1.0, self.query_initial_state).start()
@@ -573,7 +417,10 @@ class HisenseTvClient:
         _LOGGER.debug("Message received: %s on topic %s", payload, topic)
 
         # Check authentication futures
-        if self._auth_future and topic == self.topicMobiBasepath + "ui_service/data/authentication":
+        if self._auth_future and topic in (
+            self.topicMobiBasepath + "ui_service/data/authentication",
+            self.topicMobiBasepath + "ui_service/data/vidaa_app_connect",
+        ):
             self._safe_set_future_result(self._auth_future, payload)
         elif self._auth_code_future and topic == self.topicMobiBasepath + "ui_service/data/authenticationcode":
             self._safe_set_future_result(self._auth_code_future, payload)
@@ -581,13 +428,21 @@ class HisenseTvClient:
             self._safe_set_future_result(self._token_future, payload)
 
         # Handle state push callbacks
-        if topic in (self.topicBrcsBasepath + "ui_service/state", self.topicMobiBasepath + "ui_service/data/gettvstate"):
+        if topic in (
+            self.topicBrcsBasepath + "ui_service/state",
+            self.topicMobiBasepath + "ui_service/data/gettvstate",
+            self.topicMobiBasepath + "ui_service/data/state",
+        ):
             try:
                 data = json.loads(payload)
                 self._dispatch_state_update(data)
             except Exception as e:
                 _LOGGER.error("Error parsing state: %s", e)
-        elif topic in (self.topicBrcsBasepath + "platform_service/actions/volumechange", self.topicMobiBasepath + "platform_service/data/getvolume"):
+        elif topic in (
+            self.topicBrcsBasepath + "platform_service/actions/volumechange",
+            self.topicBrcsBasepath + "ui_service/volume",
+            self.topicMobiBasepath + "platform_service/data/getvolume",
+        ):
             try:
                 data = json.loads(payload)
                 self._dispatch_volume_update(data)
@@ -663,6 +518,7 @@ class HisenseTvClient:
             (self.topicTVUIBasepath + "actions/vidaa_app_connect", 0),
             (self.topicMobiBasepath + "ui_service/data/authentication", 0),
             (self.topicMobiBasepath + "ui_service/data/authenticationcode", 0),
+            (self.topicMobiBasepath + "ui_service/data/vidaa_app_connect", 0),
             (self.topicMobiBasepath + "platform_service/data/tokenissuance", 0),
         ])
 
@@ -841,8 +697,13 @@ class HisenseTvClient:
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/applist", "")
 
     @staticmethod
-    def send_wake_on_lan(mac: str, broadcast_ip: str = "255.255.255.255", port: int = 9) -> bool:
-        """Sends a standard Wake-on-LAN magic packet UDP broadcast."""
+    def send_wake_on_lan(
+        mac: str,
+        broadcast_ip: str | None = None,
+        port: int = 9,
+        ip: str | None = None,
+    ) -> bool:
+        """Sends a standard Wake-on-LAN magic packet UDP broadcast (subnet directed and global)."""
         if not mac:
             return False
         cleaned_mac = mac.replace(":", "").replace("-", "").replace(".", "").strip()
@@ -851,10 +712,30 @@ class HisenseTvClient:
         try:
             mac_bytes = bytes.fromhex(cleaned_mac)
             magic_packet = b"\xff" * 6 + mac_bytes * 16
+
+            broadcast_targets = set()
+            if broadcast_ip:
+                broadcast_targets.add(broadcast_ip)
+            else:
+                broadcast_targets.add("255.255.255.255")
+                if ip:
+                    try:
+                        ip_obj = ipaddress.ip_address(ip)
+                        if isinstance(ip_obj, ipaddress.IPv4Address):
+                            subnet_broadcast = f"{ip.rsplit('.', 1)[0]}.255"
+                            broadcast_targets.add(subnet_broadcast)
+                    except ValueError:
+                        pass
+
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                sock.sendto(magic_packet, (broadcast_ip, port))
-            _LOGGER.debug("Sent Wake-on-LAN magic packet to %s", mac)
+                for target in broadcast_targets:
+                    try:
+                        sock.sendto(magic_packet, (target, port))
+                    except Exception as target_err:
+                        _LOGGER.debug("WoL target %s send error: %s", target, target_err)
+
+            _LOGGER.debug("Sent Wake-on-LAN magic packet to %s (targets: %s)", mac, broadcast_targets)
             return True
         except Exception as e:
             _LOGGER.warning("Failed to send Wake-on-LAN packet to %s: %s", mac, e)
