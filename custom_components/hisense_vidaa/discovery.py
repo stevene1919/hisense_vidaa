@@ -62,7 +62,7 @@ def get_arp_mac(ip: str) -> str | None:
     return None
 
 
-def get_device_fingerprint(ip: str, timeout: float = 2.0) -> dict[str, Any]:
+def get_device_fingerprint(ip: str, timeout: float = 2.0, zc: Any = None) -> dict[str, Any]:
     """Fetches UPnP, DLNA, and mDNS device metadata for model and capability identification."""
     info = {
         "friendly_name": None,
@@ -161,10 +161,25 @@ def get_device_fingerprint(ip: str, timeout: float = 2.0) -> dict[str, Any]:
             def remove_service(self, zc, type_, name):
                 pass
 
-        zc = Zeroconf()
-        ServiceBrowser(zc, ["_airplay._tcp.local.", "_hap._tcp.local."], MDNSListener())
-        time.sleep(1.0)
-        zc.close()
+        should_close_zc = False
+        if zc is None:
+            try:
+                import asyncio
+                asyncio.get_running_loop()
+                zc = None
+            except RuntimeError:
+                try:
+                    zc = Zeroconf()
+                    should_close_zc = True
+                except Exception:
+                    zc = None
+
+        if zc is not None:
+            browser = ServiceBrowser(zc, ["_airplay._tcp.local.", "_hap._tcp.local."], MDNSListener())
+            time.sleep(1.0)
+            browser.cancel()
+            if should_close_zc:
+                zc.close()
 
         airplay = discovered.get("_airplay._tcp.local.", {})
         hap = discovered.get("_hap._tcp.local.", {})

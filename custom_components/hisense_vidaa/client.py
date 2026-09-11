@@ -198,6 +198,12 @@ class HisenseTvClient:
     def unregister_applist_callback(self, cb: Callable) -> None:
         self._unregister_callback("applist", cb)
 
+    def register_connected_callback(self, cb: Callable) -> None:
+        self._register_callback("connected", cb)
+
+    def unregister_connected_callback(self, cb: Callable) -> None:
+        self._unregister_callback("connected", cb)
+
     def register_disconnected_callback(self, cb: Callable) -> None:
         self._register_callback("disconnected", cb)
 
@@ -218,6 +224,9 @@ class HisenseTvClient:
 
     def _dispatch_auth_failed(self) -> None:
         self._dispatch("auth_failed", self)
+
+    def _dispatch_connected(self) -> None:
+        self._dispatch("connected")
 
     def _dispatch_state_update(self, data: Any) -> None:
         self._dispatch("state", data)
@@ -349,6 +358,7 @@ class HisenseTvClient:
         if rc == 0:
             self.connected = True
             _LOGGER.info("Connected to TV MQTT Broker")
+            self._dispatch_connected()
             if hasattr(self, "topicBrcsBasepath"):
                 client.subscribe([
                     (self.topicBrcsBasepath + "ui_service/state", 0),
@@ -365,8 +375,7 @@ class HisenseTvClient:
                     (self.topicMobiBasepath + "platform_service/data/getdeviceinfo", 0),
                     (self.topicMobiBasepath + "ui_service/data/capability", 0),
                 ])
-                if self.on_state_update:
-                    threading.Timer(1.0, self.query_initial_state).start()
+                threading.Timer(0.5, self.query_initial_state).start()
         else:
             _LOGGER.error("Failed to connect to TV MQTT Broker, rc: %d", rc)
             if self._auth_future and not self._auth_future.done():

@@ -125,3 +125,31 @@ def test_callback_unregistration_and_safety():
     client.unregister_state_callback(good_cb)
     client._dispatch_state_update({"test": "again"})
     assert len(called) == 1
+
+
+def test_connected_and_disconnected_callbacks():
+    """Test connected and disconnected callback lifecycle."""
+    client = HisenseTvClient(ip="192.168.50.12")
+    events = []
+
+    def on_conn():
+        events.append("connected")
+
+    def on_disconn():
+        events.append("disconnected")
+
+    client.register_connected_callback(on_conn)
+    client.register_disconnected_callback(on_disconn)
+
+    client._dispatch_connected()
+    assert events == ["connected"]
+
+    client._dispatch_disconnected()
+    assert events == ["connected", "disconnected"]
+
+    client.unregister_connected_callback(on_conn)
+    client.unregister_disconnected_callback(on_disconn)
+    client._dispatch_connected()
+    client._dispatch_disconnected()
+    assert events == ["connected", "disconnected"]
+

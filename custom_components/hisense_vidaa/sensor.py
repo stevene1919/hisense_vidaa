@@ -65,6 +65,11 @@ class HisenseVidaaBaseSensor(SensorEntity):
         self._mac = entry.data.get(CONF_MAC_ADDRESS)
         self._name = entry.title or DEFAULT_NAME
 
+    def _schedule_state_update(self) -> None:
+        """Safely schedule state update if entity is added to hass."""
+        if getattr(self, "hass", None) is not None:
+            self.schedule_update_ha_state()
+
     @property
     def device_info(self) -> DeviceInfo:
         """Return device registry info with dynamic model and software version."""
@@ -111,7 +116,7 @@ class HisenseVidaaTokenExpiresSensor(HisenseVidaaBaseSensor):
 
     def _handle_token_refreshed(self, client: HisenseTvClient) -> None:
         self._update_state()
-        self.async_write_ha_state()
+        self._schedule_state_update()
 
     def _update_state(self) -> None:
         if self._client.auth_profile == "legacy":
@@ -149,14 +154,21 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaBaseSensor):
         self._app_dict: dict[str, str] = {}
 
     async def async_added_to_hass(self) -> None:
+        self._client.register_connected_callback(self._handle_connected)
         self._client.register_state_callback(self._handle_state_update)
         self._client.register_applist_callback(self._handle_applist_update)
         self._client.register_disconnected_callback(self._handle_disconnected)
 
     async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_connected_callback(self._handle_connected)
         self._client.unregister_state_callback(self._handle_state_update)
         self._client.unregister_applist_callback(self._handle_applist_update)
         self._client.unregister_disconnected_callback(self._handle_disconnected)
+
+    def _handle_connected(self) -> None:
+        if self._attr_native_value == "Off":
+            self._attr_native_value = "Standby"
+        self._schedule_state_update()
 
     def _handle_applist_update(self, apps: list[dict[str, Any]]) -> None:
         if not apps:
@@ -166,7 +178,7 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaBaseSensor):
             for a in apps
             if isinstance(a, dict) and (a.get("appId") or a.get("app_id"))
         }
-        self.async_write_ha_state()
+        self._schedule_state_update()
 
     def _handle_state_update(self, state: dict[str, Any]) -> None:
         statetype = state.get("statetype")
@@ -188,11 +200,11 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaBaseSensor):
                 self._attr_native_value = self._app_dict[app_id]
             elif app_id:
                 self._attr_native_value = app_id
-        self.async_write_ha_state()
+        self._schedule_state_update()
 
     def _handle_disconnected(self) -> None:
         self._attr_native_value = "Off"
-        self.async_write_ha_state()
+        self._schedule_state_update()
 
 
 class HisenseVidaaActiveSourceSensor(HisenseVidaaBaseSensor):
@@ -207,14 +219,21 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaBaseSensor):
         self._attr_native_value = "Off" if not client.connected else "None"
 
     async def async_added_to_hass(self) -> None:
+        self._client.register_connected_callback(self._handle_connected)
         self._client.register_sourcelist_callback(self._handle_sourcelist_update)
         self._client.register_state_callback(self._handle_state_update)
         self._client.register_disconnected_callback(self._handle_disconnected)
 
     async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_connected_callback(self._handle_connected)
         self._client.unregister_sourcelist_callback(self._handle_sourcelist_update)
         self._client.unregister_state_callback(self._handle_state_update)
         self._client.unregister_disconnected_callback(self._handle_disconnected)
+
+    def _handle_connected(self) -> None:
+        if self._attr_native_value == "Off":
+            self._attr_native_value = "None"
+        self._schedule_state_update()
 
     def _handle_state_update(self, state: dict[str, Any]) -> None:
         statetype = state.get("statetype")
@@ -231,15 +250,15 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaBaseSensor):
             self._attr_native_value = "TV"
         elif state.get("sourcename") or state.get("sourceName"):
             self._attr_native_value = state.get("sourcename") or state.get("sourceName")
-        self.async_write_ha_state()
+        self._schedule_state_update()
 
     def _handle_sourcelist_update(self, sources: list[dict[str, Any]]) -> None:
         for s in sources:
             if isinstance(s, dict) and (s.get("is_active") or s.get("isactive") or s.get("active")):
                 self._attr_native_value = s.get("sourceName") or s.get("sourcename") or s.get("name")
                 break
-        self.async_write_ha_state()
+        self._schedule_state_update()
 
     def _handle_disconnected(self) -> None:
         self._attr_native_value = "Off"
-        self.async_write_ha_state()
+        self._schedule_state_update()

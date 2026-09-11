@@ -77,13 +77,16 @@ class HisenseVidaaMqttConnectedBinarySensor(BinarySensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks when added."""
+        self._client.register_connected_callback(self._handle_update)
         self._client.register_state_callback(self._handle_update)
         self._client.register_disconnected_callback(self._handle_update)
 
     async def async_will_remove_from_hass(self) -> None:
         """Unregister callbacks."""
+        self._client.unregister_connected_callback(self._handle_update)
         self._client.unregister_state_callback(self._handle_update)
         self._client.unregister_disconnected_callback(self._handle_update)
 
     def _handle_update(self, *args: Any) -> None:
-        self.async_write_ha_state()
+        if getattr(self, "hass", None) is not None:
+            self.schedule_update_ha_state()
