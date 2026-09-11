@@ -1,0 +1,270 @@
+# ==============================================================================
+# Hisense VIDAA TV - Button Card Remote Example
+# ==============================================================================
+# Prerequisites:
+# 1. Install 'button-card' from HACS (https://github.com/custom-cards/button-card)
+# 2. Replace 'remote.bedroom_smart_tv_remote' and 'media_player.bedroom_smart_tv'
+#    with your actual entity IDs.
+# ==============================================================================
+
+type: vertical-stack
+cards:
+  # Power, Source, and Top Streaming Apps
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        icon: mdi:power
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: power
+        styles:
+          card:
+            - height: 50px
+
+      - type: custom:button-card
+        icon: mdi:video-input-hdmi
+        name: Input
+        show_name: true
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: input
+        styles:
+          card:
+            - height: 50px
+
+      - type: custom:button-card
+        icon: mdi:netflix
+        color: rgb(229, 9, 20)
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "Netflix"
+        styles:
+          card:
+            - height: 50px
+
+      - type: custom:button-card
+        icon: mdi:youtube
+        color: rgb(255, 0, 0)
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "YouTube"
+        styles:
+          card:
+            - height: 50px
+
+  # Navigation & System Bar
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        icon: mdi:arrow-left
+        name: Back
+        show_name: true
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: back
+        styles:
+          card:
+            - height: 50px
+
+      - type: custom:button-card
+        icon: mdi:home
+        name: Home
+        show_name: true
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: home
+        styles:
+          card:
+            - height: 50px
+
+      - type: custom:button-card
+        icon: mdi:menu
+        name: Menu
+        show_name: true
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: menu
+        styles:
+          card:
+            - height: 50px
+
+  # D-Pad - Up
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        color: transparent
+        styles:
+          card:
+            - height: 55px
+            - background: transparent
+            - box-shadow: none
+            - border: none
+
+      - type: custom:button-card
+        icon: mdi:chevron-up
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: up
+        styles:
+          card:
+            - height: 55px
+
+      - type: custom:button-card
+        color: transparent
+        styles:
+          card:
+            - height: 55px
+            - background: transparent
+            - box-shadow: none
+            - border: none
+
+  # D-Pad - Left, OK, Right
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        icon: mdi:chevron-left
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: left
+        styles:
+          card:
+            - height: 55px
+
+      - type: custom:button-card
+        name: OK
+        show_name: true
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: ok
+        styles:
+          card:
+            - height: 55px
+
+      - type: custom:button-card
+        icon: mdi:chevron-right
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: right
+        styles:
+          card:
+            - height: 55px
+
+  # D-Pad - Down
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        color: transparent
+        styles:
+          card:
+            - height: 55px
+            - background: transparent
+            - box-shadow: none
+            - border: none
+
+      - type: custom:button-card
+        icon: mdi:chevron-down
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: down
+        styles:
+          card:
+            - height: 55px
+
+      - type: custom:button-card
+        color: transparent
+        styles:
+          card:
+            - height: 55px
+            - background: transparent
+            - box-shadow: none
+            - border: none
+
+  # Volume & Channel Controls
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        icon: mdi:volume-minus
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: volume_down
+        styles:
+          card:
+            - height: 50px
+
+      - type: custom:button-card
+        icon: mdi:volume-off
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: mute
+        styles:
+          card:
+            - height: 50px
+
+      - type: custom:button-card
+        icon: mdi:volume-plus
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: volume_up
+        styles:
+          card:
+            - height: 50px

@@ -1,0 +1,87 @@
+# ==============================================================================
+# Hisense VIDAA TV - TV Card Configuration
+# ==============================================================================
+# Prerequisites:
+# 1. Install 'tv-card' from HACS (https://github.com/marcelveldt/tv-card)
+# 2. Replace 'remote.bedroom_smart_tv_remote' and 'media_player.bedroom_smart_tv'
+#    with your actual entity IDs.
+# ==============================================================================
+
+type: custom:tv-card
+entity: remote.bedroom_smart_tv_remote
+name: Bedroom TV
+power:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: power
+back:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: back
+home:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: home
+menu:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: menu
+up:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: up
+down:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: down
+left:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: left
+right:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: right
+select:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: ok
+volume_up:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: volume_up
+volume_down:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: volume_down
+volume_mute:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: mute
+channel_up:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: channel_up
+channel_down:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: channel_down
+source:
+  service: remote.send_command
+  service_data:
+    entity_id: remote.bedroom_smart_tv_remote
+    command: input

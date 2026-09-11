@@ -1,0 +1,1342 @@
+# ==============================================================================
+# Hisense VIDAA TV - Australian EN2G30H Custom Remote Card
+# ==============================================================================
+# This configuration creates an exact pixel-accurate replica of the Australian
+# Hisense TV remote control (EN2G30H) with 12 streaming app buttons, color keys,
+# D-pad, rocker switches, info buttons, and number pad.
+#
+# Prerequisites:
+# 1. Install 'button-card' from HACS (https://github.com/custom-cards/button-card)
+# 2. Install 'stack-in-card' from HACS (https://github.com/custom-cards/stack-in-card)
+# 3. Install 'card-mod' from HACS (https://github.com/thomasloven/lovelace-card-mod)
+# 4. Replace 'remote.bedroom_smart_tv_remote' and 'media_player.bedroom_smart_tv'
+#    with your own entity IDs if needed.
+# ==============================================================================
+
+type: custom:stack-in-card
+mode: vertical
+card_mod:
+  style: |
+    ha-card {
+      background: linear-gradient(180deg, #22252c 0%, #16181b 35%, #0e0f12 100%) !important;
+      border-radius: 46px !important;
+      border: 2px solid #333742 !important;
+      box-shadow: 0 20px 48px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,255,0.18), inset 0 -3px 8px rgba(0,0,0,0.85) !important;
+      max-width: 320px;
+      margin: 0 auto;
+      padding: 22px 14px 24px 14px;
+    }
+cards:
+  # ----------------------------------------------------------------------------
+  # ROW 1: POWER & INPUT
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:power
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: power
+        styles:
+          card:
+            - background-color: "#d32f2f"
+            - height: 44px
+            - width: 44px
+            - border-radius: 50%
+            - box-shadow: "0 3px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2)"
+            - border: "1px solid rgba(255,255,255,0.1)"
+            - padding: 0px
+            - margin: 2px
+          icon:
+            - color: "#ffffff"
+            - width: 22px
+            - height: 22px
+
+      - type: custom:button-card
+        color_type: blank-card
+        styles:
+          card:
+            - height: 44px
+            - background: transparent
+            - box-shadow: none
+            - border: none
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: INPUT
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: input
+        styles:
+          card:
+            - background-color: "#2c303a"
+            - height: 36px
+            - width: 76px
+            - border-radius: 18px
+            - box-shadow: "0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)"
+            - border: "1px solid rgba(255,255,255,0.1)"
+            - padding: 0px
+            - margin: 4px 2px
+          name:
+            - color: "#e0e0e0"
+            - font-size: 11.5px
+            - font-weight: 800
+            - letter-spacing: 0.5px
+
+  # ----------------------------------------------------------------------------
+  # ROW 2: APP GRID (Disney+, YouTube, Prime Video)
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: Disney+
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "Disney+"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#113ccf"
+            - font-size: 11px
+            - font-weight: 900
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: true
+        name: " "
+        icon: mdi:youtube
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "YouTube"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          icon:
+            - color: "#ff0000"
+            - width: 28px
+            - height: 28px
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: prime<br>video
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "Prime Video"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#00a8e1"
+            - font-size: 9.5px
+            - font-weight: 800
+            - line-height: 1.1
+
+  # ----------------------------------------------------------------------------
+  # ROW 3: APP GRID (Stan., Kayo, Deezer)
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: Stan.
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "Stan."
+        styles:
+          card:
+            - background-color: "#0066ff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#ffffff"
+            - font-size: 13px
+            - font-weight: 900
+            - font-style: italic
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: Kayo
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "Kayo"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#00ba50"
+            - font-size: 13px
+            - font-weight: 900
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: deezer
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "DEEZER"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#111111"
+            - font-size: 10.5px
+            - font-weight: 800
+
+  # ----------------------------------------------------------------------------
+  # ROW 4: APP GRID (NBA League Pass, ABC iview, KiD)
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: NBA
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "NBA"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#002b5c"
+            - font-size: 11px
+            - font-weight: 900
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: iview
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "ABC iview"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#00a399"
+            - font-size: 11px
+            - font-weight: 900
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: KiD
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "Kidoodle TV"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#ff6600"
+            - font-size: 12px
+            - font-weight: 900
+
+  # ----------------------------------------------------------------------------
+  # ROW 5: APP GRID (NETFLIX, VIDAA tv, PLEX)
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: NETFLIX
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "Netflix"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#e50914"
+            - font-size: 11px
+            - font-weight: 900
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: VIDAA<br>tv
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "VIDAA tv"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#009688"
+            - font-size: 9px
+            - font-weight: 900
+            - line-height: 1.1
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: PLEX
+        tap_action:
+          action: perform-action
+          perform_action: media_player.select_source
+          target:
+            entity_id: media_player.bedroom_smart_tv
+          data:
+            source: "Plex"
+        styles:
+          card:
+            - background-color: "#ffffff"
+            - height: 38px
+            - border-radius: 19px
+            - box-shadow: "0 2px 5px rgba(0,0,0,0.3)"
+            - padding: 0px
+            - margin: 3px
+          name:
+            - color: "#e5a00d"
+            - font-size: 11px
+            - font-weight: 900
+
+  # ----------------------------------------------------------------------------
+  # ROW 6: COLOR BUTTONS (Red, Green, Yellow, Blue)
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: red
+        styles:
+          card:
+            - background-color: "#e53935"
+            - height: 16px
+            - border-radius: 8px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4)"
+            - margin: 6px 3px
+
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: green
+        styles:
+          card:
+            - background-color: "#43a047"
+            - height: 16px
+            - border-radius: 8px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4)"
+            - margin: 6px 3px
+
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: yellow
+        styles:
+          card:
+            - background-color: "#fbc02d"
+            - height: 16px
+            - border-radius: 8px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4)"
+            - margin: 6px 3px
+
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: blue
+        styles:
+          card:
+            - background-color: "#1e88e5"
+            - height: 16px
+            - border-radius: 8px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4)"
+            - margin: 6px 3px
+
+  # ----------------------------------------------------------------------------
+  # ROW 7: MENU & PLAY/PAUSE
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:format-list-bulleted-square
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: menu
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 36px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          icon:
+            - color: "#ffffff"
+            - width: 20px
+            - height: 20px
+
+      - type: custom:button-card
+        color_type: blank-card
+        styles:
+          card:
+            - height: 36px
+            - background: transparent
+            - box-shadow: none
+            - border: none
+
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:play-pause
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: play_pause
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 36px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          icon:
+            - color: "#ffffff"
+            - width: 20px
+            - height: 20px
+
+  # ----------------------------------------------------------------------------
+  # ROW 8: D-PAD (UP, LEFT, OK, RIGHT, DOWN)
+  # ----------------------------------------------------------------------------
+  - type: custom:stack-in-card
+    mode: vertical
+    card_mod:
+      style: |
+        ha-card {
+          background: radial-gradient(circle, #22252e 0%, #17191f 100%) !important;
+          border-radius: 50% !important;
+          border: 2px solid #2f3440 !important;
+          box-shadow: inset 0 3px 8px rgba(0,0,0,0.6), 0 4px 10px rgba(0,0,0,0.5) !important;
+          width: 184px !important;
+          height: 184px !important;
+          margin: 6px auto !important;
+          padding: 4px !important;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+    cards:
+      - type: horizontal-stack
+        cards:
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:chevron-up
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.bedroom_smart_tv_remote
+              data:
+                command: up
+            styles:
+              card:
+                - background-color: transparent
+                - height: 42px
+                - border-radius: 50%
+                - border: none
+                - box-shadow: none
+              icon:
+                - color: "#ffffff"
+                - width: 22px
+                - height: 22px
+
+      - type: horizontal-stack
+        cards:
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:chevron-left
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.bedroom_smart_tv_remote
+              data:
+                command: left
+            styles:
+              card:
+                - background-color: transparent
+                - height: 48px
+                - border-radius: 50%
+                - border: none
+                - box-shadow: none
+              icon:
+                - color: "#ffffff"
+                - width: 22px
+                - height: 22px
+
+          - type: custom:button-card
+            show_name: true
+            show_icon: false
+            name: OK
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.bedroom_smart_tv_remote
+              data:
+                command: ok
+            styles:
+              card:
+                - background-color: "#121317"
+                - height: 54px
+                - width: 54px
+                - border-radius: 50%
+                - border: "2px solid #363b47"
+                - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+              name:
+                - color: "#ffffff"
+                - font-size: 15px
+                - font-weight: 800
+
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:chevron-right
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.bedroom_smart_tv_remote
+              data:
+                command: right
+            styles:
+              card:
+                - background-color: transparent
+                - height: 48px
+                - border-radius: 50%
+                - border: none
+                - box-shadow: none
+              icon:
+                - color: "#ffffff"
+                - width: 22px
+                - height: 22px
+
+      - type: horizontal-stack
+        cards:
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:chevron-down
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.bedroom_smart_tv_remote
+              data:
+                command: down
+            styles:
+              card:
+                - background-color: transparent
+                - height: 42px
+                - border-radius: 50%
+                - border: none
+                - box-shadow: none
+              icon:
+                - color: "#ffffff"
+                - width: 22px
+                - height: 22px
+
+  # ----------------------------------------------------------------------------
+  # ROW 9: BACK & EXIT
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: false
+        show_icon: true
+        icon: mdi:arrow-u-left-top
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: back
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 36px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          icon:
+            - color: "#ffffff"
+            - width: 20px
+            - height: 20px
+
+      - type: custom:button-card
+        color_type: blank-card
+        styles:
+          card:
+            - height: 36px
+            - background: transparent
+            - box-shadow: none
+            - border: none
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: EXIT
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: exit
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 36px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 11.5px
+            - font-weight: 700
+
+  # ----------------------------------------------------------------------------
+  # ROW 10: VOLUME PILL, HOME / MUTE, CHANNEL PILL
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      # Volume Rocker Pill
+      - type: vertical-stack
+        cards:
+          - type: custom:button-card
+            show_name: true
+            show_icon: false
+            name: "+"
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.bedroom_smart_tv_remote
+              data:
+                command: volume_up
+            styles:
+              card:
+                - background-color: "#242730"
+                - height: 36px
+                - border-radius: "16px 16px 3px 3px"
+                - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+                - border: "1px solid rgba(255,255,255,0.06)"
+              name:
+                - color: "#ffffff"
+                - font-size: 18px
+                - font-weight: 600
+
+          - type: custom:button-card
+            show_name: true
+            show_icon: false
+            name: VOL
+            styles:
+              card:
+                - background-color: "#1d1f25"
+                - height: 20px
+                - border-radius: "0px"
+                - border: none
+                - box-shadow: none
+              name:
+                - color: "#8e929b"
+                - font-size: 9px
+                - font-weight: 800
+
+          - type: custom:button-card
+            show_name: true
+            show_icon: false
+            name: "-"
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.bedroom_smart_tv_remote
+              data:
+                command: volume_down
+            styles:
+              card:
+                - background-color: "#242730"
+                - height: 36px
+                - border-radius: "3px 3px 16px 16px"
+                - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+                - border: "1px solid rgba(255,255,255,0.06)"
+              name:
+                - color: "#ffffff"
+                - font-size: 20px
+                - font-weight: 600
+
+      # Center Column (Home & Mute)
+      - type: vertical-stack
+        cards:
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:home-outline
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.bedroom_smart_tv_remote
+              data:
+                command: home
+            styles:
+              card:
+                - background-color: "#242730"
+                - height: 42px
+                - border-radius: 14px
+                - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+                - border: "1px solid rgba(255,255,255,0.06)"
+                - margin: "0 0 6px 0"
+              icon:
+                - color: "#ffffff"
+                - width: 20px
+                - height: 20px
+
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:volume-off
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.bedroom_smart_tv_remote
+              data:
+                command: mute
+            styles:
+              card:
+                - background-color: "#242730"
+                - height: 42px
+                - border-radius: 14px
+                - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+                - border: "1px solid rgba(255,255,255,0.06)"
+                - margin: "6px 0 0 0"
+              icon:
+                - color: "#ffffff"
+                - width: 20px
+                - height: 20px
+
+      # Channel Rocker Pill
+      - type: vertical-stack
+        cards:
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:chevron-up
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.bedroom_smart_tv_remote
+              data:
+                command: channel_up
+            styles:
+              card:
+                - background-color: "#242730"
+                - height: 36px
+                - border-radius: "16px 16px 3px 3px"
+                - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+                - border: "1px solid rgba(255,255,255,0.06)"
+              icon:
+                - color: "#ffffff"
+                - width: 20px
+                - height: 20px
+
+          - type: custom:button-card
+            show_name: true
+            show_icon: false
+            name: CH
+            styles:
+              card:
+                - background-color: "#1d1f25"
+                - height: 20px
+                - border-radius: "0px"
+                - border: none
+                - box-shadow: none
+              name:
+                - color: "#8e929b"
+                - font-size: 9px
+                - font-weight: 800
+
+          - type: custom:button-card
+            show_name: false
+            show_icon: true
+            icon: mdi:chevron-down
+            tap_action:
+              action: perform-action
+              perform_action: remote.send_command
+              target:
+                entity_id: remote.bedroom_smart_tv_remote
+              data:
+                command: channel_down
+            styles:
+              card:
+                - background-color: "#242730"
+                - height: 36px
+                - border-radius: "3px 3px 16px 16px"
+                - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+                - border: "1px solid rgba(255,255,255,0.06)"
+              icon:
+                - color: "#ffffff"
+                - width: 20px
+                - height: 20px
+
+  # ----------------------------------------------------------------------------
+  # ROW 11: SUBTITLE, TEXT, INFO
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: SUBTITLE
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: subtitle
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 32px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 8.5px
+            - font-weight: 700
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: TEXT
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: text
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 32px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 10px
+            - font-weight: 700
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: INFO
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: info
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 32px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 10px
+            - font-weight: 700
+
+  # ----------------------------------------------------------------------------
+  # ROW 12: NUMBER PAD (1, 2, 3)
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: "1"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: "1"
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 16px
+            - font-weight: 600
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: "2"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: "2"
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 16px
+            - font-weight: 600
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: "3"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: "3"
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 16px
+            - font-weight: 600
+
+  # ----------------------------------------------------------------------------
+  # ROW 13: NUMBER PAD (4, 5, 6)
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: "4"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: "4"
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 16px
+            - font-weight: 600
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: "5"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: "5"
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 16px
+            - font-weight: 600
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: "6"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: "6"
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 16px
+            - font-weight: 600
+
+  # ----------------------------------------------------------------------------
+  # ROW 14: NUMBER PAD (7, 8, 9)
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: "7"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: "7"
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 16px
+            - font-weight: 600
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: "8"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: "8"
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 16px
+            - font-weight: 600
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: "9"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: "9"
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 16px
+            - font-weight: 600
+
+  # ----------------------------------------------------------------------------
+  # ROW 15: GUIDE, 0, CH.LIST
+  # ----------------------------------------------------------------------------
+  - type: horizontal-stack
+    cards:
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: GUIDE
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: guide
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 10px
+            - font-weight: 700
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: "0"
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: "0"
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 16px
+            - font-weight: 600
+
+      - type: custom:button-card
+        show_name: true
+        show_icon: false
+        name: CH.LIST
+        tap_action:
+          action: perform-action
+          perform_action: remote.send_command
+          target:
+            entity_id: remote.bedroom_smart_tv_remote
+          data:
+            command: chlist
+        styles:
+          card:
+            - background-color: "#242730"
+            - height: 38px
+            - border-radius: 12px
+            - box-shadow: "0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+            - border: "1px solid rgba(255,255,255,0.06)"
+            - margin: 2px
+          name:
+            - color: "#ffffff"
+            - font-size: 9.5px
+            - font-weight: 700
+
+  # ----------------------------------------------------------------------------
+  # ROW 16: HISENSE BRANDING
+  # ----------------------------------------------------------------------------
+  - type: custom:button-card
+    show_name: true
+    show_icon: false
+    name: Hisense
+    styles:
+      card:
+        - background-color: transparent
+        - height: 26px
+        - border: none
+        - box-shadow: none
+        - margin: "8px 0 0 0"
+      name:
+        - color: "#50545f"
+        - font-size: 14px
+        - font-weight: 700
+        - letter-spacing: 2px

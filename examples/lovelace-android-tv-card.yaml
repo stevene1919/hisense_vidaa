@@ -1,0 +1,123 @@
+# ==============================================================================
+# Hisense VIDAA TV - Android TV Card Configuration
+# ==============================================================================
+# Prerequisites:
+# 1. Install 'android-tv-card' from HACS (https://github.com/Nerwyn/android-tv-card)
+# 2. Replace 'remote.bedroom_smart_tv_remote' and 'media_player.bedroom_smart_tv'
+#    with your actual entity IDs.
+# ==============================================================================
+
+type: custom:android-tv-card
+remote_id: remote.bedroom_smart_tv_remote
+media_player_id: media_player.bedroom_smart_tv
+
+rows:
+  - - power
+    - n/a
+    - source
+  - - netflix
+    - youtube
+    - primevideo
+    - stan
+  - - back
+    - home
+    - menu
+  - - navigation_buttons
+  - - volume_buttons
+    - n/a
+    - channel_buttons
+  - - - red
+      - green
+      - yellow
+      - blue
+
+custom_actions:
+  power:
+    icon: mdi:power
+    tap_action:
+      action: perform-action
+      perform_action: remote.send_command
+      target:
+        entity_id: remote.bedroom_smart_tv_remote
+      data:
+        command: power
+
+  source:
+    icon: mdi:video-input-hdmi
+    tap_action:
+      action: perform-action
+      perform_action: remote.send_command
+      target:
+        entity_id: remote.bedroom_smart_tv_remote
+      data:
+        command: input
+
+  netflix:
+    icon: mdi:netflix
+    tap_action:
+      action: perform-action
+      perform_action: media_player.select_source
+      target:
+        entity_id: media_player.bedroom_smart_tv
+      data:
+        source: "Netflix"
+
+  youtube:
+    icon: mdi:youtube
+    tap_action:
+      action: perform-action
+      perform_action: media_player.select_source
+      target:
+        entity_id: media_player.bedroom_smart_tv
+      data:
+        source: "YouTube"
+
+  primevideo:
+    icon: mdi:amazon
+    tap_action:
+      action: perform-action
+      perform_action: media_player.select_source
+      target:
+        entity_id: media_player.bedroom_smart_tv
+      data:
+        source: "Prime Video"
+
+  stan:
+    icon: mdi:television-play
+    tap_action:
+      action: perform-action
+      perform_action: media_player.select_source
+      target:
+        entity_id: media_player.bedroom_smart_tv
+      data:
+        source: "Stan."
+
+  back:
+    icon: mdi:arrow-left
+    tap_action:
+      action: perform-action
+      perform_action: remote.send_command
+      target:
+        entity_id: remote.bedroom_smart_tv_remote
+      data:
+        command: back
+
+  home:
+    icon: mdi:home
+    tap_action:
+      action: perform-action
+      perform_action: remote.send_command
+      target:
+        entity_id: remote.bedroom_smart_tv_remote
+      data:
+        command: home
+
+  menu:
+    icon: mdi:menu
+    tap_action:
+      action: perform-action
+      perform_action: remote.send_command
+      target:
+        entity_id: remote.bedroom_smart_tv_remote
+      data:
+        command: menu
