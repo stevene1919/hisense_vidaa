@@ -66,7 +66,9 @@ This integration automatically detects and natively supports all generations of 
 - **HACS & CI Compliant**:
   - Fully structured for HACS with `hacs.json` and `integration_type: "device"`.
   - Dual CI validation pipelines (`hassfest` + `hacs/action`) for Home Assistant standards compliance.
-- **Zero-Duplication CLI Diagnostic Tool**: Built-in test suite (`test_client.py`) sharing 100% of its backend logic with the Home Assistant integration code.
+- **Zero-Duplication CLI Tools**: Two standalone diagnostic scripts sharing 100% backend logic with the integration:
+  - [`test_client.py`](test_client.py) — auth probe, pairing, firmware detection, and GitHub issue report generation.
+  - [`debug_tv.py`](debug_tv.py) — live state dump, real-time MQTT event monitoring, keypress/app/source control, and clock drift inspection.
 
 ---
 
@@ -178,66 +180,102 @@ The integration is built around modular, single-responsibility components:
 
 ---
 
-## 🧪 Testing & Diagnostics (`test_client.py`)
+## 🧪 Testing & Diagnostics
 
-The integration includes a standalone CLI test utility [`test_client.py`](test_client.py) that imports and executes the exact same [`HisenseTvClient`](custom_components/hisense_vidaa/client.py) logic used by Home Assistant.
+The integration ships with two standalone CLI tools that share 100% of the backend logic with the Home Assistant integration — no mocking, no stubs.
 
-### 1. Generate GitHub Issue Diagnostic Report (`report`)
+---
+
+### 🔬 `test_client.py` — Auth Probe & Pairing Tool
+
+[`test_client.py`](test_client.py) is focused on **authentication, pairing, and issue reporting**. Use it when setting up for the first time, debugging auth failures, or generating a GitHub diagnostic report.
+
+#### 1. Generate GitHub Issue Diagnostic Report (`report`)
 Generates a pre-formatted Markdown diagnostics block with hardware details, firmware profile, and multi-tier authentication capabilities ready to paste directly into GitHub issues:
 ```bash
 python3 test_client.py report --ip <TV_IP>
 ```
 
-### 2. Diagnostic Probe & Firmware Detection (`ping`)
-Tests TCP port reachability, TLS handshake, broker response, multi-tier auth capabilities, and suggests which integration style your TV firmware requires:
+#### 2. Diagnostic Probe & Firmware Detection (`ping`)
+Tests TCP port reachability, TLS handshake, broker response, and multi-tier auth capabilities — suggests which integration profile your firmware requires:
 ```bash
 python3 test_client.py ping --ip <TV_IP>
 
-# Test specific authentication profile (auto, modern, remotenow):
+# Test specific authentication profile:
 python3 test_client.py ping --ip <TV_IP> --profile modern
 ```
 
-### 3. Test Raw SSL/TLS Connection & Cert Validity (`test-ssl`)
-Verifies TLS cipher negotiation and certificate validity with the TV without initiating pairing:
+#### 3. Test Raw SSL/TLS Connection & Cert Validity (`test-ssl`)
+Verifies TLS cipher negotiation and certificate validity without initiating pairing:
 ```bash
-# Test with auto profile:
 python3 test_client.py test-ssl --ip <TV_IP>
-
-# Test with specific profile:
 python3 test_client.py test-ssl --ip <TV_IP> --profile modern
-python3 test_client.py test-ssl --ip <TV_IP> --profile remotenow
-
-# Test with custom certificate paths:
 python3 test_client.py test-ssl --ip <TV_IP> --cert /path/to/cert.pem --key /path/to/key.pem
 ```
 
-### 4. Test Pairing & Retrieve Tokens (`auth`)
-Initiates the challenge handshake, prompts for the 4-digit TV on-screen PIN, and saves tokens to `credentials.json`:
+#### 4. Test Pairing & Retrieve Tokens (`auth`)
+Initiates the full challenge handshake, prompts for the on-screen PIN, and saves tokens to `credentials.json`:
 ```bash
 python3 test_client.py auth --ip <TV_IP>
-
-# Specify profile explicitly if desired:
 python3 test_client.py auth --ip <TV_IP> --profile modern
 ```
 
-### 5. Test Token Refresh (`refresh`)
+#### 5. Test Token Refresh (`refresh`)
 Tests synchronous renewal of the 2-day access token using the 30-day refresh token:
 ```bash
 python3 test_client.py refresh
 ```
 
-### 6. Listen to Real-Time TV Events (`listen`)
+#### 6. Listen to Real-Time TV Events (`listen`)
 Subscribes to live state changes, volume updates, source list, and app list:
 ```bash
 python3 test_client.py listen
 ```
 
-### 7. Send Remote Control Keys (`send-key`)
+#### 7. Send Remote Control Keys (`send-key`)
 Dispatches a keypress directly to the TV:
 ```bash
 python3 test_client.py send-key KEY_VOLUMEUP
 python3 test_client.py send-key KEY_POWER
 ```
+
+---
+
+### 🛠️ `debug_tv.py` — Live Runtime Debugger
+
+[`debug_tv.py`](debug_tv.py) is focused on **live runtime interaction and state inspection** — ideal for debugging a paired TV, testing commands, monitoring MQTT event streams, or checking clock drift. It reads credentials automatically from `credentials.json`.
+
+```bash
+# Dump current state, sources, apps, and volume:
+python3 debug_tv.py --dump-state
+
+# Continuously stream live MQTT events from the TV:
+python3 debug_tv.py --monitor
+
+# Send a keypress:
+python3 debug_tv.py --send-key KEY_HOME
+python3 debug_tv.py --send-key KEY_VOLUMEUP
+
+# Launch an app by name or App ID:
+python3 debug_tv.py --launch-app Netflix
+python3 debug_tv.py --launch-app YouTube
+
+# Switch input source:
+python3 debug_tv.py --change-source HDMI1
+python3 debug_tv.py --change-source TV
+
+# Inspect UPnP Date header and calculate TV clock drift:
+python3 debug_tv.py --sync-clock
+
+# Override TV IP (default: from credentials.json):
+python3 debug_tv.py --ip 192.168.50.12 --monitor
+
+# Verbose debug logging:
+python3 debug_tv.py --dump-state -v
+```
+
+> [!TIP]
+> Run `python3 debug_tv.py` with no arguments to get a full state dump — equivalent to `--dump-state`. Useful as a quick sanity check after pairing.
 
 ---
 
