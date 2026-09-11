@@ -105,6 +105,10 @@ class HisenseTvClient:
         self.topicBrcsBasepath = "/remoteapp/mobile/broadcast/"
         self.topicRemoBasepath = ""
 
+        self.sources: list[dict[str, Any]] = []
+        self.apps: list[dict[str, Any]] = []
+        self.current_source: str | None = None
+
         if self.client_id:
             self.define_topic_paths()
 
@@ -233,15 +237,27 @@ class HisenseTvClient:
         self._dispatch("connected")
 
     def _dispatch_state_update(self, data: Any) -> None:
+        if isinstance(data, dict):
+            statetype = data.get("statetype")
+            if statetype == "sourceswitch":
+                self.current_source = data.get("sourcename") or data.get("displayname") or data.get("sourceid")
+            elif statetype in ("livetv", "tv"):
+                self.current_source = "TV"
+            elif statetype == "app":
+                self.current_source = data.get("name") or data.get("appId")
         self._dispatch("state", data)
 
     def _dispatch_volume_update(self, data: Any) -> None:
         self._dispatch("volume", data)
 
     def _dispatch_sourcelist_update(self, data: Any) -> None:
+        if isinstance(data, list):
+            self.sources = data
         self._dispatch("sourcelist", data)
 
     def _dispatch_applist_update(self, data: Any) -> None:
+        if isinstance(data, list):
+            self.apps = data
         self._dispatch("applist", data)
 
     def _dispatch_disconnected(self) -> None:
@@ -790,8 +806,85 @@ class HisenseTvClient:
         if not command:
             return False
         cmd_clean = command.strip().lower()
+        if cmd_clean.startswith("app:"):
+            app_target = command.split(":", 1)[1].strip()
+            return self._launch_app_by_name(app_target)
+        if cmd_clean.startswith("source:"):
+            src_target = command.split(":", 1)[1].strip()
+            return self._change_source_by_name_or_id(src_target)
+        if cmd_clean in ("input", "source", "cycle_source", "input_cycle", "source_cycle"):
+            return self.cycle_source()
+        if cmd_clean in ("input_menu", "source_menu"):
+            self.send_key("KEY_MENU")
+            return True
+
         key_to_send = KEY_ALIASES.get(cmd_clean, command.strip().upper())
         self.send_key(key_to_send)
+        return True
+
+    def cycle_source(self) -> bool:
+        """Cycles to the next available input source."""
+        if not self.sources:
+            self.get_sources()
+            self.send_key("KEY_MENU")
+            return True
+
+        valid_sources = [s for s in self.sources if isinstance(s, dict) and s.get("sourceid") is not None]
+        if not valid_sources:
+            self.send_key("KEY_MENU")
+            return True
+
+        curr_clean = str(self.current_source or "").lower()
+        curr_idx = -1
+        for idx, src in enumerate(valid_sources):
+            sname = (src.get("sourcename") or "").lower()
+            dname = (src.get("displayname") or "").lower()
+            sid = str(src.get("sourceid") or "").lower()
+            if curr_clean in (sname, dname, sid):
+                curr_idx = idx
+                break
+
+        next_idx = (curr_idx + 1) % len(valid_sources)
+        next_source = valid_sources[next_idx]
+        self.change_source(str(next_source["sourceid"]))
+        return True
+
+    def _launch_app_by_name(self, name_or_id: str) -> bool:
+        """Launches an app by name or app ID from cached applist."""
+        target = name_or_id.strip().lower()
+        if target in ("netflix", "app_netflix"):
+            self.send_key("KEY_NETFLIX")
+            return True
+        if target in ("youtube", "app_youtube"):
+            self.send_key("KEY_YOUTUBE")
+            return True
+        if target in ("prime", "prime video", "app_prime"):
+            self.send_key("KEY_PRIME")
+            return True
+
+        if self.apps:
+            for app in self.apps:
+                if isinstance(app, dict):
+                    aname = (app.get("name") or "").lower()
+                    aid = str(app.get("appId") or app.get("id") or "").lower()
+                    if target in (aname, aid) or target in aname:
+                        self.launch_app(app.get("appId", ""), app.get("name", ""), app.get("url", ""))
+                        return True
+        return False
+
+    def _change_source_by_name_or_id(self, target: str) -> bool:
+        """Switches to source by name (e.g. HDMI1, TV) or numeric sourceid."""
+        clean = target.strip().lower()
+        if self.sources:
+            for src in self.sources:
+                if isinstance(src, dict):
+                    sname = (src.get("sourcename") or "").lower()
+                    dname = (src.get("displayname") or "").lower()
+                    sid = str(src.get("sourceid") or "")
+                    if clean in (sname, dname, sid.lower()):
+                        self.change_source(sid)
+                        return True
+        self.change_source(target.strip())
         return True
 
     def set_volume(self, volume: int) -> None:

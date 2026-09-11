@@ -2,6 +2,13 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.7.1] - 2026-09-11
+
+### Added
+- **INPUT & SOURCE CYCLING SUPPORT**: `remote.send_command` now supports `"input"`, `"source"`, and `"cycle_source"`, automatically cycling to the next active TV input source (`TV` → `HDMI1` → `HDMI2` → `HDMI3` → `TV`) via MQTT `changesource`.
+- **DIRECT `source:<name>` & `app:<name>` TARGETING**: Added direct prefix targeting in `send_command` (`source:HDMI2`, `app:Stan`) to allow one-shot switching from remote keypads and scripts.
+- **EXTENDED KEY ALIASES**: Added `KEY_ALIASES` entries for `input`, `source`, `input_menu`, `source_menu`, `livetv`, `live_tv`, `tv`, `media`, `apps`, and `chlist`.
+
 ## [2.7.0] - 2026-09-11
 
 ### Added

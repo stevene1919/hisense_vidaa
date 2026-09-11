@@ -158,3 +158,47 @@ def test_connected_and_disconnected_callbacks():
     client._dispatch_disconnected()
     assert events == ["connected", "disconnected"]
 
+
+def test_source_cycling_and_command_helpers():
+    """Test cycle_source and send_command with input, source, and app prefixes."""
+    client = HisenseTvClient(ip="192.168.50.12", client_id="test_client")
+    client.change_source = MagicMock()
+    client.send_key = MagicMock()
+    client.launch_app = MagicMock()
+
+    client.sources = [
+        {"sourceid": "0", "sourcename": "TV"},
+        {"sourceid": "3", "sourcename": "HDMI1"},
+        {"sourceid": "4", "sourcename": "HDMI2"},
+    ]
+    client.apps = [
+        {"appId": "123", "name": "Stan", "url": "stan://"},
+    ]
+    client.current_source = "TV"
+
+    # 1. Input cycling from TV -> HDMI1
+    assert client.send_command("input") is True
+    client.change_source.assert_called_with("3")
+
+    # 2. Cycling from HDMI1 -> HDMI2
+    client.current_source = "HDMI1"
+    assert client.send_command("cycle_source") is True
+    client.change_source.assert_called_with("4")
+
+    # 3. Cycling from HDMI2 -> TV (wraparound)
+    client.current_source = "HDMI2"
+    assert client.send_command("source") is True
+    client.change_source.assert_called_with("0")
+
+    # 4. Direct source targeting
+    assert client.send_command("source:HDMI2") is True
+    client.change_source.assert_called_with("4")
+
+    # 5. App targeting via app: prefix
+    assert client.send_command("app:Stan") is True
+    client.launch_app.assert_called_with("123", "Stan", "stan://")
+
+    # 6. Built-in app shortcuts
+    assert client.send_command("app:netflix") is True
+    client.send_key.assert_called_with("KEY_NETFLIX")
+
