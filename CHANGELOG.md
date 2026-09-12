@@ -2,6 +2,11 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **SELECTIVE PLATFORM UNLOAD ON RECONFIGURATION**: `async_unload_entry` now unloads only the dynamically enabled platforms recorded during setup instead of static `PLATFORMS`. This prevents `ValueError: Config entry was never loaded!` crashes when unloading entries where optional platforms (such as `notify` or `remote`) are disabled or not supported, resolving `ConfigEntryState.FAILED_UNLOAD` and preserving the ability to reload and reconfigure options from the UI.
+
 ## [2.8.0] - 2026-09-11
 
 ### Added
