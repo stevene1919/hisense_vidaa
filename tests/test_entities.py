@@ -337,3 +337,45 @@ async def test_remote_and_media_player_idempotent_power_control(mock_client, moc
     mp.turn_on()
     mock_client.send_key.assert_called_once_with("KEY_POWER")
     assert mp.state == "on"
+
+
+@pytest.mark.anyio
+async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeypatch):
+    """Test that setting up and unloading an entry only unloads enabled platforms."""
+    from custom_components.hisense_vidaa import DOMAIN, async_setup_entry, async_unload_entry
+
+    hass = MagicMock()
+    hass.data = {}
+    hass.config_entries = MagicMock()
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    hass.loop = MagicMock()
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.HisenseTvClient",
+        lambda *args, **kwargs: mock_client,
+    )
+    mock_client.has_notifications = False
+    mock_client.check_and_refresh_token = MagicMock(return_value=False)
+    mock_client.connect_and_run = MagicMock()
+    mock_client.disconnect = MagicMock()
+
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+
+    # 1. Setup entry with notify disabled
+    mock_entry.options = {"enable_remote": True, "enable_notify": False}
+    result = await async_setup_entry(hass, mock_entry)
+    assert result is True
+
+    # Forward entry setups should have received 6 platforms (excluding notify)
+    expected_platforms = ["media_player", "sensor", "binary_sensor", "button", "select", "remote"]
+    hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(mock_entry, expected_platforms)
+    assert hass.data[DOMAIN][mock_entry.entry_id]["platforms"] == expected_platforms
+
+    # 2. Unload entry
+    unload_result = await async_unload_entry(hass, mock_entry)
+    assert unload_result is True
+    # Unload platforms must ONLY be called with the 6 loaded platforms, never all PLATFORMS
+    hass.config_entries.async_unload_platforms.assert_awaited_once_with(mock_entry, expected_platforms)
+    mock_client.disconnect.assert_called_once()
+    assert mock_entry.entry_id not in hass.data.get(DOMAIN, {})
+

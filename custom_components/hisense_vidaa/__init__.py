@@ -138,15 +138,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     client = HisenseTvClient(
         ip=data[CONF_IP_ADDRESS],
         mac=mac,
-        client_id=data[CONF_CLIENT_ID],
-        username=data[CONF_USERNAME],
-        password=data[CONF_PASSWORD],
-        access_token=data[CONF_ACCESS_TOKEN],
-        access_token_time=data[CONF_ACCESS_TOKEN_TIME],
-        access_token_duration=data[CONF_ACCESS_TOKEN_DURATION],
-        refresh_token=data[CONF_REFRESH_TOKEN],
-        refresh_token_time=data[CONF_REFRESH_TOKEN_TIME],
-        refresh_token_duration=data[CONF_REFRESH_TOKEN_DURATION],
+        client_id=data.get(CONF_CLIENT_ID),
+        username=data.get(CONF_USERNAME),
+        password=data.get(CONF_PASSWORD),
+        access_token=data.get(CONF_ACCESS_TOKEN),
+        access_token_time=data.get(CONF_ACCESS_TOKEN_TIME),
+        access_token_duration=data.get(CONF_ACCESS_TOKEN_DURATION),
+        refresh_token=data.get(CONF_REFRESH_TOKEN),
+        refresh_token_time=data.get(CONF_REFRESH_TOKEN_TIME),
+        refresh_token_duration=data.get(CONF_REFRESH_TOKEN_DURATION),
         auth_profile=data.get(CONF_AUTH_PROFILE, "auto"),
         certfile=certfile,
         keyfile=keyfile,
@@ -195,11 +195,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_entry_tokens(client)
 
     # Start running background thread loop for MQTT client in executor
-    await hass.async_add_executor_job(client.connect_and_run)
-
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {"client": client}
-
     platforms_to_setup = [
         "media_player",
         "sensor",
@@ -215,6 +210,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ):
         platforms_to_setup.append("notify")
 
+    # Start running background thread loop for MQTT client in executor
+    await hass.async_add_executor_job(client.connect_and_run)
+
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = {
+        "client": client,
+        "platforms": platforms_to_setup,
+    }
+
     await hass.config_entries.async_forward_entry_setups(entry, platforms_to_setup)
     entry.async_on_unload(entry.add_update_listener(update_listener))
     return True
@@ -227,12 +231,20 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+    if isinstance(entry_data, dict):
+        platforms = entry_data.get("platforms", PLATFORMS)
+        client = entry_data.get("client")
+    else:
+        platforms = PLATFORMS
+        client = entry_data
+
     unload_ok = await hass.config_entries.async_unload_platforms(
-        entry, PLATFORMS
+        entry, platforms
     )
     if unload_ok:
-        data = hass.data[DOMAIN].pop(entry.entry_id, None)
-        client = data.get("client") if isinstance(data, dict) else data
-        if client:
-            await hass.async_add_executor_job(client.disconnect)
+        data = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+        unloaded_client = data.get("client") if isinstance(data, dict) else (client or data)
+        if unloaded_client:
+            await hass.async_add_executor_job(unloaded_client.disconnect)
     return unload_ok

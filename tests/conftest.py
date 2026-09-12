@@ -70,7 +70,12 @@ if "homeassistant" not in sys.modules:
     # config_entries
     config_entries = types.ModuleType("homeassistant.config_entries")
     class ConfigEntry:
-        pass
+        def async_on_unload(self, func):
+            pass
+        def add_update_listener(self, listener):
+            return lambda: None
+        async def async_start_reauth(self, hass):
+            pass
     class ConfigFlow:
         def __init_subclass__(cls, domain=None, **kwargs):
             super().__init_subclass__(**kwargs)
