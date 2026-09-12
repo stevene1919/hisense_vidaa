@@ -116,7 +116,7 @@ class HisenseVidaaSyncClockButton(HisenseVidaaBaseButton):
     """Button to query and verify the TV's UPnP clock time."""
 
     _attr_translation_key = "sync_clock"
-    _attr_icon = "mdi:clock-sync-outline"
+    _attr_icon = "mdi:clock-outline"
 
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)

@@ -689,6 +689,7 @@ class HisenseTvClient:
             connect_rc[0] = rc
             if rc == 0:
                 _LOGGER.info("Refresh client connected successfully. Requesting new access token.")
+                client.subscribe(self.topicMobiBasepath + "#")
                 client.publish(self.topicTVPSBasepath + "data/gettoken", '{"refreshtoken": ""}')
             else:
                 _LOGGER.error("Refresh client connection failed, rc: %d", rc)

@@ -27,7 +27,7 @@
         "default": "mdi:lan-connect"
       },
       "sync_clock": {
-        "default": "mdi:clock-sync-outline"
+        "default": "mdi:clock-outline"
       }
     }
   },
