@@ -665,10 +665,6 @@ class HisenseTvClient:
         if self.auth_profile == "legacy":
             return False
 
-        if not self.refresh_token:
-            _LOGGER.debug("No refresh token available, skipping refresh.")
-            return False
-
         current_time = get_tv_timestamp(self.ip, timeout=1.0) or int(time.time())
         duration_days = self.access_token_duration or 2
         expiration_time = self.access_token_time + (duration_days * 86400)
@@ -677,6 +673,18 @@ class HisenseTvClient:
             return False
 
         _LOGGER.info("Access token expired or close to expiry, refreshing...")
+
+        # Temporarily stop background main client to avoid client_id collision on TV broker
+        was_connected = self.connected
+        main_client = self.mqtt_client
+        if main_client:
+            try:
+                main_client.loop_stop()
+                main_client.disconnect()
+            except Exception:
+                pass
+            self.connected = False
+
         client = mqtt.Client(client_id=self.client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
         self._apply_tls(client)
         client.username_pw_set(username=self.username, password=self.refresh_token)
@@ -685,28 +693,39 @@ class HisenseTvClient:
         updated_data: dict[str, Any] = {}
         connect_rc = [None]
 
-        def on_refresh_connect(client, userdata, flags, rc):
+        def on_refresh_connect(cl, userdata, flags, rc):
             connect_rc[0] = rc
             if rc == 0:
-                _LOGGER.info("Refresh client connected successfully. Requesting new access token.")
-                client.subscribe(self.topicMobiBasepath + "#")
-                client.publish(self.topicTVPSBasepath + "data/gettoken", '{"refreshtoken": ""}')
+                _LOGGER.info("Refresh client connected successfully. Subscribing to token topics...")
+                cl.subscribe(self.topicMobiBasepath + "#")
+                # Also publish immediately with fallback for brokers that process synchronously
+                payload = json.dumps({"refreshtoken": self.refresh_token or ""})
+                cl.publish(self.topicTVPSBasepath + "data/gettoken", payload)
             else:
                 _LOGGER.error("Refresh client connection failed, rc: %d", rc)
                 lock.set()
 
-        def on_token(client, userdata, msg):
+        def on_refresh_subscribe(cl, userdata, mid, granted_qos):
+            _LOGGER.debug("Refresh client subscribed (mid: %s). Requesting token issuance...", mid)
+            payload = json.dumps({"refreshtoken": self.refresh_token or ""})
+            cl.publish(self.topicTVPSBasepath + "data/gettoken", payload)
+
+        def on_token_msg(cl, userdata, msg):
             nonlocal updated_data
             try:
-                updated_data = json.loads(msg.payload.decode("utf-8"))
+                payload_str = msg.payload.decode("utf-8", errors="ignore")
+                _LOGGER.debug("Refresh client received message on %s: %s", msg.topic, payload_str)
+                data = json.loads(payload_str)
+                if isinstance(data, dict) and "accesstoken" in data:
+                    updated_data = data
+                    lock.set()
             except Exception as e:
                 _LOGGER.error("Error parsing refreshed token: %s", e)
-            lock.set()
 
         client.on_connect = on_refresh_connect
-        client.on_message = None
-        client.on_disconnect = lambda client, userdata, rc: _LOGGER.debug("Refresh client disconnected: %d", rc)
-        client.message_callback_add(self.topicMobiBasepath + "platform_service/data/tokenissuance", on_token)
+        client.on_subscribe = on_refresh_subscribe
+        client.on_message = on_token_msg
+        client.on_disconnect = lambda cl, userdata, rc: _LOGGER.debug("Refresh client disconnected: %d", rc)
 
         try:
             client.connect(self.ip, 36669, 60)
@@ -720,21 +739,29 @@ class HisenseTvClient:
         except Exception as e:
             _LOGGER.error("Unexpected error during refresh client connection: %s", e)
         finally:
-            client.loop_stop()
-            client.disconnect()
+            try:
+                client.loop_stop()
+                client.disconnect()
+            except Exception:
+                pass
 
         if updated_data:
             self.access_token = updated_data["accesstoken"]
-            self.access_token_time = int(updated_data["accesstoken_time"])
-            self.access_token_duration = int(updated_data["accesstoken_duration_day"])
-            self.refresh_token = updated_data["refreshtoken"]
-            self.refresh_token_time = int(updated_data["refreshtoken_time"])
-            self.refresh_token_duration = int(updated_data["refreshtoken_duration_day"])
+            self.access_token_time = int(updated_data.get("accesstoken_time", int(time.time())))
+            self.access_token_duration = int(updated_data.get("accesstoken_duration_day", 2))
+            self.refresh_token = updated_data.get("refreshtoken", self.refresh_token)
+            self.refresh_token_time = int(updated_data.get("refreshtoken_time", int(time.time())))
+            self.refresh_token_duration = int(updated_data.get("refreshtoken_duration_day") or updated_data.get("refresh_token_duration_day", 30))
             self._dispatch_token_refreshed()
+            if was_connected or main_client:
+                self.connect_and_run()
             return True
 
         if connect_rc[0] is not None:
             _LOGGER.error("Failed to refresh token. Connect RC: %d", connect_rc[0])
+
+        if was_connected or main_client:
+            self.connect_and_run()
         return False
 
     def connect_and_run(self) -> None:
