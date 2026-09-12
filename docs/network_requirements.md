@@ -4,15 +4,16 @@ To ensure reliable, long-term operation of the Hisense VIDAA TV integration, ple
 
 ---
 
-## ⚡ 1. Internet & DNS Connectivity
+## ⚡ 1. 100% Local LAN Control & Zero Internet Dependency
 
-> [!IMPORTANT]
-> **Outbound Internet & Unblocked DNS Required During Pairing & Token Renewal**:
+> [!NOTE]
+> **No Cloud or Internet Access Required**:
 > 
-> Hisense smart TVs running VIDAA OS require active outbound internet connectivity and unblocked DNS resolution to authenticate with VIDAA cloud services during the initial 4-digit PIN pairing sequence and subsequent 30-day token renewals.
+> The `hisense_vidaa` integration is **100% local (`iot_class: local_push`)**. Home Assistant connects directly to the TV's embedded MQTT broker on port `36669` over your local subnet (`LAN`).
 > 
-> - If your TV is hosted on an **isolated IoT VLAN** without internet access, or if network ad-blockers (e.g., AdGuard Home, Pi-hole) block Hisense/VIDAA telemetry/auth domains, the TV will reject the pairing request or fail to refresh tokens.
-> - Ensure the TV has unblocked outbound internet access during initial setup and periodic token renewal.
+> - **Local Authentication & Token Renewal**: The initial 4-digit PIN challenge-response handshake and subsequent 30-day token renewals are computed and validated **entirely on the TV hardware itself**. No cloud authentication servers, external API endpoints, or internet bridges are contacted.
+> - **Isolated IoT VLAN Friendly**: The TV can be safely placed on an isolated IoT VLAN without internet access (WAN blocked), provided Home Assistant can reach the TV on port `36669` (and UDP port `9` for Wake-on-LAN).
+> - **Official App vs Integration**: While official Hisense smartphone apps (*RemoteNOW* / *VIDAA Smart Remote*) require internet connectivity for cloud account logins and catalog syncing, the underlying hardware control channel on the TV is local. This integration interacts directly with that local channel, bypassing the cloud entirely.
 
 ---
 
