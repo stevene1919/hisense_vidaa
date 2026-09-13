@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
-    SensorDeviceClass,
     SensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
@@ -42,7 +41,7 @@ async def async_setup_entry(
     client: HisenseTvClient = data["client"]
 
     async_add_entities([
-        HisenseVidaaTokenExpiresSensor(client, entry),
+        HisenseVidaaSessionStatusSensor(client, entry),
         HisenseVidaaAuthProfileSensor(client, entry),
         HisenseVidaaActiveAppSensor(client, entry),
         HisenseVidaaActiveSourceSensor(client, entry),
@@ -85,44 +84,65 @@ class HisenseVidaaBaseSensor(SensorEntity):
         return info
 
 
-class HisenseVidaaTokenExpiresSensor(HisenseVidaaBaseSensor):
-    """Sensor displaying access token expiration timestamp."""
+class HisenseVidaaSessionStatusSensor(HisenseVidaaBaseSensor):
+    """Sensor displaying current authentication and session status."""
 
-    _attr_translation_key = "token_expires_in"
-    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_translation_key = "session_status"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
-        self._attr_unique_id = f"{self._entry_id}_token_expires"
+        self._attr_unique_id = f"{self._entry_id}_session_status"
         self._update_state()
 
-    @property
-    def available(self) -> bool:
-        """Return True only if dynamic token expiration data exists."""
-        return bool(
-            self._client.auth_profile != "legacy"
-            and self._client.access_token_time
-            and self._client.access_token_duration
-        )
-
     async def async_added_to_hass(self) -> None:
+        self._client.register_connected_callback(self._handle_state_change)
+        self._client.register_disconnected_callback(self._handle_state_change)
+        self._client.register_auth_failed_callback(self._handle_auth_failed)
         self._client.register_token_refreshed_callback(self._handle_token_refreshed)
         self._update_state()
 
     async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_connected_callback(self._handle_state_change)
+        self._client.unregister_disconnected_callback(self._handle_state_change)
+        self._client.unregister_auth_failed_callback(self._handle_auth_failed)
         self._client.unregister_token_refreshed_callback(self._handle_token_refreshed)
+
+    def _handle_state_change(self) -> None:
+        self._update_state()
+        self._schedule_state_update()
+
+    def _handle_auth_failed(self, client: HisenseTvClient) -> None:
+        self._attr_native_value = "Reauth Required"
+        self._attr_icon = "mdi:shield-alert"
+        self._schedule_state_update()
 
     def _handle_token_refreshed(self, client: HisenseTvClient) -> None:
         self._update_state()
         self._schedule_state_update()
 
     def _update_state(self) -> None:
-        if self._client.auth_profile != "legacy" and self._client.access_token_time and self._client.access_token_duration:
-            exp_ts = self._client.access_token_time + (self._client.access_token_duration * 86400)
-            self._attr_native_value = datetime.fromtimestamp(exp_ts, tz=UTC)
+        if self._client.connected:
+            self._attr_native_value = "Active"
+            self._attr_icon = "mdi:shield-check"
         else:
-            self._attr_native_value = None
+            self._attr_native_value = "Standby"
+            self._attr_icon = "mdi:shield-lock-outline"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return diagnostic session details."""
+        attrs: dict[str, Any] = {
+            "client_id": self._client.client_id,
+            "auth_profile": self._client.auth_profile,
+            "encryption": "TLSv1.2 (Port 36669)" if self._client.use_ssl else "Unencrypted (Port 36669)",
+            "local_only": True,
+        }
+        if self._client.access_token_time:
+            attrs["paired_at"] = datetime.fromtimestamp(
+                self._client.access_token_time, tz=UTC
+            ).isoformat()
+        return attrs
 
 
 class HisenseVidaaAuthProfileSensor(HisenseVidaaBaseSensor):

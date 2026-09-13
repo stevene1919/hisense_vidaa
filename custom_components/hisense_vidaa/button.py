@@ -35,7 +35,6 @@ async def async_setup_entry(
     client: HisenseTvClient = data["client"]
 
     entities: list[ButtonEntity] = [
-        HisenseVidaaRefreshTokenButton(client, entry),
         HisenseVidaaForceReconnectButton(client, entry),
         HisenseVidaaSyncClockButton(client, entry),
     ]
@@ -71,28 +70,6 @@ class HisenseVidaaBaseButton(ButtonEntity):
             cleaned_mac = self._mac.replace("-", ":").lower()
             info["connections"] = {(CONNECTION_NETWORK_MAC, cleaned_mac)}
         return info
-
-
-class HisenseVidaaRefreshTokenButton(HisenseVidaaBaseButton):
-    """Button to manually trigger synchronous token refresh."""
-
-    _attr_translation_key = "refresh_token"
-    _attr_icon = "mdi:refresh-circle"
-
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
-        super().__init__(client, entry)
-        self._attr_unique_id = f"{self._entry_id}_refresh_token"
-
-    async def async_press(self) -> None:
-        """Handle button press."""
-        _LOGGER.info("Manually triggering token refresh for TV at %s", self._client.ip)
-        success = await self.hass.async_add_executor_job(
-            self._client.check_and_refresh_token, True
-        )
-        if success:
-            _LOGGER.info("Manual token refresh successful for %s", self._client.ip)
-        else:
-            _LOGGER.warning("Manual token refresh failed for %s", self._client.ip)
 
 
 class HisenseVidaaForceReconnectButton(HisenseVidaaBaseButton):

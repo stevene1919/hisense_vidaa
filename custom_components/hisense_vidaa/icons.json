@@ -1,8 +1,8 @@
 {
   "entity": {
     "sensor": {
-      "token_expires_in": {
-        "default": "mdi:clock-end"
+      "session_status": {
+        "default": "mdi:shield-check"
       },
       "auth_profile": {
         "default": "mdi:shield-key-outline"
@@ -20,9 +20,6 @@
       }
     },
     "button": {
-      "refresh_token": {
-        "default": "mdi:refresh-circle"
-      },
       "force_reconnect": {
         "default": "mdi:lan-connect"
       },

@@ -4,10 +4,15 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 
 ## [2.8.1] - 2026-09-13
 
+### Added
+- **SESSION STATUS SENSOR (`sensor.{tv}_session_status`)**: Replaced the misleading "Token Expiry" timestamp countdown with an intuitive diagnostic `Session Status` sensor tracking live authentication state (`Active`, `Standby`, `Reauth Required`) with rich attributes (`paired_at`, `auth_profile`, `encryption`, `client_id`).
+
 ### Fixed
 - **SELECTIVE PLATFORM UNLOAD ON RECONFIGURATION**: `async_unload_entry` now unloads only the dynamically enabled platforms recorded during setup instead of static `PLATFORMS`. This prevents `ValueError: Config entry was never loaded!` crashes when unloading entries where optional platforms (such as `notify` or `remote`) are disabled or not supported, resolving `ConfigEntryState.FAILED_UNLOAD` and preserving the ability to reload and reconfigure options from the UI.
-- **BACKGROUND TOKEN REFRESH SUBSCRIPTION**: Fixed token renewal in `check_and_refresh_token` by adding an explicit subscription to `/remoteapp/mobile/{client}/#` before requesting new tokens, preventing timeouts and ensuring fresh access tokens are captured and persisted.
 - **MATERIAL DESIGN ICON CORRECTION**: Updated Sync Clock button icon to standard `mdi:clock-outline` in `button.py` and `icons.json` to fix broken icon rendering.
+
+### Removed
+- **REDUNDANT REFRESH TOKEN BUTTON**: Removed `button.{tv}_refresh_access_token` since VIDAA firmware does not require or execute periodic manual token rotations during active pairing sessions.
 
 ## [2.8.0] - 2026-09-11
 

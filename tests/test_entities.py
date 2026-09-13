@@ -1,6 +1,5 @@
 """Tests for Hisense VIDAA sensors, binary sensors, and buttons."""
 
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -15,7 +14,6 @@ from custom_components.hisense_vidaa.binary_sensor import (
 )
 from custom_components.hisense_vidaa.button import (
     HisenseVidaaForceReconnectButton,
-    HisenseVidaaRefreshTokenButton,
     HisenseVidaaSyncClockButton,
 )
 from custom_components.hisense_vidaa.media_player import HisenseVidaaMediaPlayer
@@ -27,7 +25,7 @@ from custom_components.hisense_vidaa.sensor import (
     HisenseVidaaActiveSourceSensor,
     HisenseVidaaAudioOutputSensor,
     HisenseVidaaAuthProfileSensor,
-    HisenseVidaaTokenExpiresSensor,
+    HisenseVidaaSessionStatusSensor,
 )
 
 
@@ -66,10 +64,21 @@ def mock_client():
 
 @pytest.mark.anyio
 async def test_sensor_entities(mock_client, mock_entry):
-    s_expires = HisenseVidaaTokenExpiresSensor(mock_client, mock_entry)
-    s_expires._update_state()
-    assert s_expires.native_value == datetime.fromtimestamp(1700000000 + (3600 * 86400), tz=UTC)
+    s_status = HisenseVidaaSessionStatusSensor(mock_client, mock_entry)
+    s_status._update_state()
+    assert s_status.native_value == "Active"
+    assert s_status.extra_state_attributes["encryption"] == "TLSv1.2 (Port 36669)"
+    assert s_status.extra_state_attributes["local_only"] is True
+    assert "paired_at" in s_status.extra_state_attributes
 
+    mock_client.connected = False
+    s_status._update_state()
+    assert s_status.native_value == "Standby"
+
+    s_status._handle_auth_failed(mock_client)
+    assert s_status.native_value == "Reauth Required"
+
+    mock_client.connected = True
     s_profile = HisenseVidaaAuthProfileSensor(mock_client, mock_entry)
     assert s_profile.native_value == "VIDAA 2.0 (Newer Firmware / 2024+)"
 
@@ -111,11 +120,6 @@ def test_binary_sensor_entities(mock_client, mock_entry):
 async def test_button_entities(mock_client, mock_entry, monkeypatch):
     hass = MagicMock(spec=HomeAssistant)
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
-
-    b_refresh = HisenseVidaaRefreshTokenButton(mock_client, mock_entry)
-    b_refresh.hass = hass
-    await b_refresh.async_press()
-    mock_client.check_and_refresh_token.assert_called_once_with(True)
 
     b_reconnect = HisenseVidaaForceReconnectButton(mock_client, mock_entry)
     b_reconnect.hass = hass

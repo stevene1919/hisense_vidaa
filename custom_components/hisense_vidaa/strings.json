@@ -117,8 +117,8 @@
   },
   "entity": {
     "sensor": {
-      "token_expires_in": {
-        "name": "Token Expiry"
+      "session_status": {
+        "name": "Session Status"
       },
       "auth_profile": {
         "name": "Auth Profile"
@@ -139,9 +139,6 @@
       }
     },
     "button": {
-      "refresh_token": {
-        "name": "Refresh Access Token"
-      },
       "force_reconnect": {
         "name": "Force Reconnect"
       },
