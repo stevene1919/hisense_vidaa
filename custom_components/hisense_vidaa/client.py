@@ -766,11 +766,6 @@ class HisenseTvClient:
 
     def connect_and_run(self) -> None:
         """Main client connection loop using the access token as password."""
-        try:
-            self.check_and_refresh_token()
-        except Exception as e:
-            _LOGGER.debug("Could not refresh token during startup (TV may be in standby): %s", e)
-
         if not self.access_token or not self.client_id or not self.username:
             _LOGGER.error("Cannot connect to TV: missing credentials (client_id, username, or access_token)")
             return
