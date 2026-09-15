@@ -187,7 +187,7 @@ def do_report(ip: str, mac: str | None, creds: dict, certfile: str | None, keyfi
         certfile=certfile,
         keyfile=keyfile,
         ca_cert=ca_cert,
-        auth_profile=profile,
+        auth_profile="auto",
         verify_ssl=verify_ssl,
     )
 
@@ -331,6 +331,8 @@ async def do_listen(creds: dict, certfile: str | None, keyfile: str | None, save
     client.on_token_refreshed = on_token_refreshed
     client.on_state_update = lambda data: print(f"📡 [STATE] {json.dumps(data)}")
     client.on_volume_update = lambda data: print(f"🔊 [VOLUME] {json.dumps(data)}")
+    client.on_picture_update = lambda data: print(f"🖼️ [PICTURE] {json.dumps(data)}")
+    client.on_sound_update = lambda data: print(f"🎵 [SOUND] {json.dumps(data)}")
     client.on_sourcelist_update = lambda data: print(f"🔌 [SOURCES] Found {len(data)} inputs")
     client.on_applist_update = lambda data: print(f"📱 [APPS] Found {len(data)} installed apps")
     client.on_disconnected_callback = lambda: print("⚠️ [DISCONNECTED] TV disconnected")

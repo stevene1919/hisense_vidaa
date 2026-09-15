@@ -296,7 +296,7 @@ async def async_setup_entry(
     mfr = config_entry.data.get(CONF_MANUFACTURER, "Hisense")
     sw_ver = config_entry.data.get(CONF_SW_VERSION)
 
-    entities = [
+    entities: list[SelectEntity] = [
         HisenseVidaaAudioOutputSelect(
             client=client,
             mac=mac,
@@ -306,23 +306,33 @@ async def async_setup_entry(
             manufacturer=mfr,
             sw_version=sw_ver,
         ),
-        HisenseVidaaPictureModeSelect(
-            client=client,
-            mac=mac,
-            entry_id=config_entry.entry_id,
-            name=name,
-            model=model,
-            manufacturer=mfr,
-            sw_version=sw_ver,
-        ),
-        HisenseVidaaSoundModeSelect(
-            client=client,
-            mac=mac,
-            entry_id=config_entry.entry_id,
-            name=name,
-            model=model,
-            manufacturer=mfr,
-            sw_version=sw_ver,
-        ),
     ]
+
+    # Only instantiate Picture Mode and Sound Mode if TV advertises dynamic settings support
+    if hasattr(client, "picture_settings") and client.picture_settings:
+        entities.append(
+            HisenseVidaaPictureModeSelect(
+                client=client,
+                mac=mac,
+                entry_id=config_entry.entry_id,
+                name=name,
+                model=model,
+                manufacturer=mfr,
+                sw_version=sw_ver,
+            )
+        )
+
+    if hasattr(client, "sound_settings") and client.sound_settings:
+        entities.append(
+            HisenseVidaaSoundModeSelect(
+                client=client,
+                mac=mac,
+                entry_id=config_entry.entry_id,
+                name=name,
+                model=model,
+                manufacturer=mfr,
+                sw_version=sw_ver,
+            )
+        )
+
     async_add_entities(entities)

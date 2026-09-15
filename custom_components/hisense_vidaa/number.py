@@ -264,33 +264,38 @@ async def async_setup_entry(
     mfr = config_entry.data.get(CONF_MANUFACTURER, "Hisense")
     sw_ver = config_entry.data.get(CONF_SW_VERSION)
 
-    entities = [
-        HisenseVidaaBacklightNumber(
-            client=client,
-            mac=mac,
-            entry_id=config_entry.entry_id,
-            name=name,
-            model=model,
-            manufacturer=mfr,
-            sw_version=sw_ver,
-        ),
-        HisenseVidaaBrightnessNumber(
-            client=client,
-            mac=mac,
-            entry_id=config_entry.entry_id,
-            name=name,
-            model=model,
-            manufacturer=mfr,
-            sw_version=sw_ver,
-        ),
-        HisenseVidaaContrastNumber(
-            client=client,
-            mac=mac,
-            entry_id=config_entry.entry_id,
-            name=name,
-            model=model,
-            manufacturer=mfr,
-            sw_version=sw_ver,
-        ),
-    ]
+    entities: list[NumberEntity] = []
+
+    # Only instantiate picture calibration sliders if TV advertises dynamic settings support
+    if hasattr(client, "picture_settings") and client.picture_settings:
+        entities.extend([
+            HisenseVidaaBacklightNumber(
+                client=client,
+                mac=mac,
+                entry_id=config_entry.entry_id,
+                name=name,
+                model=model,
+                manufacturer=mfr,
+                sw_version=sw_ver,
+            ),
+            HisenseVidaaBrightnessNumber(
+                client=client,
+                mac=mac,
+                entry_id=config_entry.entry_id,
+                name=name,
+                model=model,
+                manufacturer=mfr,
+                sw_version=sw_ver,
+            ),
+            HisenseVidaaContrastNumber(
+                client=client,
+                mac=mac,
+                entry_id=config_entry.entry_id,
+                name=name,
+                model=model,
+                manufacturer=mfr,
+                sw_version=sw_ver,
+            ),
+        ])
+
     async_add_entities(entities)
