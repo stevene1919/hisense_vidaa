@@ -546,13 +546,18 @@ class HisenseTvClient:
                 )
                 return
 
-            if rc in (4, 5) and self.refresh_token:
-                current_time = time.time()
-                with self._refresh_lock:
-                    should_refresh = not self._refreshing_token and (current_time - self._last_refresh_attempt > 10)
-                if should_refresh:
-                    _LOGGER.info("Authentication failed on connect. Refreshing token in background...")
-                    threading.Thread(target=self._refresh_token_and_update_creds, daemon=True).start()
+            if rc in (4, 5):
+                if self.refresh_token:
+                    current_time = time.time()
+                    with self._refresh_lock:
+                        should_refresh = not self._refreshing_token and (current_time - self._last_refresh_attempt > 15)
+                    if should_refresh:
+                        _LOGGER.info("Authentication failed on connect. Refreshing token in background...")
+                        threading.Thread(target=self._refresh_token_and_update_creds, daemon=True).start()
+                else:
+                    with contextlib.suppress(Exception):
+                        client.loop_stop()
+                    self._dispatch_auth_failed()
 
     def _refresh_token_and_update_creds(self) -> None:
         with self._refresh_lock:
@@ -568,10 +573,17 @@ class HisenseTvClient:
                     self.mqtt_client.username_pw_set(username=self.username, password=self.access_token)
                     self.mqtt_client.reconnect()
             else:
-                _LOGGER.warning("Token refresh failed. Waiting before next attempt.")
+                _LOGGER.warning("Token refresh failed (token expired on TV). Stopping auto-reconnect.")
+                if self.mqtt_client:
+                    with contextlib.suppress(Exception):
+                        self.mqtt_client.loop_stop()
                 self._dispatch_auth_failed()
         except Exception as e:
             _LOGGER.error("Error during background token refresh: %s", e)
+            if self.mqtt_client:
+                with contextlib.suppress(Exception):
+                    self.mqtt_client.loop_stop()
+            self._dispatch_auth_failed()
         finally:
             with self._refresh_lock:
                 self._refreshing_token = False
@@ -695,6 +707,8 @@ class HisenseTvClient:
     async def _async_start_auth_internal(self, use_new_auth: bool = False) -> None:
         loop = asyncio.get_running_loop()
         self._loop = loop
+        self.disconnect()
+        await asyncio.sleep(0.2)
         tv_ts = await loop.run_in_executor(None, get_tv_timestamp, self.ip, 1.5)
         self.generate_initial_creds(use_new_auth=use_new_auth, timestamp=tv_ts)
         self.mqtt_client = await loop.run_in_executor(

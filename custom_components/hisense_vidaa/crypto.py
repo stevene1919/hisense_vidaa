@@ -171,14 +171,14 @@ def resolve_ca_certificate(
         return os.path.abspath(ca_path)
 
     if search_dirs is None:
+        component_dir = os.path.dirname(os.path.abspath(__file__))
         search_dirs = [
             "/config/ssl",
             "/ssl",
             "/config/certs",
             "/config",
-            "/opt/usb/homeassistant/ssl",
-            "/opt/usb/homeassistant/certs",
-            "/opt/usb/homeassistant",
+            os.path.join(component_dir, "ssl"),
+            os.path.join(component_dir, "certs"),
         ]
 
     ca_names = [
@@ -212,14 +212,14 @@ def resolve_certificates(
         tuple[certfile_path, keyfile_path]
     """
     if search_dirs is None:
+        component_dir = os.path.dirname(os.path.abspath(__file__))
         search_dirs = [
             "/config/ssl",
             "/ssl",
             "/config/certs",
             "/config",
-            "/opt/usb/homeassistant/ssl",
-            "/opt/usb/homeassistant/certs",
-            "/opt/usb/homeassistant",
+            os.path.join(component_dir, "ssl"),
+            os.path.join(component_dir, "certs"),
         ]
 
     # Handle direct PKCS#12 bundle input
