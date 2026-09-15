@@ -6,7 +6,6 @@ from typing import Any
 
 from homeassistant.components.remote import RemoteEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -54,24 +53,28 @@ class HisenseVidaaRemote(RemoteEntity):
         self._model = model or "VIDAA TV"
         self._manufacturer = manufacturer or "Hisense"
         self._sw_version = sw_version
-        self._state = STATE_ON if getattr(client, "connected", False) else STATE_OFF
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks and query initial state when entity is added to hass."""
-        self._client.register_connected_callback(self._handle_connected)
-        self._client.register_state_callback(self._handle_state_update)
-        self._client.register_disconnected_callback(self._handle_disconnected)
+        self._client.register_connected_callback(self._handle_update)
+        self._client.register_state_callback(self._handle_update)
+        self._client.register_volume_callback(self._handle_update)
+        self._client.register_sourcelist_callback(self._handle_update)
+        self._client.register_applist_callback(self._handle_update)
+        self._client.register_disconnected_callback(self._handle_update)
 
         # Sync state immediately if client is already connected
         if getattr(self._client, "connected", False):
-            self._state = STATE_ON
             await self.hass.async_add_executor_job(self._client.query_initial_state)
 
     async def async_will_remove_from_hass(self) -> None:
         """Unregister callbacks when entity is removed."""
-        self._client.unregister_connected_callback(self._handle_connected)
-        self._client.unregister_state_callback(self._handle_state_update)
-        self._client.unregister_disconnected_callback(self._handle_disconnected)
+        self._client.unregister_connected_callback(self._handle_update)
+        self._client.unregister_state_callback(self._handle_update)
+        self._client.unregister_volume_callback(self._handle_update)
+        self._client.unregister_sourcelist_callback(self._handle_update)
+        self._client.unregister_applist_callback(self._handle_update)
+        self._client.unregister_disconnected_callback(self._handle_update)
 
     @property
     def unique_id(self) -> str:
@@ -96,7 +99,7 @@ class HisenseVidaaRemote(RemoteEntity):
     @property
     def is_on(self) -> bool:
         """Return true if TV is on."""
-        return self._client.connected and self._state != STATE_OFF
+        return bool(self._client and self._client.connected and self._client.is_on)
 
     @property
     def available(self) -> bool:
@@ -125,7 +128,7 @@ class HisenseVidaaRemote(RemoteEntity):
         if self._client.connected:
             # If the TV is in fake_sleep_0 (screen off / standby), send KEY_POWER to wake it.
             # If it is already ON, do NOT send KEY_POWER because KEY_POWER is a toggle and will turn it off!
-            if self._state == STATE_OFF:
+            if not self._client.is_on:
                 _LOGGER.debug("TV connected in standby/fake sleep. Sending KEY_POWER to wake display")
                 self._client.send_key("KEY_POWER")
             else:
@@ -133,7 +136,7 @@ class HisenseVidaaRemote(RemoteEntity):
         else:
             await self.hass.async_add_executor_job(self._send_power_reconnect)
 
-        self._state = STATE_ON
+        self._client.is_on = True
         self.async_write_ha_state()
 
     def _send_power_reconnect(self) -> None:
@@ -154,9 +157,9 @@ class HisenseVidaaRemote(RemoteEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the TV off."""
-        if self._client.connected and self._state != STATE_OFF:
+        if self._client.connected and self._client.is_on:
             self._client.send_key("KEY_POWER")
-        self._state = STATE_OFF
+        self._client.is_on = False
         self.async_write_ha_state()
 
     async def async_send_command(self, command: Iterable[str], **kwargs: Any) -> None:
@@ -186,31 +189,28 @@ class HisenseVidaaRemote(RemoteEntity):
                 if delay_secs > 0:
                     await asyncio.sleep(delay_secs)
 
-    def _handle_connected(self) -> None:
-        """Handle MQTT connection established."""
-        self._state = STATE_ON
+    def _handle_update(self, *args: Any) -> None:
+        """Handle state update from TV."""
         if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
             self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
         elif self.hass:
             self.schedule_update_ha_state()
+
+    def _handle_connected(self, *args: Any) -> None:
+        self._handle_update()
+
+    def _handle_disconnected(self, *args: Any) -> None:
+        self._handle_update()
 
     def _handle_state_update(self, data: dict[str, Any]) -> None:
-        statetype = data.get("statetype")
-        if statetype == "fake_sleep_0":
-            self._state = STATE_OFF
-        else:
-            self._state = STATE_ON
-        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
-            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
-        elif self.hass:
-            self.schedule_update_ha_state()
-
-    def _handle_disconnected(self) -> None:
-        self._state = STATE_OFF
-        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
-            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
-        elif self.hass:
-            self.schedule_update_ha_state()
+        if isinstance(data, dict):
+            statetype = data.get("statetype")
+            if statetype == "fake_sleep_0":
+                if self._client:
+                    self._client.is_on = False
+            elif self._client:
+                self._client.is_on = True
+        self._handle_update()
 
 
 async def async_setup_entry(

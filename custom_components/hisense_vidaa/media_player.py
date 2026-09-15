@@ -118,9 +118,9 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 
     @property
     def state(self) -> str:
-        if not self._client.connected:
+        if not self._client.connected or not self._client.is_on:
             return STATE_OFF
-        return self._state
+        return STATE_ON
 
     @property
     def available(self) -> bool:
@@ -237,7 +237,7 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 
         # Send KEY_POWER via MQTT to wake/turn on the TV if in standby/fake sleep.
         if self._client.connected:
-            if self._state == STATE_OFF:
+            if not self._client.is_on:
                 _LOGGER.debug("TV MQTT connected in standby/fake_sleep. Sending KEY_POWER to wake screen")
                 self._client.send_key("KEY_POWER")
             else:
@@ -263,13 +263,13 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 
             threading.Thread(target=reconnect_and_send, daemon=True).start()
 
-        self._state = STATE_ON
+        self._client.is_on = True
         self.schedule_update_ha_state()
 
     def turn_off(self) -> None:
-        if self._client.connected and self._state != STATE_OFF:
+        if self._client.connected and self._client.is_on:
             self._client.send_key("KEY_POWER")
-        self._state = STATE_OFF
+        self._client.is_on = False
         self.schedule_update_ha_state()
 
     def set_volume_level(self, volume: float) -> None:
@@ -355,11 +355,15 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         _LOGGER.debug("TV State updated: %s", statetype)
 
         if statetype == "fake_sleep_0":
+            if self._client:
+                self._client.is_on = False
             self._state = STATE_OFF
             self._connected_device = None
             self._channel_name = None
             self._channel_num = None
         else:
+            if self._client:
+                self._client.is_on = True
             was_off = (self._state == STATE_OFF)
             self._state = STATE_ON
             if statetype == "sourceswitch":
@@ -387,6 +391,8 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             self.schedule_update_ha_state()
 
     def _handle_volume_update(self, data: dict[str, Any]) -> None:
+        if self._client:
+            self._client.is_on = True
         self._state = STATE_ON
         vol_type = data.get("volume_type")
         if vol_type is not None:
@@ -404,6 +410,8 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
     def _handle_sourcelist_update(self, data: list[dict[str, Any]]) -> None:
         if not data:
             return
+        if self._client:
+            self._client.is_on = True
         self._source_dict = {item.get("sourcename"): item for item in data if item.get("sourcename")}
         if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
             self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
@@ -413,6 +421,8 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
     def _handle_applist_update(self, data: list[dict[str, Any]]) -> None:
         if not data:
             return
+        if self._client:
+            self._client.is_on = True
         self._app_list = data
         self._app_dict = {item.get("name"): item for item in data if item.get("name")}
         if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
@@ -421,6 +431,8 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             self.schedule_update_ha_state()
 
     def _handle_connected(self) -> None:
+        if self._client:
+            self._client.is_on = True
         self._state = STATE_ON
         if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
             self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
@@ -428,6 +440,8 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             self.schedule_update_ha_state()
 
     def _handle_disconnected(self) -> None:
+        if self._client:
+            self._client.is_on = False
         self._state = STATE_OFF
         if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
             self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)

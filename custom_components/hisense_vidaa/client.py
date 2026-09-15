@@ -112,6 +112,7 @@ class HisenseTvClient:
 
         self.mqtt_client: mqtt.Client | None = None
         self.connected = False
+        self.is_on = False
         self._callbacks: dict[str, list[Callable]] = defaultdict(list)
 
         self._auth_future: asyncio.Future | None = None
@@ -281,11 +282,20 @@ class HisenseTvClient:
         self._dispatch("auth_failed", self)
 
     def _dispatch_connected(self) -> None:
+        self.is_on = True
         self._dispatch("connected")
+
+    def _dispatch_disconnected(self) -> None:
+        self.is_on = False
+        self._dispatch("disconnected")
 
     def _dispatch_state_update(self, data: Any) -> None:
         if isinstance(data, dict):
             statetype = data.get("statetype")
+            if statetype == "fake_sleep_0":
+                self.is_on = False
+            else:
+                self.is_on = True
             if statetype == "sourceswitch":
                 self.current_source = data.get("sourcename") or data.get("displayname") or data.get("sourceid")
             elif statetype in ("livetv", "tv"):
@@ -295,16 +305,21 @@ class HisenseTvClient:
         self._dispatch("state", data)
 
     def _dispatch_volume_update(self, data: Any) -> None:
+        self.is_on = True
         self._dispatch("volume", data)
 
     def _dispatch_sourcelist_update(self, data: Any) -> None:
         if isinstance(data, list):
             self.sources = data
+            if data:
+                self.is_on = True
         self._dispatch("sourcelist", data)
 
     def _dispatch_applist_update(self, data: Any) -> None:
         if isinstance(data, list):
             self.apps = data
+            if data:
+                self.is_on = True
         self._dispatch("applist", data)
 
     def _dispatch_picture_update(self, data: Any) -> None:
