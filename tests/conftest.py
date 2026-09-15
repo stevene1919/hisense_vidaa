@@ -254,6 +254,37 @@ if "homeassistant" not in sys.modules:
     components.select = select
     sys.modules["homeassistant.components.select"] = select
 
+    # number
+    number = types.ModuleType("homeassistant.components.number")
+    class NumberMode:
+        AUTO = "auto"
+        BOX = "box"
+        SLIDER = "slider"
+    class NumberEntity:
+        _attr_has_entity_name = True
+        _attr_should_poll = False
+        def schedule_update_ha_state(self): pass
+        def async_write_ha_state(self): pass
+        @property
+        def native_value(self):
+            return getattr(self, "_attr_native_value", None)
+        @property
+        def native_min_value(self):
+            return getattr(self, "_attr_native_min_value", 0.0)
+        @property
+        def native_max_value(self):
+            return getattr(self, "_attr_native_max_value", 100.0)
+        @property
+        def native_step(self):
+            return getattr(self, "_attr_native_step", 1.0)
+        @property
+        def mode(self):
+            return getattr(self, "_attr_mode", NumberMode.AUTO)
+    number.NumberEntity = NumberEntity
+    number.NumberMode = NumberMode
+    components.number = number
+    sys.modules["homeassistant.components.number"] = number
+
     ha.components = components
     sys.modules["homeassistant.components"] = components
 

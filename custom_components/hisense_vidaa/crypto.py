@@ -170,21 +170,14 @@ def resolve_ca_certificate(
     if ca_path and os.path.isfile(ca_path):
         return os.path.abspath(ca_path)
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    repo_root = os.path.dirname(os.path.dirname(script_dir))
-
     if search_dirs is None:
         search_dirs = [
-            os.path.join(script_dir, "certs"),
-            os.path.join(repo_root, "certs"),
-            os.path.join(repo_root, "hisense_vidaa_certs"),
-            os.path.expanduser("~/.config/hisense_vidaa/certs"),
-            "/config/certs",
             "/config/ssl",
-            "/config",
             "/ssl",
-            "/opt/usb/homeassistant/certs",
+            "/config/certs",
+            "/config",
             "/opt/usb/homeassistant/ssl",
+            "/opt/usb/homeassistant/certs",
             "/opt/usb/homeassistant",
         ]
 
@@ -218,21 +211,14 @@ def resolve_certificates(
     Returns:
         tuple[certfile_path, keyfile_path]
     """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    repo_root = os.path.dirname(os.path.dirname(script_dir))
-
     if search_dirs is None:
         search_dirs = [
-            os.path.join(script_dir, "certs"),
-            os.path.join(repo_root, "certs"),
-            os.path.join(repo_root, "hisense_vidaa_certs"),
-            os.path.expanduser("~/.config/hisense_vidaa/certs"),
-            "/config/certs",
             "/config/ssl",
-            "/config",
             "/ssl",
-            "/opt/usb/homeassistant/certs",
+            "/config/certs",
+            "/config",
             "/opt/usb/homeassistant/ssl",
+            "/opt/usb/homeassistant/certs",
             "/opt/usb/homeassistant",
         ]
 
@@ -354,7 +340,7 @@ def resolve_certificates(
                     if extracted:
                         return extracted
 
-    default_cert = os.path.join(script_dir, "certs", "cert.pem")
-    default_key = os.path.join(script_dir, "certs", "key.pem")
+    default_cert = "/config/ssl/hisense.crt"
+    default_key = "/config/ssl/hisense.key"
 
     return resolved_cert or default_cert, resolved_key or default_key

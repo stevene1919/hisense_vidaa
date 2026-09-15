@@ -1,11 +1,13 @@
 """Client for connecting to Hisense VIDAA TV MQTT broker over TLS."""
 
+from __future__ import annotations
+
 import asyncio
+import contextlib
 import ipaddress
 import json
 import logging
 import os
-import re
 import socket
 import ssl
 import threading
@@ -17,7 +19,6 @@ from typing import Any
 import paho.mqtt.client as mqtt
 
 try:
-    from .const import KEY_ALIASES
     from .crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
     from .discovery import (
         get_device_fingerprint as discover_device_fingerprint,
@@ -26,8 +27,18 @@ try:
         probe_tv_auth_methods,
         test_tv_ssl_connection,
     )
+    from .navigation import get_next_cycled_source, match_app, resolve_command_key, resolve_source
+    from .settings import (
+        DEFAULT_MENU_ID_BACKLIGHT,
+        DEFAULT_MENU_ID_BRIGHTNESS,
+        DEFAULT_MENU_ID_CONTRAST,
+        DEFAULT_MENU_ID_PICTURE_MODE,
+        DEFAULT_MENU_ID_SOUND_MODE,
+        SettingMenuItem,
+        find_menu_item_by_name,
+        parse_settings_payload,
+    )
 except ImportError:
-    from const import KEY_ALIASES
     from crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
     from discovery import (
         get_device_fingerprint as discover_device_fingerprint,
@@ -35,6 +46,17 @@ except ImportError:
         ping_tv,
         probe_tv_auth_methods,
         test_tv_ssl_connection,
+    )
+    from navigation import get_next_cycled_source, match_app, resolve_command_key, resolve_source
+    from settings import (
+        DEFAULT_MENU_ID_BACKLIGHT,
+        DEFAULT_MENU_ID_BRIGHTNESS,
+        DEFAULT_MENU_ID_CONTRAST,
+        DEFAULT_MENU_ID_PICTURE_MODE,
+        DEFAULT_MENU_ID_SOUND_MODE,
+        SettingMenuItem,
+        find_menu_item_by_name,
+        parse_settings_payload,
     )
 
 _LOGGER = logging.getLogger(__name__)
@@ -111,10 +133,21 @@ class HisenseTvClient:
         self.current_source: str | None = None
         self.has_notifications: bool = False
 
+        # Picture and Sound Settings state
+        self.picture_settings: dict[int, SettingMenuItem] = {}
+        self.sound_settings: dict[int, SettingMenuItem] = {}
+        self.picture_mode: str | None = None
+        self.backlight: int | None = None
+        self.brightness: int | None = None
+        self.contrast: int | None = None
+        self.sound_mode: str | None = None
+
         if self.client_id:
             self.define_topic_paths()
 
-    # Callback properties and registrations
+    # --------------------------------------------------------------------------
+    # Callback Registry & Dispatch
+    # --------------------------------------------------------------------------
     def _register_callback(self, event: str, cb: Callable) -> None:
         if cb and cb not in self._callbacks[event]:
             self._callbacks[event].append(cb)
@@ -232,6 +265,18 @@ class HisenseTvClient:
     def unregister_auth_failed_callback(self, cb: Callable) -> None:
         self._unregister_callback("auth_failed", cb)
 
+    def register_picture_callback(self, cb: Callable) -> None:
+        self._register_callback("picture", cb)
+
+    def unregister_picture_callback(self, cb: Callable) -> None:
+        self._unregister_callback("picture", cb)
+
+    def register_sound_callback(self, cb: Callable) -> None:
+        self._register_callback("sound", cb)
+
+    def unregister_sound_callback(self, cb: Callable) -> None:
+        self._unregister_callback("sound", cb)
+
     def _dispatch_auth_failed(self) -> None:
         self._dispatch("auth_failed", self)
 
@@ -262,23 +307,80 @@ class HisenseTvClient:
             self.apps = data
         self._dispatch("applist", data)
 
+    def _dispatch_picture_update(self, data: Any) -> None:
+        if isinstance(data, dict):
+            if "menu_info" in data or "menu_list" in data or "items" in data:
+                self.picture_settings = parse_settings_payload(data)
+                pm_item = find_menu_item_by_name(self.picture_settings, "Picture Mode", DEFAULT_MENU_ID_PICTURE_MODE)
+                if pm_item and pm_item.value:
+                    self.picture_mode = str(pm_item.value)
+                bl_item = find_menu_item_by_name(self.picture_settings, "Backlight", DEFAULT_MENU_ID_BACKLIGHT)
+                if bl_item and bl_item.value is not None:
+                    with contextlib.suppress(ValueError, TypeError):
+                        self.backlight = int(bl_item.value)
+                br_item = find_menu_item_by_name(self.picture_settings, "Brightness", DEFAULT_MENU_ID_BRIGHTNESS)
+                if br_item and br_item.value is not None:
+                    with contextlib.suppress(ValueError, TypeError):
+                        self.brightness = int(br_item.value)
+                ct_item = find_menu_item_by_name(self.picture_settings, "Contrast", DEFAULT_MENU_ID_CONTRAST)
+                if ct_item and ct_item.value is not None:
+                    with contextlib.suppress(ValueError, TypeError):
+                        self.contrast = int(ct_item.value)
+            elif data.get("action") == "notify_value_changed":
+                try:
+                    menu_id = int(data.get("menu_id", 0))
+                    menu_val = data.get("menu_value")
+                    if menu_id in self.picture_settings:
+                        self.picture_settings[menu_id].value = menu_val
+                    if menu_id == DEFAULT_MENU_ID_PICTURE_MODE or "picture" in str(self.picture_settings.get(menu_id, "")).lower():
+                        self.picture_mode = str(menu_val)
+                    elif menu_id == DEFAULT_MENU_ID_BACKLIGHT or "backlight" in str(self.picture_settings.get(menu_id, "")).lower():
+                        with contextlib.suppress(ValueError, TypeError):
+                            self.backlight = int(menu_val)
+                except Exception as e:
+                    _LOGGER.debug("Error updating notify_value_changed for picture: %s", e)
+        self._dispatch("picture", data)
+
+    def _dispatch_sound_update(self, data: Any) -> None:
+        if isinstance(data, dict):
+            if "menu_info" in data or "menu_list" in data or "items" in data:
+                self.sound_settings = parse_settings_payload(data)
+                sm_item = find_menu_item_by_name(self.sound_settings, "Sound Mode", DEFAULT_MENU_ID_SOUND_MODE)
+                if sm_item and sm_item.value:
+                    self.sound_mode = str(sm_item.value)
+            elif data.get("action") == "notify_value_changed":
+                try:
+                    menu_id = int(data.get("menu_id", 0))
+                    menu_val = data.get("menu_value")
+                    if menu_id in self.sound_settings:
+                        self.sound_settings[menu_id].value = menu_val
+                    if menu_id == DEFAULT_MENU_ID_SOUND_MODE or "sound" in str(self.sound_settings.get(menu_id, "")).lower():
+                        self.sound_mode = str(menu_val)
+                except Exception as e:
+                    _LOGGER.debug("Error updating notify_value_changed for sound: %s", e)
+        self._dispatch("sound", data)
+
     def _dispatch_disconnected(self) -> None:
+        self.connected = False
         self._dispatch("disconnected")
 
     def _dispatch_token_refreshed(self) -> None:
         self._dispatch("token_refreshed", self)
 
+    # --------------------------------------------------------------------------
+    # Discovery, Fingerprinting & Network Wrappers
+    # --------------------------------------------------------------------------
     def validate_certificates(self) -> None:
         """Verifies that the SSL certificate and private key files exist and are readable."""
         if not self.certfile or not os.path.isfile(self.certfile):
             raise FileNotFoundError(
                 f"SSL Certificate file not found: '{self.certfile}'. "
-                "Please place certificate files in 'certs/' or specify --cert."
+                "Please place certificate files in '/config/ssl' or specify --cert."
             )
         if not self.keyfile or not os.path.isfile(self.keyfile):
             raise FileNotFoundError(
                 f"SSL Private Key file not found: '{self.keyfile}'. "
-                "Please place key files in 'certs/' or specify --key."
+                "Please place key files in '/config/ssl' or specify --key."
             )
 
     def test_ssl_connection(self, timeout: float = 5.0) -> dict[str, Any]:
@@ -324,6 +426,9 @@ class HisenseTvClient:
             timeout=timeout,
         )
 
+    # --------------------------------------------------------------------------
+    # Topic Configuration & Credentials Generation
+    # --------------------------------------------------------------------------
     def define_topic_paths(self) -> None:
         """Sets up topic paths for the specific client ID."""
         self.topicTVUIBasepath = f"/remoteapp/tv/ui_service/{self.client_id}/"
@@ -353,6 +458,9 @@ class HisenseTvClient:
             self.username,
         )
 
+    # --------------------------------------------------------------------------
+    # MQTT Setup & Message Handlers
+    # --------------------------------------------------------------------------
     def _apply_tls(self, client: mqtt.Client) -> None:
         """Applies TLS certificate configuration to an MQTT client instance."""
         if not self.use_ssl or not self.certfile or not self.keyfile:
@@ -366,7 +474,7 @@ class HisenseTvClient:
                 cert_reqs=ssl.CERT_REQUIRED,
                 tls_version=ssl.PROTOCOL_TLS,
             )
-            client.tls_insecure_set(True)  # Hostname validation skipped as TV cert CN is RemoteCA
+            client.tls_insecure_set(True)
         else:
             client.tls_set(
                 ca_certs=None,
@@ -423,6 +531,10 @@ class HisenseTvClient:
                     (self.topicMobiBasepath + "platform_service/data/gettvinfo", 0),
                     (self.topicMobiBasepath + "platform_service/data/getdeviceinfo", 0),
                     (self.topicMobiBasepath + "ui_service/data/capability", 0),
+                    (self.topicMobiBasepath + "platform_service/data/picturesetting", 0),
+                    (self.topicBrcsBasepath + "platform_service/data/picturesetting", 0),
+                    (self.topicMobiBasepath + "platform_service/data/soundsetting", 0),
+                    (self.topicBrcsBasepath + "platform_service/data/soundsetting", 0),
                 ])
                 threading.Timer(0.5, self.query_initial_state).start()
         else:
@@ -482,7 +594,10 @@ class HisenseTvClient:
             self._safe_set_future_result(self._auth_future, payload)
         elif self._auth_code_future and topic == self.topicMobiBasepath + "ui_service/data/authenticationcode":
             self._safe_set_future_result(self._auth_code_future, payload)
-        elif self._token_future and topic == self.topicMobiBasepath + "platform_service/data/tokenissuance":
+        elif self._token_future and topic in (
+            self.topicMobiBasepath + "platform_service/data/tokenissuance",
+            self.topicMobiBasepath + "platform_service/data/gettoken",
+        ):
             self._safe_set_future_result(self._token_future, payload)
 
         # Handle state push callbacks
@@ -520,6 +635,24 @@ class HisenseTvClient:
                 self._dispatch_applist_update(data)
             except Exception as e:
                 _LOGGER.error("Error parsing applist: %s", e)
+        elif topic in (
+            self.topicMobiBasepath + "platform_service/data/picturesetting",
+            self.topicBrcsBasepath + "platform_service/data/picturesetting",
+        ):
+            try:
+                data = json.loads(payload)
+                self._dispatch_picture_update(data)
+            except Exception as e:
+                _LOGGER.error("Error parsing picturesetting: %s", e)
+        elif topic in (
+            self.topicMobiBasepath + "platform_service/data/soundsetting",
+            self.topicBrcsBasepath + "platform_service/data/soundsetting",
+        ):
+            try:
+                data = json.loads(payload)
+                self._dispatch_sound_update(data)
+            except Exception as e:
+                _LOGGER.error("Error parsing soundsetting: %s", e)
         elif topic == self.topicMobiBasepath + "ui_service/data/capability":
             try:
                 data = json.loads(payload)
@@ -531,6 +664,9 @@ class HisenseTvClient:
             except Exception as e:
                 _LOGGER.debug("Error parsing capability descriptor: %s", e)
 
+    # --------------------------------------------------------------------------
+    # Authentication & Pairing Handshake
+    # --------------------------------------------------------------------------
     async def async_start_auth(self) -> None:
         """Starts the authentication handshake and triggers the TV to show PIN."""
         if self.auth_profile == "legacy":
@@ -593,7 +729,6 @@ class HisenseTvClient:
         # Allow broker time to register subscriptions before publishing
         await asyncio.sleep(0.5)
 
-        # Publish connection message to trigger PIN with retry if TV dropped first frame
         for attempt in range(3):
             self.mqtt_client.publish(
                 self.topicTVUIBasepath + "actions/vidaa_app_connect",
@@ -637,7 +772,6 @@ class HisenseTvClient:
         finally:
             self._auth_code_future = None
 
-        # Request tokens
         self._token_future = loop.create_future()
         self.mqtt_client.publish(self.topicTVPSBasepath + "data/gettoken", '{"refreshtoken": ""}')
         self.mqtt_client.publish(self.topicTVUIBasepath + "actions/authenticationcodeclose")
@@ -653,28 +787,38 @@ class HisenseTvClient:
             self.refresh_token_time = int(token_data["refreshtoken_time"])
             self.refresh_token_duration = int(token_data["refreshtoken_duration_day"])
 
+            _LOGGER.info(
+                "Pairing successful! Received access_token (valid %d days) and refresh_token (valid %d days)",
+                self.access_token_duration,
+                self.refresh_token_duration,
+            )
             return token_data
         except TimeoutError:
-            raise Exception("Timeout waiting for tokens")
+            raise Exception("Timeout waiting for token issuance from TV")
         finally:
             self._token_future = None
-            self.disconnect()
 
     def check_and_refresh_token(self, force: bool = False) -> bool:
-        """Checks if access token is expired (valid for 2 days) and refreshes it synchronously."""
-        if self.auth_profile == "legacy":
+        """Checks access token expiration and triggers refresh via refresh token if necessary."""
+        if not self.refresh_token:
             return False
 
-        current_time = get_tv_timestamp(self.ip, timeout=1.0) or int(time.time())
-        duration_days = self.access_token_duration or 2
-        expiration_time = self.access_token_time + (duration_days * 86400)
+        now = int(time.time())
+        token_expiration = self.access_token_time + (self.access_token_duration * 86400)
+        time_remaining = token_expiration - now
 
-        if not force and current_time <= expiration_time - 300:
+        if force or (self.access_token and time_remaining < 43200) or not self.access_token:
+            _LOGGER.info("Access token expired or expiring soon (remaining: %ds). Refreshing...", time_remaining)
+            return self.refresh_tokens()
+
+        return False
+
+    def refresh_tokens(self) -> bool:
+        """Connects with the refresh token to obtain a fresh access token."""
+        if not self.refresh_token or not self.client_id or not self.username:
+            _LOGGER.warning("Cannot refresh token: missing refresh_token, client_id, or username")
             return False
 
-        _LOGGER.info("Access token expired or close to expiry, refreshing...")
-
-        # Temporarily stop background main client to avoid client_id collision on TV broker
         was_connected = self.connected
         main_client = self.mqtt_client
         if main_client:
@@ -683,6 +827,7 @@ class HisenseTvClient:
                 main_client.disconnect()
             except Exception:
                 pass
+            self.mqtt_client = None
             self.connected = False
 
         client = mqtt.Client(client_id=self.client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
@@ -698,7 +843,6 @@ class HisenseTvClient:
             if rc == 0:
                 _LOGGER.info("Refresh client connected successfully. Subscribing to token topics...")
                 cl.subscribe(self.topicMobiBasepath + "#")
-                # Also publish immediately with fallback for brokers that process synchronously
                 payload = json.dumps({"refreshtoken": self.refresh_token or ""})
                 cl.publish(self.topicTVPSBasepath + "data/gettoken", payload)
             else:
@@ -706,7 +850,6 @@ class HisenseTvClient:
                 lock.set()
 
         def on_refresh_subscribe(cl, userdata, mid, granted_qos):
-            _LOGGER.debug("Refresh client subscribed (mid: %s). Requesting token issuance...", mid)
             payload = json.dumps({"refreshtoken": self.refresh_token or ""})
             cl.publish(self.topicTVPSBasepath + "data/gettoken", payload)
 
@@ -764,6 +907,9 @@ class HisenseTvClient:
             self.connect_and_run()
         return False
 
+    # --------------------------------------------------------------------------
+    # Main Runtime Connection Loop
+    # --------------------------------------------------------------------------
     def connect_and_run(self) -> None:
         """Main client connection loop using the access token as password."""
         if not self.access_token or not self.client_id or not self.username:
@@ -776,7 +922,7 @@ class HisenseTvClient:
         self.mqtt_client.loop_start()
 
     def query_initial_state(self) -> None:
-        """Queries initial state, volume, source list, and app list from TV."""
+        """Queries initial state, volume, source list, app list, and settings from TV."""
         if self.connected and self.mqtt_client:
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/gettvstate", "")
             time.sleep(0.1)
@@ -785,7 +931,14 @@ class HisenseTvClient:
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/sourcelist", "")
             time.sleep(0.1)
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/applist", "")
+            time.sleep(0.1)
+            self.get_picture_settings()
+            time.sleep(0.1)
+            self.get_sound_settings()
 
+    # --------------------------------------------------------------------------
+    # TV Commands, Navigation, Settings & Controls
+    # --------------------------------------------------------------------------
     @staticmethod
     def send_wake_on_lan(
         mac: str | list[str] | tuple[str, ...],
@@ -793,7 +946,7 @@ class HisenseTvClient:
         port: int = 9,
         ip: str | None = None,
     ) -> bool:
-        """Sends standard Wake-on-LAN magic packet UDP broadcasts (subnet directed and global) for one or multiple MACs."""
+        """Sends standard Wake-on-LAN magic packet UDP broadcasts for one or multiple MACs."""
         if not mac:
             return False
 
@@ -853,8 +1006,6 @@ class HisenseTvClient:
             "type": "notify",
         }
         payload = json.dumps(payload_dict)
-
-        # Publish to both standard candidate action topics for max compatibility across firmware
         self.mqtt_client.publish(self.topicTVUIBasepath + "actions/showmessage", payload)
         self.mqtt_client.publish(self.topicTVUIBasepath + "actions/toast", payload)
         return True
@@ -889,103 +1040,45 @@ class HisenseTvClient:
             self.send_key("KEY_MENU")
             return True
 
-        key_to_send = KEY_ALIASES.get(cmd_clean, command.strip().upper())
+        key_to_send = resolve_command_key(command)
         self.send_key(key_to_send)
         return True
 
     def cycle_source(self) -> bool:
         """Cycles to the next available input source."""
-        if not self.sources:
-            self.get_sources()
+        next_source = get_next_cycled_source(self.sources, self.current_source)
+        if not next_source:
             self.send_key("KEY_MENU")
             return True
 
-        valid_sources = [
-            s
-            for s in self.sources
-            if isinstance(s, dict)
-            and (s.get("sourceid") is not None or s.get("sourcename") is not None)
-        ]
-        if not valid_sources:
-            self.send_key("KEY_MENU")
-            return True
-
-        curr_clean = str(self.current_source or "").strip().lower()
-        curr_idx = -1
-        for idx, src in enumerate(valid_sources):
-            sname = str(src.get("sourcename") or "").strip().lower()
-            dname = str(src.get("displayname") or "").strip().lower()
-            sid = str(src.get("sourceid") or "").strip().lower()
-            if curr_clean and (curr_clean in (sname, dname, sid)):
-                curr_idx = idx
-                break
-
-        next_idx = (curr_idx + 1) % len(valid_sources)
-        next_source = valid_sources[next_idx]
-        sid = str(next_source.get("sourceid") or next_source.get("sourcename") or "")
-        sname = str(next_source.get("sourcename") or next_source.get("displayname") or sid)
+        sid, sname = next_source
         self.change_source(sid, sname)
         return True
 
     def _launch_app_by_name(self, name_or_id: str) -> bool:
         """Launches an app by name or app ID from cached applist."""
-        target = name_or_id.strip().lower()
-        if target in ("netflix", "app_netflix"):
+        matched = match_app(self.apps, name_or_id)
+        if matched:
+            self.launch_app(matched["appId"], matched["name"], matched["url"])
+            return True
+
+        target_clean = name_or_id.strip().lower()
+        if target_clean in ("netflix", "app_netflix"):
             self.send_key("KEY_NETFLIX")
             return True
-        if target in ("youtube", "app_youtube"):
+        if target_clean in ("youtube", "app_youtube"):
             self.send_key("KEY_YOUTUBE")
             return True
-        if target in ("prime", "prime video", "app_prime"):
+        if target_clean in ("prime", "prime video", "app_prime"):
             self.send_key("KEY_PRIME")
             return True
 
-        def _normalize(s: str) -> str:
-            return re.sub(r"[^a-z0-9]", "", s.lower())
-
-        target_norm = _normalize(target)
-
-        if self.apps:
-            # 1. Exact match
-            for app in self.apps:
-                if isinstance(app, dict):
-                    aname = (app.get("name") or "").lower()
-                    aid = str(app.get("appId") or app.get("id") or "").lower()
-                    if target in (aname, aid):
-                        self.launch_app(str(app.get("appId", "")), app.get("name", ""), app.get("url", ""))
-                        return True
-
-            # 2. Normalized alphanumeric match (ignores punctuation, case, spacing)
-            for app in self.apps:
-                if isinstance(app, dict):
-                    aname = app.get("name") or ""
-                    aid = str(app.get("appId") or app.get("id") or "")
-                    if target_norm and (target_norm == _normalize(aname) or target_norm == _normalize(aid)):
-                        self.launch_app(str(app.get("appId", "")), aname, app.get("url", ""))
-                        return True
-
-            # 3. Substring match
-            for app in self.apps:
-                if isinstance(app, dict):
-                    aname = (app.get("name") or "").lower()
-                    if target in aname or (target_norm and target_norm in _normalize(aname)):
-                        self.launch_app(str(app.get("appId", "")), app.get("name", ""), app.get("url", ""))
-                        return True
         return False
 
     def _change_source_by_name_or_id(self, target: str) -> bool:
         """Switches to source by name (e.g. HDMI1, TV) or numeric sourceid."""
-        clean = target.strip().lower()
-        if self.sources:
-            for src in self.sources:
-                if isinstance(src, dict):
-                    sname = (src.get("sourcename") or "").lower()
-                    dname = (src.get("displayname") or "").lower()
-                    sid = str(src.get("sourceid") or "")
-                    if clean in (sname, dname, sid.lower()):
-                        self.change_source(sid, src.get("sourcename"))
-                        return True
-        self.change_source(target.strip())
+        sid, sname = resolve_source(self.sources, target)
+        self.change_source(sid or target.strip(), sname)
         return True
 
     def set_volume(self, volume: int) -> None:
@@ -1001,19 +1094,6 @@ class HisenseTvClient:
         sid = str(source_id)
         sname = source_name
 
-        # Resolve against cached sources if possible
-        if self.sources:
-            clean = str(source_id).strip().lower()
-            for s in self.sources:
-                if isinstance(s, dict):
-                    curr_sid = str(s.get("sourceid") or "")
-                    curr_sname = str(s.get("sourcename") or "")
-                    curr_dname = str(s.get("displayname") or "")
-                    if clean in (curr_sid.lower(), curr_sname.lower(), curr_dname.lower()):
-                        sid = curr_sid or curr_sname
-                        sname = curr_sname or curr_sid
-                        break
-
         payload_dict: dict[str, Any] = {}
         if sid:
             payload_dict["sourceid"] = sid
@@ -1025,12 +1105,11 @@ class HisenseTvClient:
         payload = json.dumps(payload_dict)
         self.mqtt_client.publish(self.topicTVUIBasepath + "actions/changesource", payload)
 
-        # For modern VIDAA firmware where numeric IDs are ignored in favor of string sourcename
+        # Dual publish for newer VIDAA firmware expecting source name
         if sname and sid != sname and str(sid).isdigit():
             payload_modern = json.dumps({"sourceid": sname, "sourcename": sname})
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/changesource", payload_modern)
 
-        # If switching to broadcast TV, also send KEY_LIVETV as fallback for models requiring channel tuner trigger
         if str(sid).upper() == "TV" or (sname and str(sname).upper() == "TV") or str(source_id).lower() == "tv":
             self.send_key("KEY_LIVETV")
 
@@ -1040,6 +1119,97 @@ class HisenseTvClient:
             payload = json.dumps({"appId": app_id, "name": app_name, "url": url})
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/launchapp", payload)
 
+    # --------------------------------------------------------------------------
+    # Picture & Sound Settings Controls (Issue #20 & Beyond)
+    # --------------------------------------------------------------------------
+    def get_picture_settings(self) -> None:
+        """Requests current picture settings menu information from the TV."""
+        if self.connected and self.mqtt_client:
+            self.mqtt_client.publish(
+                self.topicTVPSBasepath + "actions/picturesetting",
+                json.dumps({"action": "get_menu_info"}),
+            )
+
+    def set_picture_setting(self, menu_id: int, menu_value: str | int | float) -> None:
+        """Changes a specific picture setting value."""
+        if self.connected and self.mqtt_client:
+            payload = json.dumps({
+                "action": "notify_value_changed",
+                "menu_id": int(menu_id),
+                "menu_value": str(menu_value),
+            })
+            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/picturesetting", payload)
+            if int(menu_id) in self.picture_settings:
+                self.picture_settings[int(menu_id)].value = menu_value
+
+    def set_picture_mode(self, mode: str) -> None:
+        """Sets the TV picture mode preset."""
+        pm_item = find_menu_item_by_name(self.picture_settings, "Picture Mode", DEFAULT_MENU_ID_PICTURE_MODE)
+        menu_id = pm_item.menu_id if pm_item else DEFAULT_MENU_ID_PICTURE_MODE
+        self.set_picture_setting(menu_id, mode)
+        self.picture_mode = mode
+
+    def set_backlight(self, level: int) -> None:
+        """Sets the TV backlight level (0–100)."""
+        bl_item = find_menu_item_by_name(self.picture_settings, "Backlight", DEFAULT_MENU_ID_BACKLIGHT)
+        menu_id = bl_item.menu_id if bl_item else DEFAULT_MENU_ID_BACKLIGHT
+        clamped = max(0, min(100, int(level)))
+        self.set_picture_setting(menu_id, clamped)
+        self.backlight = clamped
+
+    def set_brightness(self, level: int) -> None:
+        """Sets the TV brightness level (0–100)."""
+        br_item = find_menu_item_by_name(self.picture_settings, "Brightness", DEFAULT_MENU_ID_BRIGHTNESS)
+        menu_id = br_item.menu_id if br_item else DEFAULT_MENU_ID_BRIGHTNESS
+        clamped = max(0, min(100, int(level)))
+        self.set_picture_setting(menu_id, clamped)
+        self.brightness = clamped
+
+    def set_contrast(self, level: int) -> None:
+        """Sets the TV contrast level (0–100)."""
+        ct_item = find_menu_item_by_name(self.picture_settings, "Contrast", DEFAULT_MENU_ID_CONTRAST)
+        menu_id = ct_item.menu_id if ct_item else DEFAULT_MENU_ID_CONTRAST
+        clamped = max(0, min(100, int(level)))
+        self.set_picture_setting(menu_id, clamped)
+        self.contrast = clamped
+
+    def get_sound_settings(self) -> None:
+        """Requests current sound settings menu information from the TV."""
+        if self.connected and self.mqtt_client:
+            self.mqtt_client.publish(
+                self.topicTVPSBasepath + "actions/soundsetting",
+                json.dumps({"action": "get_menu_info"}),
+            )
+
+    def set_sound_setting(self, menu_id: int, menu_value: str | int | float) -> None:
+        """Changes a specific sound setting value."""
+        if self.connected and self.mqtt_client:
+            payload = json.dumps({
+                "action": "notify_value_changed",
+                "menu_id": int(menu_id),
+                "menu_value": str(menu_value),
+            })
+            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/soundsetting", payload)
+            if int(menu_id) in self.sound_settings:
+                self.sound_settings[int(menu_id)].value = menu_value
+
+    def set_sound_mode(self, mode: str) -> None:
+        """Sets the TV sound mode preset."""
+        sm_item = find_menu_item_by_name(self.sound_settings, "Sound Mode", DEFAULT_MENU_ID_SOUND_MODE)
+        menu_id = sm_item.menu_id if sm_item else DEFAULT_MENU_ID_SOUND_MODE
+        self.set_sound_setting(menu_id, mode)
+        self.sound_mode = mode
+
+    def send_text_input(self, text: str, action: str = "insert") -> None:
+        """Sends virtual keyboard string input to active on-screen input/search field."""
+        if self.connected and self.mqtt_client:
+            payload = json.dumps({"text": text, "action": action})
+            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/txtinputdata", payload)
+            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/bwsinputdata", payload)
+
+    # --------------------------------------------------------------------------
+    # Async Queries & Disconnect
+    # --------------------------------------------------------------------------
     async def async_query(self, pub_topic: str, sub_topic: str, payload: str | None = None) -> Any:
         """Publishes a query to the TV and asynchronously awaits the response topic."""
         if not self.mqtt_client:

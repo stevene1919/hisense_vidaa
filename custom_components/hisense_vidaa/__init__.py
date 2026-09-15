@@ -11,10 +11,14 @@ from homeassistant.helpers import config_validation as cv, issue_registry as ir
 
 from .client import HisenseTvClient
 from .const import (
+    ATTR_ACTION,
     ATTR_APP,
     ATTR_DELAY,
     ATTR_KEY,
+    ATTR_MENU_ID,
+    ATTR_MENU_VALUE,
     ATTR_REPEAT,
+    ATTR_TEXT,
     CONF_ACCESS_TOKEN,
     CONF_ACCESS_TOKEN_DURATION,
     CONF_ACCESS_TOKEN_TIME,
@@ -38,6 +42,9 @@ from .const import (
     DOMAIN,
     SERVICE_LAUNCH_APP,
     SERVICE_SEND_KEY,
+    SERVICE_SEND_TEXT_INPUT,
+    SERVICE_SET_PICTURE_SETTING,
+    SERVICE_SET_SOUND_SETTING,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,6 +57,7 @@ PLATFORMS: list[str] = [
     "button",
     "notify",
     "select",
+    "number",
 ]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -79,12 +87,12 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
         for entry_id, data in hass.data.get(DOMAIN, {}).items():
             client: HisenseTvClient = data.get("client") if isinstance(data, dict) else data
             if client:
-                # Search app dict for matching app or send directly as url
                 matched_app = None
-                for a in getattr(client, "_app_list", []):
+                for a in getattr(client, "apps", []):
                     if isinstance(a, dict) and (
-                        a.get("appName", "").lower() == app.lower()
-                        or a.get("appId", "").lower() == app.lower()
+                        str(a.get("name", "")).lower() == app.lower()
+                        or str(a.get("appName", "")).lower() == app.lower()
+                        or str(a.get("appId", "")).lower() == app.lower()
                     ):
                         matched_app = a
                         break
@@ -92,18 +100,54 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
                 if matched_app:
                     await hass.async_add_executor_job(
                         client.launch_app,
-                        matched_app.get("appId", ""),
-                        matched_app.get("appName", ""),
-                        matched_app.get("appUrl", ""),
+                        str(matched_app.get("appId", "")),
+                        str(matched_app.get("name") or matched_app.get("appName") or ""),
+                        str(matched_app.get("url") or matched_app.get("appUrl") or ""),
                     )
                 else:
                     await hass.async_add_executor_job(client.launch_app, "", app, app)
+
+    async def handle_set_picture_setting(call: ServiceCall) -> None:
+        """Handle set_picture_setting service call."""
+        menu_id = call.data.get(ATTR_MENU_ID)
+        menu_val = call.data.get(ATTR_MENU_VALUE)
+        for entry_id, data in hass.data.get(DOMAIN, {}).items():
+            client: HisenseTvClient = data.get("client") if isinstance(data, dict) else data
+            if client:
+                await hass.async_add_executor_job(client.set_picture_setting, menu_id, menu_val)
+
+    async def handle_set_sound_setting(call: ServiceCall) -> None:
+        """Handle set_sound_setting service call."""
+        menu_id = call.data.get(ATTR_MENU_ID)
+        menu_val = call.data.get(ATTR_MENU_VALUE)
+        for entry_id, data in hass.data.get(DOMAIN, {}).items():
+            client: HisenseTvClient = data.get("client") if isinstance(data, dict) else data
+            if client:
+                await hass.async_add_executor_job(client.set_sound_setting, menu_id, menu_val)
+
+    async def handle_send_text_input(call: ServiceCall) -> None:
+        """Handle send_text_input service call."""
+        text = call.data.get(ATTR_TEXT, "")
+        action = call.data.get(ATTR_ACTION, "insert")
+        for entry_id, data in hass.data.get(DOMAIN, {}).items():
+            client: HisenseTvClient = data.get("client") if isinstance(data, dict) else data
+            if client:
+                await hass.async_add_executor_job(client.send_text_input, text, action)
 
     if not hass.services.has_service(DOMAIN, SERVICE_SEND_KEY):
         hass.services.async_register(DOMAIN, SERVICE_SEND_KEY, handle_send_key)
 
     if not hass.services.has_service(DOMAIN, SERVICE_LAUNCH_APP):
         hass.services.async_register(DOMAIN, SERVICE_LAUNCH_APP, handle_launch_app)
+
+    if not hass.services.has_service(DOMAIN, SERVICE_SET_PICTURE_SETTING):
+        hass.services.async_register(DOMAIN, SERVICE_SET_PICTURE_SETTING, handle_set_picture_setting)
+
+    if not hass.services.has_service(DOMAIN, SERVICE_SET_SOUND_SETTING):
+        hass.services.async_register(DOMAIN, SERVICE_SET_SOUND_SETTING, handle_set_sound_setting)
+
+    if not hass.services.has_service(DOMAIN, SERVICE_SEND_TEXT_INPUT):
+        hass.services.async_register(DOMAIN, SERVICE_SEND_TEXT_INPUT, handle_send_text_input)
 
     return True
 

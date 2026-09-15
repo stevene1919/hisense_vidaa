@@ -154,6 +154,23 @@
     "select": {
       "audio_output": {
         "name": "Audio Output Mode"
+      },
+      "picture_mode": {
+        "name": "Picture Mode"
+      },
+      "sound_mode": {
+        "name": "Sound Mode"
+      }
+    },
+    "number": {
+      "backlight": {
+        "name": "Backlight"
+      },
+      "brightness": {
+        "name": "Brightness"
+      },
+      "contrast": {
+        "name": "Contrast"
       }
     }
   },
@@ -185,6 +202,48 @@
           "description": "The name of the app (e.g. Netflix, YouTube, Prime Video) or a deep link URL."
         }
       }
+    },
+    "set_picture_setting": {
+      "name": "Set Picture Setting",
+      "description": "Change a specific TV picture menu setting or calibration parameter.",
+      "fields": {
+        "menu_id": {
+          "name": "Menu ID",
+          "description": "Numeric menu ID (e.g. 91 for Picture Mode, 92 for Backlight, 93 for Brightness, 94 for Contrast)."
+        },
+        "menu_value": {
+          "name": "Menu Value",
+          "description": "Setting value or preset mode name."
+        }
+      }
+    },
+    "set_sound_setting": {
+      "name": "Set Sound Setting",
+      "description": "Change a specific TV sound menu setting or equalizer preset.",
+      "fields": {
+        "menu_id": {
+          "name": "Menu ID",
+          "description": "Numeric menu ID (e.g. 1 for Sound Mode)."
+        },
+        "menu_value": {
+          "name": "Menu Value",
+          "description": "Sound mode name or value."
+        }
+      }
+    },
+    "send_text_input": {
+      "name": "Send Text Input",
+      "description": "Send virtual keyboard text to an active on-screen input field or browser search bar.",
+      "fields": {
+        "text": {
+          "name": "Text",
+          "description": "Text string to input."
+        },
+        "action": {
+          "name": "Action",
+          "description": "Input action type (insert, replace, clear)."
+        }
+      }
     }
   },
   "selector": {
@@ -204,7 +263,7 @@
         "step": {
           "confirm": {
             "title": "Verify Client Certificates",
-            "description": "Once you have copied hisense.crt and hisense.key into /config or /ssl, submit this form to verify."
+            "description": "Once you have copied hisense.crt and hisense.key into /config/ssl or /ssl, submit this form to verify."
           }
         },
         "error": {

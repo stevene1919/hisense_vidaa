@@ -39,7 +39,7 @@ DEFAULT_TIMEOUT = 10
 DEFAULT_WOL_TIMEOUT = 30
 DEFAULT_RECONNECT_INTERVAL = 15
 
-DEFAULT_CERT_DIR = "certs"
+DEFAULT_CERT_DIR = "ssl"
 DEFAULT_CERT_FILENAME = "hisense.crt"
 DEFAULT_KEY_FILENAME = "hisense.key"
 
@@ -57,11 +57,18 @@ DEFAULT_USE_SSL = True
 # Service Names & Attributes
 SERVICE_SEND_KEY = "send_key"
 SERVICE_LAUNCH_APP = "launch_app"
+SERVICE_SET_PICTURE_SETTING = "set_picture_setting"
+SERVICE_SET_SOUND_SETTING = "set_sound_setting"
+SERVICE_SEND_TEXT_INPUT = "send_text_input"
 
 ATTR_KEY = "key"
 ATTR_REPEAT = "repeat"
 ATTR_DELAY = "delay"
 ATTR_APP = "app"
+ATTR_MENU_ID = "menu_id"
+ATTR_MENU_VALUE = "menu_value"
+ATTR_TEXT = "text"
+ATTR_ACTION = "action"
 
 AUTH_PROFILES = {
     "auto": "Auto Detect (Recommended)",

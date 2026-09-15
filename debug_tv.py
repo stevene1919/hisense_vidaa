@@ -2,13 +2,12 @@
 """Hisense VIDAA TV - Diagnostic and Live Debugging Tool.
 
 Usage:
-  python3 debug_tv.py [--ip <IP>] [--monitor] [--dump-state] [--send-key <KEY>] [--launch-app <APP>] [--change-source <SRC>] [--sync-clock]
+  python3 debug_tv.py [--ip <IP>] [--monitor] [--dump-state] [--probe] [--send-key <KEY>] [--launch-app <APP>] [--change-source <SRC>] [--sync-clock]
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import os
 import sys
@@ -21,6 +20,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "cus
 
 from client import HisenseTvClient
 from discovery import get_device_fingerprint, get_tv_timestamp
+from probe import (
+    create_client_from_creds,
+    load_credentials_file,
+)
 
 
 def setup_logger(verbose: bool = False) -> logging.Logger:
@@ -31,16 +34,6 @@ def setup_logger(verbose: bool = False) -> logging.Logger:
     handler.setFormatter(formatter)
     logger.handlers = [handler]
     return logger
-
-
-def load_credentials(creds_path: str = "credentials.json") -> dict:
-    if os.path.isfile(creds_path):
-        try:
-            with open(creds_path, encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {}
 
 
 def print_section(title: str) -> None:
@@ -55,6 +48,7 @@ def main() -> None:
     parser.add_argument("--key", type=str, default=None, help="Path to client private key pem")
     parser.add_argument("--monitor", action="store_true", help="Continuously monitor and stream live TV MQTT events")
     parser.add_argument("--dump-state", action="store_true", help="Dump all current state, apps, sources, and volume")
+    parser.add_argument("--probe", action="store_true", help="Probe picture and sound settings menu trees")
     parser.add_argument("--send-key", type=str, default=None, help="Send a keypress command (e.g. KEY_HOME, KEY_VOLUMEUP)")
     parser.add_argument("--launch-app", type=str, default=None, help="Launch an app by name or App ID (e.g. Netflix, YouTube)")
     parser.add_argument("--change-source", type=str, default=None, help="Change active input source (e.g. HDMI1, HDMI2, TV)")
@@ -65,13 +59,9 @@ def main() -> None:
     _logger = setup_logger(args.verbose)
 
     # 1. Load credentials
-    creds = load_credentials(args.creds)
+    creds = load_credentials_file(args.creds)
     tv_ip = args.ip or creds.get("ip_address") or "192.168.50.12"
-    mac = creds.get("mac_address")
     client_id = creds.get("client_id")
-    username = creds.get("username")
-    password = creds.get("password")
-    access_token = creds.get("accesstoken")
 
     print_section("1. Network & Device Discovery Diagnostics")
     print(f"Target TV IP:  {tv_ip}")
@@ -107,16 +97,8 @@ def main() -> None:
 
     # 4. Initialize Client & Connect
     print_section("2. MQTT Broker & Real-Time Protocol Diagnostics")
-    client = HisenseTvClient(
-        ip=tv_ip,
-        mac=mac,
-        client_id=client_id,
-        username=username,
-        password=password,
-        access_token=access_token,
-        certfile=args.cert,
-        keyfile=args.key,
-        auth_profile="auto",
+    client = create_client_from_creds(creds, certfile=args.cert, keyfile=args.key) if creds else HisenseTvClient(
+        ip=tv_ip, certfile=args.cert, keyfile=args.key, auth_profile="auto"
     )
 
     state_cache = {"state": {}, "volume": {}, "sources": [], "apps": []}
@@ -173,6 +155,12 @@ def main() -> None:
     client.query_initial_state()
     time.sleep(2.0)
 
+    if args.probe:
+        print("\nProbing picture & sound menu trees...")
+        client.get_picture_settings()
+        client.get_sound_settings()
+        time.sleep(2.0)
+
     # Handle requested actions
     if args.send_key:
         print(f"\nSending Keypress: '{args.send_key}'...")
@@ -219,6 +207,16 @@ def main() -> None:
         print(f"\nInstalled Apps ({len(state_cache['apps'])}):")
         app_names = [a.get("name") for a in state_cache["apps"] if a.get("name")]
         print("  " + ", ".join(sorted(app_names)[:15]) + ("..." if len(app_names) > 15 else ""))
+
+        if client.picture_settings:
+            print(f"\nPicture Settings ({len(client.picture_settings)} items):")
+            for item in client.picture_settings:
+                print(f"  - {item.menu_name} (ID: {item.menu_id}): {item.menu_value}")
+
+        if client.sound_settings:
+            print(f"\nSound Settings ({len(client.sound_settings)} items):")
+            for item in client.sound_settings:
+                print(f"  - {item.menu_name} (ID: {item.menu_id}): {item.menu_value}")
 
     if args.monitor:
         print_section("4. Live Event Monitor (Press Ctrl+C to Stop)")

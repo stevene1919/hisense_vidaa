@@ -18,8 +18,17 @@ from custom_components.hisense_vidaa.button import (
 )
 from custom_components.hisense_vidaa.media_player import HisenseVidaaMediaPlayer
 from custom_components.hisense_vidaa.notify import HisenseVidaaNotifyEntity
+from custom_components.hisense_vidaa.number import (
+    HisenseVidaaBacklightNumber,
+    HisenseVidaaBrightnessNumber,
+    HisenseVidaaContrastNumber,
+)
 from custom_components.hisense_vidaa.remote import HisenseVidaaRemote
-from custom_components.hisense_vidaa.select import HisenseVidaaAudioOutputSelect
+from custom_components.hisense_vidaa.select import (
+    HisenseVidaaAudioOutputSelect,
+    HisenseVidaaPictureModeSelect,
+    HisenseVidaaSoundModeSelect,
+)
 from custom_components.hisense_vidaa.sensor import (
     HisenseVidaaActiveAppSensor,
     HisenseVidaaActiveSourceSensor,
@@ -257,6 +266,79 @@ async def test_select_entity(mock_client, mock_entry):
     await sel.async_select_option("TV Speakers")
     mock_client.send_key.assert_called_with("KEY_AUDIO_ONLY")
     assert sel.current_option == "TV Speakers"
+
+
+@pytest.mark.anyio
+async def test_picture_and_sound_mode_selects(mock_client, mock_entry):
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    pic_sel = HisenseVidaaPictureModeSelect(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+    )
+    pic_sel.hass = hass
+    assert pic_sel.unique_id == "test_entry_id_picture_mode"
+    assert "Standard" in pic_sel.options
+
+    await pic_sel.async_select_option("Cinema Day")
+    mock_client.set_picture_mode.assert_called_with("Cinema Day")
+
+    snd_sel = HisenseVidaaSoundModeSelect(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+    )
+    snd_sel.hass = hass
+    assert snd_sel.unique_id == "test_entry_id_sound_mode"
+    assert "Standard" in snd_sel.options
+
+    await snd_sel.async_select_option("Theater")
+    mock_client.set_sound_mode.assert_called_with("Theater")
+
+
+@pytest.mark.anyio
+async def test_picture_calibration_numbers(mock_client, mock_entry):
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    bl = HisenseVidaaBacklightNumber(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+    )
+    bl.hass = hass
+    assert bl.unique_id == "test_entry_id_backlight"
+    assert bl.native_min_value == 0
+    assert bl.native_max_value == 100
+    await bl.async_set_native_value(85)
+    mock_client.set_backlight.assert_called_with(85)
+
+    br = HisenseVidaaBrightnessNumber(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+    )
+    br.hass = hass
+    assert br.unique_id == "test_entry_id_brightness"
+    await br.async_set_native_value(52)
+    mock_client.set_brightness.assert_called_with(52)
+
+    ct = HisenseVidaaContrastNumber(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+    )
+    ct.hass = hass
+    assert ct.unique_id == "test_entry_id_contrast"
+    await ct.async_set_native_value(90)
+    mock_client.set_contrast.assert_called_with(90)
 
 
 def test_media_player_cec_source_naming(mock_client, mock_entry):
