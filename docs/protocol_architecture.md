@@ -101,3 +101,12 @@ stateDiagram-v2
 | `/remoteapp/mobile/broadcast/ui_service/volume` | `Subscribe` | Secondary broadcast topic for volume changes |
 | `/remoteapp/mobile/{client_id}/ui_service/data/sourcelist` | `Subscribe` | Response containing available physical inputs |
 | `/remoteapp/mobile/{client_id}/ui_service/data/applist` | `Subscribe` | Response containing installed Smart TV applications |
+| `/remoteapp/tv/platform_service/{client_id}/actions/picturesetting` | `Publish` | Query picture menu (`get_menu_info`) or update parameter (`notify_value_changed`) |
+| `/remoteapp/tv/platform_service/{client_id}/actions/soundsetting` | `Publish` | Query sound menu (`get_menu_info`) or update EQ preset (`notify_value_changed`) |
+| `/remoteapp/tv/ui_service/{client_id}/actions/txtinputdata` | `Publish` | Inject text into active input field (`{"text": "...", "action": "insert"}`) |
+| `/remoteapp/tv/ui_service/{client_id}/actions/bwsinputdata` | `Publish` | Inject text into web browser address / search bar |
+| `/remoteapp/mobile/{client_id}/platform_service/data/picturesetting` | `Subscribe` | Response containing picture menu tree & active picture parameters |
+| `/remoteapp/mobile/{client_id}/platform_service/data/soundsetting` | `Subscribe` | Response containing sound menu tree & active equalizer parameters |
+| `/remoteapp/mobile/broadcast/platform_service/data/picturesetting` | `Subscribe` | Broadcast state push when picture mode or brightness changes on TV |
+| `/remoteapp/mobile/broadcast/platform_service/data/soundsetting` | `Subscribe` | Broadcast state push when sound mode or audio setting changes on TV |
+| `/remoteapp/mobile/{client_id}/ui_service/data/capability` | `Subscribe` | TV capabilities descriptor (e.g. notifications/toast support) |

@@ -2,6 +2,30 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.8.5] - 2026-09-15
+
+### Added
+- **PICTURE & DISPLAY CONTROLS (`number` and `select` platforms - Issue #20)**:
+  - Added `number.{tv}_backlight`, `number.{tv}_brightness`, and `number.{tv}_contrast` slider entities (0–100) for real-time picture adjustments over MQTT.
+  - Added `select.{tv}_picture_mode` dropdown entity with options dynamically discovered from the TV (with fallback to `Standard`, `Cinema Day`, `Cinema Night`, `Dynamic`, `Sport`, `Game`, `Filmmaker Mode`, `PC`).
+  - Added `select.{tv}_sound_mode` dropdown entity for real-time sound equalizer mode switching (`Standard`, `Theater`, `Music`, `Speech`, `Late Night`, `Sports`).
+- **NEW AUTOMATION SERVICES**:
+  - `hisense_vidaa.set_picture_setting`: Execute arbitrary picture setting changes via `menu_id` and `menu_value`.
+  - `hisense_vidaa.set_sound_setting`: Execute arbitrary sound equalizer adjustments via `menu_id` and `menu_value`.
+  - `hisense_vidaa.send_text_input`: Inject text strings directly into TV search bars and text fields via `actions/txtinputdata` and `actions/bwsinputdata`.
+- **FEATURE PROBING & GITHUB ISSUE DIAGNOSTICS**:
+  - Added shared `probe.py` module for discovering TV capabilities and querying picture/sound menu structures.
+  - Added `probe` CLI command and `--probe` reporting flag to `test_client.py` and `debug_tv.py`, generating pre-formatted Markdown diagnostics tables ready for GitHub issue submissions.
+
+### Fixed
+- **STANDARD HOME ASSISTANT SSL DIRECTORY (Issue #21)**:
+  - Standardized certificate search paths to standard Home Assistant directories (`/config/ssl`, `/ssl`, `/config/certs`, `/config`).
+  - Stopped auto-reconnect loops and broker hammering when credentials expire (`rc: 5`), preventing collisions during re-pairing handshakes.
+- **CODEBASE MODULARIZATION**:
+  - Extracted menu models and parsers into `settings.py`.
+  - Extracted app fuzzy matching, source cycling, and key alias definitions into `navigation.py`.
+  - Consolidated CLI test and debugging tools to share common probing and credential handlers.
+
 ## [2.8.1] - 2026-09-13
 
 ### Added

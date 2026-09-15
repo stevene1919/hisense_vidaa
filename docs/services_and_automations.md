@@ -30,6 +30,78 @@ data:
   delay: 0.2
 ```
 
+### 3. `hisense_vidaa.send_text_input`
+Inject virtual keyboard text directly into on-screen search bars and text inputs (e.g. searching YouTube, Netflix, or browser).
+
+```yaml
+action: hisense_vidaa.send_text_input
+target:
+  entity_id: media_player.living_room_tv
+data:
+  text: "The Matrix"
+```
+
+### 4. `hisense_vidaa.set_picture_setting`
+Execute custom picture setting adjustments via raw menu ID and parameter value.
+
+```yaml
+action: hisense_vidaa.set_picture_setting
+target:
+  entity_id: media_player.living_room_tv
+data:
+  menu_id: 0
+  menu_value: "Cinema Night"
+```
+
+### 5. `hisense_vidaa.set_sound_setting`
+Execute custom sound equalizer adjustments via raw menu ID and parameter value.
+
+```yaml
+action: hisense_vidaa.set_sound_setting
+target:
+  entity_id: media_player.living_room_tv
+data:
+  menu_id: 0
+  menu_value: "Theater"
+```
+
+---
+
+## 🎛️ Picture & Sound Controls (`number` and `select` entities)
+
+### Adjust Backlight, Brightness, and Contrast Sliders
+Control display parameters in automations using standard `number.set_value`:
+
+```yaml
+action: number.set_value
+target:
+  entity_id: number.living_room_tv_backlight
+data:
+  value: 45 # Range: 0 - 100
+```
+
+### Switch Picture Mode Dynamically
+Switch Picture Mode based on ambient light or time of day:
+
+```yaml
+action: select.select_option
+target:
+  entity_id: select.living_room_tv_picture_mode
+data:
+  option: "Cinema Night" # Options: Standard, Cinema Day, Cinema Night, Dynamic, Sport, Game, Filmmaker Mode, PC
+```
+
+### Switch Sound Equalizer Mode
+Change audio EQ presets based on active media or content:
+
+```yaml
+action: select.select_option
+target:
+  entity_id: select.living_room_tv_sound_mode
+data:
+  option: "Theater" # Options: Standard, Theater, Music, Speech, Late Night, Sports
+```
+
 ---
 
 ## 📢 On-Screen Toast Notifications (`notify.send_message`)

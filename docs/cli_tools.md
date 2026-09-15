@@ -9,12 +9,22 @@ The integration includes two standalone Python CLI utilities that share 100% of 
 [`test_client.py`](../test_client.py) focuses on **initial discovery, SSL validation, authentication, and diagnostic reporting**.
 
 ### 1. Generate GitHub Issue Diagnostic Report (`report`)
-Generates a sanitized Markdown diagnostics block detailing hardware info, firmware version, and multi-tier authentication support ready to paste into GitHub issues:
+Generates a sanitized Markdown diagnostics block detailing hardware info, firmware version, multi-tier authentication support, and optionally probed picture/sound menu capabilities ready to paste into GitHub issues:
 ```bash
+# Generate basic diagnostics report:
 python3 test_client.py report --ip <TV_IP>
+
+# Generate full diagnostics report with dynamic picture/sound menu probing:
+python3 test_client.py report --ip <TV_IP> --probe
 ```
 
-### 2. Diagnostic Probe & Firmware Detection (`ping`)
+### 2. Feature & Menu Capability Probing (`probe` / `probe-features`)
+Connects to the TV broker and probes dynamic picture settings, sound equalizer options, device descriptors, and app/source capabilities:
+```bash
+python3 test_client.py probe --ip <TV_IP>
+```
+
+### 3. Diagnostic Probe & Firmware Detection (`ping`)
 Tests TCP port reachability, TLS handshake, broker response, and multi-tier auth capabilities:
 ```bash
 python3 test_client.py ping --ip <TV_IP>

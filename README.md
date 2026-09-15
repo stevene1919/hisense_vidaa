@@ -35,11 +35,13 @@ The integration automatically detects and supports all generations of Hisense sm
 - **Local Push Updates**: Instant feedback for power state, volume, mute, source input, and active app.
 - **Media Player Platform**: Full power toggle, volume stepping, input source switcher, dynamic app artwork, deep linking, and configurable media transport controls. Exposes `MediaPlayerDeviceClass.TV` for native Apple HomeKit and iOS Control Center virtual remote integration.
 - **Dedicated Remote Platform**: Fast key command dispatching, key aliases (`home`, `menu`, `back`, `ok`, etc.), configurable repeat counts, and inter-key delay options.
+- **Picture & Display Adjustments (`number` & `select`)**: Fine-tune Backlight, Brightness, and Contrast slider entities (0–100) and switch Picture Modes (`Standard`, `Cinema Day`, `Cinema Night`, `Dynamic`, `Sport`, `Game`, `Filmmaker Mode`, `PC`) dynamically.
+- **Sound Mode Selector (`select`)**: Switch real-time TV sound equalizer modes (`Standard`, `Theater`, `Music`, `Speech`, `Late Night`, `Sports`) and audio output routing (`select.{tv}_audio_output`).
 - **On-Screen Toast Notifications (`notify`)**: Send customized on-screen toast messages and alert banners directly to the TV screen via `notify.send_message`.
-- **Audio Output Selector (`select`)**: Switch real-time TV sound output modes (TV Speaker, ARC/eARC, Headphone, Bluetooth) directly from Home Assistant.
-- **Rich Diagnostic Sensors**: Active source (with dynamic HDMI-CEC device naming), active Smart TV app, audio output mode, MQTT connection state, and token lifecycle status.
+- **Direct Text Input (`send_text_input` service)**: Inject virtual keyboard text directly into on-screen search bars and input fields across apps.
+- **Rich Diagnostic Sensors**: Active source (with dynamic HDMI-CEC device naming), active Smart TV app, audio output mode, MQTT connection state, and session status.
 - **Network Resilience**: Subnet-directed Wake-on-LAN with dual-MAC fallback (Ethernet + Wi-Fi) for reliable power-on from deep standby, clock synchronization via UPnP, and automatic 30-day token refresh.
-- **Flexible SSL Handling**: Automatic in-memory extraction for PKCS#12 bundles (`.p12` / `.pfx`) and support for standard PEM pairs (`.pem`, `.crt`, `.key`).
+- **Flexible SSL Handling**: Automatic in-memory extraction for PKCS#12 bundles (`.p12` / `.pfx`) and support for standard PEM pairs (`.pem`, `.crt`, `.key`) stored in `/config/ssl`.
 - **Tabbed Options Flow**: Beautiful, categorized options menu (General & Power, Sources & Media, Remote Key Timings, SSL Certificates) for adjusting settings without re-pairing.
 
 ---
@@ -56,7 +58,7 @@ Click the button below to add this repository directly to your HACS installation
 
 ### 2. Place Certificate Files
 
-Copy your client certificate / key (or `.p12` bundle) to `/config/custom_components/hisense_vidaa/certs/` (or `/config/certs/` / `/config/ssl/`).
+Copy your client certificate / key (or `.p12` bundle) to `/config/ssl/` (or `/ssl/` / `/config/certs/`).
 
 > For certificate formats and search paths, see the **[SSL Certificate Guide](docs/certificates.md)**.
 
@@ -79,7 +81,7 @@ For deep technical details, guides, and dashboard templates, refer to the dedica
 | 🖼️ **[Screenshots & UI Gallery](docs/screenshots.md)** | Full visual tour of device controls, media player dialogs, source dropdowns, and option flows. |
 | 🔒 **[SSL Certificate Setup](docs/certificates.md)** | Certificate filename matrix, PKCS#12 extraction, and root CA verification. |
 | 🌐 **[Network & Wake-on-LAN Requirements](docs/network_requirements.md)** | 100% local LAN architecture, static DHCP setup, IoT VLAN configuration, and reliable wired WoL guidelines. |
-| 🛠️ **[Services & Automation Examples](docs/services_and_automations.md)** | Full YAML automation examples, `hisense_vidaa.launch_app`, `hisense_vidaa.send_key`, and button cards. |
+| 🛠️ **[Services & Automation Examples](docs/services_and_automations.md)** | Full YAML automation examples, picture/sound adjustments, `hisense_vidaa.send_text_input`, and button cards. |
 | 🧪 **[CLI Testing & Diagnostic Tools](docs/cli_tools.md)** | Standalone [`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py) command-line utility reference. |
 | 🔬 **[Protocol & Cryptographic Architecture](docs/protocol_architecture.md)** | Deep-dive reverse engineering: XOR masks, dynamic hashes, token lifecycles, and MQTT topic dictionary. |
 
@@ -87,11 +89,14 @@ For deep technical details, guides, and dashboard templates, refer to the dedica
 
 ## 🛠️ Diagnostics & Troubleshooting
 
-The integration includes a diagnostic tool to test your TV's network connectivity and generate pre-formatted report blocks:
+The integration includes a diagnostic tool to test your TV's network connectivity, probe features, and generate pre-formatted report blocks:
 
 ```bash
-# Generate a diagnostics report block for GitHub issues:
-python3 test_client.py report --ip <TV_IP>
+# Generate a complete diagnostics report with feature probing for GitHub issues:
+python3 test_client.py report --ip <TV_IP> --probe
+
+# Probe picture and sound settings menu structures:
+python3 test_client.py probe --ip <TV_IP>
 
 # Quick diagnostic probe & firmware detection:
 python3 test_client.py ping --ip <TV_IP>
