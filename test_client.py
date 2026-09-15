@@ -15,11 +15,14 @@ import os
 import sys
 import time
 
-# Ensure local custom_components/hisense_vidaa directory is in Python path
+# Ensure local or HA custom_components/hisense_vidaa directory is in Python path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 COMP_DIR = os.path.join(SCRIPT_DIR, "custom_components", "hisense_vidaa")
+HA_COMP_DIR = "/config/custom_components/hisense_vidaa"
 if os.path.isdir(COMP_DIR) and COMP_DIR not in sys.path:
     sys.path.insert(0, COMP_DIR)
+elif os.path.isdir(HA_COMP_DIR) and HA_COMP_DIR not in sys.path:
+    sys.path.insert(0, HA_COMP_DIR)
 elif SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 

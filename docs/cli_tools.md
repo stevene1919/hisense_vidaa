@@ -1,6 +1,31 @@
 # 🧪 Standalone CLI Testing & Diagnostic Tools
 
-The integration includes two standalone Python CLI utilities that share 100% of the backend logic with the Home Assistant integration (`client.py`, `crypto.py`, `discovery.py`). These tools require no mocking and communicate directly with real TVs.
+The integration includes two standalone Python CLI utilities that share 100% of the backend logic with the Home Assistant integration (`client.py`, `crypto.py`, `discovery.py`). These tools communicate directly with real TVs for diagnostic reporting, capability probing, and live monitoring.
+
+---
+
+## 📥 How to Run the Tools
+
+### Option A: From any Computer or Server (Recommended)
+Clone the repository and run the scripts directly:
+```bash
+git clone https://github.com/stevene1919/hisense_vidaa.git
+cd hisense_vidaa
+pip install paho-mqtt defusedxml cryptography
+
+# Probe TV features & capabilities:
+python3 test_client.py probe --ip <TV_IP>
+```
+
+### Option B: Inside Home Assistant (Terminal / SSH Addon)
+If you installed the integration via HACS, you can download `test_client.py` directly into your `/config` directory:
+```bash
+cd /config
+curl -sSL https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/test_client.py -o test_client.py
+
+# Run probe (automatically links to /config/custom_components/hisense_vidaa):
+python3 test_client.py probe --ip <TV_IP>
+```
 
 ---
 

@@ -89,18 +89,36 @@ For deep technical details, guides, and dashboard templates, refer to the dedica
 
 ## 🛠️ Diagnostics & Troubleshooting
 
-The integration includes a diagnostic tool to test your TV's network connectivity, probe features, and generate pre-formatted report blocks:
+The integration includes diagnostic CLI tools ([`test_client.py`](test_client.py) & [`debug_tv.py`](debug_tv.py)) to test network connectivity, probe TV capabilities, and generate pre-formatted report blocks for GitHub issues.
+
+### Running the Diagnostic Tool
+
+```bash
+# Option A: From any PC or server (recommended):
+git clone https://github.com/stevene1919/hisense_vidaa.git
+cd hisense_vidaa
+python3 test_client.py probe --ip <TV_IP>
+
+# Option B: Inside Home Assistant (Terminal / SSH Addon):
+cd /config
+curl -sSL https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/test_client.py -o test_client.py
+python3 test_client.py probe --ip <TV_IP>
+```
+
+### Common Commands
 
 ```bash
 # Generate a complete diagnostics report with feature probing for GitHub issues:
 python3 test_client.py report --ip <TV_IP> --probe
 
-# Probe picture and sound settings menu structures:
+# Probe picture, sound, installed apps, and input sources:
 python3 test_client.py probe --ip <TV_IP>
 
-# Quick diagnostic probe & firmware detection:
+# Quick 3-tier connectivity & firmware detection probe:
 python3 test_client.py ping --ip <TV_IP>
 ```
+
+> See the full **[CLI Testing & Diagnostic Guide](docs/cli_tools.md)** for more commands (`launch-app`, `send-key`, `listen`, `wake`).
 
 ---
 
