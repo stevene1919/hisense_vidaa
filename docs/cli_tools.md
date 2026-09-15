@@ -67,7 +67,14 @@ python3 test_client.py send-key KEY_VOLUMEUP
 python3 test_client.py send-key KEY_POWER
 ```
 
-### 8. Wake-on-LAN Broadcast (`wake`)
+### 8. Launch App by Name (`launch-app`)
+Launches an installed Smart TV application by name:
+```bash
+python3 test_client.py launch-app "YouTube"
+python3 test_client.py launch-app "Netflix"
+```
+
+### 9. Wake-on-LAN Broadcast (`wake`)
 Broadcasts a subnet-directed magic packet:
 ```bash
 python3 test_client.py wake --mac E8:51:77:EC:98:1C
