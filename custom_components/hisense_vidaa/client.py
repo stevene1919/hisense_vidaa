@@ -538,6 +538,7 @@ class HisenseTvClient:
                 ])
                 threading.Timer(0.5, self.query_initial_state).start()
         else:
+            self.connected = False
             _LOGGER.error("Failed to connect to TV MQTT Broker, rc: %d", rc)
             if self._auth_future and not self._auth_future.done():
                 self._safe_set_future_exception(
@@ -547,6 +548,10 @@ class HisenseTvClient:
                 return
 
             if rc in (4, 5):
+                # Immediately halt paho-mqtt auto-reconnect loop to avoid flapping/broker storm
+                with contextlib.suppress(Exception):
+                    client.loop_stop()
+
                 if self.refresh_token:
                     current_time = time.time()
                     with self._refresh_lock:
@@ -554,9 +559,9 @@ class HisenseTvClient:
                     if should_refresh:
                         _LOGGER.info("Authentication failed on connect. Refreshing token in background...")
                         threading.Thread(target=self._refresh_token_and_update_creds, daemon=True).start()
+                    else:
+                        self._dispatch_auth_failed()
                 else:
-                    with contextlib.suppress(Exception):
-                        client.loop_stop()
                     self._dispatch_auth_failed()
 
     def _refresh_token_and_update_creds(self) -> None:
@@ -572,17 +577,13 @@ class HisenseTvClient:
                 if self.mqtt_client:
                     self.mqtt_client.username_pw_set(username=self.username, password=self.access_token)
                     self.mqtt_client.reconnect()
+                    with contextlib.suppress(Exception):
+                        self.mqtt_client.loop_start()
             else:
                 _LOGGER.warning("Token refresh failed (token expired on TV). Stopping auto-reconnect.")
-                if self.mqtt_client:
-                    with contextlib.suppress(Exception):
-                        self.mqtt_client.loop_stop()
                 self._dispatch_auth_failed()
         except Exception as e:
             _LOGGER.error("Error during background token refresh: %s", e)
-            if self.mqtt_client:
-                with contextlib.suppress(Exception):
-                    self.mqtt_client.loop_stop()
             self._dispatch_auth_failed()
         finally:
             with self._refresh_lock:
