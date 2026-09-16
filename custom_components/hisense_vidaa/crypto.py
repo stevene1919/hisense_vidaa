@@ -232,6 +232,9 @@ def resolve_certificates(
 
     if profile_clean in ("modern", "vidaa_2024", "vidaa"):
         cert_names = [
+            "vidaa_client_v01.pem",
+            "vidaa_client_v01.crt",
+            "vidaa_client_v02.pem",
             "vidaa_2024_cert.pem",
             "vidaa2024_cert.pem",
             "vidaa_client.pem",
@@ -240,6 +243,8 @@ def resolve_certificates(
             "cert.pem",
         ]
         key_names = [
+            "vidaa_client_v01.key",
+            "vidaa_client_v02.key",
             "vidaa_2024_key.pem",
             "vidaa2024_key.pem",
             "vidaa_client.key",
@@ -257,6 +262,8 @@ def resolve_certificates(
     elif profile_clean in ("remotenow", "remotenow_2018", "standard"):
         cert_names = [
             "remotenow_2018_cert.pem",
+            "vidaa_client_v01.pem",
+            "vidaa_client_v01.crt",
             "vidaa_client.pem",
             "hisense.crt",
             "client_cert.pem",
@@ -264,6 +271,7 @@ def resolve_certificates(
         ]
         key_names = [
             "remotenow_2018_key.pem",
+            "vidaa_client_v01.key",
             "vidaa_client.key",
             "hisense.key",
             "client_key.pem",
@@ -276,6 +284,9 @@ def resolve_certificates(
         ]
     else:  # auto
         cert_names = [
+            "vidaa_client_v01.pem",
+            "vidaa_client_v01.crt",
+            "vidaa_client_v02.pem",
             "vidaa_client.pem",
             "hisense.crt",
             "client_cert.pem",
@@ -285,6 +296,8 @@ def resolve_certificates(
             "cert.pem",
         ]
         key_names = [
+            "vidaa_client_v01.key",
+            "vidaa_client_v02.key",
             "vidaa_client.key",
             "hisense.key",
             "client_key.pem",
@@ -320,7 +333,16 @@ def resolve_certificates(
 
     if keyfile and os.path.isfile(keyfile):
         resolved_key = os.path.abspath(keyfile)
-    else:
+    elif resolved_cert:
+        # Check if a matching key exists alongside resolved_cert (e.g. vidaa_client_v01.pem -> vidaa_client_v01.key)
+        cert_stem = os.path.splitext(resolved_cert)[0]
+        for ext in (".key", "_key.pem", ".pem"):
+            candidate = cert_stem + ext
+            if candidate != resolved_cert and os.path.isfile(candidate):
+                resolved_key = candidate
+                break
+
+    if not resolved_key:
         for d in search_dirs:
             for name in key_names:
                 candidate = os.path.join(d, name)
