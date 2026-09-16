@@ -90,15 +90,20 @@ def test_volume_alternate_topic_dispatch():
 
 def test_wake_on_lan_subnet_broadcast():
     """Test Wake-on-LAN sends magic packets to both subnet directed broadcast and 255.255.255.255."""
-    from unittest.mock import patch
+    from unittest.mock import patch, MagicMock
 
     sent_targets = []
 
-    def mock_sendto(self, data, addr):
+    mock_sock = MagicMock()
+    mock_sock.__enter__.return_value = mock_sock
+
+    def mock_sendto(data, addr):
         sent_targets.append(addr[0])
         return len(data)
 
-    with patch("socket.socket.sendto", new=mock_sendto):
+    mock_sock.sendto.side_effect = mock_sendto
+
+    with patch("socket.socket", return_value=mock_sock):
         result = HisenseTvClient.send_wake_on_lan(
             mac="e8:51:77:ec:98:1c",
             ip="192.168.50.12",

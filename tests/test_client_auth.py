@@ -80,3 +80,28 @@ def test_probe_auth_methods():
         assert "supported" in probe["legacy_static"]
         assert "supported" in probe["standard_dynamic"]
         assert "supported" in probe["modern_dynamic"]
+
+
+def test_ensure_connected_rate_limiting_and_cleanup():
+    """Test ensure_connected rate limits reconnection attempts and cleans up previous loops."""
+    client = HisenseTvClient(ip="192.168.50.12", client_id="test_client", username="u", access_token="t")
+
+    mock_old_mqtt = MagicMock()
+    client.mqtt_client = mock_old_mqtt
+    client.connected = False
+
+    # First call triggers reconnect
+    with patch.object(client, "create_mqtt_client") as mock_create:
+        mock_new_mqtt = MagicMock()
+        mock_create.return_value = mock_new_mqtt
+
+        res1 = client.ensure_connected(min_interval=5.0)
+        assert res1 is True
+        mock_old_mqtt.loop_stop.assert_called_once()
+        mock_old_mqtt.disconnect.assert_called_once()
+        mock_new_mqtt.connect_async.assert_called_once()
+        mock_new_mqtt.loop_start.assert_called_once()
+
+        # Immediate second call is rate-limited
+        res2 = client.ensure_connected(min_interval=5.0)
+        assert res2 is False

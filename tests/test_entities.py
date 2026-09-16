@@ -127,7 +127,12 @@ def test_binary_sensor_entities(mock_client, mock_entry):
 
 @pytest.mark.anyio
 async def test_button_entities(mock_client, mock_entry, monkeypatch):
+    import threading
     hass = MagicMock(spec=HomeAssistant)
+    hass.loop_thread_id = threading.get_ident()
+    hass.loop = MagicMock()
+    hass.data = {}
+    hass.states = MagicMock()
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     b_reconnect = HisenseVidaaForceReconnectButton(mock_client, mock_entry)
@@ -225,7 +230,12 @@ def test_media_player_play_media(mock_client, mock_entry):
 
 @pytest.mark.anyio
 async def test_notify_entity(mock_client, mock_entry):
+    import threading
     hass = MagicMock(spec=HomeAssistant)
+    hass.loop_thread_id = threading.get_ident()
+    hass.loop = MagicMock()
+    hass.data = {}
+    hass.states = MagicMock()
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     notify = HisenseVidaaNotifyEntity(
@@ -244,7 +254,12 @@ async def test_notify_entity(mock_client, mock_entry):
 
 @pytest.mark.anyio
 async def test_select_entity(mock_client, mock_entry):
+    import threading
     hass = MagicMock(spec=HomeAssistant)
+    hass.loop_thread_id = threading.get_ident()
+    hass.loop = MagicMock()
+    hass.data = {}
+    hass.states = MagicMock()
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     sel = HisenseVidaaAudioOutputSelect(
@@ -254,6 +269,7 @@ async def test_select_entity(mock_client, mock_entry):
         name=mock_entry.title,
     )
     sel.hass = hass
+    sel.entity_id = "select.audio_output"
     assert sel.available is True
     assert sel.unique_id == "test_entry_id_audio_output_select"
     assert sel.current_option == "TV Speakers"
@@ -270,7 +286,12 @@ async def test_select_entity(mock_client, mock_entry):
 
 @pytest.mark.anyio
 async def test_picture_and_sound_mode_selects(mock_client, mock_entry):
+    import threading
     hass = MagicMock(spec=HomeAssistant)
+    hass.loop_thread_id = threading.get_ident()
+    hass.loop = MagicMock()
+    hass.data = {}
+    hass.states = MagicMock()
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     pic_sel = HisenseVidaaPictureModeSelect(
@@ -280,6 +301,7 @@ async def test_picture_and_sound_mode_selects(mock_client, mock_entry):
         name=mock_entry.title,
     )
     pic_sel.hass = hass
+    pic_sel.entity_id = "select.picture_mode"
     assert pic_sel.unique_id == "test_entry_id_picture_mode"
     assert "Standard" in pic_sel.options
 
@@ -293,6 +315,7 @@ async def test_picture_and_sound_mode_selects(mock_client, mock_entry):
         name=mock_entry.title,
     )
     snd_sel.hass = hass
+    snd_sel.entity_id = "select.sound_mode"
     assert snd_sel.unique_id == "test_entry_id_sound_mode"
     assert "Standard" in snd_sel.options
 
@@ -302,7 +325,12 @@ async def test_picture_and_sound_mode_selects(mock_client, mock_entry):
 
 @pytest.mark.anyio
 async def test_picture_calibration_numbers(mock_client, mock_entry):
+    import threading
     hass = MagicMock(spec=HomeAssistant)
+    hass.loop_thread_id = threading.get_ident()
+    hass.loop = MagicMock()
+    hass.data = {}
+    hass.states = MagicMock()
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     bl = HisenseVidaaBacklightNumber(
@@ -312,6 +340,7 @@ async def test_picture_calibration_numbers(mock_client, mock_entry):
         name=mock_entry.title,
     )
     bl.hass = hass
+    bl.entity_id = "number.backlight"
     assert bl.unique_id == "test_entry_id_backlight"
     assert bl.native_min_value == 0
     assert bl.native_max_value == 100
@@ -325,6 +354,7 @@ async def test_picture_calibration_numbers(mock_client, mock_entry):
         name=mock_entry.title,
     )
     br.hass = hass
+    br.entity_id = "number.brightness"
     assert br.unique_id == "test_entry_id_brightness"
     await br.async_set_native_value(52)
     mock_client.set_brightness.assert_called_with(52)
@@ -336,6 +366,7 @@ async def test_picture_calibration_numbers(mock_client, mock_entry):
         name=mock_entry.title,
     )
     ct.hass = hass
+    ct.entity_id = "number.contrast"
     assert ct.unique_id == "test_entry_id_contrast"
     await ct.async_set_native_value(90)
     mock_client.set_contrast.assert_called_with(90)
@@ -369,7 +400,12 @@ def test_media_player_cec_source_naming(mock_client, mock_entry):
 
 @pytest.mark.anyio
 async def test_remote_and_media_player_idempotent_power_control(mock_client, mock_entry):
+    import threading
     hass = MagicMock(spec=HomeAssistant)
+    hass.loop_thread_id = threading.get_ident()
+    hass.loop = MagicMock()
+    hass.data = {}
+    hass.states = MagicMock()
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     rem = HisenseVidaaRemote(
@@ -380,6 +416,7 @@ async def test_remote_and_media_player_idempotent_power_control(mock_client, moc
         options=mock_entry.options,
     )
     rem.hass = hass
+    rem.entity_id = "remote.living_room_tv"
 
     # Mock client connected: initial state should be ON
     mock_client.connected = True
