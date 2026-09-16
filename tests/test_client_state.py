@@ -90,7 +90,7 @@ def test_volume_alternate_topic_dispatch():
 
 def test_wake_on_lan_subnet_broadcast():
     """Test Wake-on-LAN sends magic packets to both subnet directed broadcast and 255.255.255.255."""
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import MagicMock, patch
 
     sent_targets = []
 

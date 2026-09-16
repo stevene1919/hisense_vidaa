@@ -557,6 +557,12 @@ class HisenseTvClient:
         else:
             self.connected = False
             _LOGGER.error("Failed to connect to TV MQTT Broker, rc: %d", rc)
+
+            if rc in (4, 5):
+                # Immediately halt paho-mqtt auto-reconnect loop to avoid flapping/broker storm
+                with contextlib.suppress(Exception):
+                    client.loop_stop()
+
             if self._auth_future and not self._auth_future.done():
                 self._safe_set_future_exception(
                     self._auth_future,
@@ -565,10 +571,6 @@ class HisenseTvClient:
                 return
 
             if rc in (4, 5):
-                # Immediately halt paho-mqtt auto-reconnect loop to avoid flapping/broker storm
-                with contextlib.suppress(Exception):
-                    client.loop_stop()
-
                 if self.refresh_token:
                     current_time = time.time()
                     with self._refresh_lock:

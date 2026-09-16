@@ -85,6 +85,26 @@ def test_resolve_certificates(tmp_path):
     assert key == str(key_file)
 
 
+def test_resolve_certificates_versioned(tmp_path):
+    """Test resolving versioned certificates such as vidaa_client_v01.pem / key."""
+    cert_dir = tmp_path / "ssl"
+    cert_dir.mkdir()
+
+    v01_cert = cert_dir / "vidaa_client_v01.pem"
+    v01_key = cert_dir / "vidaa_client_v01.key"
+    v01_cert.write_text("V01 CERT")
+    v01_key.write_text("V01 KEY")
+
+    cert, key = resolve_certificates(auth_profile="auto", search_dirs=[str(cert_dir)])
+    assert cert == str(v01_cert)
+    assert key == str(v01_key)
+
+    # Test auto matching key alongside explicit certfile
+    cert_match, key_match = resolve_certificates(certfile=str(v01_cert), search_dirs=[str(cert_dir)])
+    assert cert_match == str(v01_cert)
+    assert key_match == str(v01_key)
+
+
 def test_extract_pkcs12_and_resolve(tmp_path):
     """Test generating a PKCS#12 bundle, extracting to PEM, and auto-resolving."""
     # Generate synthetic key and cert
