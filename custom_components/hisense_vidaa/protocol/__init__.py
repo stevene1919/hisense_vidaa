@@ -23,6 +23,7 @@ from .connection import (
 )
 from .dispatcher import dispatch_incoming_mqtt_message
 from .pairing import async_start_pairing_handshake, async_submit_pin_code
+from .ping import ping_tv
 from .topics import TOPIC_BROADCAST_BASEPATH, TopicPaths, build_topic_paths
 from .wol import send_wake_on_lan
 
@@ -41,6 +42,7 @@ __all__ = [
     "get_profile_default_cert_paths",
     "is_token_expired",
     "perform_token_refresh",
+    "ping_tv",
     "probe_tv_auth_methods",
     "resolve_ca_certificate",
     "resolve_certificates",

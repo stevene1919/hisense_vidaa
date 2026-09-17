@@ -11,14 +11,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 try:
-    from ..crypto import resolve_ca_certificate, resolve_certificates
-    from ..discovery import get_arp_mac
     from ..protocol.auth import probe_tv_auth_methods
+    from ..protocol.certs import resolve_ca_certificate, resolve_certificates
+    from .fingerprint import get_arp_mac
     from .settings import SettingMenuItem
 except (ImportError, ValueError):
-    from crypto import resolve_ca_certificate, resolve_certificates
-    from discovery import get_arp_mac
     from protocol.auth import probe_tv_auth_methods
+    from protocol.certs import resolve_ca_certificate, resolve_certificates
+    from tv.fingerprint import get_arp_mac
     from tv.settings import SettingMenuItem
 
 _LOGGER = logging.getLogger(__name__)
