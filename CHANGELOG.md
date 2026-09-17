@@ -13,6 +13,8 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 - **VERSIONED CERTIFICATE RESOLUTION (Issues #6, #21)**:
   - Extended certificate resolver to recognize versioned certificate bundles (`vidaa_client_v01.pem`/`.crt`/`.key`, `vidaa_client_v02.pem`/`.key`).
   - Added automatic matching key resolution alongside explicit or discovered certificate files.
+- **AUDIO OUTPUT SELECTION STABILITY**:
+  - Filtered volume update handler in `select.py` and `media_player.py` to only process master volume (`0`) and ARC (`1`) channels, preventing mute broadcast packets (`volume_type: 2`) from momentarily toggling audio output selection to `Headphone / Bluetooth`.
 
 ## [2.8.5] - 2026-09-15
 
