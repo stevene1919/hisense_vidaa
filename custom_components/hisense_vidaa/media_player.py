@@ -11,7 +11,6 @@ from homeassistant.components.media_player import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
@@ -30,6 +29,7 @@ from .const import (
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
     DOMAIN,
 )
+from .entity import HisenseVidaaEntity
 from .settings import (
     DEFAULT_MENU_ID_SOUND_MODE,
     STANDARD_SOUND_MODES,
@@ -39,32 +39,32 @@ from .settings import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class HisenseVidaaMediaPlayer(MediaPlayerEntity):
-    _attr_has_entity_name = True
+class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
     _attr_name = None
     _attr_device_class = MediaPlayerDeviceClass.TV
 
     def __init__(
         self,
         client,
-        mac,
-        entry_id,
-        name,
+        mac=None,
+        entry_id=None,
+        name=None,
         options=None,
         model=None,
         manufacturer=None,
         sw_version=None,
     ):
-        self._client = client
-        self._mac = mac
-        self._entry_id = entry_id
-        self._name = name
-        self._options = options or {}
-        self._model = model or "VIDAA TV"
-        self._manufacturer = manufacturer or "Hisense"
-        self._sw_version = sw_version
-
-        self._state = STATE_OFF
+        super().__init__(
+            client=client,
+            entry_or_mac=mac,
+            entry_id=entry_id,
+            name=name,
+            model=model,
+            manufacturer=manufacturer,
+            sw_version=sw_version,
+            options=options,
+        )
+        self._attr_unique_id = f"{self._entry_id}_media_player"
         self._volume = 0
         self._muted = False
         self._source = None
@@ -107,24 +107,7 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
     @property
     def unique_id(self) -> str:
         """Return a unique ID."""
-        return f"{self._entry_id}_media_player"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device info."""
-        info = DeviceInfo(
-            identifiers={(DOMAIN, self._entry_id)},
-            name=self._name,
-            manufacturer=self._manufacturer,
-            model=self._model,
-            sw_version=self._sw_version,
-        )
-
-        if self._mac:
-            cleaned_mac = self._mac.replace("-", ":").lower()
-            info["connections"] = {(CONNECTION_NETWORK_MAC, cleaned_mac)}
-
-        return info
+        return self._attr_unique_id
 
     @property
     def state(self) -> str:

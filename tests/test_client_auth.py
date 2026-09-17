@@ -190,3 +190,47 @@ async def test_async_start_auth_auto_fallback_on_rc5():
         await client.async_start_auth()
         assert calls == ["modern", "middle"]
         assert client.auth_profile == "middle"
+
+
+@pytest.mark.anyio
+async def test_async_start_auth_full_cascade_to_legacy():
+    """Test auto profile cascades all dynamic profiles (modern, middle, remotenow) when all fail."""
+    client = HisenseTvClient(ip="192.168.50.12", auth_profile="auto")
+
+    calls = []
+
+    async def mock_internal(profile="modern", use_new_auth=None):
+        calls.append(profile)
+        raise Exception("MQTT connection rejected with code 5")
+
+    with patch.object(client, "get_device_fingerprint", return_value={}), \
+         patch.object(client, "_async_start_auth_internal", side_effect=mock_internal):
+        with pytest.raises(Exception, match="rejected with code 5"):
+            await client.async_start_auth()
+        assert calls == ["modern", "middle", "remotenow"]
+
+
+
+def test_check_and_refresh_token_network_error_resilience():
+    """Test token refresh catches network / socket errors gracefully without crashing."""
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        client_id="test_client",
+        access_token="old_token",
+        access_token_time=now - (3 * 86400),
+        access_token_duration=2,
+        refresh_token="valid_refresh",
+        refresh_token_time=now - (3 * 86400),
+        refresh_token_duration=30,
+    )
+
+    with patch("paho.mqtt.client.Client") as mock_mqtt:
+        mock_instance = MagicMock()
+        mock_instance.connect.side_effect = OSError("Connection refused / unreachable host")
+        mock_mqtt.return_value = mock_instance
+
+        # Should catch error and return False
+        refreshed = client.check_and_refresh_token(force=True)
+        assert refreshed is False
+

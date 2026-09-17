@@ -8,19 +8,12 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .client import HisenseTvClient
-from .const import (
-    CONF_MAC_ADDRESS,
-    CONF_MANUFACTURER,
-    CONF_MODEL,
-    CONF_SW_VERSION,
-    DEFAULT_NAME,
-    DOMAIN,
-)
+from .const import DOMAIN
 from .discovery import get_tv_timestamp
+from .entity import HisenseVidaaEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,34 +35,10 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class HisenseVidaaBaseButton(ButtonEntity):
+class HisenseVidaaBaseButton(HisenseVidaaEntity, ButtonEntity):
     """Base button for Hisense VIDAA TV."""
 
-    _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
-        """Initialize the button."""
-        self._client = client
-        self._entry = entry
-        self._entry_id = entry.entry_id
-        self._mac = entry.data.get(CONF_MAC_ADDRESS)
-        self._name = entry.title or DEFAULT_NAME
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device registry info."""
-        info = DeviceInfo(
-            identifiers={(DOMAIN, self._entry_id)},
-            name=self._name,
-            manufacturer=self._entry.data.get(CONF_MANUFACTURER, "Hisense"),
-            model=self._entry.data.get(CONF_MODEL, "VIDAA TV"),
-            sw_version=self._entry.data.get(CONF_SW_VERSION),
-        )
-        if self._mac:
-            cleaned_mac = self._mac.replace("-", ":").lower()
-            info["connections"] = {(CONNECTION_NETWORK_MAC, cleaned_mac)}
-        return info
 
 
 class HisenseVidaaForceReconnectButton(HisenseVidaaBaseButton):

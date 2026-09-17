@@ -8,16 +8,10 @@ from typing import Any
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import (
-    CONF_MAC_ADDRESS,
-    CONF_MANUFACTURER,
-    CONF_MODEL,
-    CONF_SW_VERSION,
-    DOMAIN,
-)
+from .const import DOMAIN
+from .entity import HisenseVidaaEntity
 from .settings import (
     DEFAULT_MENU_ID_PICTURE_MODE,
     DEFAULT_MENU_ID_SOUND_MODE,
@@ -45,10 +39,9 @@ VOLUME_TYPE_MAP = {
 }
 
 
-class HisenseVidaaAudioOutputSelect(SelectEntity):
+class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
     """Hisense VIDAA Audio Output Mode selector."""
 
-    _attr_has_entity_name = True
     _attr_name = "Audio Output Mode"
     _attr_icon = "mdi:speaker-multiple"
     _attr_options = AUDIO_OUTPUT_OPTIONS
@@ -56,46 +49,35 @@ class HisenseVidaaAudioOutputSelect(SelectEntity):
     def __init__(
         self,
         client,
-        mac: str | None,
-        entry_id: str,
-        name: str,
-        model: str | None = None,
-        manufacturer: str | None = None,
-        sw_version: str | None = None,
+        entry_or_mac=None,
+        mac=None,
+        entry_id=None,
+        name=None,
+        model=None,
+        manufacturer=None,
+        sw_version=None,
+        options=None,
     ) -> None:
-        self._client = client
-        self._mac = mac
-        self._entry_id = entry_id
-        self._name = name
-        self._model = model or "VIDAA TV"
-        self._manufacturer = manufacturer or "Hisense"
-        self._sw_version = sw_version
+        super().__init__(
+            client=client,
+            entry_or_mac=entry_or_mac,
+            mac=mac,
+            entry_id=entry_id,
+            name=name,
+            model=model,
+            manufacturer=manufacturer,
+            sw_version=sw_version,
+            options=options,
+        )
+        self._attr_unique_id = f"{self._entry_id}_audio_output_select"
         self._volume_type = 0
-
-    async def async_added_to_hass(self) -> None:
-        self._client.register_volume_callback(self._handle_volume_update)
 
     @property
     def unique_id(self) -> str:
-        return f"{self._entry_id}_audio_output_select"
+        return self._attr_unique_id
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        info = DeviceInfo(
-            identifiers={(DOMAIN, self._entry_id)},
-            name=self._name,
-            manufacturer=self._manufacturer,
-            model=self._model,
-            sw_version=self._sw_version,
-        )
-        if self._mac:
-            cleaned_mac = self._mac.replace("-", ":").lower()
-            info["connections"] = {(CONNECTION_NETWORK_MAC, cleaned_mac)}
-        return info
-
-    @property
-    def available(self) -> bool:
-        return bool(self._client and self._client.connected)
+    async def async_added_to_hass(self) -> None:
+        self._client.register_volume_callback(self._handle_volume_update)
 
     @property
     def current_option(self) -> str:
@@ -124,56 +106,44 @@ class HisenseVidaaAudioOutputSelect(SelectEntity):
         self.async_write_ha_state()
 
 
-class HisenseVidaaPictureModeSelect(SelectEntity):
+class HisenseVidaaPictureModeSelect(HisenseVidaaEntity, SelectEntity):
     """Hisense VIDAA Picture Mode selector."""
 
-    _attr_has_entity_name = True
     _attr_name = "Picture Mode"
     _attr_icon = "mdi:television-shading"
 
     def __init__(
         self,
         client,
-        mac: str | None,
-        entry_id: str,
-        name: str,
-        model: str | None = None,
-        manufacturer: str | None = None,
-        sw_version: str | None = None,
+        entry_or_mac=None,
+        mac=None,
+        entry_id=None,
+        name=None,
+        model=None,
+        manufacturer=None,
+        sw_version=None,
+        options=None,
     ) -> None:
-        self._client = client
-        self._mac = mac
-        self._entry_id = entry_id
-        self._name = name
-        self._model = model or "VIDAA TV"
-        self._manufacturer = manufacturer or "Hisense"
-        self._sw_version = sw_version
+        super().__init__(
+            client=client,
+            entry_or_mac=entry_or_mac,
+            mac=mac,
+            entry_id=entry_id,
+            name=name,
+            model=model,
+            manufacturer=manufacturer,
+            sw_version=sw_version,
+            options=options,
+        )
+        self._attr_unique_id = f"{self._entry_id}_picture_mode"
         self._current_mode = "Standard"
-
-    async def async_added_to_hass(self) -> None:
-        self._client.register_picture_callback(self._handle_picture_update)
 
     @property
     def unique_id(self) -> str:
-        return f"{self._entry_id}_picture_mode"
+        return self._attr_unique_id
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        info = DeviceInfo(
-            identifiers={(DOMAIN, self._entry_id)},
-            name=self._name,
-            manufacturer=self._manufacturer,
-            model=self._model,
-            sw_version=self._sw_version,
-        )
-        if self._mac:
-            cleaned_mac = self._mac.replace("-", ":").lower()
-            info["connections"] = {(CONNECTION_NETWORK_MAC, cleaned_mac)}
-        return info
-
-    @property
-    def available(self) -> bool:
-        return bool(self._client and self._client.connected)
+    async def async_added_to_hass(self) -> None:
+        self._client.register_picture_callback(self._handle_picture_update)
 
     @property
     def options(self) -> list[str]:
@@ -203,56 +173,44 @@ class HisenseVidaaPictureModeSelect(SelectEntity):
         self.async_write_ha_state()
 
 
-class HisenseVidaaSoundModeSelect(SelectEntity):
+class HisenseVidaaSoundModeSelect(HisenseVidaaEntity, SelectEntity):
     """Hisense VIDAA Sound Mode selector."""
 
-    _attr_has_entity_name = True
     _attr_name = "Sound Mode"
     _attr_icon = "mdi:equalizer"
 
     def __init__(
         self,
         client,
-        mac: str | None,
-        entry_id: str,
-        name: str,
-        model: str | None = None,
-        manufacturer: str | None = None,
-        sw_version: str | None = None,
+        entry_or_mac=None,
+        mac=None,
+        entry_id=None,
+        name=None,
+        model=None,
+        manufacturer=None,
+        sw_version=None,
+        options=None,
     ) -> None:
-        self._client = client
-        self._mac = mac
-        self._entry_id = entry_id
-        self._name = name
-        self._model = model or "VIDAA TV"
-        self._manufacturer = manufacturer or "Hisense"
-        self._sw_version = sw_version
+        super().__init__(
+            client=client,
+            entry_or_mac=entry_or_mac,
+            mac=mac,
+            entry_id=entry_id,
+            name=name,
+            model=model,
+            manufacturer=manufacturer,
+            sw_version=sw_version,
+            options=options,
+        )
+        self._attr_unique_id = f"{self._entry_id}_sound_mode"
         self._current_mode = "Standard"
-
-    async def async_added_to_hass(self) -> None:
-        self._client.register_sound_callback(self._handle_sound_update)
 
     @property
     def unique_id(self) -> str:
-        return f"{self._entry_id}_sound_mode"
+        return self._attr_unique_id
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        info = DeviceInfo(
-            identifiers={(DOMAIN, self._entry_id)},
-            name=self._name,
-            manufacturer=self._manufacturer,
-            model=self._model,
-            sw_version=self._sw_version,
-        )
-        if self._mac:
-            cleaned_mac = self._mac.replace("-", ":").lower()
-            info["connections"] = {(CONNECTION_NETWORK_MAC, cleaned_mac)}
-        return info
-
-    @property
-    def available(self) -> bool:
-        return bool(self._client and self._client.connected)
+    async def async_added_to_hass(self) -> None:
+        self._client.register_sound_callback(self._handle_sound_update)
 
     @property
     def options(self) -> list[str]:
@@ -290,49 +248,16 @@ async def async_setup_entry(
     """Set up the Hisense VIDAA select platform."""
     data = hass.data[DOMAIN][config_entry.entry_id]
     client = data.get("client", data) if isinstance(data, dict) else data
-    mac = config_entry.data.get(CONF_MAC_ADDRESS)
-    name = config_entry.title
-    model = config_entry.data.get(CONF_MODEL, "VIDAA TV")
-    mfr = config_entry.data.get(CONF_MANUFACTURER, "Hisense")
-    sw_ver = config_entry.data.get(CONF_SW_VERSION)
 
     entities: list[SelectEntity] = [
-        HisenseVidaaAudioOutputSelect(
-            client=client,
-            mac=mac,
-            entry_id=config_entry.entry_id,
-            name=name,
-            model=model,
-            manufacturer=mfr,
-            sw_version=sw_ver,
-        ),
+        HisenseVidaaAudioOutputSelect(client=client, entry_or_mac=config_entry),
     ]
 
     # Only instantiate Picture Mode and Sound Mode if TV advertises dynamic settings support
     if hasattr(client, "picture_settings") and client.picture_settings:
-        entities.append(
-            HisenseVidaaPictureModeSelect(
-                client=client,
-                mac=mac,
-                entry_id=config_entry.entry_id,
-                name=name,
-                model=model,
-                manufacturer=mfr,
-                sw_version=sw_ver,
-            )
-        )
+        entities.append(HisenseVidaaPictureModeSelect(client=client, entry_or_mac=config_entry))
 
     if hasattr(client, "sound_settings") and client.sound_settings:
-        entities.append(
-            HisenseVidaaSoundModeSelect(
-                client=client,
-                mac=mac,
-                entry_id=config_entry.entry_id,
-                name=name,
-                model=model,
-                manufacturer=mfr,
-                sw_version=sw_ver,
-            )
-        )
+        entities.append(HisenseVidaaSoundModeSelect(client=client, entry_or_mac=config_entry))
 
     async_add_entities(entities)

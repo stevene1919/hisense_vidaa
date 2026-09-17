@@ -292,3 +292,127 @@ async def test_options_flow(monkeypatch):
     assert result_certs_submit["type"] == "create_entry"
     assert result_certs_submit["data"]["certfile"] == "/config/certs/custom.crt"
     assert result_certs_submit["data"]["auth_profile"] == "modern"
+
+
+@pytest.mark.anyio
+async def test_reauth_flow_success(monkeypatch):
+    """Test reauth flow prompts confirmation, triggers client auth, submits PIN, and updates entry."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    mock_entry = MagicMock()
+    mock_entry.entry_id = "test_entry_reauth"
+    mock_entry.data = {
+        CONF_IP_ADDRESS: "192.168.50.12",
+        CONF_MAC_ADDRESS: "e8:51:77:ec:98:1c",
+        "auth_profile": "modern",
+    }
+    hass.config_entries.async_get_entry = MagicMock(return_value=mock_entry)
+    hass.config_entries.async_update_entry = MagicMock()
+    hass.config_entries.async_reload = AsyncMock()
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    flow.context = {"entry_id": "test_entry_reauth"}
+
+    # Start reauth
+    result_init = await flow.async_step_reauth(mock_entry.data)
+    assert result_init["type"] == "form"
+    assert result_init["step_id"] == "reauth_confirm"
+
+    # Confirm reauth
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        AsyncMock(return_value=None),
+    )
+    result_confirm = await flow.async_step_reauth_confirm(user_input={})
+    assert result_confirm["type"] == "form"
+    assert result_confirm["step_id"] == "auth"
+
+    # Submit PIN
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.client.HisenseTvClient.async_submit_pin",
+        AsyncMock(return_value=None),
+    )
+    flow.client.access_token = "new_access_token"
+    flow.client.refresh_token = "new_refresh_token"
+
+    result_auth = await flow.async_step_auth(user_input={"pin_code": "1234"})
+    assert result_auth["type"] == "abort"
+    assert result_auth["reason"] == "reauth_successful"
+    assert hass.config_entries.async_update_entry.called
+    assert hass.config_entries.async_reload.called
+
+
+@pytest.mark.anyio
+async def test_reconfigure_flow_success(monkeypatch):
+    """Test reconfigure flow updates IP/profile and re-pairs or updates entry."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    mock_entry = MagicMock()
+    mock_entry.entry_id = "test_entry_reconf"
+    mock_entry.data = {
+        CONF_IP_ADDRESS: "192.168.50.12",
+        CONF_MAC_ADDRESS: "e8:51:77:ec:98:1c",
+        "auth_profile": "legacy",
+    }
+    hass.config_entries.async_get_entry = MagicMock(return_value=mock_entry)
+    hass.config_entries.async_update_entry = MagicMock()
+    hass.config_entries.async_reload = AsyncMock()
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    flow.context = {"entry_id": "test_entry_reconf"}
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        AsyncMock(return_value=None),
+    )
+
+    result_reconf = await flow.async_step_reconfigure(
+        user_input={
+            CONF_IP_ADDRESS: "192.168.50.15",
+            "auth_profile": "legacy",
+        }
+    )
+    assert result_reconf["type"] == "abort"
+    assert result_reconf["reason"] == "reconfigure_successful"
+    assert hass.config_entries.async_update_entry.called
+
+
+@pytest.mark.anyio
+async def test_zeroconf_discovery(monkeypatch):
+    """Test mDNS / Zeroconf discovery handling."""
+    from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    flow.context = {}
+    flow.async_set_unique_id = AsyncMock(return_value=None)
+    flow._abort_if_unique_id_configured = MagicMock()
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.config_flow.get_arp_mac",
+        lambda host: "e8:51:77:ec:98:1c",
+    )
+
+    discovery_info = ZeroconfServiceInfo(
+        ip_address="192.168.50.12",
+        ip_addresses=["192.168.50.12"],
+        port=36669,
+        hostname="hisensetv.local.",
+        type="_vidaa._tcp.local.",
+        name="Living Room TV._vidaa._tcp.local.",
+        properties={},
+    )
+
+    result = await flow.async_step_zeroconf(discovery_info)
+    assert result["type"] == "form"
+    assert result["step_id"] == "discovery_confirm"
+    assert flow.ip_address == "192.168.50.12"
+    assert flow.mac_address == "e8:51:77:ec:98:1c"
+

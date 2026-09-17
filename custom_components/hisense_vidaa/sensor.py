@@ -12,21 +12,16 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .client import HisenseTvClient
 from .const import (
     AUTH_PROFILES,
     CONF_AUTH_PROFILE,
-    CONF_MAC_ADDRESS,
-    CONF_MANUFACTURER,
-    CONF_MODEL,
-    CONF_SW_VERSION,
     DEFAULT_AUTH_PROFILE,
-    DEFAULT_NAME,
     DOMAIN,
 )
+from .entity import HisenseVidaaEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,39 +44,17 @@ async def async_setup_entry(
     ])
 
 
-class HisenseVidaaBaseSensor(SensorEntity):
+class HisenseVidaaBaseSensor(HisenseVidaaEntity, SensorEntity):
     """Base class for Hisense VIDAA sensors."""
-
-    _attr_has_entity_name = True
-    _attr_should_poll = False
 
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         """Initialize the base sensor."""
-        self._client = client
-        self._entry = entry
-        self._entry_id = entry.entry_id
-        self._mac = entry.data.get(CONF_MAC_ADDRESS)
-        self._name = entry.title or DEFAULT_NAME
+        super().__init__(client, entry)
 
     def _schedule_state_update(self) -> None:
         """Safely schedule state update if entity is added to hass."""
         if getattr(self, "hass", None) is not None:
             self.schedule_update_ha_state()
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device registry info with dynamic model and software version."""
-        info = DeviceInfo(
-            identifiers={(DOMAIN, self._entry_id)},
-            name=self._name,
-            manufacturer=self._entry.data.get(CONF_MANUFACTURER, "Hisense"),
-            model=self._entry.data.get(CONF_MODEL, "VIDAA TV"),
-            sw_version=self._entry.data.get(CONF_SW_VERSION),
-        )
-        if self._mac:
-            cleaned_mac = self._mac.replace("-", ":").lower()
-            info["connections"] = {(CONNECTION_NETWORK_MAC, cleaned_mac)}
-        return info
 
 
 class HisenseVidaaSessionStatusSensor(HisenseVidaaBaseSensor):

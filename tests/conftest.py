@@ -45,9 +45,21 @@ if "homeassistant" not in sys.modules:
     # core
     core = types.ModuleType("homeassistant.core")
     class HomeAssistant:
-        pass
+        config_entries = None
+        services = None
+        data = None
+        loop = None
+
+        def __init__(self):
+            self.config_entries = MagicMock()
+            self.services = MagicMock()
+            self.data = {}
     class ServiceCall:
-        pass
+        def __init__(self, domain=None, service=None, data=None, context=None):
+            self.domain = domain
+            self.service = service
+            self.data = data or {}
+            self.context = context
     def callback(func):
         return func
     core.HomeAssistant = HomeAssistant
@@ -292,6 +304,17 @@ if "homeassistant" not in sys.modules:
     # helpers
     helpers = types.ModuleType("homeassistant.helpers")
 
+    # helpers.entity
+    entity_module = types.ModuleType("homeassistant.helpers.entity")
+    class Entity:
+        _attr_has_entity_name = True
+        _attr_should_poll = False
+        def schedule_update_ha_state(self): pass
+        def async_write_ha_state(self): pass
+    entity_module.Entity = Entity
+    helpers.entity = entity_module
+    sys.modules["homeassistant.helpers.entity"] = entity_module
+
     # helpers.selector
     selector = types.ModuleType("homeassistant.helpers.selector")
     class NumberSelector:
@@ -384,13 +407,15 @@ if "homeassistant" not in sys.modules:
     # helpers.service_info.zeroconf
     zeroconf_info = types.ModuleType("homeassistant.helpers.service_info.zeroconf")
     class ZeroconfServiceInfo:
-        def __init__(self, host=None, port=None, hostname=None, type=None, name=None, properties=None):
-            self.host = host
+        def __init__(self, host=None, port=None, hostname=None, type=None, name=None, properties=None, ip_address=None, ip_addresses=None):
+            self.host = host or ip_address
             self.port = port
             self.hostname = hostname
             self.type = type
             self.name = name
             self.properties = properties or {}
+            self.ip_address = ip_address or host
+            self.ip_addresses = ip_addresses or ([self.ip_address] if self.ip_address else [])
     zeroconf_info.ZeroconfServiceInfo = ZeroconfServiceInfo
     service_info.zeroconf = zeroconf_info
     sys.modules["homeassistant.helpers.service_info.zeroconf"] = zeroconf_info

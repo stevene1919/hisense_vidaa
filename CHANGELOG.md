@@ -29,8 +29,11 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
   - Added automatic matching key resolution alongside explicit or discovered certificate files.
 - **AUDIO OUTPUT SELECTION STABILITY**:
   - Filtered volume update handler in `select.py` and `media_player.py` to only process master volume (`0`) and ARC (`1`) channels, preventing mute broadcast packets (`volume_type: 2`) from momentarily toggling audio output selection to `Headphone / Bluetooth`.
-- **UNIT TEST EXPANSION**:
-  - Added unit test cases covering 4-tier credential generation, middle auth probing, token validity thresholds, missing metadata safety, and multi-tier auth fallback (57 passing tests).
+- **BASE ENTITY REFACTORING & CODE DEDUPLICATION**:
+  - Extracted common base class `HisenseVidaaEntity` in [`entity.py`](custom_components/hisense_vidaa/entity.py), standardizing `device_info` registration, MAC address formatting, connection status availability, and `_attr_has_entity_name = True` across all 8 entity platforms (`binary_sensor`, `button`, `media_player`, `notify`, `number`, `remote`, `select`, `sensor`).
+- **EXPANDED TEST COVERAGE**:
+  - Added unit test suite [`tests/test_services.py`](tests/test_services.py) covering all custom integration services (`send_key`, `launch_app`, `set_picture_setting`, `set_sound_setting`, `send_text_input`).
+  - Added test cases covering Home Assistant reauth flow, reconfigure flow, mDNS/Zeroconf discovery, and full multi-tier authentication cascade (66 passing tests).
 
 ## [2.8.5] - 2026-09-15
 
