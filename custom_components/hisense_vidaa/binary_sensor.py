@@ -25,7 +25,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up Hisense VIDAA binary sensors."""
     data = hass.data[DOMAIN][entry.entry_id]
-    client: HisenseTvClient = data.get("client", data) if isinstance(data, dict) else data
+    client: HisenseTvClient = data["client"]
 
     async_add_entities([
         HisenseVidaaMqttConnectedBinarySensor(client, entry),
@@ -43,27 +43,10 @@ class HisenseVidaaMqttConnectedBinarySensor(HisenseVidaaEntity, BinarySensorEnti
     def __init__(
         self,
         client: HisenseTvClient,
-        entry_or_mac=None,
-        mac=None,
-        entry_id=None,
-        name=None,
-        model=None,
-        manufacturer=None,
-        sw_version=None,
-        options=None,
+        entry: ConfigEntry,
     ) -> None:
         """Initialize the binary sensor."""
-        super().__init__(
-            client=client,
-            entry_or_mac=entry_or_mac,
-            mac=mac,
-            entry_id=entry_id,
-            name=name,
-            model=model,
-            manufacturer=manufacturer,
-            sw_version=sw_version,
-            options=options,
-        )
+        super().__init__(client=client, entry=entry)
         self._attr_unique_id = f"{self._entry_id}_mqtt_connected"
 
     @property
@@ -98,27 +81,10 @@ class HisenseVidaaInUseBinarySensor(HisenseVidaaEntity, BinarySensorEntity):
     def __init__(
         self,
         client: HisenseTvClient,
-        entry_or_mac=None,
-        mac=None,
-        entry_id=None,
-        name=None,
-        model=None,
-        manufacturer=None,
-        sw_version=None,
-        options=None,
+        entry: ConfigEntry,
     ) -> None:
         """Initialize the in-use binary sensor."""
-        super().__init__(
-            client=client,
-            entry_or_mac=entry_or_mac,
-            mac=mac,
-            entry_id=entry_id,
-            name=name,
-            model=model,
-            manufacturer=manufacturer,
-            sw_version=sw_version,
-            options=options,
-        )
+        super().__init__(client=client, entry=entry)
         self._attr_unique_id = f"{self._entry_id}_in_use"
 
     @property

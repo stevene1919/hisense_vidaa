@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .client import HisenseTvClient
 from .const import DOMAIN
 from .entity import HisenseVidaaEntity
 
@@ -26,27 +27,10 @@ class HisenseVidaaBaseNumber(HisenseVidaaEntity, NumberEntity):
 
     def __init__(
         self,
-        client,
-        entry_or_mac=None,
-        mac=None,
-        entry_id=None,
-        name=None,
-        model=None,
-        manufacturer=None,
-        sw_version=None,
-        options=None,
+        client: HisenseTvClient,
+        entry: ConfigEntry,
     ) -> None:
-        super().__init__(
-            client=client,
-            entry_or_mac=entry_or_mac,
-            mac=mac,
-            entry_id=entry_id,
-            name=name,
-            model=model,
-            manufacturer=manufacturer,
-            sw_version=sw_version,
-            options=options,
-        )
+        super().__init__(client=client, entry=entry)
         self._value = 50.0
 
     async def async_added_to_hass(self) -> None:
@@ -74,27 +58,10 @@ class HisenseVidaaBacklightNumber(HisenseVidaaBaseNumber):
 
     def __init__(
         self,
-        client,
-        entry_or_mac=None,
-        mac=None,
-        entry_id=None,
-        name=None,
-        model=None,
-        manufacturer=None,
-        sw_version=None,
-        options=None,
+        client: HisenseTvClient,
+        entry: ConfigEntry,
     ) -> None:
-        super().__init__(
-            client=client,
-            entry_or_mac=entry_or_mac,
-            mac=mac,
-            entry_id=entry_id,
-            name=name,
-            model=model,
-            manufacturer=manufacturer,
-            sw_version=sw_version,
-            options=options,
-        )
+        super().__init__(client=client, entry=entry)
         self._attr_unique_id = f"{self._entry_id}_backlight"
         self._value = 80.0
 
@@ -127,27 +94,10 @@ class HisenseVidaaBrightnessNumber(HisenseVidaaBaseNumber):
 
     def __init__(
         self,
-        client,
-        entry_or_mac=None,
-        mac=None,
-        entry_id=None,
-        name=None,
-        model=None,
-        manufacturer=None,
-        sw_version=None,
-        options=None,
+        client: HisenseTvClient,
+        entry: ConfigEntry,
     ) -> None:
-        super().__init__(
-            client=client,
-            entry_or_mac=entry_or_mac,
-            mac=mac,
-            entry_id=entry_id,
-            name=name,
-            model=model,
-            manufacturer=manufacturer,
-            sw_version=sw_version,
-            options=options,
-        )
+        super().__init__(client=client, entry=entry)
         self._attr_unique_id = f"{self._entry_id}_brightness"
         self._value = 50.0
 
@@ -180,27 +130,10 @@ class HisenseVidaaContrastNumber(HisenseVidaaBaseNumber):
 
     def __init__(
         self,
-        client,
-        entry_or_mac=None,
-        mac=None,
-        entry_id=None,
-        name=None,
-        model=None,
-        manufacturer=None,
-        sw_version=None,
-        options=None,
+        client: HisenseTvClient,
+        entry: ConfigEntry,
     ) -> None:
-        super().__init__(
-            client=client,
-            entry_or_mac=entry_or_mac,
-            mac=mac,
-            entry_id=entry_id,
-            name=name,
-            model=model,
-            manufacturer=manufacturer,
-            sw_version=sw_version,
-            options=options,
-        )
+        super().__init__(client=client, entry=entry)
         self._attr_unique_id = f"{self._entry_id}_contrast"
         self._value = 50.0
 
@@ -232,12 +165,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Hisense VIDAA number platform."""
     data = hass.data[DOMAIN][config_entry.entry_id]
-    client = data.get("client", data) if isinstance(data, dict) else data
+    client: HisenseTvClient = data["client"]
 
     entities: list[NumberEntity] = [
-        HisenseVidaaBacklightNumber(client=client, entry_or_mac=config_entry),
-        HisenseVidaaBrightnessNumber(client=client, entry_or_mac=config_entry),
-        HisenseVidaaContrastNumber(client=client, entry_or_mac=config_entry),
+        HisenseVidaaBacklightNumber(client=client, entry=config_entry),
+        HisenseVidaaBrightnessNumber(client=client, entry=config_entry),
+        HisenseVidaaContrastNumber(client=client, entry=config_entry),
     ]
 
     async_add_entities(entities)

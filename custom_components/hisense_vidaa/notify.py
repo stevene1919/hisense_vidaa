@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .client import HisenseTvClient
 from .const import DOMAIN
 from .entity import HisenseVidaaEntity
 
@@ -23,25 +24,10 @@ class HisenseVidaaNotifyEntity(HisenseVidaaEntity, NotifyEntity):
 
     def __init__(
         self,
-        client,
-        entry_or_mac=None,
-        mac=None,
-        entry_id=None,
-        name=None,
-        model=None,
-        manufacturer=None,
-        sw_version=None,
+        client: HisenseTvClient,
+        entry: ConfigEntry,
     ) -> None:
-        super().__init__(
-            client=client,
-            entry_or_mac=entry_or_mac,
-            mac=mac,
-            entry_id=entry_id,
-            name=name,
-            model=model,
-            manufacturer=manufacturer,
-            sw_version=sw_version,
-        )
+        super().__init__(client=client, entry=entry)
         self._attr_unique_id = f"{self._entry_id}_notify"
 
     @property
@@ -62,7 +48,5 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Hisense VIDAA notify platform."""
     data = hass.data[DOMAIN][config_entry.entry_id]
-    client = data.get("client", data) if isinstance(data, dict) else data
-
-    entity = HisenseVidaaNotifyEntity(client=client, entry_or_mac=config_entry)
-    async_add_entities([entity])
+    client: HisenseTvClient = data["client"]
+    async_add_entities([HisenseVidaaNotifyEntity(client=client, entry=config_entry)])

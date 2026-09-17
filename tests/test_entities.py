@@ -166,13 +166,7 @@ async def test_button_entities(mock_client, mock_entry, monkeypatch):
 def test_media_player_and_remote_device_info(mock_client, mock_entry):
     mp = HisenseVidaaMediaPlayer(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
-        options=mock_entry.options,
-        model=mock_entry.data["model"],
-        manufacturer=mock_entry.data["manufacturer"],
-        sw_version=mock_entry.data["sw_version"],
+        entry=mock_entry,
     )
     dev_info = mp.device_info
     assert mp.device_class == MediaPlayerDeviceClass.TV
@@ -183,13 +177,7 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
 
     rem = HisenseVidaaRemote(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
-        options=mock_entry.options,
-        model=mock_entry.data["model"],
-        manufacturer=mock_entry.data["manufacturer"],
-        sw_version=mock_entry.data["sw_version"],
+        entry=mock_entry,
     )
     rem_info = rem.device_info
     assert rem_info["identifiers"] == {("hisense_vidaa", "test_entry_id")}
@@ -200,9 +188,7 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
 async def test_remote_send_command(mock_client, mock_entry):
     rem = HisenseVidaaRemote(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
+        entry=mock_entry,
     )
     # Standard command
     await rem.async_send_command(["home", "ok"], delay_secs=0.01)
@@ -221,9 +207,7 @@ async def test_remote_send_command(mock_client, mock_entry):
 def test_media_player_play_media(mock_client, mock_entry):
     mp = HisenseVidaaMediaPlayer(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
+        entry=mock_entry,
     )
     mp._app_dict = {"Netflix": {"appId": "1", "name": "Netflix", "url": "netflix://"}}
 
@@ -247,9 +231,7 @@ def test_media_player_sound_mode_and_waking_state(mock_client, mock_entry):
 
     mp = HisenseVidaaMediaPlayer(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
+        entry=mock_entry,
     )
     mp.hass = MagicMock()
 
@@ -292,9 +274,7 @@ async def test_notify_entity(mock_client, mock_entry):
 
     notify = HisenseVidaaNotifyEntity(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
+        entry=mock_entry,
     )
     notify.hass = hass
     assert notify.available is True
@@ -316,9 +296,7 @@ async def test_select_entity(mock_client, mock_entry):
 
     sel = HisenseVidaaAudioOutputSelect(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
+        entry=mock_entry,
     )
     sel.hass = hass
     sel.entity_id = "select.audio_output"
@@ -352,9 +330,7 @@ async def test_picture_and_sound_mode_selects(mock_client, mock_entry):
 
     pic_sel = HisenseVidaaPictureModeSelect(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
+        entry=mock_entry,
     )
     pic_sel.hass = hass
     pic_sel.entity_id = "select.picture_mode"
@@ -366,9 +342,7 @@ async def test_picture_and_sound_mode_selects(mock_client, mock_entry):
 
     snd_sel = HisenseVidaaSoundModeSelect(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
+        entry=mock_entry,
     )
     snd_sel.hass = hass
     snd_sel.entity_id = "select.sound_mode"
@@ -391,9 +365,7 @@ async def test_picture_calibration_numbers(mock_client, mock_entry):
 
     bl = HisenseVidaaBacklightNumber(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
+        entry=mock_entry,
     )
     bl.hass = hass
     bl.entity_id = "number.backlight"
@@ -405,9 +377,7 @@ async def test_picture_calibration_numbers(mock_client, mock_entry):
 
     br = HisenseVidaaBrightnessNumber(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
+        entry=mock_entry,
     )
     br.hass = hass
     br.entity_id = "number.brightness"
@@ -417,9 +387,7 @@ async def test_picture_calibration_numbers(mock_client, mock_entry):
 
     ct = HisenseVidaaContrastNumber(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
+        entry=mock_entry,
     )
     ct.hass = hass
     ct.entity_id = "number.contrast"
@@ -432,10 +400,7 @@ def test_media_player_cec_source_naming(mock_client, mock_entry):
     mock_entry.options = {"enable_cec_names": True, "include_apps_in_sources": True}
     mp = HisenseVidaaMediaPlayer(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
-        options=mock_entry.options,
+        entry=mock_entry,
     )
     mp.hass = MagicMock()
     mp._source_dict = {
@@ -466,10 +431,7 @@ async def test_remote_and_media_player_idempotent_power_control(mock_client, moc
 
     rem = HisenseVidaaRemote(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
-        options=mock_entry.options,
+        entry=mock_entry,
     )
     rem.hass = hass
     rem.entity_id = "remote.living_room_tv"
@@ -496,10 +458,7 @@ async def test_remote_and_media_player_idempotent_power_control(mock_client, moc
     # Test media_player turn_on idempotence
     mp = HisenseVidaaMediaPlayer(
         client=mock_client,
-        mac=mock_entry.data["mac_address"],
-        entry_id=mock_entry.entry_id,
-        name=mock_entry.title,
-        options=mock_entry.options,
+        entry=mock_entry,
     )
     mp.hass = hass
     assert mp.state == "on"
@@ -620,7 +579,7 @@ async def test_in_use_binary_sensor_and_live_tv_metadata(mock_client, mock_entry
     # Media player series and title attributes
     mp = HisenseVidaaMediaPlayer(
         client=mock_client,
-        entry_or_mac=mock_entry,
+        entry=mock_entry,
     )
     mp._state = "on"
     assert mp.media_series_title == "ABC HD (20)"

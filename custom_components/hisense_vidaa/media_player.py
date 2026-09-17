@@ -13,16 +13,13 @@ from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .client import HisenseTvClient
 from .const import (
     CONF_ENABLE_CEC_NAMES,
     CONF_ENABLE_MEDIA_CONTROLS,
     CONF_ENABLE_WOL,
     CONF_INCLUDE_APPS_IN_SOURCES,
-    CONF_MAC_ADDRESS,
-    CONF_MANUFACTURER,
-    CONF_MODEL,
     CONF_SECONDARY_MAC_ADDRESS,
-    CONF_SW_VERSION,
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_WOL,
@@ -52,27 +49,10 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
 
     def __init__(
         self,
-        client,
-        entry_or_mac=None,
-        mac=None,
-        entry_id=None,
-        name=None,
-        options=None,
-        model=None,
-        manufacturer=None,
-        sw_version=None,
-    ):
-        super().__init__(
-            client=client,
-            entry_or_mac=entry_or_mac,
-            mac=mac,
-            entry_id=entry_id,
-            name=name,
-            model=model,
-            manufacturer=manufacturer,
-            sw_version=sw_version,
-            options=options,
-        )
+        client: HisenseTvClient,
+        entry: ConfigEntry,
+    ) -> None:
+        super().__init__(client=client, entry=entry)
         self._attr_unique_id = f"{self._entry_id}_media_player"
         self._volume = 0
         self._muted = False
@@ -469,18 +449,5 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     data = hass.data[DOMAIN][config_entry.entry_id]
-    client = data.get("client", data) if isinstance(data, dict) else data
-    mac = config_entry.data.get(CONF_MAC_ADDRESS)
-    options = config_entry.options
-
-    entity = HisenseVidaaMediaPlayer(
-        client=client,
-        mac=mac,
-        entry_id=config_entry.entry_id,
-        name=config_entry.title,
-        options=options,
-        model=config_entry.data.get(CONF_MODEL, "VIDAA TV"),
-        manufacturer=config_entry.data.get(CONF_MANUFACTURER, "Hisense"),
-        sw_version=config_entry.data.get(CONF_SW_VERSION),
-    )
-    async_add_entities([entity])
+    client: HisenseTvClient = data["client"]
+    async_add_entities([HisenseVidaaMediaPlayer(client=client, entry=config_entry)])
