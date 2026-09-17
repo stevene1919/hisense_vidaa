@@ -448,10 +448,11 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         self.ip_address = parsed.host
         self.discovered_title = parsed.title
-        self.mac_address = parsed.mac_address
+        self.mac_address = parsed.mac_address or get_arp_mac(parsed.host)
 
-        if parsed.unique_id:
-            await self.async_set_unique_id(parsed.unique_id)
+        unique_id = self.mac_address or parsed.unique_id
+        if unique_id:
+            await self.async_set_unique_id(unique_id)
             self._abort_if_unique_id_configured(
                 updates={CONF_IP_ADDRESS: self.ip_address}
             )

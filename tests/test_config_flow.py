@@ -399,6 +399,14 @@ async def test_zeroconf_discovery(monkeypatch):
         "custom_components.hisense_vidaa.config_flow.get_arp_mac",
         lambda host: "e8:51:77:ec:98:1c",
     )
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.discovery.get_arp_mac",
+        lambda host: "e8:51:77:ec:98:1c",
+    )
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.tv.fingerprint.get_arp_mac",
+        lambda host: "e8:51:77:ec:98:1c",
+    )
 
     discovery_info = ZeroconfServiceInfo(
         ip_address="192.168.50.12",
