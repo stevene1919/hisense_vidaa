@@ -56,12 +56,12 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks and query initial state when entity is added to hass."""
-        self._client.register_connected_callback(self._handle_update)
-        self._client.register_state_callback(self._handle_update)
+        self._client.register_connected_callback(self._handle_connected)
+        self._client.register_state_callback(self._handle_state_update)
         self._client.register_volume_callback(self._handle_update)
         self._client.register_sourcelist_callback(self._handle_update)
         self._client.register_applist_callback(self._handle_update)
-        self._client.register_disconnected_callback(self._handle_update)
+        self._client.register_disconnected_callback(self._handle_disconnected)
 
         # Sync state immediately if client is already connected
         if getattr(self._client, "connected", False):
@@ -69,12 +69,12 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Unregister callbacks when entity is removed."""
-        self._client.unregister_connected_callback(self._handle_update)
-        self._client.unregister_state_callback(self._handle_update)
+        self._client.unregister_connected_callback(self._handle_connected)
+        self._client.unregister_state_callback(self._handle_state_update)
         self._client.unregister_volume_callback(self._handle_update)
         self._client.unregister_sourcelist_callback(self._handle_update)
         self._client.unregister_applist_callback(self._handle_update)
-        self._client.unregister_disconnected_callback(self._handle_update)
+        self._client.unregister_disconnected_callback(self._handle_disconnected)
 
     @property
     def unique_id(self) -> str:
@@ -91,6 +91,12 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
         """Return true if remote is available."""
         return bool(self._entry_id and (self._client.access_token or self._mac))
 
+    async def _async_exec(self, func: Any, *args: Any) -> Any:
+        """Execute a client function in the executor if hass is present, or directly if testing."""
+        if getattr(self, "hass", None) is not None:
+            return await self.hass.async_add_executor_job(func, *args)
+        return func(*args)
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the TV on."""
         enable_wol = self._options.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL)
@@ -102,7 +108,7 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
             if sec_mac and sec_mac not in mac_targets:
                 mac_targets.append(sec_mac)
             if mac_targets:
-                await self.hass.async_add_executor_job(
+                await self._async_exec(
                     self._client.send_wake_on_lan,
                     mac_targets,
                     None,
@@ -115,11 +121,11 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
             # If it is already ON, do NOT send KEY_POWER because KEY_POWER is a toggle and will turn it off!
             if not self._client.is_on:
                 _LOGGER.debug("TV connected in standby/fake sleep. Sending KEY_POWER to wake display")
-                self._client.send_key("KEY_POWER")
+                await self._async_exec(self._client.send_key, "KEY_POWER")
             else:
                 _LOGGER.debug("TV already connected and running. Skipping KEY_POWER to prevent powering off")
         else:
-            await self.hass.async_add_executor_job(self._ensure_connected_and_send_power)
+            await self._async_exec(self._ensure_connected_and_send_power)
 
         self._client.is_on = True
         self.async_write_ha_state()
@@ -138,7 +144,7 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the TV off."""
         if self._client.connected and self._client.is_on:
-            self._client.send_key("KEY_POWER")
+            await self._async_exec(self._client.send_key, "KEY_POWER")
         self._client.is_on = False
         self.async_write_ha_state()
 
@@ -155,17 +161,17 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
                 if hold_secs and hold_secs > 0:
                     cmd_lower = single_cmd.strip().lower()
                     if cmd_lower in ("ok", "enter", "select", "key_ok"):
-                        self._client.send_key("KEY_OK_LONG_PRESS")
+                        await self._async_exec(self._client.send_key, "KEY_OK_LONG_PRESS")
                     elif cmd_lower in ("mute", "key_mute"):
-                        self._client.send_key("KEY_MUTE_LONG_PRESS")
+                        await self._async_exec(self._client.send_key, "KEY_MUTE_LONG_PRESS")
                     else:
                         # Emulate key hold by rapid repetition over hold_secs
                         steps = max(1, round(hold_secs / 0.1))
                         for _ in range(steps):
-                            self._client.send_command(single_cmd)
+                            await self._async_exec(self._client.send_command, single_cmd)
                             await asyncio.sleep(0.1)
                 else:
-                    self._client.send_command(single_cmd)
+                    await self._async_exec(self._client.send_command, single_cmd)
                 if delay_secs > 0:
                     await asyncio.sleep(delay_secs)
 

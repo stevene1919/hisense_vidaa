@@ -52,6 +52,9 @@ class HisenseVidaaBaseNumber(HisenseVidaaEntity, NumberEntity):
     async def async_added_to_hass(self) -> None:
         self._client.register_picture_callback(self._handle_picture_update)
 
+    async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_picture_callback(self._handle_picture_update)
+
     def _handle_picture_update(self, data: dict[str, Any]) -> None:
         self._update_value_from_client()
         if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
@@ -231,14 +234,10 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][config_entry.entry_id]
     client = data.get("client", data) if isinstance(data, dict) else data
 
-    entities: list[NumberEntity] = []
-
-    # Only instantiate picture calibration sliders if TV advertises dynamic settings support
-    if hasattr(client, "picture_settings") and client.picture_settings:
-        entities.extend([
-            HisenseVidaaBacklightNumber(client=client, entry_or_mac=config_entry),
-            HisenseVidaaBrightnessNumber(client=client, entry_or_mac=config_entry),
-            HisenseVidaaContrastNumber(client=client, entry_or_mac=config_entry),
-        ])
+    entities: list[NumberEntity] = [
+        HisenseVidaaBacklightNumber(client=client, entry_or_mac=config_entry),
+        HisenseVidaaBrightnessNumber(client=client, entry_or_mac=config_entry),
+        HisenseVidaaContrastNumber(client=client, entry_or_mac=config_entry),
+    ]
 
     async_add_entities(entities)

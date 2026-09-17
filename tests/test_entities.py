@@ -628,3 +628,34 @@ async def test_in_use_binary_sensor_and_live_tv_metadata(mock_client, mock_entry
     assert mp.extra_state_attributes["channel_name"] == "ABC HD"
 
 
+@pytest.mark.anyio
+async def test_select_and_number_platforms_lifecycle(mock_client, mock_entry):
+    """Test select and number platforms creation and lifecycle unregistration."""
+    from custom_components.hisense_vidaa.const import DOMAIN
+    from custom_components.hisense_vidaa.number import async_setup_entry as async_setup_number
+    from custom_components.hisense_vidaa.select import async_setup_entry as async_setup_select
+
+    hass = MagicMock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_entry.entry_id: {"client": mock_client}}}
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    # Test select setup
+    select_entities = []
+    await async_setup_select(hass, mock_entry, lambda entities: select_entities.extend(entities))
+    assert len(select_entities) == 3
+
+    for sel in select_entities:
+        await sel.async_added_to_hass()
+        await sel.async_will_remove_from_hass()
+
+    # Test number setup
+    number_entities = []
+    await async_setup_number(hass, mock_entry, lambda entities: number_entities.extend(entities))
+    assert len(number_entities) == 3
+
+    for num in number_entities:
+        await num.async_added_to_hass()
+        await num.async_will_remove_from_hass()
+
+
+

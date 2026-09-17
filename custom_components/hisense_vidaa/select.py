@@ -79,6 +79,9 @@ class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
     async def async_added_to_hass(self) -> None:
         self._client.register_volume_callback(self._handle_volume_update)
 
+    async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_volume_callback(self._handle_volume_update)
+
     @property
     def current_option(self) -> str:
         return VOLUME_TYPE_MAP.get(self._volume_type, AUDIO_OUTPUT_TV_SPEAKERS)
@@ -144,6 +147,9 @@ class HisenseVidaaPictureModeSelect(HisenseVidaaEntity, SelectEntity):
 
     async def async_added_to_hass(self) -> None:
         self._client.register_picture_callback(self._handle_picture_update)
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_picture_callback(self._handle_picture_update)
 
     @property
     def options(self) -> list[str]:
@@ -212,6 +218,9 @@ class HisenseVidaaSoundModeSelect(HisenseVidaaEntity, SelectEntity):
     async def async_added_to_hass(self) -> None:
         self._client.register_sound_callback(self._handle_sound_update)
 
+    async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_sound_callback(self._handle_sound_update)
+
     @property
     def options(self) -> list[str]:
         sm_item = find_menu_item_by_name(self._client.sound_settings, "Sound Mode", DEFAULT_MENU_ID_SOUND_MODE)
@@ -251,13 +260,8 @@ async def async_setup_entry(
 
     entities: list[SelectEntity] = [
         HisenseVidaaAudioOutputSelect(client=client, entry_or_mac=config_entry),
+        HisenseVidaaPictureModeSelect(client=client, entry_or_mac=config_entry),
+        HisenseVidaaSoundModeSelect(client=client, entry_or_mac=config_entry),
     ]
-
-    # Only instantiate Picture Mode and Sound Mode if TV advertises dynamic settings support
-    if hasattr(client, "picture_settings") and client.picture_settings:
-        entities.append(HisenseVidaaPictureModeSelect(client=client, entry_or_mac=config_entry))
-
-    if hasattr(client, "sound_settings") and client.sound_settings:
-        entities.append(HisenseVidaaSoundModeSelect(client=client, entry_or_mac=config_entry))
 
     async_add_entities(entities)

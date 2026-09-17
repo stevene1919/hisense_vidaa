@@ -209,6 +209,16 @@ class HisenseTvClient:
         self.topicRemoBasepath = ""
         self.define_topic_paths()
 
+    @property
+    def is_on(self) -> bool:
+        """Returns True if the TV is connected and active."""
+        return self.state not in ("off", "")
+
+    @is_on.setter
+    def is_on(self, value: bool) -> None:
+        """Sets the power state."""
+        self.state = "on" if value else "off"
+
     # --------------------------------------------------------------------------
     # Callbacks & Event Dispatch
     # --------------------------------------------------------------------------

@@ -70,6 +70,25 @@ class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
     def is_on(self) -> bool:
         return self._is_on
 
+    async def async_added_to_hass(self) -> None:
+        self._client.register_disconnected_callback(self._handle_disconnected)
+        self._client.register_state_callback(self._handle_state_update)
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_disconnected_callback(self._handle_disconnected)
+        self._client.unregister_state_callback(self._handle_state_update)
+
+    def _handle_disconnected(self, *args: Any) -> None:
+        self._is_on = False
+        if getattr(self, "hass", None) is not None:
+            self.schedule_update_ha_state()
+
+    def _handle_state_update(self, data: dict[str, Any]) -> None:
+        if isinstance(data, dict) and data.get("statetype") == "fake_sleep_0":
+            self._is_on = False
+            if getattr(self, "hass", None) is not None:
+                self.schedule_update_ha_state()
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn off the screen while keeping audio active."""
         if not self._client or not self._client.connected:
