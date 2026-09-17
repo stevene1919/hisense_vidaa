@@ -24,8 +24,20 @@ from .actions import (
     set_volume,
     show_message,
 )
-from .navigation import (
+from .aliases import (
+    ALL_KEY_AND_APP_ALIASES,
+    GLOBAL_APP_ALIASES,
     KEY_ALIASES,
+    REGIONAL_APP_ALIASES_AU_NZ,
+    REGIONAL_APP_ALIASES_NA,
+    REGIONAL_APP_ALIASES_UK_EU,
+)
+from .media import (
+    clean_source_label,
+    execute_play_media,
+    execute_select_source,
+)
+from .navigation import (
     cycle_tv_source,
     get_next_cycled_source,
     match_app,
@@ -70,6 +82,7 @@ from .state import (
 )
 
 __all__ = [
+    "ALL_KEY_AND_APP_ALIASES",
     "DEFAULT_MENU_ID_BACKLIGHT",
     "DEFAULT_MENU_ID_BASS",
     "DEFAULT_MENU_ID_BRIGHTNESS",
@@ -80,7 +93,11 @@ __all__ = [
     "DEFAULT_MENU_ID_SHARPNESS",
     "DEFAULT_MENU_ID_SOUND_MODE",
     "DEFAULT_MENU_ID_TREBLE",
+    "GLOBAL_APP_ALIASES",
     "KEY_ALIASES",
+    "REGIONAL_APP_ALIASES_AU_NZ",
+    "REGIONAL_APP_ALIASES_NA",
+    "REGIONAL_APP_ALIASES_UK_EU",
     "STANDARD_PICTURE_MODES",
     "STANDARD_SOUND_MODES",
     "FeatureProbeResult",
@@ -92,9 +109,12 @@ __all__ = [
     "apply_volume_update",
     "change_source",
     "change_source_by_name_or_id",
+    "clean_source_label",
     "create_client_from_creds",
     "cycle_source",
     "cycle_tv_source",
+    "execute_play_media",
+    "execute_select_source",
     "find_menu_item_by_name",
     "format_probe_results_markdown",
     "generate_markdown_report",

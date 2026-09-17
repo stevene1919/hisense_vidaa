@@ -28,6 +28,11 @@ try:
         probe_tv_auth_methods,
         test_tv_ssl_connection,
     )
+    from .protocol.connection import (
+        build_mqtt_client,
+        clean_disconnect_mqtt_client,
+        subscribe_standard_tv_topics,
+    )
     from .protocol.dispatcher import dispatch_incoming_mqtt_message
     from .protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
     from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
@@ -75,6 +80,11 @@ except (ImportError, ValueError):
         perform_token_refresh,
         probe_tv_auth_methods,
         test_tv_ssl_connection,
+    )
+    from protocol.connection import (
+        build_mqtt_client,
+        clean_disconnect_mqtt_client,
+        subscribe_standard_tv_topics,
     )
     from protocol.dispatcher import dispatch_incoming_mqtt_message
     from protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
@@ -468,15 +478,19 @@ class HisenseTvClient:
 
     def create_mqtt_client(self, client_id: str, username: str, password: str) -> mqtt.Client:
         """Creates and configures an authenticated MQTT client."""
-        client = mqtt.Client(client_id=client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
-        client.reconnect_delay_set(min_delay=2, max_delay=30)
-        self._apply_tls(client)
-        client.username_pw_set(username=username, password=password)
-
-        client.on_connect = self._on_connect
-        client.on_message = self._on_message
-        client.on_disconnect = self._on_disconnect
-        return client
+        return build_mqtt_client(
+            client_id=client_id,
+            username=username,
+            password=password,
+            certfile=self.certfile,
+            keyfile=self.keyfile,
+            ca_cert=self.ca_cert,
+            verify_ssl=self.verify_ssl,
+            use_ssl=self.use_ssl,
+            on_connect=self._on_connect,
+            on_message=self._on_message,
+            on_disconnect=self._on_disconnect,
+        )
 
     def _safe_set_future_result(self, future: asyncio.Future | None, result: Any) -> None:
         if future and not future.done():
@@ -497,25 +511,11 @@ class HisenseTvClient:
             self.connected = True
             _LOGGER.info("[%s] Connected to TV MQTT broker", self.ip)
             self._dispatch_connected()
-            client.subscribe([
-                (self.topicBrcsBasepath + "ui_service/state", 0),
-                (self.topicBrcsBasepath + "platform_service/actions/volumechange", 0),
-                (self.topicBrcsBasepath + "ui_service/volume", 0),
-                (self.topicBrcsBasepath + "platform_service/actions/tvsleep", 0),
-                (self.topicBrcsBasepath + "ui_service/data/hotelmodechange", 0),
-                (self.topicMobiBasepath + "ui_service/data/sourcelist", 0),
-                (self.topicMobiBasepath + "ui_service/data/applist", 0),
-                (self.topicMobiBasepath + "ui_service/data/gettvstate", 0),
-                (self.topicMobiBasepath + "ui_service/data/state", 0),
-                (self.topicMobiBasepath + "platform_service/data/getvolume", 0),
-                (self.topicMobiBasepath + "platform_service/data/gettvinfo", 0),
-                (self.topicMobiBasepath + "platform_service/data/getdeviceinfo", 0),
-                (self.topicMobiBasepath + "ui_service/data/capability", 0),
-                (self.topicMobiBasepath + "platform_service/data/picturesetting", 0),
-                (self.topicBrcsBasepath + "platform_service/data/picturesetting", 0),
-                (self.topicMobiBasepath + "platform_service/data/soundsetting", 0),
-                (self.topicBrcsBasepath + "platform_service/data/soundsetting", 0),
-            ])
+            subscribe_standard_tv_topics(
+                client=client,
+                broadcast_basepath=self.topicBrcsBasepath,
+                mobile_basepath=self.topicMobiBasepath,
+            )
             threading.Timer(0.5, self.query_initial_state).start()
         else:
             self.connected = False
@@ -830,14 +830,7 @@ class HisenseTvClient:
     def disconnect(self) -> None:
         """Cleanly disconnects the MQTT client and stops the background network thread."""
         if self.mqtt_client:
-            try:
-                self.mqtt_client.on_connect = None
-                self.mqtt_client.on_disconnect = None
-                self.mqtt_client.on_message = None
-                self.mqtt_client.loop_stop()
-                self.mqtt_client.disconnect()
-            except Exception as e:
-                _LOGGER.debug("Error during client disconnect: %s", e)
-            finally:
-                self.mqtt_client = None
-                self.connected = False
+            clean_disconnect_mqtt_client(self.mqtt_client)
+            self.mqtt_client = None
+            self.connected = False
+

@@ -16,6 +16,11 @@ from .certs import (
     resolve_ca_certificate,
     resolve_certificates,
 )
+from .connection import (
+    build_mqtt_client,
+    clean_disconnect_mqtt_client,
+    subscribe_standard_tv_topics,
+)
 from .dispatcher import dispatch_incoming_mqtt_message
 from .pairing import async_start_pairing_handshake, async_submit_pin_code
 from .topics import TOPIC_BROADCAST_BASEPATH, TopicPaths, build_topic_paths
@@ -27,8 +32,10 @@ __all__ = [
     "apply_mqtt_tls",
     "async_start_pairing_handshake",
     "async_submit_pin_code",
+    "build_mqtt_client",
     "build_topic_paths",
     "check_certs_exist",
+    "clean_disconnect_mqtt_client",
     "dispatch_incoming_mqtt_message",
     "extract_pkcs12_to_pem",
     "get_profile_default_cert_paths",
@@ -38,5 +45,6 @@ __all__ = [
     "resolve_ca_certificate",
     "resolve_certificates",
     "send_wake_on_lan",
+    "subscribe_standard_tv_topics",
     "test_tv_ssl_connection",
 ]

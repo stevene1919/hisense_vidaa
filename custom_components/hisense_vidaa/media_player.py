@@ -30,6 +30,7 @@ from .const import (
     DOMAIN,
 )
 from .entity import HisenseVidaaEntity
+from .tv.media import execute_play_media, execute_select_source
 from .tv.settings import (
     DEFAULT_MENU_ID_SOUND_MODE,
     STANDARD_SOUND_MODES,
@@ -336,54 +337,11 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
 
     def play_media(self, media_type: str, media_id: str, **kwargs: Any) -> None:
         """Launch an app, tune to channel, open URL/deep-link, or execute key command."""
-        type_lower = media_type.lower()
-        if type_lower in ("app", "application", "url", "deep_link", "video", "music") or "://" in media_id:
-            # Check app dictionary for direct match or scheme match
-            app = self._app_dict.get(media_id)
-            if app:
-                self._client.launch_app(app["appId"], app["name"], app["url"])
-                return
-            for a_name, a_info in self._app_dict.items():
-                if a_name.lower() == media_id.lower() or a_info.get("url", "").lower() == media_id.lower():
-                    self._client.launch_app(a_info["appId"], a_info["name"], a_info["url"])
-                    return
-
-            # Direct URL / deep-link launch
-            if "://" in media_id or type_lower in ("url", "deep_link"):
-                self._client.launch_app("", media_id, media_id)
-                return
-
-        if type_lower in ("channel", "tvshow"):
-            for char in str(media_id):
-                if char.isdigit():
-                    self._client.send_key(f"KEY_{char}")
-                    time.sleep(0.1)
-                elif char in (".", "-"):
-                    self._client.send_key("KEY_CHANNELDOT")
-                    time.sleep(0.1)
-            return
-
-        self._client.send_command(media_id)
+        execute_play_media(self._client, self._app_dict, media_type, media_id)
 
     def select_source(self, source: str) -> None:
-        # Strip HDMI-CEC device label if present (e.g., "HDMI 2 (PlayStation 5)" -> "HDMI 2")
-        clean_source = source.split(" (")[0].strip() if " (" in source else source
-
-        # Check app dictionary for direct match or cleaned match
-        app = self._app_dict.get(source) or self._app_dict.get(clean_source)
-        if app:
-            self._client.launch_app(app.get("appId", ""), app.get("name", ""), app.get("url", ""))
-            return
-
-        # Input source match
-        src = self._source_dict.get(source) or self._source_dict.get(clean_source)
-        if src:
-            sid = str(src.get("sourceid") or src.get("sourcename") or "")
-            sname = str(src.get("sourcename") or clean_source)
-            self._client.change_source(sid, sname)
-            return
-
-        self._client.change_source(clean_source)
+        """Select input source or smart application."""
+        execute_select_source(self._client, self._source_dict, self._app_dict, source)
 
     def select_sound_mode(self, sound_mode: str) -> None:
         """Select sound mode."""
