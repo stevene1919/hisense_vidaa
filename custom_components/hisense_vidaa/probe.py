@@ -208,39 +208,58 @@ def generate_markdown_report(
         lines.append(f"- **Stored Credentials Auth:** {stored_str}")
 
     if probe_result and probe_result.connected:
-        lines.append("\n### 🎛️ Discovered Features & Settings Menu Tree")
+        lines.append("\n### 🎛️ Feature & Control Capabilities")
+
+        # Dynamic Picture / Sound Menu Controls
+        lines.append("#### 🖼️ Dynamic Calibration & Menu Trees")
         if probe_result.picture_settings:
-            lines.append("<details><summary><b>🖼️ Picture Settings & Modes</b> (Click to expand)</summary>\n")
+            lines.append("<details><summary><b>✅ Dynamic Picture Settings Discovered</b> (Click to expand)</summary>\n")
             for item in probe_result.picture_settings:
                 opts = f" (Options: {', '.join(item.options)})" if item.options else ""
                 val = f" [Current: {item.menu_value}]" if item.menu_value is not None else ""
                 lines.append(f"- **{item.menu_name}** (ID: `{item.menu_id}`, Type: `{item.menu_type}`){val}{opts}")
             lines.append("\n</details>")
         else:
-            lines.append("- **Picture Settings:** Default static options")
+            lines.append("- **Picture Settings:** ⚠️ Not exposed over MQTT (Firmware uses internal OSD; dynamic picture mode/sliders not instantiated)")
 
         if probe_result.sound_settings:
-            lines.append("<details><summary><b>🔊 Sound Settings & Modes</b> (Click to expand)</summary>\n")
+            lines.append("<details><summary><b>✅ Dynamic Sound Settings Discovered</b> (Click to expand)</summary>\n")
             for item in probe_result.sound_settings:
                 opts = f" (Options: {', '.join(item.options)})" if item.options else ""
                 val = f" [Current: {item.menu_value}]" if item.menu_value is not None else ""
                 lines.append(f"- **{item.menu_name}** (ID: `{item.menu_id}`, Type: `{item.menu_type}`){val}{opts}")
             lines.append("\n</details>")
         else:
-            lines.append("- **Sound Settings:** Default static options")
+            lines.append("- **Sound Settings:** ⚠️ Not exposed over MQTT (Firmware uses internal OSD; dynamic sound mode selects not instantiated)")
 
+        # Interactive Media & App Controls
+        lines.append("\n#### 🎮 Interactive Media & Navigation Controls")
         if probe_result.sources:
-            lines.append(f"<details><summary><b>🔌 Input Sources ({len(probe_result.sources)})</b> (Click to expand)</summary>\n")
+            lines.append(f"<details><summary><b>🔌 Controllable Input Sources ({len(probe_result.sources)})</b> (Click to expand)</summary>\n")
             for s in probe_result.sources:
                 active = " [ACTIVE]" if s.get("is_signal") in ("1", 1, True) or s.get("is_active") else ""
                 lines.append(f"- `{s.get('sourceid')}`: **{s.get('sourcename', 'Unknown')}**{active}")
             lines.append("\n</details>")
+        else:
+            lines.append("- **Input Sources:** 0 discovered")
 
         if probe_result.apps:
-            lines.append(f"<details><summary><b>📱 Installed Smart TV Apps ({len(probe_result.apps)})</b> (Click to expand)</summary>\n")
+            lines.append(f"<details><summary><b>📱 Launchable Smart TV Apps ({len(probe_result.apps)})</b> (Click to expand)</summary>\n")
             for a in probe_result.apps:
                 lines.append(f"- **{a.get('name') or a.get('appName', 'Unknown')}** (`appId`: `{a.get('appId')}`)")
             lines.append("\n</details>")
+        else:
+            lines.append("- **Installed Apps:** 0 discovered")
+
+        # Telemetry & Diagnostic Sensors
+        lines.append("\n#### 📊 Telemetry & Live State Sensors")
+        lines.append("- `media_player.<tv>`: Power, Volume, Mute, Source Selection, Media Transport")
+        lines.append("- `remote.<tv>`: Fast Direct Remote Key Commands (`KEY_POWER`, `KEY_HOME`, `KEY_BACK`, etc.)")
+        lines.append("- `sensor.<tv>_active_source`: Live input tracking")
+        lines.append("- `sensor.<tv>_active_app`: Live foreground app tracking")
+        lines.append("- `select.<tv>_audio_output_mode`: TV Speakers / ARC / eARC routing")
+        lines.append("- `sensor.<tv>_session_status`: Token session health & encryption status")
+        lines.append("- `binary_sensor.<tv>_mqtt_connected`: Real-time broker connection status")
 
     lines.append("\n### 📦 Integration Environment")
     lines.append(f"- **Integration Version:** `{version}`")

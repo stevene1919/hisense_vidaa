@@ -283,6 +283,10 @@ async def test_select_entity(mock_client, mock_entry):
     mock_client.send_key.assert_called_with("KEY_AUDIO_ONLY")
     assert sel.current_option == "TV Speakers"
 
+    # Mute broadcast (volume_type: 2) must not change audio output selection
+    sel._handle_volume_update({"volume_type": 2, "volume_value": 0})
+    assert sel.current_option == "TV Speakers"
+
 
 @pytest.mark.anyio
 async def test_picture_and_sound_mode_selects(mock_client, mock_entry):

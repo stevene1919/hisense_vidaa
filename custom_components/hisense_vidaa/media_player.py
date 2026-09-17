@@ -390,9 +390,8 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             self._client.is_on = True
         self._state = STATE_ON
         vol_type = data.get("volume_type")
-        if vol_type is not None:
-            self._volume_type = int(vol_type)
         if vol_type in (0, 1):
+            self._volume_type = int(vol_type)
             self._volume = data.get("volume_value", self._volume)
         elif vol_type == 2:
             self._muted = (data.get("volume_value") == 1)
