@@ -255,11 +255,13 @@ async def test_options_flow(monkeypatch):
         user_input={
             "enable_picture_controls": True,
             "enable_sound_controls": True,
+            "enable_audio_only": True,
         }
     )
     assert result_ps_submit["type"] == "create_entry"
     assert result_ps_submit["data"]["enable_picture_controls"] is True
     assert result_ps_submit["data"]["enable_sound_controls"] is True
+    assert result_ps_submit["data"]["enable_audio_only"] is True
 
     # Test remote_keys step
     result_keys_submit = await handler.async_step_remote_keys(

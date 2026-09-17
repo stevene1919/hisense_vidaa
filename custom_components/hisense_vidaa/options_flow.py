@@ -8,6 +8,7 @@ from .const import (
     AUTH_PROFILE_SELECTOR,
     CONF_AUTH_PROFILE,
     CONF_CERTFILE,
+    CONF_ENABLE_AUDIO_ONLY,
     CONF_ENABLE_CEC_NAMES,
     CONF_ENABLE_MEDIA_CONTROLS,
     CONF_ENABLE_NOTIFY,
@@ -22,6 +23,7 @@ from .const import (
     CONF_SECONDARY_MAC_ADDRESS,
     CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
+    DEFAULT_ENABLE_AUDIO_ONLY,
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_NOTIFY,
@@ -156,6 +158,13 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
                     default=options.get(
                         CONF_ENABLE_SOUND_CONTROLS,
                         DEFAULT_ENABLE_SOUND_CONTROLS,
+                    ),
+                ): bool,
+                vol.Optional(
+                    CONF_ENABLE_AUDIO_ONLY,
+                    default=options.get(
+                        CONF_ENABLE_AUDIO_ONLY,
+                        DEFAULT_ENABLE_AUDIO_ONLY,
                     ),
                 ): bool,
             }),

@@ -10,9 +10,14 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import (
+    CONF_ENABLE_AUDIO_ONLY,
+    DEFAULT_ENABLE_AUDIO_ONLY,
+    DOMAIN,
+)
 from .entity import HisenseVidaaEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,12 +30,7 @@ KEY_GAP_SECONDS = 0.5
 class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
     """Switch for Audio-Only mode (display panel off, sound playing).
 
-    KEY_AUDIO toggles the display panel on/off without changing sound, but VIDAA
-    does not report whether the screen is currently lit.
-
-    By sending a harmless wake key (KEY_INFO) first, the screen is guaranteed to be awake,
-    ensuring KEY_AUDIO consistently turns the display panel OFF (idempotent).
-    Turning off sends KEY_INFO directly to wake the screen back up.
+    Supported on select VIDAA TV models that implement KEY_AUDIO screen toggle.
     """
 
     _attr_name = "Audio Only"
@@ -143,7 +143,24 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][config_entry.entry_id]
     client = data["client"]
 
-    async_add_entities([
-        HisenseVidaaAudioOnlySwitch(client=client, entry=config_entry),
+    enable_audio_only = config_entry.options.get(
+        CONF_ENABLE_AUDIO_ONLY, DEFAULT_ENABLE_AUDIO_ONLY
+    )
+
+    # Clean up audio_only switch from entity registry if disabled
+    entity_reg = er.async_get(hass)
+    unique_id = f"{config_entry.entry_id}_audio_only"
+    if not enable_audio_only and (
+        entity_id := entity_reg.async_get_entity_id("switch", DOMAIN, unique_id)
+    ):
+        entity_reg.async_remove(entity_id)
+
+    entities: list[SwitchEntity] = [
         HisenseVidaaDebugLoggingSwitch(client=client, entry=config_entry),
-    ])
+    ]
+    if enable_audio_only:
+        entities.append(
+            HisenseVidaaAudioOnlySwitch(client=client, entry=config_entry)
+        )
+
+    async_add_entities(entities)

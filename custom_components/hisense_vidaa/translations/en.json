@@ -100,10 +100,11 @@
       },
       "picture_sound": {
         "title": "Picture & Sound Controls",
-        "description": "Enable picture calibration sliders and sound mode selector (only supported on select VIDAA TV models).",
+        "description": "Enable picture calibration sliders, sound mode selector, and audio-only display switch (supported on select VIDAA TV models only).",
         "data": {
           "enable_picture_controls": "Enable Picture Mode and calibration sliders (Backlight, Brightness, Contrast)",
-          "enable_sound_controls": "Enable Sound Mode equalizer selector"
+          "enable_sound_controls": "Enable Sound Mode equalizer selector",
+          "enable_audio_only": "Enable Audio-Only (Screen Off) display switch"
         }
       },
       "remote_keys": {
