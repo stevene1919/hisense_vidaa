@@ -139,6 +139,8 @@ The TV broker validates client connections using mutual TLS (mTLS v1.2/v1.3). Th
    - The integration contains automated PKCS#12 unpackers using `cryptography.hazmat.primitives.serialization.pkcs12`.
    - Automatically tests known manufacturer keystore passwords (e.g. `186e990688070325a1c4b0ce275d2388`, `remote`, `hisense`, empty) to extract `.pem` key/cert pairs on the fly.
 
+> For setup instructions, file placement (`/config/ssl/`), and manual CLI validation, refer to the [SSL Certificate Setup & Management Guide](certificates.md).
+
 ---
 
 ## 🔬 Capability Probing & Model Quirks
