@@ -48,9 +48,13 @@ The integration automatically detects and supports multiple generations of Hisen
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Installation & Setup
 
-### 1. Install via HACS
+### Step 1: Install the Integration Files
+
+You can install the integration either via **HACS** (easiest) or **Manually** (without HACS).
+
+#### Option A: Install via HACS (Recommended)
 
 Click the button below to add this repository directly to your HACS installation:
 
@@ -58,18 +62,82 @@ Click the button below to add this repository directly to your HACS installation
 
 *Or manually in HACS:* **HACS** $\rightarrow$ **Integrations** $\rightarrow$ **Custom repositories** $\rightarrow$ Add `https://github.com/stevene1919/hisense_vidaa` (Category: *Integration*).
 
-### 2. Place Certificate Files
+---
+
+#### Option B: Manual Installation (Without HACS)
+
+For Home Assistant Container (Docker), Core, or instances without HACS:
+
+1. Connect to your Home Assistant server via SSH or Terminal.
+2. Navigate to your Home Assistant configuration directory (e.g. `/config` or `/home/homeassistant/.homeassistant`).
+3. Download and extract the component into `custom_components/hisense_vidaa`:
+
+```bash
+# From your Home Assistant /config directory:
+cd /config
+mkdir -p custom_components
+cd custom_components
+
+# Clone the latest integration release:
+git clone https://github.com/stevene1919/hisense_vidaa.git hisense_vidaa_tmp
+mv hisense_vidaa_tmp/custom_components/hisense_vidaa ./hisense_vidaa
+rm -rf hisense_vidaa_tmp
+```
+
+*Or via `curl` / `unzip`:*
+```bash
+cd /config/custom_components
+curl -sSL -o hisense_vidaa.zip https://github.com/stevene1919/hisense_vidaa/archive/refs/heads/main.zip
+unzip -q hisense_vidaa.zip
+mv hisense_vidaa-main/custom_components/hisense_vidaa ./hisense_vidaa
+rm -rf hisense_vidaa.zip hisense_vidaa-main
+```
+
+4. Verify your directory structure matches the expected layout:
+```text
+/config/
+├── configuration.yaml
+├── custom_components/
+│   └── hisense_vidaa/
+│       ├── __init__.py
+│       ├── manifest.json
+│       ├── const.py
+│       ├── media_player.py
+│       └── ...
+└── ssl/ (or /config/ssl/)
+    ├── hisense.crt
+    └── hisense.key
+```
+
+---
+
+### Step 2: Place Certificate Files
 
 Copy your client certificate / key (or `.p12` bundle) to `/config/ssl/` (or `/ssl/` / `/config/certs/`).
 
-> For certificate formats and search paths, see the **[SSL Certificate Guide](docs/certificates.md)**.
+> For certificate formats, filename matrix, and automatic extraction, see the **[SSL Certificate Guide](docs/certificates.md)**.
 
-### 3. Pair Your TV
+### Step 3: Pair Your TV
 
-1. Restart Home Assistant.
+1. **Restart Home Assistant** (`Settings` $\rightarrow$ `System` $\rightarrow$ `Restart`).
 2. Go to **Settings $\rightarrow$ Devices & Services $\rightarrow$ Add Integration** and search for **Hisense VIDAA TV**.
 3. Enter your TV's IP address and select `Auto Detect (Recommended)`.
 4. Enter the 4-digit PIN displayed on your TV screen to complete setup.
+
+---
+
+### 🔄 Updating the Integration
+
+- **HACS**: Go to **HACS** $\rightarrow$ **Integrations** $\rightarrow$ Click **Update** on the Hisense VIDAA card.
+- **Manual**: Re-run the download commands in `custom_components/hisense_vidaa` or run:
+  ```bash
+  cd /config/custom_components
+  curl -sSL -o hisense_vidaa.zip https://github.com/stevene1919/hisense_vidaa/archive/refs/heads/main.zip
+  unzip -qo hisense_vidaa.zip
+  cp -r hisense_vidaa-main/custom_components/hisense_vidaa/* ./hisense_vidaa/
+  rm -rf hisense_vidaa.zip hisense_vidaa-main
+  ```
+  Then restart Home Assistant.
 
 ---
 
