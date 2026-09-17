@@ -459,7 +459,7 @@ class HisenseTvClient:
     def _on_connect(self, client: mqtt.Client, userdata: Any, flags: Any, rc: int) -> None:
         if rc == 0:
             self.connected = True
-            _LOGGER.info("Connected to TV MQTT Broker")
+            _LOGGER.info("[%s] Connected to TV MQTT broker", self.ip)
             self._dispatch_connected()
             client.subscribe([
                 (self.topicBrcsBasepath + "ui_service/state", 0),
@@ -483,7 +483,7 @@ class HisenseTvClient:
             threading.Timer(0.5, self.query_initial_state).start()
         else:
             self.connected = False
-            _LOGGER.error("Failed to connect to TV MQTT Broker, rc: %d", rc)
+            _LOGGER.warning("[%s] Failed to connect to TV MQTT broker (rc: %d)", self.ip, rc)
 
             if rc in (4, 5):
                 with contextlib.suppress(Exception):
@@ -502,7 +502,7 @@ class HisenseTvClient:
                     with self._refresh_lock:
                         should_refresh = not self._refreshing_token and (current_time - self._last_refresh_attempt > 15)
                     if should_refresh:
-                        _LOGGER.info("Authentication failed on connect. Refreshing token in background...")
+                        _LOGGER.info("[%s] Authentication failed on connect. Refreshing token in background...", self.ip)
                         threading.Thread(target=self._refresh_token_and_update_creds, daemon=True).start()
                     else:
                         self._dispatch_auth_failed()
@@ -518,12 +518,12 @@ class HisenseTvClient:
 
         try:
             if self.check_and_refresh_token(force=True):
-                _LOGGER.info("Token successfully refreshed on connection failure.")
+                _LOGGER.info("[%s] Token successfully refreshed on connection failure.", self.ip)
             else:
-                _LOGGER.warning("Token refresh failed (token expired on TV). Stopping auto-reconnect.")
+                _LOGGER.warning("[%s] Token refresh failed (token expired on TV). Stopping auto-reconnect.", self.ip)
                 self._dispatch_auth_failed()
         except Exception as e:
-            _LOGGER.error("Error during background token refresh: %s", e)
+            _LOGGER.error("[%s] Error during background token refresh: %s", self.ip, e)
             self._dispatch_auth_failed()
         finally:
             with self._refresh_lock:
@@ -531,7 +531,7 @@ class HisenseTvClient:
 
     def _on_disconnect(self, client: mqtt.Client, userdata: Any, rc: int) -> None:
         self.connected = False
-        _LOGGER.info("Disconnected from TV MQTT Broker, rc: %d", rc)
+        _LOGGER.debug("[%s] Disconnected from TV MQTT broker (rc: %d)", self.ip, rc)
         if (self._auth_future and not self._auth_future.done()) or (self._auth_code_future and not self._auth_code_future.done()):
             with contextlib.suppress(Exception):
                 client.loop_stop()
@@ -540,7 +540,7 @@ class HisenseTvClient:
     def _on_message(self, client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
         topic = msg.topic
         payload = msg.payload.decode("utf-8", errors="ignore")
-        _LOGGER.debug("Message received: %s on topic %s", payload, topic)
+        _LOGGER.debug("[%s] Message received: %s on topic %s", self.ip, payload, topic)
 
         # Check authentication futures
         if self._auth_future and (
@@ -577,7 +577,7 @@ class HisenseTvClient:
                 data = json.loads(payload)
                 self._dispatch_state_update(data)
             except Exception as e:
-                _LOGGER.error("Error parsing state: %s", e)
+                _LOGGER.debug("[%s] Error parsing state: %s", self.ip, e)
         elif topic in (
             self.topicBrcsBasepath + "platform_service/actions/volumechange",
             self.topicBrcsBasepath + "ui_service/volume",
@@ -587,7 +587,7 @@ class HisenseTvClient:
                 data = json.loads(payload)
                 self._dispatch_volume_update(data)
             except Exception as e:
-                _LOGGER.error("Error parsing volume: %s", e)
+                _LOGGER.debug("[%s] Error parsing volume: %s", self.ip, e)
         elif topic == self.topicBrcsBasepath + "platform_service/actions/tvsleep":
             self._dispatch_state_update({"statetype": "fake_sleep_0"})
         elif topic == self.topicMobiBasepath + "ui_service/data/sourcelist":
@@ -595,13 +595,13 @@ class HisenseTvClient:
                 data = json.loads(payload)
                 self._dispatch_sourcelist_update(data)
             except Exception as e:
-                _LOGGER.error("Error parsing sourcelist: %s", e)
+                _LOGGER.debug("[%s] Error parsing sourcelist: %s", self.ip, e)
         elif topic == self.topicMobiBasepath + "ui_service/data/applist":
             try:
                 data = json.loads(payload)
                 self._dispatch_applist_update(data)
             except Exception as e:
-                _LOGGER.error("Error parsing applist: %s", e)
+                _LOGGER.debug("[%s] Error parsing applist: %s", self.ip, e)
         elif topic in (
             self.topicMobiBasepath + "platform_service/data/picturesetting",
             self.topicBrcsBasepath + "platform_service/data/picturesetting",
@@ -610,7 +610,7 @@ class HisenseTvClient:
                 data = json.loads(payload)
                 self._dispatch_picture_update(data)
             except Exception as e:
-                _LOGGER.error("Error parsing picturesetting: %s", e)
+                _LOGGER.debug("[%s] Error parsing picturesetting: %s", self.ip, e)
         elif topic in (
             self.topicMobiBasepath + "platform_service/data/soundsetting",
             self.topicBrcsBasepath + "platform_service/data/soundsetting",
@@ -619,7 +619,7 @@ class HisenseTvClient:
                 data = json.loads(payload)
                 self._dispatch_sound_update(data)
             except Exception as e:
-                _LOGGER.error("Error parsing soundsetting: %s", e)
+                _LOGGER.debug("[%s] Error parsing soundsetting: %s", self.ip, e)
         elif topic == self.topicMobiBasepath + "ui_service/data/capability":
             try:
                 data = json.loads(payload)
@@ -627,9 +627,9 @@ class HisenseTvClient:
                     caps = str(data).lower()
                     if "notify" in caps or "toast" in caps or "showmessage" in caps or "message" in caps:
                         self.has_notifications = True
-                        _LOGGER.info("TV reported support for on-screen notifications: %s", data)
+                        _LOGGER.info("[%s] TV reported support for on-screen notifications: %s", self.ip, data)
             except Exception as e:
-                _LOGGER.debug("Error parsing capability descriptor: %s", e)
+                _LOGGER.debug("[%s] Error parsing capability descriptor: %s", self.ip, e)
 
     # --------------------------------------------------------------------------
     # Authentication & Pairing Handshake
@@ -660,7 +660,7 @@ class HisenseTvClient:
         if not force and self.access_token:
             if not is_token_expired(self.access_token_time, self.access_token_duration):
                 return False
-            _LOGGER.info("Access token expired. Refreshing...")
+            _LOGGER.debug("[%s] Access token expired, initiating refresh", self.ip)
 
         return self.refresh_tokens()
 
@@ -709,11 +709,11 @@ class HisenseTvClient:
     def connect_and_run(self) -> None:
         """Main client connection loop using the access token as password."""
         if not self.access_token or not self.client_id or not self.username:
-            _LOGGER.error("Cannot connect to TV: missing credentials (client_id, username, or access_token)")
+            _LOGGER.error("[%s] Cannot connect to TV: missing credentials (client_id, username, or access_token)", self.ip)
             return
 
         if self.mqtt_client:
-            _LOGGER.debug("Cleaning up existing MQTT client before reconnecting")
+            _LOGGER.debug("[%s] Cleaning up existing MQTT client before reconnecting", self.ip)
             try:
                 self.mqtt_client.on_connect = None
                 self.mqtt_client.on_disconnect = None
@@ -721,13 +721,13 @@ class HisenseTvClient:
                 self.mqtt_client.loop_stop()
                 self.mqtt_client.disconnect()
             except Exception as e:
-                _LOGGER.debug("Error disconnecting existing MQTT client: %s", e)
+                _LOGGER.debug("[%s] Error disconnecting existing MQTT client: %s", self.ip, e)
             finally:
                 self.mqtt_client = None
                 self.connected = False
 
         self.mqtt_client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
-        _LOGGER.info("Starting background MQTT connection loop to TV at %s", self.ip)
+        _LOGGER.debug("[%s] Starting background MQTT connection loop", self.ip)
         self.mqtt_client.connect_async(self.ip, 36669, 60)
         self.mqtt_client.loop_start()
 
@@ -740,7 +740,7 @@ class HisenseTvClient:
         with self._reconnect_lock:
             if now - self._last_reconnect_time < min_interval:
                 _LOGGER.debug(
-                    "Skipping reconnection attempt to %s: last attempt was %.1fs ago (min interval: %.1fs)",
+                    "[%s] Skipping reconnection attempt: last attempt was %.1fs ago (min interval: %.1fs)",
                     self.ip,
                     now - self._last_reconnect_time,
                     min_interval,
@@ -748,13 +748,13 @@ class HisenseTvClient:
                 return False
             self._last_reconnect_time = now
 
-        _LOGGER.info("Ensuring MQTT connection to TV at %s...", self.ip)
+        _LOGGER.debug("[%s] Ensuring MQTT connection to TV...", self.ip)
         try:
             self.check_and_refresh_token()
             self.connect_and_run()
             return True
         except Exception as e:
-            _LOGGER.error("Error during ensure_connected to %s: %s", self.ip, e)
+            _LOGGER.error("[%s] Error during ensure_connected: %s", self.ip, e)
             return False
 
     def query_initial_state(self) -> None:

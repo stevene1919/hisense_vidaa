@@ -196,7 +196,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     try:
                         return await self._async_init_client_and_auth()
                     except Exception as e:
-                        _LOGGER.exception("Failed to connect or initiate auth with TV at %s: %s", self.ip_address, e)
+                        _LOGGER.warning("[%s] Failed to connect or initiate auth with TV: %s", self.ip_address, e)
                         errors["base"] = "cannot_connect"
                 else:
                     return await self.async_step_certs()
@@ -234,7 +234,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 try:
                     await self.client.async_start_auth()
                 except Exception as e:
-                    _LOGGER.exception("Failed to connect to TV to show PIN: %s", e)
+                    _LOGGER.warning("[%s] Failed to connect to TV to show PIN: %s", self.ip_address, e)
                     errors["base"] = "cannot_connect"
 
         if user_input is not None and self.client:
@@ -267,7 +267,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self._async_discover_device_name()
                 return await self.async_step_options()
             except Exception as e:
-                _LOGGER.exception("Failed to validate PIN or retrieve tokens from TV: %s", e)
+                _LOGGER.warning("[%s] Failed to validate PIN or retrieve tokens from TV: %s", self.ip_address, e)
                 errors["base"] = "invalid_auth"
 
         return self.async_show_form(
@@ -325,7 +325,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 return await self.async_step_auth()
             except Exception as e:
-                _LOGGER.exception("Failed to connect to TV for reauth: %s", e)
+                _LOGGER.warning("[%s] Failed to connect to TV for reauth: %s", self.ip_address, e)
                 errors["base"] = "cannot_connect"
 
         return self.async_show_form(
@@ -407,7 +407,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 return await self.async_step_auth()
             except Exception as e:
-                _LOGGER.exception("Failed to initiate reconfigure pairing: %s", e)
+                _LOGGER.warning("[%s] Failed to initiate reconfigure pairing: %s", self.ip_address, e)
                 errors["base"] = "cannot_connect"
 
         return self.async_show_form(
@@ -515,8 +515,8 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 try:
                     return await self._async_init_client_and_auth()
                 except Exception as e:
-                    _LOGGER.exception(
-                        "Failed to connect or initiate auth with TV at %s: %s",
+                    _LOGGER.warning(
+                        "[%s] Failed to connect or initiate auth with TV: %s",
                         self.ip_address,
                         e,
                     )
@@ -581,7 +581,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 try:
                     return await self._async_init_client_and_auth()
                 except Exception as e:
-                    _LOGGER.exception("Failed to connect or initiate auth: %s", e)
+                    _LOGGER.warning("[%s] Failed to connect or initiate auth: %s", self.ip_address, e)
                     errors["base"] = "cannot_connect"
 
         return self.async_show_form(

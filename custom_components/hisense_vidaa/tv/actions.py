@@ -61,7 +61,7 @@ def show_message(
 ) -> bool:
     """Displays an on-screen toast popup notification on the TV."""
     if not client.connected or not client.mqtt_client:
-        _LOGGER.debug("Cannot show toast message: TV MQTT client not connected")
+        _LOGGER.debug("[%s] Cannot show toast message: TV MQTT client not connected", getattr(client, "ip", "unknown"))
         return False
 
     payload_dict = {

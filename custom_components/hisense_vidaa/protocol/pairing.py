@@ -50,12 +50,12 @@ async def async_start_pairing_handshake(client: Any) -> None:
                         else:
                             profiles_to_try = ["remotenow", "middle", "modern"]
             except Exception as e:
-                _LOGGER.debug("Could not determine transport_protocol before auth: %s", e)
+                _LOGGER.debug("[%s] Could not determine transport_protocol before auth: %s", client.ip, e)
 
         last_err = None
         for p in profiles_to_try:
             try:
-                _LOGGER.debug("Attempting pairing auth with profile: %s", p)
+                _LOGGER.debug("[%s] Attempting pairing auth with profile: %s", client.ip, p)
                 await client._async_start_auth_internal(profile=p)
                 client.auth_profile = p
                 return
@@ -63,7 +63,7 @@ async def async_start_pairing_handshake(client: Any) -> None:
                 last_err = e
                 err_msg = str(e)
                 if "code 5" in err_msg or "code 4" in err_msg or "Not authorized" in err_msg:
-                    _LOGGER.info("Auth profile %s rejected by TV (%s), falling back...", p, err_msg)
+                    _LOGGER.info("[%s] Auth profile %s rejected by TV (%s), falling back...", client.ip, p, err_msg)
                     continue
                 raise
         if last_err:
@@ -124,7 +124,7 @@ async def _async_execute_pairing_attempt(
             break
         except TimeoutError:
             if attempt < 2 and not client._auth_future.done():
-                _LOGGER.debug("No response to vidaa_app_connect on attempt %d, retrying...", attempt + 1)
+                _LOGGER.debug("[%s] No response to vidaa_app_connect on attempt %d, retrying...", client.ip, attempt + 1)
                 await asyncio.sleep(0.5)
             else:
                 client.disconnect()
@@ -148,10 +148,10 @@ async def async_submit_pin_code(client: Any, pin_code: str) -> dict[str, Any]:
 
     try:
         payload_str = await asyncio.wait_for(client._auth_code_future, timeout=15)
-        _LOGGER.debug("Received PIN response payload: %s", payload_str)
+        _LOGGER.debug("[%s] Received PIN response payload: %s", client.ip, payload_str)
         payload = json.loads(payload_str)
         if payload.get("result") != 1:
-            _LOGGER.error("PIN validation rejected with payload: %s", payload_str)
+            _LOGGER.warning("[%s] PIN validation rejected with payload: %s", client.ip, payload_str)
             raise Exception(f"Incorrect PIN code (TV response: {payload_str})")
     except TimeoutError:
         raise Exception("Timeout waiting for PIN validation")
@@ -174,7 +174,8 @@ async def async_submit_pin_code(client: Any, pin_code: str) -> dict[str, Any]:
         client.refresh_token_duration = int(token_data["refreshtoken_duration_day"])
 
         _LOGGER.info(
-            "Pairing successful! Received access_token (valid %d days) and refresh_token (valid %d days)",
+            "[%s] Pairing successful! Received access_token (valid %d days) and refresh_token (valid %d days)",
+            client.ip,
             client.access_token_duration,
             client.refresh_token_duration,
         )

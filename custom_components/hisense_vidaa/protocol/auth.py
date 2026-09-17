@@ -80,7 +80,7 @@ def perform_token_refresh(
 ) -> dict[str, Any] | None:
     """Connects synchronously using refresh_token to obtain new token credentials from TV."""
     if not refresh_token or not client_id or not username:
-        _LOGGER.warning("Cannot refresh token: missing refresh_token, client_id, or username")
+        _LOGGER.warning("[%s] Cannot refresh token: missing refresh_token, client_id, or username", ip)
         return None
 
     paths: TopicPaths = build_topic_paths(client_id)
@@ -107,12 +107,12 @@ def perform_token_refresh(
     def on_refresh_connect(cl: mqtt.Client, userdata: Any, flags: Any, rc: int) -> None:
         connect_rc[0] = rc
         if rc == 0:
-            _LOGGER.info("Refresh client connected successfully. Subscribing to token topics...")
+            _LOGGER.debug("[%s] Refresh client connected successfully. Subscribing to token topics...", ip)
             cl.subscribe(paths.mobile + "#")
             payload = json.dumps({"refreshtoken": refresh_token or ""})
             cl.publish(paths.platform + "data/gettoken", payload)
         else:
-            _LOGGER.error("Refresh client connection failed, rc: %d", rc)
+            _LOGGER.warning("[%s] Refresh client connection rejected (rc: %d)", ip, rc)
             lock.set()
 
     def on_refresh_subscribe(cl: mqtt.Client, userdata: Any, mid: int, granted_qos: Any) -> None:
@@ -123,18 +123,18 @@ def perform_token_refresh(
         nonlocal updated_data
         try:
             payload_str = msg.payload.decode("utf-8", errors="ignore")
-            _LOGGER.debug("Refresh client received message on %s: %s", msg.topic, payload_str)
+            _LOGGER.debug("[%s] Refresh client received message on %s: %s", ip, msg.topic, payload_str)
             data = json.loads(payload_str)
             if isinstance(data, dict) and "accesstoken" in data:
                 updated_data = data
                 lock.set()
         except Exception as e:
-            _LOGGER.error("Error parsing refreshed token: %s", e)
+            _LOGGER.debug("[%s] Error parsing refreshed token: %s", ip, e)
 
     client.on_connect = on_refresh_connect
     client.on_subscribe = on_refresh_subscribe
     client.on_message = on_token_msg
-    client.on_disconnect = lambda cl, userdata, rc: _LOGGER.debug("Refresh client disconnected: %d", rc)
+    client.on_disconnect = lambda cl, userdata, rc: _LOGGER.debug("[%s] Refresh client disconnected: %d", ip, rc)
 
     try:
         client.connect(ip, port, 60)
@@ -144,9 +144,9 @@ def perform_token_refresh(
         while not lock.is_set() and time.time() - start < timeout:
             time.sleep(0.1)
     except (OSError, TimeoutError) as e:
-        _LOGGER.debug("TV is offline or unreachable during token refresh: %s", e)
+        _LOGGER.debug("[%s] TV is offline or unreachable during token refresh: %s", ip, e)
     except Exception as e:
-        _LOGGER.error("Unexpected error during refresh client connection: %s", e)
+        _LOGGER.warning("[%s] Unexpected error during refresh client connection: %s", ip, e)
     finally:
         with contextlib.suppress(Exception):
             client.loop_stop()
@@ -156,6 +156,6 @@ def perform_token_refresh(
         return updated_data
 
     if connect_rc[0] is not None:
-        _LOGGER.error("Failed to refresh token. Connect RC: %d", connect_rc[0])
+        _LOGGER.warning("[%s] Failed to refresh token (Connect RC: %d)", ip, connect_rc[0])
 
     return None
