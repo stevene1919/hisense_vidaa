@@ -86,7 +86,7 @@ class HisenseVidaaForceReconnectButton(HisenseVidaaBaseButton):
         """Handle button press."""
         _LOGGER.info("Manually forcing MQTT reconnection to TV at %s", self._client.ip)
         await self.hass.async_add_executor_job(self._client.disconnect)
-        self._client.connect_and_run()
+        await self.hass.async_add_executor_job(self._client.connect_and_run)
 
 
 class HisenseVidaaSyncClockButton(HisenseVidaaBaseButton):
