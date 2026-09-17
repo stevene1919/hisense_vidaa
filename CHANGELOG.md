@@ -2,6 +2,21 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.9.1] - 2026-09-17
+
+### Added
+- **DYNAMIC SOUND MODE FEATURE DISCOVERY**: `MediaPlayerEntityFeature.SELECT_SOUND_MODE` is now dynamically registered only when the TV hardware exposes active sound mode presets via MQTT. If a TV model does not report sound mode capabilities, the sound mode selector is cleanly omitted from the Home Assistant media player card and entity attributes (`sound_mode_list = None`).
+- **NATIVE ASYNC ACTION PLATFORM METHODS**: Refactored all media player platform actions (`async_turn_on`, `async_turn_off`, `async_set_volume_level`, `async_select_source`, `async_select_sound_mode`, `async_play_media`, etc.) to standard Home Assistant asynchronous methods.
+- **AUTOMATED CONFIG ENTRY TOKEN PERSISTENCE**: Registered `token_refreshed` callback handler in `__init__.py` to persist rotated access tokens back into `config_entry.data`.
+
+### Fixed
+- **CALLBACK DISPATCH SIGNATURES (`tv/callbacks.py`)**: Fixed `auth_failed` and `token_refreshed` callback invocations to pass the active client instance (`self`), aligning callback signatures across the lifecycle.
+- **VOLUME & MUTE PAYLOAD PARSING (`tv/state.py`)**: Added strict `volume_type in (2, "2")` guards when evaluating mute status, preventing external ARC soundbar broadcasts (`volume_type: 1`) from overriding `client.muted`.
+- **ENTITY AVAILABILITY MATRIX**: Refined entity availability matrix across base entities (`entity.py`), diagnostic sensors (`sensor.py`), and interactive controls (`select.py`, `number.py`, `switch.py`).
+- **NON-BLOCKING DISCOVERY PROBING (`config_flow.py`)**: Offloaded SSDP and Zeroconf device probing to background executor jobs (`hass.async_add_executor_job`) to eliminate event loop blocking during device setup.
+- **REPAIRS & SERVICE TARGETING**: Fixed certificate resolution check in `repairs.py` (`check_certs_exist`) and modernized `services.py` with standard `entity_id` and `device_id` target resolution.
+- **DIAGNOSTICS ATTRIBUTE RESOLUTION**: Corrected diagnostic payload properties in `diagnostics.py` to match refactored client state attributes (`current_source` and `state`).
+
 ## [2.9.0] - 2026-09-17
 
 ### Added
