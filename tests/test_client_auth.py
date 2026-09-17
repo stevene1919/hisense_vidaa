@@ -42,6 +42,39 @@ def test_check_and_refresh_token_not_expired():
     assert client.check_and_refresh_token(force=False) is False
 
 
+def test_check_and_refresh_token_valid_within_12_hours_does_not_refresh():
+    """Test token refresh is NOT triggered when token has <12 hours remaining but is still valid (>0s)."""
+    now = int(time.time())
+    # 2-day duration (172800s), issued 40 hours ago -> 8 hours (28800s) remaining
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        client_id="test_client",
+        access_token="valid_token",
+        access_token_time=now - (40 * 3600),
+        access_token_duration=2,
+        refresh_token="valid_refresh",
+        refresh_token_time=now - (40 * 3600),
+        refresh_token_duration=30,
+    )
+
+    # Must return False to avoid prompting PIN on TV while access token is still active
+    assert client.check_and_refresh_token(force=False) is False
+
+
+def test_check_and_refresh_token_missing_metadata_does_not_refresh():
+    """Test token refresh is skipped when metadata (time or duration) is missing."""
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        client_id="test_client",
+        access_token="valid_token",
+        access_token_time=0,
+        access_token_duration=0,
+        refresh_token="valid_refresh",
+    )
+
+    assert client.check_and_refresh_token(force=False) is False
+
+
 def test_check_and_refresh_token_expired():
     """Test token refresh is triggered when token has expired (>48 hours)."""
     now = int(time.time())
