@@ -126,3 +126,34 @@ stateDiagram-v2
 | `/remoteapp/mobile/broadcast/platform_service/data/picturesetting` | `Subscribe` | Broadcast state push when picture mode or brightness changes on TV |
 | `/remoteapp/mobile/broadcast/platform_service/data/soundsetting` | `Subscribe` | Broadcast state push when sound mode or audio setting changes on TV |
 | `/remoteapp/mobile/{client_id}/ui_service/data/capability` | `Subscribe` | TV capabilities descriptor (e.g. notifications/toast support) |
+
+---
+
+## 🔑 Certificate Architecture & Extraction
+
+The TV broker validates client connections using mutual TLS (mTLS v1.2/v1.3). The integration ships with pre-configured certificate profiles extracted from official mobile companion apps:
+
+1. **`vidaa_2024` (VIDAA 2.0 / Modern)**: Extracted from the modern VIDAA Android client (`com.vidaa.smarttv`).
+2. **`remotenow_2018` (RemoteNOW / Standard)**: Extracted from the RemoteNOW Android client (`com.hisense.tv.remotenow`).
+3. **PKCS#12 (`.p12` / `.pfx`) Dynamic Extraction**:
+   - The integration contains automated PKCS#12 unpackers using `cryptography.hazmat.primitives.serialization.pkcs12`.
+   - Automatically tests known manufacturer keystore passwords (e.g. `186e990688070325a1c4b0ce275d2388`, `remote`, `hisense`, empty) to extract `.pem` key/cert pairs on the fly.
+
+---
+
+## 🔬 Capability Probing & Model Quirks
+
+Different VIDAA models expose varying subsets of the MQTT protocol depending on regional licensing and mainboard chipset:
+
+1. **Picture & Sound Settings (`/actions/picturesetting`, `/actions/soundsetting`)**:
+   - Sending `{"action": "get_menu_info"}` requests the full menu JSON hierarchy (picture modes, backlights, contrast, EQ presets).
+   - Supported TVs return populated menu trees with numeric `menu_id` identifiers.
+   - Unsupported models return an empty payload `{}` or ignore the topic.
+   - *Firmware Quirk (2024+)*: Unprompted background queries during boot can trigger an on-screen TV prompt on select firmware revisions. Probing is therefore gated during initial setup (PIN verification) or explicitly invoked via the diagnostic probe button.
+
+2. **Sound Mode Dynamic Exposure**:
+   - Home Assistant's `MediaPlayerEntityFeature.SELECT_SOUND_MODE` and `sound_mode_list` are dynamically attached only when the TV actively returns sound equalizer options.
+
+3. **Audio-Only / Screen-Off Control**:
+   - VIDAA OS does not expose a dedicated MQTT status query topic for display panel power state.
+   - The integration provides an opt-in switch entity mapping to display power toggling on models supporting panel sleep.
