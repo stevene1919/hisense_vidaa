@@ -190,7 +190,7 @@ async def test_certs_step_submission_valid(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_options_flow():
+async def test_options_flow(monkeypatch):
     """Test options flow handler."""
     from custom_components.hisense_vidaa.options_flow import HisenseVidaaOptionsFlowHandler
 
@@ -255,12 +255,40 @@ async def test_options_flow():
     assert result_keys_submit["data"]["key_delay"] == 0.3
     assert result_keys_submit["data"]["key_repeat"] == 2
 
-    # Test certs step
+    # Test certs step with invalid non-existent paths
+    result_certs_invalid = await handler.async_step_certs(
+        user_input={
+            "auth_profile": "auto",
+            "certfile": "/nonexistent/path/custom.crt",
+            "keyfile": "/nonexistent/path/custom.key",
+        }
+    )
+    assert result_certs_invalid["type"] == "form"
+    assert result_certs_invalid["errors"]["certfile"] == "certs_not_found"
+
+    # Test certs step updating auth profile without custom paths
+    result_profile_submit = await handler.async_step_certs(
+        user_input={
+            "auth_profile": "middle",
+            "certfile": "",
+            "keyfile": "",
+        }
+    )
+    assert result_profile_submit["type"] == "create_entry"
+    assert result_profile_submit["data"]["auth_profile"] == "middle"
+
+    # Test certs step with valid paths (monkeypatched check_certs_exist)
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.options_flow.check_certs_exist",
+        lambda c, k: True,
+    )
     result_certs_submit = await handler.async_step_certs(
         user_input={
+            "auth_profile": "modern",
             "certfile": "/config/certs/custom.crt",
             "keyfile": "/config/certs/custom.key",
         }
     )
     assert result_certs_submit["type"] == "create_entry"
     assert result_certs_submit["data"]["certfile"] == "/config/certs/custom.crt"
+    assert result_certs_submit["data"]["auth_profile"] == "modern"

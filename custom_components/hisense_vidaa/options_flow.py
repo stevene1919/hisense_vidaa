@@ -5,6 +5,7 @@ from homeassistant import config_entries
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_AUTH_PROFILE,
     CONF_CERTFILE,
     CONF_ENABLE_CEC_NAMES,
     CONF_ENABLE_MEDIA_CONTROLS,
@@ -17,6 +18,7 @@ from .const import (
     CONF_KEYFILE,
     CONF_SECONDARY_MAC_ADDRESS,
     CONF_USE_SSL,
+    DEFAULT_AUTH_PROFILE,
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_NOTIFY,
@@ -26,6 +28,23 @@ from .const import (
     DEFAULT_KEY_DELAY,
     DEFAULT_KEY_REPEAT,
     DEFAULT_USE_SSL,
+)
+from .crypto import check_certs_exist
+
+AUTH_PROFILE_OPTIONS = [
+    selector.SelectOptionDict(value="auto", label="Auto Detect (Recommended)"),
+    selector.SelectOptionDict(value="modern", label="VIDAA 2.0 / 2024+ (vidaa_2024)"),
+    selector.SelectOptionDict(value="middle", label="VIDAA 1.5 / Middle (3000–3285)"),
+    selector.SelectOptionDict(value="remotenow", label="RemoteNOW / 2018–2023 (standard)"),
+    selector.SelectOptionDict(value="legacy", label="Legacy Static (Pre-2022 / Static Credentials)"),
+]
+
+AUTH_PROFILE_SELECTOR = selector.SelectSelector(
+    selector.SelectSelectorConfig(
+        options=AUTH_PROFILE_OPTIONS,
+        mode=selector.SelectSelectorMode.DROPDOWN,
+        translation_key="auth_profile",
+    )
 )
 
 
@@ -165,27 +184,47 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """SSL / TLS client certificate configuration."""
-        if user_input is not None:
-            updated_options = {**self.config_entry.options, **user_input}
-            return self.async_create_entry(title="", data=updated_options)
-
+        errors: dict[str, str] = {}
         options = self.config_entry.options
         data = self.config_entry.data
+
+        current_profile = options.get(
+            CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
+        )
+        current_cert = options.get(CONF_CERTFILE, data.get(CONF_CERTFILE, ""))
+        current_key = options.get(CONF_KEYFILE, data.get(CONF_KEYFILE, ""))
+
+        if user_input is not None:
+            new_cert = (user_input.get(CONF_CERTFILE) or "").strip()
+            new_key = (user_input.get(CONF_KEYFILE) or "").strip()
+
+            if (new_cert or new_key) and not check_certs_exist(new_cert, new_key):
+                if new_cert and not check_certs_exist(new_cert, new_cert):
+                    errors[CONF_CERTFILE] = "certs_not_found"
+                elif new_key and not check_certs_exist(new_key, new_key):
+                    errors[CONF_KEYFILE] = "certs_not_found"
+                else:
+                    errors["base"] = "certs_not_found"
+
+            if not errors:
+                updated_options = {**self.config_entry.options, **user_input}
+                return self.async_create_entry(title="", data=updated_options)
 
         return self.async_show_form(
             step_id="certs",
             data_schema=vol.Schema({
                 vol.Optional(
+                    CONF_AUTH_PROFILE,
+                    default=current_profile,
+                ): AUTH_PROFILE_SELECTOR,
+                vol.Optional(
                     CONF_CERTFILE,
-                    default=options.get(
-                        CONF_CERTFILE, data.get(CONF_CERTFILE, "")
-                    ),
+                    default=current_cert,
                 ): str,
                 vol.Optional(
                     CONF_KEYFILE,
-                    default=options.get(
-                        CONF_KEYFILE, data.get(CONF_KEYFILE, "")
-                    ),
+                    default=current_key,
                 ): str,
             }),
+            errors=errors,
         )

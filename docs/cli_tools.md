@@ -54,26 +54,29 @@ Tests TCP port reachability, TLS handshake, broker response, and multi-tier auth
 ```bash
 python3 test_client.py ping --ip <TV_IP>
 
-# Test specific authentication profile:
+# Test specific authentication profile (modern / middle / remotenow / legacy):
 python3 test_client.py ping --ip <TV_IP> --profile modern
+python3 test_client.py ping --ip <TV_IP> --profile middle
 ```
 
-### 3. Test Raw SSL/TLS Connection (`test-ssl`)
+### 4. Test Raw SSL/TLS Connection (`test-ssl`)
 Verifies TLS cipher negotiation and certificate validity without pairing:
 ```bash
 python3 test_client.py test-ssl --ip <TV_IP>
 python3 test_client.py test-ssl --ip <TV_IP> --profile modern
+python3 test_client.py test-ssl --ip <TV_IP> --profile middle
 python3 test_client.py test-ssl --ip <TV_IP> --cert /path/to/cert.pem --key /path/to/key.pem
 ```
 
-### 4. Interactive PIN Pairing (`auth`)
+### 5. Interactive PIN Pairing (`auth`)
 Initiates the challenge handshake, displays the on-screen 4-digit PIN on the TV, and saves the issued tokens to `credentials.json`:
 ```bash
 python3 test_client.py auth --ip <TV_IP>
 python3 test_client.py auth --ip <TV_IP> --profile modern
+python3 test_client.py auth --ip <TV_IP> --profile middle
 ```
 
-### 5. Test Token Renewal (`refresh`)
+### 6. Test Token Renewal (`refresh`)
 Tests renewal of the 2-day access token using the 30-day refresh token:
 ```bash
 python3 test_client.py refresh

@@ -30,6 +30,11 @@ from .const import (
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
     DOMAIN,
 )
+from .settings import (
+    DEFAULT_MENU_ID_SOUND_MODE,
+    STANDARD_SOUND_MODES,
+    find_menu_item_by_name,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,6 +86,7 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         self._client.register_volume_callback(self._handle_volume_update)
         self._client.register_sourcelist_callback(self._handle_sourcelist_update)
         self._client.register_applist_callback(self._handle_applist_update)
+        self._client.register_sound_callback(self._handle_sound_update)
         self._client.register_disconnected_callback(self._handle_disconnected)
 
         # Sync state and query initial state now that callbacks are registered and active
@@ -92,6 +98,10 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         """Unregister callbacks when entity is removed."""
         self._client.unregister_connected_callback(self._handle_connected)
         self._client.unregister_state_callback(self._handle_state_update)
+        self._client.unregister_volume_callback(self._handle_volume_update)
+        self._client.unregister_sourcelist_callback(self._handle_sourcelist_update)
+        self._client.unregister_applist_callback(self._handle_applist_update)
+        self._client.unregister_sound_callback(self._handle_sound_update)
         self._client.unregister_disconnected_callback(self._handle_disconnected)
 
     @property
@@ -199,6 +209,23 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
         return sorted(sources)
 
     @property
+    def sound_mode(self) -> str | None:
+        """Return the current sound mode."""
+        return getattr(self._client, "sound_mode", None)
+
+    @property
+    def sound_mode_list(self) -> list[str]:
+        """Return the list of available sound modes."""
+        sm_item = find_menu_item_by_name(
+            getattr(self._client, "sound_settings", None),
+            "Sound Mode",
+            DEFAULT_MENU_ID_SOUND_MODE,
+        )
+        if sm_item and sm_item.options:
+            return sm_item.options
+        return STANDARD_SOUND_MODES
+
+    @property
     def supported_features(self) -> MediaPlayerEntityFeature:
         base = (
             MediaPlayerEntityFeature.TURN_ON
@@ -207,6 +234,7 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             | MediaPlayerEntityFeature.VOLUME_STEP
             | MediaPlayerEntityFeature.VOLUME_MUTE
             | MediaPlayerEntityFeature.SELECT_SOURCE
+            | MediaPlayerEntityFeature.SELECT_SOUND_MODE
             | MediaPlayerEntityFeature.PLAY_MEDIA
         )
         enable_controls = self._options.get(
@@ -345,6 +373,21 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
 
         self._client.change_source(clean_source)
 
+    def select_sound_mode(self, sound_mode: str) -> None:
+        """Select sound mode."""
+        self._client.set_sound_mode(sound_mode)
+        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
+            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        elif self.hass:
+            self.schedule_update_ha_state()
+
+    def _handle_sound_update(self, data: dict[str, Any]) -> None:
+        """Handle sound setting updates from TV."""
+        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
+            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
+        elif self.hass:
+            self.schedule_update_ha_state()
+
     def _handle_state_update(self, data: dict[str, Any]) -> None:
         statetype = data.get("statetype")
         _LOGGER.debug("TV State updated: %s", statetype)
@@ -356,6 +399,13 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             self._connected_device = None
             self._channel_name = None
             self._channel_num = None
+        elif statetype == "fake_sleep_1":
+            if self._client:
+                self._client.is_on = True
+            was_off = (self._state == STATE_OFF)
+            self._state = STATE_ON
+            if (was_off or not self._source_dict or not self._app_dict) and hasattr(self.hass, "add_job"):
+                self.hass.add_job(self._client.query_initial_state)
         else:
             if self._client:
                 self._client.is_on = True

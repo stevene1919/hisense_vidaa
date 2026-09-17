@@ -191,7 +191,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         refresh_token=data.get(CONF_REFRESH_TOKEN),
         refresh_token_time=data.get(CONF_REFRESH_TOKEN_TIME),
         refresh_token_duration=data.get(CONF_REFRESH_TOKEN_DURATION),
-        auth_profile=data.get(CONF_AUTH_PROFILE, "auto"),
+        auth_profile=entry.options.get(CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, "auto")),
         certfile=certfile,
         keyfile=keyfile,
         use_ssl=use_ssl,

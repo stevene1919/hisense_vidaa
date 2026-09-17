@@ -228,6 +228,45 @@ def test_media_player_play_media(mock_client, mock_entry):
     assert mock_client.send_key.call_count == 3
 
 
+def test_media_player_sound_mode_and_waking_state(mock_client, mock_entry):
+    from homeassistant.components.media_player import MediaPlayerEntityFeature
+    from homeassistant.const import STATE_OFF, STATE_ON
+
+    mp = HisenseVidaaMediaPlayer(
+        client=mock_client,
+        mac=mock_entry.data["mac_address"],
+        entry_id=mock_entry.entry_id,
+        name=mock_entry.title,
+    )
+    mp.hass = MagicMock()
+
+    # Supported features check
+    assert bool(mp.supported_features & MediaPlayerEntityFeature.SELECT_SOUND_MODE) is True
+
+    # Sound mode property & list
+    mock_client.sound_mode = "Theatre"
+    mock_client.sound_settings = []
+    assert mp.sound_mode == "Theatre"
+    assert "Standard" in mp.sound_mode_list
+    assert "Theatre" in mp.sound_mode_list
+
+    # Select sound mode
+    mp.select_sound_mode("Music")
+    mock_client.set_sound_mode.assert_called_with("Music")
+
+    # Waking state transition: fake_sleep_1
+    mp._handle_state_update({"statetype": "fake_sleep_0"})
+    assert mp.state == STATE_OFF
+    assert mock_client.is_on is False
+
+    mp._handle_state_update({"statetype": "fake_sleep_1"})
+    assert mp.state == STATE_ON
+    assert mock_client.is_on is True
+
+    # Sound update callback
+    mp._handle_sound_update({"menu_id": "sound_mode", "value": "Speech"})
+
+
 @pytest.mark.anyio
 async def test_notify_entity(mock_client, mock_entry):
     import threading

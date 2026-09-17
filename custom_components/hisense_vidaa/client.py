@@ -296,6 +296,8 @@ class HisenseTvClient:
             statetype = data.get("statetype")
             if statetype == "fake_sleep_0":
                 self.is_on = False
+            elif statetype == "fake_sleep_1":
+                self.is_on = True
             else:
                 self.is_on = True
             if statetype == "sourceswitch":

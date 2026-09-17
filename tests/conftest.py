@@ -142,6 +142,7 @@ if "homeassistant" not in sys.modules:
         SELECT_SOURCE = 2048
         STOP = 4096
         PLAY = 16384
+        SELECT_SOUND_MODE = 65536
     media_player.MediaPlayerEntity = MediaPlayerEntity
     media_player.MediaPlayerDeviceClass = MediaPlayerDeviceClass
     media_player.MediaPlayerEntityFeature = MediaPlayerEntityFeature

@@ -107,12 +107,16 @@
       },
       "certs": {
         "title": "SSL Certificates & Security",
-        "description": "Custom paths for SSL/TLS client certificate and private key.",
+        "description": "Select authentication profile and optional custom SSL/TLS client certificate paths.",
         "data": {
+          "auth_profile": "Authentication / Certificate Profile",
           "certfile": "Certificate File Path (.crt / .pem / .p12)",
           "keyfile": "Private Key File Path (.key / .pem)"
         }
       }
+    },
+    "error": {
+      "certs_not_found": "Certificate or private key file was not found at the specified path. Please check the file location and permissions."
     }
   },
   "entity": {

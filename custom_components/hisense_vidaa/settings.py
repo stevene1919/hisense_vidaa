@@ -150,11 +150,27 @@ def parse_settings_payload(payload_dict: dict[str, Any]) -> dict[int, SettingMen
 
 
 def find_menu_item_by_name(
-    items: dict[int, SettingMenuItem],
+    items: dict[int, SettingMenuItem] | list | None,
     target_name: str,
     default_id: int | None = None,
 ) -> SettingMenuItem | None:
     """Finds a setting item by name or alias."""
+    if not items:
+        return None
+    if isinstance(items, list):
+        parsed_items = {}
+        for x in items:
+            if isinstance(x, SettingMenuItem):
+                parsed_items[x.menu_id] = x
+            elif isinstance(x, dict) and "menu_id" in x:
+                item = SettingMenuItem.from_dict(x)
+                if item:
+                    parsed_items[item.menu_id] = item
+        items = parsed_items
+
+    if not isinstance(items, dict):
+        return None
+
     norm_target = normalize_setting_name(target_name)
     for item in items.values():
         if normalize_setting_name(item.name) == norm_target:

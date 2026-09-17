@@ -39,14 +39,37 @@ For dependable power-on control from Home Assistant when the TV is in standby:
 
 ---
 
-## 🔒 4. Firewall & Port Reference
+## 🔒 4. IoT VLAN Firewall & Port Matrix
 
-The TV and Home Assistant communicate over the following local network ports:
+If your Hisense TV is placed on an isolated **IoT VLAN** separate from your Home Assistant server (e.g. `HA_VLAN` $\leftrightarrow$ `IOT_VLAN`), configure the following firewall rules on your router/gateway:
 
-| Port | Protocol | Purpose | Direction |
-| :--- | :--- | :--- | :--- |
-| **`36669`** | TCP / TLS | TV Internal MQTT Broker (Commands, State, Pairing) | HA $\rightarrow$ TV |
-| **`38400` / `18400`** | TCP / HTTP | UPnP / DLNA Device Description & Clock Sync | HA $\rightarrow$ TV |
-| **`9` / `7`** | UDP | Wake-on-LAN Subnet Directed Broadcast | HA $\rightarrow$ TV / Broadcast |
-| **`1900`** | UDP | SSDP / UPnP Discovery Broadcast | Broadcast $\leftrightarrow$ Both |
-| **`5353`** | UDP | mDNS / Zeroconf Network Discovery | Broadcast $\leftrightarrow$ Both |
+### 📋 Port & Protocol Matrix
+
+| Port | Protocol | Traffic Type | Direction | Purpose | Required? |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`36669`** | TCP | Unicast (TLS) | HA $\rightarrow$ TV | **Core TV MQTT Control Channel** (Pairing, commands, state updates, source switching, volume) | **Mandatory** |
+| **`56669`** | TCP | Unicast (Plain) | HA $\rightarrow$ TV | **Legacy Plaintext MQTT Channel** (Pre-2018 / legacy models operating without SSL) | *Optional (Legacy only)* |
+| **`38400`** | TCP | Unicast (HTTP) | HA $\rightarrow$ TV | **UPnP Device Description (`rendererdevicedesc.xml`) & Clock Header Sync** (Modern VIDAA) | **Recommended** |
+| **`18400`** | TCP | Unicast (HTTP) | HA $\rightarrow$ TV | **UPnP Device Description (`rendererdevicedesc.xml`) & Clock Header Sync** (Alternate VIDAA port) | **Recommended** |
+| **`9` / `7`** | UDP | Directed Broadcast / Unicast | HA $\rightarrow$ TV | **Wake-on-LAN (WoL)** (Power-on magic packet to wake TV from deep standby) | **Recommended** |
+| **`1900`** | UDP | Multicast (`239.255.255.250`) | Both / Multicast | **SSDP / UPnP Auto-Discovery** (Automatic discovery of TV IP and device metadata) | *Optional (Discovery)* |
+| **`5353`** | UDP | Multicast (`224.0.0.251`) | Both / Multicast | **mDNS / Zeroconf Network Discovery** | *Optional (Discovery)* |
+
+---
+
+### 🛡️ Recommended Inter-VLAN Firewall Policy Rules
+
+1. **HA to TV (Unicast TCP/UDP)**:
+   - **Source**: Home Assistant Server IP (`HA_IP`)
+   - **Destination**: Hisense TV IP (`TV_IP`)
+   - **Allowed Ports**: `TCP 36669, 56669, 38400, 18400`, `UDP 9, 7`
+   - **Action**: `ACCEPT`
+2. **TV to HA (Established / Related Return Traffic)**:
+   - Allow established and related connection states (`conntrack state ESTABLISHED, RELATED`) from `IOT_VLAN` to `HA_VLAN`.
+   - The TV does **not** need to initiate new inbound connections to Home Assistant.
+3. **Cross-Subnet SSDP Discovery (Optional)**:
+   - SSDP multicast (`UDP 1900` to `239.255.255.250`) does not naturally cross VLAN boundaries. If you want automatic SSDP discovery across subnets, enable an **mDNS / SSDP relay** (such as `smcroute`, `igmpproxy`, or `udp-broadcast-relay-redux`) on your gateway.
+   - Alternatively, simply enter the TV's IP address directly during integration setup to bypass SSDP discovery.
+4. **Cross-Subnet Wake-on-LAN (WoL)**:
+   - Standard WoL packets broadcast to `255.255.255.255`. For cross-VLAN wake-on-LAN, configure your gateway to permit **Subnet Directed Broadcast** (e.g. `192.168.50.255:9`) or use a UDP broadcast relay daemon.
+

@@ -6,7 +6,6 @@ from urllib.parse import urlparse
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.helpers import selector
 from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
@@ -47,23 +46,12 @@ from .const import (
 )
 from .crypto import check_certs_exist, resolve_certificates
 from .discovery import get_arp_mac
-from .options_flow import HisenseVidaaOptionsFlowHandler
+from .options_flow import (
+    AUTH_PROFILE_SELECTOR,
+    HisenseVidaaOptionsFlowHandler,
+)
 
 _LOGGER = logging.getLogger(__name__)
-
-AUTH_PROFILE_SELECTOR = selector.SelectSelector(
-    selector.SelectSelectorConfig(
-        options=[
-            selector.SelectOptionDict(value="auto", label="Auto Detect (Recommended)"),
-            selector.SelectOptionDict(value="modern", label="VIDAA 2.0 / 2024+ (vidaa_2024)"),
-            selector.SelectOptionDict(value="middle", label="VIDAA 1.5 / Middle (3000–3285)"),
-            selector.SelectOptionDict(value="remotenow", label="RemoteNOW / 2018–2023 (standard)"),
-            selector.SelectOptionDict(value="legacy", label="Legacy Static (Pre-2022 / Static Credentials)"),
-        ],
-        mode=selector.SelectSelectorMode.DROPDOWN,
-        translation_key="auth_profile",
-    )
-)
 
 
 class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -558,6 +546,9 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if self.auth_profile == "modern":
             default_cert_name = "vidaa_2024_cert.pem"
             default_key_name = "vidaa_2024_key.pem"
+        elif self.auth_profile == "middle":
+            default_cert_name = "vidaa_client_v01.pem"
+            default_key_name = "vidaa_client_v01.key"
         elif self.auth_profile == "remotenow":
             default_cert_name = "remotenow_2018_cert.pem"
             default_key_name = "remotenow_2018_key.pem"
@@ -579,8 +570,14 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.keyfile = user_input.get(CONF_KEYFILE) or default_key_path
 
             if self.use_ssl and not check_certs_exist(self.certfile, self.keyfile):
-                errors["base"] = "certs_not_found"
-            else:
+                if not check_certs_exist(self.certfile, self.certfile):
+                    errors[CONF_CERTFILE] = "certs_not_found"
+                elif not check_certs_exist(self.keyfile, self.keyfile):
+                    errors[CONF_KEYFILE] = "certs_not_found"
+                else:
+                    errors["base"] = "certs_not_found"
+
+            if not errors:
                 try:
                     return await self._async_init_client_and_auth()
                 except Exception as e:
