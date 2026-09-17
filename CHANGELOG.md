@@ -4,6 +4,14 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 
 ## [2.8.6] - 2026-09-17
 
+### Added
+- **4-TIER AUTHENTICATION MATRIX & PROTOCOL FALLBACK CASCADE (Issues #6, #22)**:
+  - Added support for VIDAA Middle tier (`middle`: XOR masked timestamp + Standard salt `h*i&s%e!r^v0i1c9` for transport protocol $3000 \le v < 3290$).
+  - Added multi-port UPnP descriptor detection (supporting both standard port `38400` and alternative port `18400`) for automatically reading `transport_protocol` from `rendererdevicedesc.xml`.
+  - Implemented intelligent pairing auth cascade in `async_start_auth()` that prioritizes candidate profiles (`[modern, middle, remotenow]`, `[middle, modern, remotenow]`, or `[remotenow, middle, modern]`) based on detected transport protocol and automatically cascades through fallback profiles on `rc: 5` / `rc: 4` rejection.
+  - Added `middle_dynamic` probe testing to `probe_tv_auth_methods()` and updated pre-formatted GitHub issue diagnostics tables in `probe.py`.
+  - Added `VIDAA 1.5 / Middle (3000–3285)` selector option in config flow, reconfigure flow, and localizations.
+
 ### Fixed
 - **MQTT RC 4/5 LOOP HALT & THREAD-STORM PREVENTION (Issues #6, #22)**:
   - Immediately stop paho-mqtt auto-reconnect background loop on `rc=4` / `rc=5` (not authorized / invalid credentials) before processing authentication futures and callbacks to prevent runaway reconnect thread storms and broker throttling during pairing failures or expired tokens.
@@ -22,7 +30,7 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 - **AUDIO OUTPUT SELECTION STABILITY**:
   - Filtered volume update handler in `select.py` and `media_player.py` to only process master volume (`0`) and ARC (`1`) channels, preventing mute broadcast packets (`volume_type: 2`) from momentarily toggling audio output selection to `Headphone / Bluetooth`.
 - **UNIT TEST EXPANSION**:
-  - Added unit test cases covering token validity thresholds, missing metadata safety, and auth fallback (55 passing tests).
+  - Added unit test cases covering 4-tier credential generation, middle auth probing, token validity thresholds, missing metadata safety, and multi-tier auth fallback (57 passing tests).
 
 ## [2.8.5] - 2026-09-15
 
