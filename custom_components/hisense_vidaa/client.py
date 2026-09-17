@@ -122,6 +122,8 @@ class HisenseTvClient:
         self._refreshing_token = False
         self._last_refresh_attempt = 0.0
         self._refresh_lock = threading.Lock()
+        self._last_reconnect_time = 0.0
+        self._reconnect_lock = threading.Lock()
 
         self.topicTVUIBasepath = ""
         self.topicTVPSBasepath = ""
@@ -555,6 +557,12 @@ class HisenseTvClient:
         else:
             self.connected = False
             _LOGGER.error("Failed to connect to TV MQTT Broker, rc: %d", rc)
+
+            if rc in (4, 5):
+                # Immediately halt paho-mqtt auto-reconnect loop to avoid flapping/broker storm
+                with contextlib.suppress(Exception):
+                    client.loop_stop()
+
             if self._auth_future and not self._auth_future.done():
                 self._safe_set_future_exception(
                     self._auth_future,
@@ -563,10 +571,6 @@ class HisenseTvClient:
                 return
 
             if rc in (4, 5):
-                # Immediately halt paho-mqtt auto-reconnect loop to avoid flapping/broker storm
-                with contextlib.suppress(Exception):
-                    client.loop_stop()
-
                 if self.refresh_token:
                     current_time = time.time()
                     with self._refresh_lock:
@@ -588,12 +592,7 @@ class HisenseTvClient:
 
         try:
             if self.check_and_refresh_token(force=True):
-                _LOGGER.info("Token successfully refreshed on connection failure. Updating client credentials.")
-                if self.mqtt_client:
-                    self.mqtt_client.username_pw_set(username=self.username, password=self.access_token)
-                    self.mqtt_client.reconnect()
-                    with contextlib.suppress(Exception):
-                        self.mqtt_client.loop_start()
+                _LOGGER.info("Token successfully refreshed on connection failure.")
             else:
                 _LOGGER.warning("Token refresh failed (token expired on TV). Stopping auto-reconnect.")
                 self._dispatch_auth_failed()
@@ -933,8 +932,6 @@ class HisenseTvClient:
         if connect_rc[0] is not None:
             _LOGGER.error("Failed to refresh token. Connect RC: %d", connect_rc[0])
 
-        if was_connected or main_client:
-            self.connect_and_run()
         return False
 
     # --------------------------------------------------------------------------
@@ -946,10 +943,50 @@ class HisenseTvClient:
             _LOGGER.error("Cannot connect to TV: missing credentials (client_id, username, or access_token)")
             return
 
+        if self.mqtt_client:
+            _LOGGER.debug("Cleaning up existing MQTT client before reconnecting")
+            try:
+                self.mqtt_client.on_connect = None
+                self.mqtt_client.on_disconnect = None
+                self.mqtt_client.on_message = None
+                self.mqtt_client.loop_stop()
+                self.mqtt_client.disconnect()
+            except Exception as e:
+                _LOGGER.debug("Error disconnecting existing MQTT client: %s", e)
+            finally:
+                self.mqtt_client = None
+                self.connected = False
+
         self.mqtt_client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
         _LOGGER.info("Starting background MQTT connection loop to TV at %s", self.ip)
         self.mqtt_client.connect_async(self.ip, 36669, 60)
         self.mqtt_client.loop_start()
+
+    def ensure_connected(self, min_interval: float = 5.0) -> bool:
+        """Ensures the MQTT client is connected, rate-limiting reconnect attempts."""
+        if self.connected and self.mqtt_client:
+            return True
+
+        now = time.time()
+        with self._reconnect_lock:
+            if now - self._last_reconnect_time < min_interval:
+                _LOGGER.debug(
+                    "Skipping reconnection attempt to %s: last attempt was %.1fs ago (min interval: %.1fs)",
+                    self.ip,
+                    now - self._last_reconnect_time,
+                    min_interval,
+                )
+                return False
+            self._last_reconnect_time = now
+
+        _LOGGER.info("Ensuring MQTT connection to TV at %s...", self.ip)
+        try:
+            self.check_and_refresh_token()
+            self.connect_and_run()
+            return True
+        except Exception as e:
+            _LOGGER.error("Error during ensure_connected to %s: %s", self.ip, e)
+            return False
 
     def query_initial_state(self) -> None:
         """Queries initial state, volume, source list, app list, and settings from TV."""

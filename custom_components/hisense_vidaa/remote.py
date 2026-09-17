@@ -134,24 +134,19 @@ class HisenseVidaaRemote(RemoteEntity):
             else:
                 _LOGGER.debug("TV already connected and running. Skipping KEY_POWER to prevent powering off")
         else:
-            await self.hass.async_add_executor_job(self._send_power_reconnect)
+            await self.hass.async_add_executor_job(self._ensure_connected_and_send_power)
 
         self._client.is_on = True
         self.async_write_ha_state()
 
-    def _send_power_reconnect(self) -> None:
+    def _ensure_connected_and_send_power(self) -> None:
         try:
-            self._client.check_and_refresh_token()
-            self._client.mqtt_client.username_pw_set(
-                username=self._client.username,
-                password=self._client.access_token,
-            )
-            self._client.mqtt_client.reconnect()
-            for _ in range(50):
-                if self._client.connected:
-                    self._client.send_key("KEY_POWER")
-                    break
-                time.sleep(0.1)
+            if self._client.ensure_connected():
+                for _ in range(50):
+                    if self._client.connected:
+                        self._client.send_key("KEY_POWER")
+                        break
+                    time.sleep(0.1)
         except Exception as e:
             _LOGGER.error("Failed to reconnect and send KEY_POWER from remote: %s", e)
 

@@ -2,6 +2,18 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.8.6] - 2026-09-17
+
+### Fixed
+- **MQTT RC 4/5 LOOP HALT & THREAD-STORM PREVENTION (Issues #6, #22)**:
+  - Immediately stop paho-mqtt auto-reconnect background loop on `rc=4` / `rc=5` (not authorized / invalid credentials) before processing authentication futures and callbacks to prevent runaway reconnect thread storms and broker throttling during pairing failures or expired tokens.
+  - Added thread lock and `ensure_connected(min_interval=5.0)` rate-limiting to throttle connection attempts from media player and remote entity commands.
+  - Properly clean up active MQTT background loops and event handlers before instantiating new client instances in `connect_and_run()`.
+  - Removed duplicate unthrottled reconnect logic from token refresh failure paths.
+- **VERSIONED CERTIFICATE RESOLUTION (Issues #6, #21)**:
+  - Extended certificate resolver to recognize versioned certificate bundles (`vidaa_client_v01.pem`/`.crt`/`.key`, `vidaa_client_v02.pem`/`.key`).
+  - Added automatic matching key resolution alongside explicit or discovered certificate files.
+
 ## [2.8.5] - 2026-09-15
 
 ### Added

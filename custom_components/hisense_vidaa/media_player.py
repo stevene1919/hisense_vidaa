@@ -246,18 +246,13 @@ class HisenseVidaaMediaPlayer(MediaPlayerEntity):
             _LOGGER.debug("TV MQTT not connected. Attempting background token refresh and reconnect to send KEY_POWER")
             def reconnect_and_send():
                 try:
-                    self._client.check_and_refresh_token()
-                    self._client.mqtt_client.username_pw_set(
-                        username=self._client.username,
-                        password=self._client.access_token
-                    )
-                    self._client.mqtt_client.reconnect()
-                    for _ in range(50):
-                        if self._client.connected:
-                            _LOGGER.debug("TV MQTT connected after reconnect. Sending KEY_POWER")
-                            self._client.send_key("KEY_POWER")
-                            break
-                        time.sleep(0.1)
+                    if self._client.ensure_connected():
+                        for _ in range(50):
+                            if self._client.connected:
+                                _LOGGER.debug("TV MQTT connected after reconnect. Sending KEY_POWER")
+                                self._client.send_key("KEY_POWER")
+                                break
+                            time.sleep(0.1)
                 except Exception as e:
                     _LOGGER.error("Failed to reconnect and send KEY_POWER: %s", e)
 
