@@ -28,6 +28,7 @@ try:
         probe_tv_auth_methods,
         test_tv_ssl_connection,
     )
+    from .protocol.dispatcher import dispatch_incoming_mqtt_message
     from .protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
     from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
     from .protocol.wol import send_wake_on_lan
@@ -75,6 +76,7 @@ except (ImportError, ValueError):
         probe_tv_auth_methods,
         test_tv_ssl_connection,
     )
+    from protocol.dispatcher import dispatch_incoming_mqtt_message
     from protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
     from protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
     from protocol.wol import send_wake_on_lan
@@ -562,107 +564,8 @@ class HisenseTvClient:
         self._dispatch_disconnected()
 
     def _on_message(self, client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
-        topic = msg.topic
         payload = msg.payload.decode("utf-8", errors="ignore")
-        _LOGGER.debug("[%s] Message received: %s on topic %s", self.ip, payload, topic)
-
-        # Check authentication futures
-        if self._auth_future and (
-            topic in (
-                self.topicMobiBasepath + "ui_service/data/authentication",
-                self.topicMobiBasepath + "ui_service/data/vidaa_app_connect",
-            )
-            or topic.endswith("ui_service/data/authentication")
-            or topic.endswith("ui_service/data/vidaa_app_connect")
-        ):
-            self._safe_set_future_result(self._auth_future, payload)
-        elif self._auth_code_future and (
-            topic == self.topicMobiBasepath + "ui_service/data/authenticationcode"
-            or topic.endswith("ui_service/data/authenticationcode")
-        ):
-            self._safe_set_future_result(self._auth_code_future, payload)
-        elif self._token_future and (
-            topic in (
-                self.topicMobiBasepath + "platform_service/data/tokenissuance",
-                self.topicMobiBasepath + "platform_service/data/gettoken",
-            )
-            or topic.endswith("platform_service/data/tokenissuance")
-            or topic.endswith("platform_service/data/gettoken")
-        ):
-            self._safe_set_future_result(self._token_future, payload)
-
-        # Handle state push callbacks
-        if topic in (
-            self.topicBrcsBasepath + "ui_service/state",
-            self.topicMobiBasepath + "ui_service/data/gettvstate",
-            self.topicMobiBasepath + "ui_service/data/state",
-        ):
-            try:
-                data = json.loads(payload)
-                self._dispatch_state_update(data)
-            except Exception as e:
-                _LOGGER.debug("[%s] Error parsing state: %s", self.ip, e)
-        elif topic in (
-            self.topicBrcsBasepath + "platform_service/actions/volumechange",
-            self.topicBrcsBasepath + "ui_service/volume",
-            self.topicMobiBasepath + "platform_service/data/getvolume",
-        ):
-            try:
-                data = json.loads(payload)
-                self._dispatch_volume_update(data)
-            except Exception as e:
-                _LOGGER.debug("[%s] Error parsing volume: %s", self.ip, e)
-        elif topic == self.topicBrcsBasepath + "platform_service/actions/tvsleep":
-            self._dispatch_state_update({"statetype": "fake_sleep_0"})
-        elif topic == self.topicMobiBasepath + "ui_service/data/sourcelist":
-            try:
-                data = json.loads(payload)
-                self._dispatch_sourcelist_update(data)
-            except Exception as e:
-                _LOGGER.debug("[%s] Error parsing sourcelist: %s", self.ip, e)
-        elif topic == self.topicMobiBasepath + "ui_service/data/applist":
-            try:
-                data = json.loads(payload)
-                self._dispatch_applist_update(data)
-            except Exception as e:
-                _LOGGER.debug("[%s] Error parsing applist: %s", self.ip, e)
-        elif topic in (
-            self.topicMobiBasepath + "platform_service/data/picturesetting",
-            self.topicBrcsBasepath + "platform_service/data/picturesetting",
-        ):
-            try:
-                data = json.loads(payload)
-                self._dispatch_picture_update(data)
-            except Exception as e:
-                _LOGGER.debug("[%s] Error parsing picturesetting: %s", self.ip, e)
-        elif topic in (
-            self.topicMobiBasepath + "platform_service/data/soundsetting",
-            self.topicBrcsBasepath + "platform_service/data/soundsetting",
-        ):
-            try:
-                data = json.loads(payload)
-                self._dispatch_sound_update(data)
-            except Exception as e:
-                _LOGGER.debug("[%s] Error parsing soundsetting: %s", self.ip, e)
-        elif topic == self.topicMobiBasepath + "ui_service/data/capability":
-            try:
-                data = json.loads(payload)
-                if isinstance(data, dict):
-                    caps = str(data).lower()
-                    if "notify" in caps or "toast" in caps or "showmessage" in caps or "message" in caps:
-                        self.has_notifications = True
-                        _LOGGER.info("[%s] TV reported support for on-screen notifications: %s", self.ip, data)
-            except Exception as e:
-                _LOGGER.debug("[%s] Error parsing capability descriptor: %s", self.ip, e)
-        elif topic in (
-            self.topicMobiBasepath + "platform_service/data/getdeviceinfo",
-            self.topicMobiBasepath + "platform_service/data/gettvinfo",
-        ) or topic.endswith("platform_service/data/getdeviceinfo") or topic.endswith("platform_service/data/gettvinfo"):
-            try:
-                data = json.loads(payload)
-                self._dispatch_device_info_update(data)
-            except Exception as e:
-                _LOGGER.debug("[%s] Error parsing device info: %s", self.ip, e)
+        dispatch_incoming_mqtt_message(self, topic=msg.topic, payload=payload)
 
     # --------------------------------------------------------------------------
     # Authentication & Pairing Handshake

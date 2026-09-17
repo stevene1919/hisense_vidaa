@@ -16,6 +16,7 @@ from .certs import (
     resolve_ca_certificate,
     resolve_certificates,
 )
+from .dispatcher import dispatch_incoming_mqtt_message
 from .pairing import async_start_pairing_handshake, async_submit_pin_code
 from .topics import TOPIC_BROADCAST_BASEPATH, TopicPaths, build_topic_paths
 from .wol import send_wake_on_lan
@@ -28,6 +29,7 @@ __all__ = [
     "async_submit_pin_code",
     "build_topic_paths",
     "check_certs_exist",
+    "dispatch_incoming_mqtt_message",
     "extract_pkcs12_to_pem",
     "get_profile_default_cert_paths",
     "is_token_expired",

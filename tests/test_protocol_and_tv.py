@@ -135,3 +135,27 @@ def test_settings_item_and_probe_report() -> None:
     )
     assert "TestTV" in report
     assert "Picture Mode" in report
+
+
+def test_dispatch_incoming_mqtt_message() -> None:
+    from custom_components.hisense_vidaa.protocol.dispatcher import dispatch_incoming_mqtt_message
+
+    mock_client = MagicMock()
+    mock_client.ip = "192.168.50.12"
+    mock_client.topicMobiBasepath = "hisense_sub_test/"
+    mock_client.topicBrcsBasepath = "hisense_broadcast/"
+    mock_client._auth_future = None
+    mock_client._auth_code_future = None
+    mock_client._token_future = None
+
+    # Test state update dispatch
+    dispatch_incoming_mqtt_message(mock_client, "hisense_broadcast/ui_service/state", '{"statetype": "app", "name": "Netflix"}')
+    mock_client._dispatch_state_update.assert_called_with({"statetype": "app", "name": "Netflix"})
+
+    # Test volume update dispatch
+    dispatch_incoming_mqtt_message(mock_client, "hisense_broadcast/ui_service/volume", '{"volume_value": 25}')
+    mock_client._dispatch_volume_update.assert_called_with({"volume_value": 25})
+
+    # Test device info dispatch
+    dispatch_incoming_mqtt_message(mock_client, "hisense_sub_test/platform_service/data/getdeviceinfo", '{"devicename": "Living Room TV"}')
+    mock_client._dispatch_device_info_update.assert_called_with({"devicename": "Living Room TV"})
