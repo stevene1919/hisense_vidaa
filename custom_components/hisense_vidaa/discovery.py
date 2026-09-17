@@ -267,6 +267,7 @@ def probe_tv_auth_methods(
     results = {
         "legacy_static": {"rc": None, "supported": False},
         "standard_dynamic": {"rc": None, "supported": False},
+        "middle_dynamic": {"rc": None, "supported": False},
         "modern_dynamic": {"rc": None, "supported": False},
     }
 
@@ -297,9 +298,9 @@ def probe_tv_auth_methods(
     except Exception as e:
         _LOGGER.debug("Legacy static probe error: %s", e)
 
-    # 2. Standard dynamic pairing (his$<timestamp>)
+    # 2. Standard dynamic pairing (his$<timestamp> / standard salt)
     try:
-        cid, user, pwd = generate_initial_credentials(mac=mac, use_new_auth=False)
+        cid, user, pwd = generate_initial_credentials(mac=mac, auth_profile="remotenow")
         std_rc = [None]
         std_lock = threading.Event()
         std_client = mqtt.Client(client_id=cid, clean_session=True, protocol=mqtt.MQTTv311)
@@ -317,9 +318,29 @@ def probe_tv_auth_methods(
     except Exception as e:
         _LOGGER.debug("Standard dynamic probe error: %s", e)
 
-    # 3. Modern XOR dynamic pairing (his$<timestamp ^ XOR>)
+    # 3. Middle XOR dynamic pairing (his$<timestamp ^ XOR> / standard salt)
     try:
-        cid, user, pwd = generate_initial_credentials(mac=mac, use_new_auth=True)
+        cid, user, pwd = generate_initial_credentials(mac=mac, auth_profile="middle")
+        mid_rc = [None]
+        mid_lock = threading.Event()
+        mid_client = mqtt.Client(client_id=cid, clean_session=True, protocol=mqtt.MQTTv311)
+        _setup_tls(mid_client)
+        mid_client.username_pw_set(username=user, password=pwd)
+        mid_client.on_connect = lambda c, u, f, rc: (mid_rc.__setitem__(0, rc), mid_lock.set())
+        mid_client.on_disconnect = lambda c, u, rc: mid_lock.set()
+        mid_client.connect_async(ip, 36669, 5)
+        mid_client.loop_start()
+        mid_lock.wait(timeout=timeout)
+        mid_client.loop_stop()
+        mid_client.disconnect()
+        results["middle_dynamic"]["rc"] = mid_rc[0]
+        results["middle_dynamic"]["supported"] = (mid_rc[0] == 0)
+    except Exception as e:
+        _LOGGER.debug("Middle dynamic probe error: %s", e)
+
+    # 4. Modern XOR dynamic pairing (his$<timestamp ^ XOR> / modern salt)
+    try:
+        cid, user, pwd = generate_initial_credentials(mac=mac, auth_profile="modern")
         mod_rc = [None]
         mod_lock = threading.Event()
         mod_client = mqtt.Client(client_id=cid, clean_session=True, protocol=mqtt.MQTTv311)

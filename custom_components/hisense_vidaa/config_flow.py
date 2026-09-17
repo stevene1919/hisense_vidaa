@@ -56,8 +56,9 @@ AUTH_PROFILE_SELECTOR = selector.SelectSelector(
         options=[
             selector.SelectOptionDict(value="auto", label="Auto Detect (Recommended)"),
             selector.SelectOptionDict(value="modern", label="VIDAA 2.0 / 2024+ (vidaa_2024)"),
+            selector.SelectOptionDict(value="middle", label="VIDAA 1.5 / Middle (3000–3285)"),
             selector.SelectOptionDict(value="remotenow", label="RemoteNOW / 2018–2023 (standard)"),
-            selector.SelectOptionDict(value="legacy", label="Legacy Unencrypted (No SSL / static)"),
+            selector.SelectOptionDict(value="legacy", label="Legacy Static (Pre-2022 / Static Credentials)"),
         ],
         mode=selector.SelectSelectorMode.DROPDOWN,
         translation_key="auth_profile",
@@ -159,6 +160,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if (
                 probe.get("legacy_static", {}).get("supported")
                 and not probe.get("modern_dynamic", {}).get("supported")
+                and not probe.get("middle_dynamic", {}).get("supported")
                 and not probe.get("standard_dynamic", {}).get("supported")
             ):
                 self.auth_profile = "legacy"

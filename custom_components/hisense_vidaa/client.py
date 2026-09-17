@@ -454,21 +454,25 @@ class HisenseTvClient:
         self.topicRemoBasepath = f"/remoteapp/tv/remote_service/{self.client_id}/"
 
     def generate_initial_creds(
-        self, use_new_auth: bool | None = None, timestamp: int | None = None
+        self,
+        use_new_auth: bool | None = None,
+        auth_profile: str | None = None,
+        timestamp: int | None = None,
     ) -> None:
         """Generates initial dynamic credentials for challenge-response pairing."""
         if timestamp is None and self.ip:
             timestamp = get_tv_timestamp(self.ip, timeout=1.5)
+        profile = auth_profile or self.auth_profile
         self.client_id, self.username, self.password = generate_initial_credentials(
             mac=self.mac,
             timestamp=timestamp,
-            auth_profile=self.auth_profile,
+            auth_profile=profile,
             use_new_auth=use_new_auth,
         )
         self.define_topic_paths()
         _LOGGER.debug(
             "Generated initial creds (profile=%s, use_new_auth=%s, ts=%s) - Client ID: %s, Username: %s",
-            self.auth_profile,
+            profile,
             use_new_auth,
             timestamp,
             self.client_id,
@@ -710,7 +714,7 @@ class HisenseTvClient:
     # --------------------------------------------------------------------------
     async def async_start_auth(self) -> None:
         """Starts the authentication handshake and triggers the TV to show PIN."""
-        if self.auth_profile == "legacy":
+        if self.auth_profile in ("legacy", "static"):
             self.client_id = "hisenseservice"
             self.username = "hisenseservice"
             self.password = "multimqttservice"
@@ -719,27 +723,57 @@ class HisenseTvClient:
             return
 
         if self.auth_profile in ("modern", "vidaa_2024", "vidaa"):
-            await self._async_start_auth_internal(use_new_auth=True)
+            await self._async_start_auth_internal(profile="modern")
+        elif self.auth_profile in ("middle", "vidaa_15", "vidaa_middle"):
+            await self._async_start_auth_internal(profile="middle")
         elif self.auth_profile in ("remotenow", "remotenow_2018", "standard"):
-            await self._async_start_auth_internal(use_new_auth=False)
+            await self._async_start_auth_internal(profile="remotenow")
         else:  # auto
-            try:
-                await self._async_start_auth_internal(use_new_auth=False)
-            except Exception as e:
-                err_msg = str(e)
-                if "code 5" in err_msg or "code 4" in err_msg or "Not authorized" in err_msg:
-                    _LOGGER.info("Standard auth failed (%s), auto-falling back to modern VIDAA auth...", err_msg)
-                    await self._async_start_auth_internal(use_new_auth=True)
-                else:
-                    raise
+            profiles_to_try = ["modern", "middle", "remotenow"]
+            if self.ip:
+                try:
+                    fp = await asyncio.get_running_loop().run_in_executor(None, self.get_device_fingerprint, 1.0)
+                    tp = fp.get("transport_protocol")
+                    if tp:
+                        with contextlib.suppress(ValueError, TypeError):
+                            tp_int = int(tp)
+                            if tp_int >= 3290:
+                                profiles_to_try = ["modern", "middle", "remotenow"]
+                            elif 3000 <= tp_int < 3290:
+                                profiles_to_try = ["middle", "modern", "remotenow"]
+                            else:
+                                profiles_to_try = ["remotenow", "middle", "modern"]
+                except Exception as e:
+                    _LOGGER.debug("Could not determine transport_protocol before auth: %s", e)
 
-    async def _async_start_auth_internal(self, use_new_auth: bool = False) -> None:
+            last_err = None
+            for p in profiles_to_try:
+                try:
+                    _LOGGER.debug("Attempting pairing auth with profile: %s", p)
+                    await self._async_start_auth_internal(profile=p)
+                    self.auth_profile = p
+                    return
+                except Exception as e:
+                    last_err = e
+                    err_msg = str(e)
+                    if "code 5" in err_msg or "code 4" in err_msg or "Not authorized" in err_msg:
+                        _LOGGER.info("Auth profile %s rejected by TV (%s), falling back...", p, err_msg)
+                        continue
+                    raise
+            if last_err:
+                raise last_err
+
+    async def _async_start_auth_internal(
+        self, profile: str = "modern", use_new_auth: bool | None = None
+    ) -> None:
         loop = asyncio.get_running_loop()
         self._loop = loop
         self.disconnect()
         await asyncio.sleep(0.2)
         tv_ts = await loop.run_in_executor(None, get_tv_timestamp, self.ip, 1.5)
-        self.generate_initial_creds(use_new_auth=use_new_auth, timestamp=tv_ts)
+        self.generate_initial_creds(
+            use_new_auth=use_new_auth, auth_profile=profile, timestamp=tv_ts
+        )
         self.mqtt_client = await loop.run_in_executor(
             None, self.create_mqtt_client, self.client_id, self.username, self.password
         )

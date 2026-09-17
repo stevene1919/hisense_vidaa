@@ -56,23 +56,38 @@ def generate_initial_credentials(
 
     cleaned_mac = clean_mac(mac)
     second_hash = hashlib.md5(f"{CLIENT_ID_PATTERN}${cleaned_mac}".encode()).hexdigest().upper()
+    suffix = "001"
+    client_id = f"{cleaned_mac}$his${second_hash[:6]}_vidaacommon_{suffix}"
+
+    profile_clean = (auth_profile or "auto").lower()
+
+    # Pre-dynamic legacy static authentication
+    if profile_clean in ("legacy", "static"):
+        return client_id, "hisenseservice", "multimqttservice"
+
     last_digit_of_cross_sum = sum(int(digit) for digit in str(timestamp)) % 10
 
-    if use_new_auth is None:
-        use_new_auth = (auth_profile or "auto").lower() in ("modern", "vidaa_2024", "vidaa")
-
-    if use_new_auth:
+    if use_new_auth is True:
         salt = MODERN_SALT
         username = f"his${timestamp ^ XOR_TIMESTAMP_MASK}"
-    else:
+    elif use_new_auth is False:
         salt = STANDARD_SALT
         username = f"his${timestamp}"
+    elif profile_clean in ("modern", "vidaa_2024", "vidaa"):
+        salt = MODERN_SALT
+        username = f"his${timestamp ^ XOR_TIMESTAMP_MASK}"
+    elif profile_clean in ("middle", "vidaa_15", "vidaa_middle"):
+        salt = STANDARD_SALT
+        username = f"his${timestamp ^ XOR_TIMESTAMP_MASK}"
+    elif profile_clean in ("remotenow", "remotenow_2018", "standard"):
+        salt = STANDARD_SALT
+        username = f"his${timestamp}"
+    else:  # auto
+        salt = MODERN_SALT
+        username = f"his${timestamp ^ XOR_TIMESTAMP_MASK}"
 
     third_hash = hashlib.md5(f"his{last_digit_of_cross_sum}{salt}".encode()).hexdigest().upper()
     fourth_hash = hashlib.md5(f"{timestamp}${third_hash[:6]}".encode()).hexdigest().upper()
-
-    suffix = "001"
-    client_id = f"{cleaned_mac}$his${second_hash[:6]}_vidaacommon_{suffix}"
 
     return client_id, username, fourth_hash
 
@@ -258,6 +273,33 @@ def resolve_certificates(
             "3R.p12",
             "vidaa_cert.p12",
             "vidaa.p12",
+        ]
+    elif profile_clean in ("middle", "vidaa_15", "vidaa_middle"):
+        cert_names = [
+            "vidaa_client_v01.pem",
+            "vidaa_client_v01.crt",
+            "vidaa_client_v02.pem",
+            "vidaa_client.pem",
+            "remotenow_2018_cert.pem",
+            "hisense.crt",
+            "client_cert.pem",
+            "cert.pem",
+        ]
+        key_names = [
+            "vidaa_client_v01.key",
+            "vidaa_client_v02.key",
+            "vidaa_client.key",
+            "remotenow_2018_key.pem",
+            "hisense.key",
+            "client_key.pem",
+            "key.pem",
+        ]
+        p12_names = [
+            "client_mobile_android.p12",
+            "vidaa_2024_client_mobile_android.p12",
+            "3R.p12",
+            "rcamobile.p12",
+            "hisense.p12",
         ]
     elif profile_clean in ("remotenow", "remotenow_2018", "standard"):
         cert_names = [

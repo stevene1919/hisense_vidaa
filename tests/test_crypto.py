@@ -52,6 +52,36 @@ def test_generate_initial_credentials_standard():
     assert password.isupper()
 
 
+def test_generate_initial_credentials_middle():
+    """Test credential generation for Middle VIDAA (3000-3285) with XOR mask + Standard salt."""
+    mac = "E8:51:77:EC:98:1C"
+    ts = 1788778246
+
+    client_id, username, password = generate_initial_credentials(
+        mac=mac, timestamp=ts, auth_profile="middle"
+    )
+
+    expected_md5 = hashlib.md5(f"{CLIENT_ID_PATTERN}${mac}".encode()).hexdigest().upper()
+    assert client_id == f"{mac}$his${expected_md5[:6]}_vidaacommon_001"
+
+    # Middle username uses XOR masked timestamp
+    expected_xor = ts ^ XOR_TIMESTAMP_MASK
+    assert username == f"his${expected_xor}"
+    assert len(password) == 32
+
+
+def test_generate_initial_credentials_legacy():
+    """Test static credential generation for legacy pre-dynamic firmware."""
+    mac = "E8:51:77:EC:98:1C"
+    client_id, username, password = generate_initial_credentials(
+        mac=mac, auth_profile="legacy"
+    )
+
+    assert username == "hisenseservice"
+    assert password == "multimqttservice"
+    assert "vidaacommon_001" in client_id
+
+
 def test_generate_initial_credentials_modern():
     """Test credential generation for Modern VIDAA 2.0 with XOR timestamp mask."""
     mac = "E8:51:77:EC:98:1C"

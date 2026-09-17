@@ -186,17 +186,20 @@ def generate_markdown_report(
     lines.append("\n### 🔐 MQTT Authentication Capabilities")
     legacy = auth_probe.get("legacy_static", {})
     std = auth_probe.get("standard_dynamic", {})
+    middle = auth_probe.get("middle_dynamic", {})
     modern = auth_probe.get("modern_dynamic", {})
 
     leg_str = "✅ ACCEPTED (rc=0)" if legacy.get("supported") else f"❌ REJECTED (rc={legacy.get('rc')})"
     std_str = "✅ ACCEPTED (rc=0)" if std.get("supported") else f"❌ REJECTED (rc={std.get('rc')})"
+    mid_str = "✅ ACCEPTED (rc=0)" if middle.get("supported") else f"❌ REJECTED (rc={middle.get('rc')})"
     mod_str = "✅ ACCEPTED (rc=0)" if modern.get("supported") else f"❌ REJECTED (rc={modern.get('rc')})"
 
     lines.append(f"- **Legacy Static Auth (`hisenseservice`):** {leg_str}")
     lines.append(f"- **Standard Dynamic Auth (`his$<timestamp>`):** {std_str}")
-    lines.append(f"- **Modern Dynamic Auth (`his$<timestamp ^ XOR>`):** {mod_str}")
+    lines.append(f"- **Middle Dynamic Auth (`his$<timestamp ^ XOR>` / Standard Salt):** {mid_str}")
+    lines.append(f"- **Modern Dynamic Auth (`his$<timestamp ^ XOR>` / Modern Salt):** {mod_str}")
 
-    if not legacy.get("supported") and not std.get("supported") and not modern.get("supported"):
+    if not legacy.get("supported") and not std.get("supported") and not middle.get("supported") and not modern.get("supported"):
         lines.append(
             "\n> [!WARNING]\n"
             "> **All standard authentication profiles rejected (rc=5)**: The TV broker accepted the TLS handshake but rejected initial MQTT credentials. "

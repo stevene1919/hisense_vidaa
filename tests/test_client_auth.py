@@ -110,9 +110,11 @@ def test_probe_auth_methods():
         probe = client.probe_auth_methods(timeout=0.01)
         assert "legacy_static" in probe
         assert "standard_dynamic" in probe
+        assert "middle_dynamic" in probe
         assert "modern_dynamic" in probe
         assert "supported" in probe["legacy_static"]
         assert "supported" in probe["standard_dynamic"]
+        assert "supported" in probe["middle_dynamic"]
         assert "supported" in probe["modern_dynamic"]
 
 
@@ -173,16 +175,18 @@ def test_on_connect_rc5_pairing_future():
 
 @pytest.mark.anyio
 async def test_async_start_auth_auto_fallback_on_rc5():
-    """Test auto profile falls back from standard auth to modern auth on rc=5."""
+    """Test auto profile falls back through profiles on rc=5 until success."""
     client = HisenseTvClient(ip="192.168.50.12", auth_profile="auto")
 
     calls = []
 
-    async def mock_internal(use_new_auth=False):
-        calls.append(use_new_auth)
-        if not use_new_auth:
+    async def mock_internal(profile="modern", use_new_auth=None):
+        calls.append(profile)
+        if profile == "modern":
             raise Exception("MQTT connection rejected with code 5 (Not authorized / invalid credentials)")
 
-    with patch.object(client, "_async_start_auth_internal", side_effect=mock_internal):
+    with patch.object(client, "get_device_fingerprint", return_value={"transport_protocol": "3290"}), \
+         patch.object(client, "_async_start_auth_internal", side_effect=mock_internal):
         await client.async_start_auth()
-        assert calls == [False, True]
+        assert calls == ["modern", "middle"]
+        assert client.auth_profile == "middle"

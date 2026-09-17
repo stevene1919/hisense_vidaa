@@ -73,6 +73,7 @@ ATTR_ACTION = "action"
 AUTH_PROFILES = {
     "auto": "Auto Detect (Recommended)",
     "modern": "VIDAA 2.0 (Newer Firmware / 2024+)",
+    "middle": "VIDAA 1.5 / Middle (3000–3285)",
     "remotenow": "RemoteNOW (Standard / 2018–2023)",
     "legacy": "Legacy Static (Pre-2022 / Static Credentials)",
 }
