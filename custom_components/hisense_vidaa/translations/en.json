@@ -48,7 +48,10 @@
           "enable_remote": "Enable dedicated Remote entity",
           "enable_wol": "Enable Wake-on-LAN power on",
           "include_apps_in_sources": "Include Smart TV Apps in Media Player source list",
-          "enable_media_controls": "Enable media transport controls (play/pause, stop, skip)"
+          "enable_media_controls": "Enable media transport controls (play/pause, stop, skip)",
+          "enable_picture_controls": "Enable Picture Mode and calibration sliders (Backlight, Brightness, Contrast)",
+          "enable_sound_controls": "Enable Sound Mode equalizer selector",
+          "enable_audio_only": "Enable Audio-Only (Screen Off) display switch"
         }
       }
     },
@@ -161,6 +164,9 @@
       },
       "sync_clock": {
         "name": "Sync Clock"
+      },
+      "probe_capabilities": {
+        "name": "Probe Capabilities"
       }
     },
     "notify": {

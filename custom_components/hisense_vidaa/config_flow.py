@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any
 
@@ -17,8 +18,11 @@ from .const import (
     CONF_AUTH_PROFILE,
     CONF_CERTFILE,
     CONF_CLIENT_ID,
+    CONF_ENABLE_AUDIO_ONLY,
     CONF_ENABLE_MEDIA_CONTROLS,
+    CONF_ENABLE_PICTURE_CONTROLS,
     CONF_ENABLE_REMOTE,
+    CONF_ENABLE_SOUND_CONTROLS,
     CONF_ENABLE_WOL,
     CONF_INCLUDE_APPS_IN_SOURCES,
     CONF_IP_ADDRESS,
@@ -34,8 +38,11 @@ from .const import (
     CONF_USE_SSL,
     CONF_USERNAME,
     DEFAULT_AUTH_PROFILE,
+    DEFAULT_ENABLE_AUDIO_ONLY,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
+    DEFAULT_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
+    DEFAULT_ENABLE_SOUND_CONTROLS,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
     DEFAULT_USE_SSL,
@@ -112,6 +119,17 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except Exception:
             pass
 
+    async def _async_probe_device_capabilities(self) -> None:
+        """Probe TV capabilities (picture/sound menus) to set intelligent default options."""
+        if not self.client or not self.client.connected:
+            return
+        try:
+            await self.hass.async_add_executor_job(self.client.get_picture_settings)
+            await self.hass.async_add_executor_job(self.client.get_sound_settings)
+            await asyncio.sleep(1.0)
+        except Exception as e:
+            _LOGGER.debug("[%s] Error during capability probe: %s", self.ip_address, e)
+
     async def _async_disconnect_existing_client(self) -> None:
         """Disconnect any running client for this IP/MAC to avoid MQTT session collision during pairing."""
         if not hasattr(self.hass, "data") or not isinstance(self.hass.data, dict):
@@ -165,6 +183,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if self.auth_profile == "legacy":
             await self._async_discover_device_name()
+            await self._async_probe_device_capabilities()
             return await self.async_step_options()
 
         return await self.async_step_auth()
@@ -282,6 +301,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return await self._async_finish_reauth(reason="reauth_successful")
 
                 await self._async_discover_device_name()
+                await self._async_probe_device_capabilities()
                 return await self.async_step_options()
             except Exception as e:
                 _LOGGER.warning("[%s] Failed to validate PIN or retrieve tokens from TV: %s", self.ip_address, e)
@@ -534,6 +554,9 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Allow configuring initial options during setup."""
+        pic_supported = bool(getattr(self.client, "picture_settings", None)) if self.client else DEFAULT_ENABLE_PICTURE_CONTROLS
+        sound_supported = bool(getattr(self.client, "sound_settings", None)) if self.client else DEFAULT_ENABLE_SOUND_CONTROLS
+
         if user_input is not None and self.client:
             entry_data = self._get_client_auth_data()
 
@@ -555,6 +578,18 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_ENABLE_MEDIA_CONTROLS,
                         DEFAULT_ENABLE_MEDIA_CONTROLS,
                     ),
+                    CONF_ENABLE_PICTURE_CONTROLS: user_input.get(
+                        CONF_ENABLE_PICTURE_CONTROLS,
+                        pic_supported,
+                    ),
+                    CONF_ENABLE_SOUND_CONTROLS: user_input.get(
+                        CONF_ENABLE_SOUND_CONTROLS,
+                        sound_supported,
+                    ),
+                    CONF_ENABLE_AUDIO_ONLY: user_input.get(
+                        CONF_ENABLE_AUDIO_ONLY,
+                        DEFAULT_ENABLE_AUDIO_ONLY,
+                    ),
                 },
             )
 
@@ -572,6 +607,18 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     CONF_ENABLE_MEDIA_CONTROLS,
                     default=DEFAULT_ENABLE_MEDIA_CONTROLS,
+                ): bool,
+                vol.Optional(
+                    CONF_ENABLE_PICTURE_CONTROLS,
+                    default=pic_supported,
+                ): bool,
+                vol.Optional(
+                    CONF_ENABLE_SOUND_CONTROLS,
+                    default=sound_supported,
+                ): bool,
+                vol.Optional(
+                    CONF_ENABLE_AUDIO_ONLY,
+                    default=DEFAULT_ENABLE_AUDIO_ONLY,
                 ): bool,
             }),
         )

@@ -104,7 +104,14 @@ async def test_options_step_creates_entry():
     flow.client = mock_client
 
     result = await flow.async_step_options(
-        user_input={"enable_remote": True, "enable_wol": True, "include_apps_in_sources": True}
+        user_input={
+            "enable_remote": True,
+            "enable_wol": True,
+            "include_apps_in_sources": True,
+            "enable_picture_controls": False,
+            "enable_sound_controls": False,
+            "enable_audio_only": False,
+        }
     )
 
     assert result["type"] == "create_entry"
@@ -115,6 +122,40 @@ async def test_options_step_creates_entry():
     assert result["data"][CONF_MANUFACTURER] == "Hisense"
     assert result["data"][CONF_SW_VERSION] == "V1.0"
     assert result["options"]["enable_remote"] is True
+    assert result["options"]["enable_picture_controls"] is False
+    assert result["options"]["enable_sound_controls"] is False
+    assert result["options"]["enable_audio_only"] is False
+
+
+@pytest.mark.anyio
+async def test_capability_probing_in_config_flow(monkeypatch):
+    """Test capability probing dynamically updates option defaults."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    flow.context = {}
+
+    flow.ip_address = "192.168.50.12"
+    flow.mac_address = "e8:51:77:ec:98:1c"
+    flow.discovered_title = "Hisense TV"
+
+    mock_client = MagicMock()
+    mock_client.connected = True
+    mock_client.picture_settings = {"91": MagicMock()}
+    mock_client.sound_settings = {}
+    mock_client.get_picture_settings = MagicMock()
+    mock_client.get_sound_settings = MagicMock()
+    flow.client = mock_client
+
+    await flow._async_probe_device_capabilities()
+    assert mock_client.get_picture_settings.called
+    assert mock_client.get_sound_settings.called
+
+    form_result = await flow.async_step_options()
+    assert form_result["type"] == "form"
+    assert form_result["step_id"] == "options"
 
 
 @pytest.mark.anyio
