@@ -27,21 +27,29 @@ try:
     from .protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
     from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
     from .protocol.wol import send_wake_on_lan
-    from .tv.navigation import (
-        get_next_cycled_source,
-        match_app,
-        resolve_command_key,
-        resolve_source,
+    from .tv.actions import (
+        change_source as act_change_source,
+        change_source_by_name_or_id as act_change_source_by_name_or_id,
+        cycle_source as act_cycle_source,
+        get_picture_settings as act_get_picture_settings,
+        get_sound_settings as act_get_sound_settings,
+        launch_app as act_launch_app,
+        launch_app_by_name as act_launch_app_by_name,
+        query_initial_state as act_query_initial_state,
+        send_command as act_send_command,
+        send_key as act_send_key,
+        send_text_input as act_send_text_input,
+        set_backlight as act_set_backlight,
+        set_brightness as act_set_brightness,
+        set_contrast as act_set_contrast,
+        set_picture_mode as act_set_picture_mode,
+        set_picture_setting as act_set_picture_setting,
+        set_sound_mode as act_set_sound_mode,
+        set_sound_setting as act_set_sound_setting,
+        set_volume as act_set_volume,
+        show_message as act_show_message,
     )
-    from .tv.settings import (
-        DEFAULT_MENU_ID_BACKLIGHT,
-        DEFAULT_MENU_ID_BRIGHTNESS,
-        DEFAULT_MENU_ID_CONTRAST,
-        DEFAULT_MENU_ID_PICTURE_MODE,
-        DEFAULT_MENU_ID_SOUND_MODE,
-        SettingMenuItem,
-        find_menu_item_by_name,
-    )
+    from .tv.settings import SettingMenuItem
     from .tv.state import (
         apply_picture_update,
         apply_sound_update,
@@ -61,21 +69,29 @@ except (ImportError, ValueError):
     from protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
     from protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
     from protocol.wol import send_wake_on_lan
-    from tv.navigation import (
-        get_next_cycled_source,
-        match_app,
-        resolve_command_key,
-        resolve_source,
+    from tv.actions import (
+        change_source as act_change_source,
+        change_source_by_name_or_id as act_change_source_by_name_or_id,
+        cycle_source as act_cycle_source,
+        get_picture_settings as act_get_picture_settings,
+        get_sound_settings as act_get_sound_settings,
+        launch_app as act_launch_app,
+        launch_app_by_name as act_launch_app_by_name,
+        query_initial_state as act_query_initial_state,
+        send_command as act_send_command,
+        send_key as act_send_key,
+        send_text_input as act_send_text_input,
+        set_backlight as act_set_backlight,
+        set_brightness as act_set_brightness,
+        set_contrast as act_set_contrast,
+        set_picture_mode as act_set_picture_mode,
+        set_picture_setting as act_set_picture_setting,
+        set_sound_mode as act_set_sound_mode,
+        set_sound_setting as act_set_sound_setting,
+        set_volume as act_set_volume,
+        show_message as act_show_message,
     )
-    from tv.settings import (
-        DEFAULT_MENU_ID_BACKLIGHT,
-        DEFAULT_MENU_ID_BRIGHTNESS,
-        DEFAULT_MENU_ID_CONTRAST,
-        DEFAULT_MENU_ID_PICTURE_MODE,
-        DEFAULT_MENU_ID_SOUND_MODE,
-        SettingMenuItem,
-        find_menu_item_by_name,
-    )
+    from tv.settings import SettingMenuItem
     from tv.state import (
         apply_picture_update,
         apply_sound_update,
@@ -790,14 +806,7 @@ class HisenseTvClient:
 
     def query_initial_state(self) -> None:
         """Queries initial state, volume, source list, app list, and settings from TV."""
-        if self.connected and self.mqtt_client:
-            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/gettvstate", "")
-            time.sleep(0.1)
-            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/getvolume", "")
-            time.sleep(0.1)
-            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/sourcelist", "")
-            time.sleep(0.1)
-            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/applist", "")
+        act_query_initial_state(self)
 
     # --------------------------------------------------------------------------
     # TV Commands, Navigation, Settings & Controls
@@ -814,224 +823,82 @@ class HisenseTvClient:
 
     def show_message(self, message: str, title: str | None = None, duration: int = 5) -> bool:
         """Displays an on-screen toast popup notification on the TV."""
-        if not self.connected or not self.mqtt_client:
-            _LOGGER.debug("Cannot show toast message: TV MQTT client not connected")
-            return False
-
-        payload_dict = {
-            "message": message,
-            "title": title or "",
-            "duration": duration,
-            "type": "notify",
-        }
-        payload = json.dumps(payload_dict)
-        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/showmessage", payload)
-        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/toast", payload)
-        return True
+        return act_show_message(self, message=message, title=title, duration=duration)
 
     def send_key(self, key: str) -> None:
         """Publishes a raw keypress event to the TV."""
-        if self.connected and self.mqtt_client:
-            self.mqtt_client.publish(self.topicRemoBasepath + "actions/sendkey", key)
+        act_send_key(self, key=key)
 
     def send_command(self, command: str) -> bool:
         """Sends a key command to the TV, automatically resolving known key aliases."""
-        if not command:
-            return False
-        cmd_clean = command.strip().lower()
-        if cmd_clean.startswith("app:"):
-            app_target = command.split(":", 1)[1].strip()
-            return self._launch_app_by_name(app_target)
-        if cmd_clean.startswith("source:"):
-            src_target = command.split(":", 1)[1].strip()
-            return self._change_source_by_name_or_id(src_target)
-        if cmd_clean in (
-            "input",
-            "source",
-            "cycle_source",
-            "input_cycle",
-            "source_cycle",
-            "key_input",
-            "key_source",
-        ):
-            return self.cycle_source()
-        if cmd_clean in ("input_menu", "source_menu", "key_input_menu", "key_source_menu"):
-            self.send_key("KEY_MENU")
-            return True
-
-        key_to_send = resolve_command_key(command)
-        self.send_key(key_to_send)
-        return True
+        return act_send_command(self, command=command)
 
     def cycle_source(self) -> bool:
         """Cycles to the next available input source."""
-        next_source = get_next_cycled_source(self.sources, self.current_source)
-        if not next_source:
-            self.send_key("KEY_MENU")
-            return True
-
-        sid, sname = next_source
-        self.change_source(sid, sname)
-        return True
+        return act_cycle_source(self)
 
     def _launch_app_by_name(self, name_or_id: str) -> bool:
         """Launches an app by name or app ID from cached applist."""
-        matched = match_app(self.apps, name_or_id)
-        if matched:
-            self.launch_app(matched["appId"], matched["name"], matched["url"])
-            return True
-
-        target_clean = name_or_id.strip().lower()
-        if target_clean in ("netflix", "app_netflix"):
-            self.send_key("KEY_NETFLIX")
-            return True
-        if target_clean in ("youtube", "app_youtube"):
-            self.send_key("KEY_YOUTUBE")
-            return True
-        if target_clean in ("prime", "prime video", "app_prime"):
-            self.send_key("KEY_PRIME")
-            return True
-
-        return False
+        return act_launch_app_by_name(self, name_or_id=name_or_id)
 
     def _change_source_by_name_or_id(self, target: str) -> bool:
         """Switches to source by name (e.g. HDMI1, TV) or numeric sourceid."""
-        sid, sname = resolve_source(self.sources, target)
-        self.change_source(sid or target.strip(), sname)
-        return True
+        return act_change_source_by_name_or_id(self, target=target)
 
     def set_volume(self, volume: int) -> None:
         """Sets the absolute volume on the TV (0–100)."""
-        if self.connected and self.mqtt_client:
-            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/changevolume", str(volume))
+        act_set_volume(self, volume=volume)
 
     def change_source(self, source_id: str, source_name: str | None = None) -> None:
         """Switches the active input source on the TV."""
-        if not self.connected or not self.mqtt_client:
-            return
-
-        sid = str(source_id)
-        sname = source_name
-
-        payload_dict: dict[str, Any] = {}
-        if sid:
-            payload_dict["sourceid"] = sid
-        if sname:
-            payload_dict["sourcename"] = sname
-        if not payload_dict:
-            payload_dict = {"sourceid": source_id}
-
-        payload = json.dumps(payload_dict)
-        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/changesource", payload)
-
-        # Dual publish for newer VIDAA firmware expecting source name
-        if sname and sid != sname and str(sid).isdigit():
-            payload_modern = json.dumps({"sourceid": sname, "sourcename": sname})
-            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/changesource", payload_modern)
-
-        if str(sid).upper() == "TV" or (sname and str(sname).upper() == "TV") or str(source_id).lower() == "tv":
-            self.send_key("KEY_LIVETV")
+        act_change_source(self, source_id=source_id, source_name=source_name)
 
     def launch_app(self, app_id: str, app_name: str, url: str) -> None:
         """Launches an installed Smart TV application."""
-        if self.connected and self.mqtt_client:
-            payload = json.dumps({
-                "appId": app_id,
-                "name": app_name,
-                "url": url,
-                "urlType": 37,
-                "appName": app_name,
-                "appUrl": url,
-            })
-            self.mqtt_client.publish(self.topicTVUIBasepath + "actions/launchapp", payload)
+        act_launch_app(self, app_id=app_id, app_name=app_name, url=url)
 
     # --------------------------------------------------------------------------
     # Picture & Sound Settings Controls
     # --------------------------------------------------------------------------
     def get_picture_settings(self) -> None:
         """Requests current picture settings menu information from the TV."""
-        if self.connected and self.mqtt_client:
-            self.mqtt_client.publish(
-                self.topicTVPSBasepath + "actions/picturesetting",
-                json.dumps({"action": "get_menu_info"}),
-            )
+        act_get_picture_settings(self)
 
     def set_picture_setting(self, menu_id: int, menu_value: str | int | float) -> None:
         """Changes a specific picture setting value."""
-        if self.connected and self.mqtt_client:
-            payload = json.dumps({
-                "action": "notify_value_changed",
-                "menu_id": int(menu_id),
-                "menu_value": str(menu_value),
-            })
-            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/picturesetting", payload)
-            if int(menu_id) in self.picture_settings:
-                self.picture_settings[int(menu_id)].value = menu_value
+        act_set_picture_setting(self, menu_id=menu_id, menu_value=menu_value)
 
     def set_picture_mode(self, mode: str) -> None:
         """Sets the TV picture mode preset."""
-        pm_item = find_menu_item_by_name(self.picture_settings, "Picture Mode", DEFAULT_MENU_ID_PICTURE_MODE)
-        menu_id = pm_item.menu_id if pm_item else DEFAULT_MENU_ID_PICTURE_MODE
-        self.set_picture_setting(menu_id, mode)
-        self.picture_mode = mode
+        act_set_picture_mode(self, mode=mode)
 
     def set_backlight(self, level: int) -> None:
         """Sets the TV backlight level (0–100)."""
-        bl_item = find_menu_item_by_name(self.picture_settings, "Backlight", DEFAULT_MENU_ID_BACKLIGHT)
-        menu_id = bl_item.menu_id if bl_item else DEFAULT_MENU_ID_BACKLIGHT
-        clamped = max(0, min(100, int(level)))
-        self.set_picture_setting(menu_id, clamped)
-        self.backlight = clamped
+        act_set_backlight(self, level=level)
 
     def set_brightness(self, level: int) -> None:
         """Sets the TV brightness level (0–100)."""
-        br_item = find_menu_item_by_name(self.picture_settings, "Brightness", DEFAULT_MENU_ID_BRIGHTNESS)
-        menu_id = br_item.menu_id if br_item else DEFAULT_MENU_ID_BRIGHTNESS
-        clamped = max(0, min(100, int(level)))
-        self.set_picture_setting(menu_id, clamped)
-        self.brightness = clamped
+        act_set_brightness(self, level=level)
 
     def set_contrast(self, level: int) -> None:
         """Sets the TV contrast level (0–100)."""
-        ct_item = find_menu_item_by_name(self.picture_settings, "Contrast", DEFAULT_MENU_ID_CONTRAST)
-        menu_id = ct_item.menu_id if ct_item else DEFAULT_MENU_ID_CONTRAST
-        clamped = max(0, min(100, int(level)))
-        self.set_picture_setting(menu_id, clamped)
-        self.contrast = clamped
+        act_set_contrast(self, level=level)
 
     def get_sound_settings(self) -> None:
         """Requests current sound settings menu information from the TV."""
-        if self.connected and self.mqtt_client:
-            self.mqtt_client.publish(
-                self.topicTVPSBasepath + "actions/soundsetting",
-                json.dumps({"action": "get_menu_info"}),
-            )
+        act_get_sound_settings(self)
 
     def set_sound_setting(self, menu_id: int, menu_value: str | int | float) -> None:
         """Changes a specific sound setting value."""
-        if self.connected and self.mqtt_client:
-            payload = json.dumps({
-                "action": "notify_value_changed",
-                "menu_id": int(menu_id),
-                "menu_value": str(menu_value),
-            })
-            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/soundsetting", payload)
-            if int(menu_id) in self.sound_settings:
-                self.sound_settings[int(menu_id)].value = menu_value
+        act_set_sound_setting(self, menu_id=menu_id, menu_value=menu_value)
 
     def set_sound_mode(self, mode: str) -> None:
         """Sets the TV sound mode preset."""
-        sm_item = find_menu_item_by_name(self.sound_settings, "Sound Mode", DEFAULT_MENU_ID_SOUND_MODE)
-        menu_id = sm_item.menu_id if sm_item else DEFAULT_MENU_ID_SOUND_MODE
-        self.set_sound_setting(menu_id, mode)
-        self.sound_mode = mode
+        act_set_sound_mode(self, mode=mode)
 
     def send_text_input(self, text: str, action: str = "insert") -> None:
         """Sends virtual keyboard string input to active on-screen input/search field."""
-        if self.connected and self.mqtt_client:
-            payload = json.dumps({"text": text, "action": action})
-            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/txtinputdata", payload)
-            self.mqtt_client.publish(self.topicTVPSBasepath + "actions/bwsinputdata", payload)
+        act_send_text_input(self, text=text, action=action)
 
     # --------------------------------------------------------------------------
     # Async Queries & Disconnect
