@@ -70,3 +70,13 @@ This document tracks planned features, new platforms, technical debt, and archit
 ### 7. Security Hardening & Best Practices
 - [x] **Safe XML Parsing with `defusedxml` ([Issue #14](https://github.com/stevene1919/hisense_vidaa/issues/14))**:
   - Import `defusedxml.ElementTree` with fallback to standard `xml.etree.ElementTree` in `discovery.py` to guard against XML entity expansion on UPnP port 38400.
+
+### 8. Generation 3 Authentication Reverse-Engineering (VIDAA U7+ / `Q0704`+ / App `v1.09+` - [Issue #6](https://github.com/stevene1919/hisense_vidaa/issues/6))
+- [ ] **Decompile & Analyze VIDAA Android App `v1.09.06.002.3`**:
+  - Decompile `libmqttcrypt.so` and Java authentication modules from VIDAA Android App `v1.09.06.002.3` (V America Operations Inc.).
+  - Identify updated MD5 salt, timestamp XOR constants, or client ID structure used on firmware `Q0704`+ where legacy, standard (`hiserv0i1c9`), and modern XOR (`0937a0`) all return `rc: 5`.
+- [ ] **Pre-Auth Handshake & Device Registration Investigation**:
+  - Investigate whether the official mobile app executes an initial HTTP REST / SSDP device pairing registration prior to issuing MQTT `CONNECT`.
+- [ ] **Implement Generation 3 Profile in `crypto.py` & `client.py`**:
+  - Add `gen3` / `vidaa_2025` profile and integrate into auto-detection fallback chain.
+
