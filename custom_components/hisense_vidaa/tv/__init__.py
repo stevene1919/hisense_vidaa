@@ -41,6 +41,12 @@ from .settings import (
     find_menu_item_by_name,
     parse_settings_payload,
 )
+from .state import (
+    apply_picture_update,
+    apply_sound_update,
+    apply_state_update,
+    apply_volume_update,
+)
 
 __all__ = [
     "DEFAULT_MENU_ID_BACKLIGHT",
@@ -58,6 +64,10 @@ __all__ = [
     "STANDARD_SOUND_MODES",
     "FeatureProbeResult",
     "SettingMenuItem",
+    "apply_picture_update",
+    "apply_sound_update",
+    "apply_state_update",
+    "apply_volume_update",
     "change_source_by_name_or_id",
     "create_client_from_creds",
     "cycle_tv_source",

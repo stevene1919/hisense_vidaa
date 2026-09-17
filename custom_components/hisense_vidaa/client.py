@@ -24,6 +24,7 @@ try:
         test_tv_ssl_connection,
     )
     from .protocol.auth import apply_mqtt_tls, is_token_expired, perform_token_refresh
+    from .protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
     from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
     from .protocol.wol import send_wake_on_lan
     from .tv.navigation import (
@@ -40,7 +41,12 @@ try:
         DEFAULT_MENU_ID_SOUND_MODE,
         SettingMenuItem,
         find_menu_item_by_name,
-        parse_settings_payload,
+    )
+    from .tv.state import (
+        apply_picture_update,
+        apply_sound_update,
+        apply_state_update,
+        apply_volume_update,
     )
 except (ImportError, ValueError):
     from crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
@@ -52,6 +58,7 @@ except (ImportError, ValueError):
         test_tv_ssl_connection,
     )
     from protocol.auth import apply_mqtt_tls, is_token_expired, perform_token_refresh
+    from protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
     from protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
     from protocol.wol import send_wake_on_lan
     from tv.navigation import (
@@ -68,7 +75,12 @@ except (ImportError, ValueError):
         DEFAULT_MENU_ID_SOUND_MODE,
         SettingMenuItem,
         find_menu_item_by_name,
-        parse_settings_payload,
+    )
+    from tv.state import (
+        apply_picture_update,
+        apply_sound_update,
+        apply_state_update,
+        apply_volume_update,
     )
 
 _LOGGER = logging.getLogger(__name__)
@@ -301,57 +313,11 @@ class HisenseTvClient:
         self._dispatch("disconnected")
 
     def _dispatch_state_update(self, data: Any) -> None:
-        if isinstance(data, dict):
-            statetype = str(data.get("statetype", "")).lower()
-            if "sleep" in statetype or "off" in statetype or statetype == "fake_sleep_0":
-                self.state = "off"
-            elif statetype in ("screen_saver", "screensaver"):
-                self.state = "screensaver"
-            elif statetype or data.get("is_power_on") in (1, "1", True):
-                self.state = "on"
-
-            if "sourcename" in data:
-                self.current_source = data["sourcename"]
-            if "sourceid" in data:
-                self.current_source_id = str(data["sourceid"])
-            if "appname" in data:
-                self.current_app = data["appname"]
-            if "appid" in data:
-                self.current_app_id = str(data["appid"])
-            if "channel_name" in data:
-                self.current_channel = data["channel_name"]
-            if "program_title" in data:
-                self.current_program = data["program_title"]
-            if "channel_num" in data:
-                self.channel_number = str(data["channel_num"])
-            if "audio_output" in data:
-                self.audio_output_mode = str(data["audio_output"])
-            if "hdr_mode" in data:
-                self.hdr_mode = str(data["hdr_mode"])
-            if "audio_format" in data:
-                self.audio_format = str(data["audio_format"])
-            if "sleep_time" in data:
-                with contextlib.suppress(ValueError, TypeError):
-                    self.sleep_timer = int(data["sleep_time"])
-
+        apply_state_update(self, data)
         self._dispatch("state", data)
 
     def _dispatch_volume_update(self, data: Any) -> None:
-        if isinstance(data, dict):
-            if "volume_value" in data:
-                with contextlib.suppress(ValueError, TypeError):
-                    self.volume = int(data["volume_value"])
-            elif "volume" in data:
-                with contextlib.suppress(ValueError, TypeError):
-                    self.volume = int(data["volume"])
-
-            if "volume_type" in data:
-                self.muted = bool(data["volume_type"] == 1 or data["volume_type"] == "1")
-            elif "is_mute" in data:
-                self.muted = bool(data["is_mute"] in (1, "1", True))
-            elif "muted" in data:
-                self.muted = bool(data["muted"])
-
+        apply_volume_update(self, data)
         self._dispatch("volume", data)
 
     def _dispatch_sourcelist_update(self, data: Any) -> None:
@@ -369,29 +335,11 @@ class HisenseTvClient:
         self._dispatch("applist", self.apps)
 
     def _dispatch_picture_update(self, data: Any) -> None:
-        parsed_items = parse_settings_payload(data)
-        for item in parsed_items:
-            self.picture_settings[item.menu_id] = item
-            name_clean = item.name.lower()
-            if "mode" in name_clean:
-                self.picture_mode = str(item.value)
-            elif "backlight" in name_clean:
-                with contextlib.suppress(ValueError, TypeError):
-                    self.backlight = int(item.value)
-            elif "brightness" in name_clean:
-                with contextlib.suppress(ValueError, TypeError):
-                    self.brightness = int(item.value)
-            elif "contrast" in name_clean:
-                with contextlib.suppress(ValueError, TypeError):
-                    self.contrast = int(item.value)
+        apply_picture_update(self, data)
         self._dispatch("picture", data)
 
     def _dispatch_sound_update(self, data: Any) -> None:
-        parsed_items = parse_settings_payload(data)
-        for item in parsed_items:
-            self.sound_settings[item.menu_id] = item
-            if "mode" in item.name.lower():
-                self.sound_mode = str(item.value)
+        apply_sound_update(self, data)
         self._dispatch("sound", data)
 
     def _dispatch_token_refreshed(self) -> None:
@@ -719,168 +667,21 @@ class HisenseTvClient:
     # --------------------------------------------------------------------------
     async def async_start_auth(self) -> None:
         """Starts the authentication handshake and triggers the TV to show PIN."""
-        if self.auth_profile in ("legacy", "static"):
-            self.client_id = "hisenseservice"
-            self.username = "hisenseservice"
-            self.password = "multimqttservice"
-            self.access_token = "multimqttservice"
-            self.define_topic_paths()
-            return
-
-        if self.auth_profile in ("modern", "vidaa_2024", "vidaa"):
-            await self._async_start_auth_internal(profile="modern")
-        elif self.auth_profile in ("middle", "vidaa_15", "vidaa_middle"):
-            await self._async_start_auth_internal(profile="middle")
-        elif self.auth_profile in ("remotenow", "remotenow_2018", "standard"):
-            await self._async_start_auth_internal(profile="remotenow")
-        else:  # auto
-            profiles_to_try = ["modern", "middle", "remotenow"]
-            if self.ip:
-                try:
-                    fp = await asyncio.get_running_loop().run_in_executor(None, self.get_device_fingerprint, 1.0)
-                    tp = fp.get("transport_protocol")
-                    if tp:
-                        with contextlib.suppress(ValueError, TypeError):
-                            tp_int = int(tp)
-                            if tp_int >= 3290:
-                                profiles_to_try = ["modern", "middle", "remotenow"]
-                            elif 3000 <= tp_int < 3290:
-                                profiles_to_try = ["middle", "modern", "remotenow"]
-                            else:
-                                profiles_to_try = ["remotenow", "middle", "modern"]
-                except Exception as e:
-                    _LOGGER.debug("Could not determine transport_protocol before auth: %s", e)
-
-            last_err = None
-            for p in profiles_to_try:
-                try:
-                    _LOGGER.debug("Attempting pairing auth with profile: %s", p)
-                    await self._async_start_auth_internal(profile=p)
-                    self.auth_profile = p
-                    return
-                except Exception as e:
-                    last_err = e
-                    err_msg = str(e)
-                    if "code 5" in err_msg or "code 4" in err_msg or "Not authorized" in err_msg:
-                        _LOGGER.info("Auth profile %s rejected by TV (%s), falling back...", p, err_msg)
-                        continue
-                    raise
-            if last_err:
-                raise last_err
+        await async_start_pairing_handshake(self)
 
     async def _async_start_auth_internal(
         self, profile: str = "modern", use_new_auth: bool | None = None
     ) -> None:
-        loop = asyncio.get_running_loop()
-        self._loop = loop
-        self.disconnect()
-        await asyncio.sleep(0.2)
-        tv_ts = await loop.run_in_executor(None, get_tv_timestamp, self.ip, 1.5)
-        self.generate_initial_creds(
-            use_new_auth=use_new_auth, auth_profile=profile, timestamp=tv_ts
-        )
-        self.mqtt_client = await loop.run_in_executor(
-            None, self.create_mqtt_client, self.client_id, self.username, self.password
-        )
-        self.mqtt_client.reconnect_delay_set(min_delay=30, max_delay=60)
-
-        self._auth_future = loop.create_future()
-        self.mqtt_client.connect_async(self.ip, 36669, 60)
-        self.mqtt_client.loop_start()
-
-        # Wait up to 10 seconds for connection
-        for _ in range(50):
-            if self.connected:
-                break
-            if self._auth_future.done() and self._auth_future.exception():
-                self.disconnect()
-                raise self._auth_future.exception()
-            await asyncio.sleep(0.2)
-
-        if not self.connected:
-            self.disconnect()
-            raise Exception("Cannot connect to TV MQTT Broker (connection timeout)")
-
-        self.mqtt_client.subscribe([
-            (self.topicTVUIBasepath + "actions/vidaa_app_connect", 0),
-            (self.topicMobiBasepath + "#", 0),
-            (self.topicMobiBasepath + "ui_service/data/authentication", 0),
-            (self.topicMobiBasepath + "ui_service/data/authenticationcode", 0),
-            (self.topicMobiBasepath + "ui_service/data/vidaa_app_connect", 0),
-            (self.topicMobiBasepath + "platform_service/data/tokenissuance", 0),
-        ])
-
-        # Allow broker time to register subscriptions before publishing
-        await asyncio.sleep(0.5)
-
-        for attempt in range(3):
-            self.mqtt_client.publish(
-                self.topicTVUIBasepath + "actions/vidaa_app_connect",
-                '{"app_version":2,"connect_result":0,"device_type":"Mobile App"}',
-            )
-            try:
-                await asyncio.wait_for(asyncio.shield(self._auth_future), timeout=4.0)
-                break
-            except TimeoutError:
-                if attempt < 2 and not self._auth_future.done():
-                    _LOGGER.debug("No response to vidaa_app_connect on attempt %d, retrying...", attempt + 1)
-                    await asyncio.sleep(0.5)
-                else:
-                    self.disconnect()
-                    raise Exception("TV authentication request timed out (TV did not show PIN)")
-        self._auth_future = None
+        """Internal helper attempting a single auth handshake attempt."""
+        try:
+            from .protocol.pairing import _async_execute_pairing_attempt
+        except (ImportError, ValueError):
+            from protocol.pairing import _async_execute_pairing_attempt
+        await _async_execute_pairing_attempt(self, profile=profile, use_new_auth=use_new_auth)
 
     async def async_submit_pin(self, pin_code: str) -> dict[str, Any]:
         """Submits the PIN code entered by the user and retrieves token pair."""
-        loop = asyncio.get_running_loop()
-        self._loop = loop
-        self._auth_code_future = loop.create_future()
-
-        if not self.mqtt_client:
-            raise Exception("MQTT client not initialized")
-
-        self.mqtt_client.publish(
-            self.topicTVUIBasepath + "actions/authenticationcode",
-            json.dumps({"authNum": int(pin_code)}),
-        )
-
-        try:
-            payload_str = await asyncio.wait_for(self._auth_code_future, timeout=15)
-            _LOGGER.debug("Received PIN response payload: %s", payload_str)
-            payload = json.loads(payload_str)
-            if payload.get("result") != 1:
-                _LOGGER.error("PIN validation rejected with payload: %s", payload_str)
-                raise Exception(f"Incorrect PIN code (TV response: {payload_str})")
-        except TimeoutError:
-            raise Exception("Timeout waiting for PIN validation")
-        finally:
-            self._auth_code_future = None
-
-        self._token_future = loop.create_future()
-        self.mqtt_client.publish(self.topicTVPSBasepath + "data/gettoken", '{"refreshtoken": ""}')
-        self.mqtt_client.publish(self.topicTVUIBasepath + "actions/authenticationcodeclose")
-
-        try:
-            token_payload_str = await asyncio.wait_for(self._token_future, timeout=15)
-            token_data = json.loads(token_payload_str)
-
-            self.access_token = token_data["accesstoken"]
-            self.access_token_time = int(token_data["accesstoken_time"])
-            self.access_token_duration = int(token_data["accesstoken_duration_day"])
-            self.refresh_token = token_data["refreshtoken"]
-            self.refresh_token_time = int(token_data["refreshtoken_time"])
-            self.refresh_token_duration = int(token_data["refreshtoken_duration_day"])
-
-            _LOGGER.info(
-                "Pairing successful! Received access_token (valid %d days) and refresh_token (valid %d days)",
-                self.access_token_duration,
-                self.refresh_token_duration,
-            )
-            return token_data
-        except TimeoutError:
-            raise Exception("Timeout waiting for token issuance from TV")
-        finally:
-            self._token_future = None
+        return await async_submit_pin_code(self, pin_code)
 
     def check_and_refresh_token(self, force: bool = False) -> bool:
         """Checks access token expiration and triggers refresh via refresh token if necessary."""

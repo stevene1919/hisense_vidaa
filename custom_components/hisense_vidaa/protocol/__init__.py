@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .auth import apply_mqtt_tls, is_token_expired, perform_token_refresh
+from .pairing import async_start_pairing_handshake, async_submit_pin_code
 from .topics import TOPIC_BROADCAST_BASEPATH, TopicPaths, build_topic_paths
 from .wol import send_wake_on_lan
 
@@ -10,6 +11,8 @@ __all__ = [
     "TOPIC_BROADCAST_BASEPATH",
     "TopicPaths",
     "apply_mqtt_tls",
+    "async_start_pairing_handshake",
+    "async_submit_pin_code",
     "build_topic_paths",
     "is_token_expired",
     "perform_token_refresh",
