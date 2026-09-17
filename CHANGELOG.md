@@ -31,9 +31,16 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
   - Filtered volume update handler in `select.py` and `media_player.py` to only process master volume (`0`) and ARC (`1`) channels, preventing mute broadcast packets (`volume_type: 2`) from momentarily toggling audio output selection to `Headphone / Bluetooth`.
 - **BASE ENTITY REFACTORING & CODE DEDUPLICATION**:
   - Extracted common base class `HisenseVidaaEntity` in [`entity.py`](custom_components/hisense_vidaa/entity.py), standardizing `device_info` registration, MAC address formatting, connection status availability, and `_attr_has_entity_name = True` across all 8 entity platforms (`binary_sensor`, `button`, `media_player`, `notify`, `number`, `remote`, `select`, `sensor`).
+- **SWITCH PLATFORM & IDEMPOTENT AUDIO-ONLY (SCREEN-OFF) CONTROLS**:
+  - Added `switch.{tv}_audio_only` entity implementing idempotent display screen-off control (`KEY_INFO -> KEY_AUDIO` sequence) allowing users to turn off the TV display panel without disrupting audio playback.
+  - Added `switch.{tv}_debug_logging` diagnostic switch allowing users to toggle verbose debug logging on/off dynamically from the UI without restarting Home Assistant.
+- **IN-USE SENSOR & TRANSIENT LIVE TV METADATA RETENTION**:
+  - Added `binary_sensor.{tv}_in_use` (`BinarySensorDeviceClass.RUNNING`) reflecting genuine active TV usage with rich broadcast metadata.
+  - Preserved transient `livetv` broadcast metadata (`channel_name`, `channel_number`, `program_title`, `program_detail`, `media_series_title`) on media player and sensors.
+  - Added backward-compatible `urlType: 37` app launch payloads for older VIDAA firmware compatibility.
 - **EXPANDED TEST COVERAGE**:
   - Added unit test suite [`tests/test_services.py`](tests/test_services.py) covering all custom integration services (`send_key`, `launch_app`, `set_picture_setting`, `set_sound_setting`, `send_text_input`).
-  - Added test cases covering Home Assistant reauth flow, reconfigure flow, mDNS/Zeroconf discovery, and full multi-tier authentication cascade (66 passing tests).
+  - Added test cases covering switches, in-use binary sensors, Home Assistant reauth flow, reconfigure flow, mDNS/Zeroconf discovery, and full multi-tier authentication cascade (68 passing tests).
 
 ## [2.8.5] - 2026-09-15
 

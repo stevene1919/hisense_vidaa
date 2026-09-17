@@ -532,16 +532,88 @@ async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeyp
     result = await async_setup_entry(hass, mock_entry)
     assert result is True
 
-    # Forward entry setups should have received 6 platforms (excluding notify)
-    expected_platforms = ["media_player", "sensor", "binary_sensor", "button", "select", "remote"]
+    # Forward entry setups should have received 8 platforms (excluding notify)
+    expected_platforms = ["media_player", "sensor", "binary_sensor", "button", "switch", "select", "number", "remote"]
     hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(mock_entry, expected_platforms)
     assert hass.data[DOMAIN][mock_entry.entry_id]["platforms"] == expected_platforms
 
     # 2. Unload entry
     unload_result = await async_unload_entry(hass, mock_entry)
     assert unload_result is True
-    # Unload platforms must ONLY be called with the 6 loaded platforms, never all PLATFORMS
+    # Unload platforms must ONLY be called with the 8 loaded platforms, never all PLATFORMS
     hass.config_entries.async_unload_platforms.assert_awaited_once_with(mock_entry, expected_platforms)
     mock_client.disconnect.assert_called_once()
     assert mock_entry.entry_id not in hass.data.get(DOMAIN, {})
+
+
+@pytest.mark.anyio
+async def test_switch_entities(mock_client, mock_entry):
+    """Test AudioOnly and DebugLogging switch entities."""
+    from custom_components.hisense_vidaa.switch import (
+        HisenseVidaaAudioOnlySwitch,
+        HisenseVidaaDebugLoggingSwitch,
+    )
+
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    # AudioOnly switch
+    sw_audio = HisenseVidaaAudioOnlySwitch(mock_client, mock_entry)
+    sw_audio.hass = hass
+    assert sw_audio.is_on is False
+    assert sw_audio.unique_id == "test_entry_id_audio_only"
+
+    # Turn on audio only (idempotent screen off)
+    await sw_audio.async_turn_on()
+    assert sw_audio.is_on is True
+    mock_client.send_key.assert_any_call("KEY_INFO")
+    mock_client.send_key.assert_any_call("KEY_AUDIO")
+
+    # Turn off audio only (wake screen)
+    mock_client.send_key.reset_mock()
+    await sw_audio.async_turn_off()
+    assert sw_audio.is_on is False
+    mock_client.send_key.assert_called_once_with("KEY_INFO")
+
+    # DebugLogging switch
+    sw_debug = HisenseVidaaDebugLoggingSwitch(mock_client, mock_entry)
+    sw_debug.hass = hass
+    assert sw_debug.unique_id == "test_entry_id_debug_logging"
+
+    await sw_debug.async_turn_on()
+    assert sw_debug.is_on is True
+
+    await sw_debug.async_turn_off()
+    assert sw_debug.is_on is False
+
+
+@pytest.mark.anyio
+async def test_in_use_binary_sensor_and_live_tv_metadata(mock_client, mock_entry):
+    """Test In Use binary sensor and Live TV channel attributes on media player."""
+    from custom_components.hisense_vidaa.binary_sensor import HisenseVidaaInUseBinarySensor
+
+    mock_client.is_on = True
+    mock_client.connected = True
+    mock_client.channel_name = "ABC HD"
+    mock_client.channel_number = "20"
+    mock_client.program_title = "News 7pm"
+    mock_client.program_detail = "Evening news broadcast"
+
+    bin_in_use = HisenseVidaaInUseBinarySensor(mock_client, mock_entry)
+    assert bin_in_use.is_on is True
+    assert bin_in_use.extra_state_attributes["channel_name"] == "ABC HD"
+    assert bin_in_use.extra_state_attributes["channel_number"] == "20"
+    assert bin_in_use.extra_state_attributes["program_title"] == "News 7pm"
+
+    # Media player series and title attributes
+    mp = HisenseVidaaMediaPlayer(
+        client=mock_client,
+        entry_or_mac=mock_entry,
+    )
+    mp._state = "on"
+    assert mp.media_series_title == "ABC HD (20)"
+    assert mp.media_title == "News 7pm"
+    assert mp.extra_state_attributes["channel_name"] == "ABC HD"
+    assert mp.extra_state_attributes["program_detail"] == "Evening news broadcast"
+
 

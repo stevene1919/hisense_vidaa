@@ -46,6 +46,7 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
     def __init__(
         self,
         client,
+        entry_or_mac=None,
         mac=None,
         entry_id=None,
         name=None,
@@ -56,7 +57,8 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
     ):
         super().__init__(
             client=client,
-            entry_or_mac=mac,
+            entry_or_mac=entry_or_mac,
+            mac=mac,
             entry_id=entry_id,
             name=name,
             model=model,
@@ -121,7 +123,7 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return device-specific attributes."""
+        """Return device-specific and Live TV metadata attributes."""
         attrs: dict[str, Any] = {
             "mqtt_connected": self._client.connected,
             "auth_profile": self._client.auth_profile,
@@ -130,10 +132,22 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
             attrs["mac_address"] = self._mac
         if self._connected_device:
             attrs["connected_device"] = self._connected_device
-        if self._channel_name:
-            attrs["channel_name"] = self._channel_name
-        if self._channel_num:
-            attrs["channel_num"] = self._channel_num
+        ch_name = self._channel_name or (self._client.channel_name if self._client else None)
+        if ch_name:
+            attrs["channel_name"] = ch_name
+        ch_num = self._channel_num or (self._client.channel_number if self._client else None)
+        if ch_num:
+            attrs["channel_num"] = ch_num
+            attrs["channel_number"] = ch_num
+        if self._client:
+            if self._client.program_title:
+                attrs["program_title"] = self._client.program_title
+            if self._client.program_detail:
+                attrs["program_detail"] = self._client.program_detail
+            if self._client.program_start:
+                attrs["program_start"] = self._client.program_start
+            if self._client.program_end:
+                attrs["program_end"] = self._client.program_end
         if self._volume_type is not None:
             attrs["audio_output"] = "ARC / eARC" if self._volume_type == 1 else "TV Speakers"
         return attrs
@@ -190,6 +204,28 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
             return sorted(sources) + app_names
 
         return sorted(sources)
+
+    @property
+    def media_title(self) -> str | None:
+        """Return the title of current playing media or Live TV program."""
+        if self._state == STATE_OFF:
+            return None
+        if self._client and self._client.program_title:
+            return self._client.program_title
+        return self._source
+
+    @property
+    def media_series_title(self) -> str | None:
+        """Return the channel or series title if watching Live TV."""
+        if self._state == STATE_OFF:
+            return None
+        if self._channel_name or (self._client and self._client.channel_name):
+            ch_name = self._channel_name or self._client.channel_name
+            ch_num = self._channel_num or (self._client.channel_number if self._client else None)
+            if ch_num:
+                return f"{ch_name} ({ch_num})"
+            return ch_name
+        return None
 
     @property
     def sound_mode(self) -> str | None:

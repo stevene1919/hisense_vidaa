@@ -201,6 +201,8 @@ if "homeassistant" not in sys.modules:
             return getattr(self, "_attr_is_on", None)
     class BinarySensorDeviceClass:
         CONNECTIVITY = "connectivity"
+        RUNNING = "running"
+        POWER = "power"
     binary_sensor.BinarySensorEntity = BinarySensorEntity
     binary_sensor.BinarySensorDeviceClass = BinarySensorDeviceClass
     components.binary_sensor = binary_sensor
@@ -249,6 +251,23 @@ if "homeassistant" not in sys.modules:
     notify.NotifyEntity = NotifyEntity
     components.notify = notify
     sys.modules["homeassistant.components.notify"] = notify
+
+    # switch
+    switch = types.ModuleType("homeassistant.components.switch")
+    class SwitchEntity:
+        _attr_has_entity_name = True
+        _attr_should_poll = False
+        def schedule_update_ha_state(self): pass
+        def async_write_ha_state(self): pass
+        @property
+        def is_on(self):
+            return getattr(self, "_attr_is_on", False)
+    class SwitchDeviceClass:
+        SWITCH = "switch"
+    switch.SwitchEntity = SwitchEntity
+    switch.SwitchDeviceClass = SwitchDeviceClass
+    components.switch = switch
+    sys.modules["homeassistant.components.switch"] = switch
 
     # select
     select = types.ModuleType("homeassistant.components.select")

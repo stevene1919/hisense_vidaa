@@ -55,6 +55,7 @@ PLATFORMS: list[str] = [
     "sensor",
     "binary_sensor",
     "button",
+    "switch",
     "notify",
     "select",
     "number",
@@ -244,7 +245,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "sensor",
         "binary_sensor",
         "button",
+        "switch",
         "select",
+        "number",
     ]
     if entry.options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE):
         platforms_to_setup.append("remote")

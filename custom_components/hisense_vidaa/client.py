@@ -145,6 +145,15 @@ class HisenseTvClient:
         self.contrast: int | None = None
         self.sound_mode: str | None = None
 
+        # Live TV & Channel metadata
+        self.channel_name: str | None = None
+        self.channel_number: str | None = None
+        self.program_title: str | None = None
+        self.program_detail: str | None = None
+        self.program_start: str | None = None
+        self.program_end: str | None = None
+        self.last_volume_update_time: float = 0.0
+
         if self.client_id:
             self.define_topic_paths()
 
@@ -302,14 +311,31 @@ class HisenseTvClient:
                 self.is_on = True
             if statetype == "sourceswitch":
                 self.current_source = data.get("sourcename") or data.get("displayname") or data.get("sourceid")
+                if data.get("displayname"):
+                    self.program_title = data.get("displayname")
             elif statetype in ("livetv", "tv"):
                 self.current_source = "TV"
+                if data.get("channel_name"):
+                    self.channel_name = data.get("channel_name")
+                if data.get("channel_num") is not None:
+                    self.channel_number = str(data.get("channel_num"))
+                if data.get("progname") or data.get("title"):
+                    self.program_title = data.get("progname") or data.get("title")
+                if data.get("detail"):
+                    self.program_detail = data.get("detail")
+                if data.get("starttime"):
+                    self.program_start = data.get("starttime")
+                if data.get("endtime"):
+                    self.program_end = data.get("endtime")
             elif statetype == "app":
                 self.current_source = data.get("name") or data.get("appId")
+                if data.get("name"):
+                    self.program_title = data.get("name")
         self._dispatch("state", data)
 
     def _dispatch_volume_update(self, data: Any) -> None:
         self.is_on = True
+        self.last_volume_update_time = time.time()
         self._dispatch("volume", data)
 
     def _dispatch_sourcelist_update(self, data: Any) -> None:
@@ -1233,7 +1259,14 @@ class HisenseTvClient:
     def launch_app(self, app_id: str, app_name: str, url: str) -> None:
         """Launches an installed Smart TV application."""
         if self.connected and self.mqtt_client:
-            payload = json.dumps({"appId": app_id, "name": app_name, "url": url})
+            payload = json.dumps({
+                "appId": app_id,
+                "name": app_name,
+                "url": url,
+                "urlType": 37,
+                "appName": app_name,
+                "appUrl": url,
+            })
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/launchapp", payload)
 
     # --------------------------------------------------------------------------
