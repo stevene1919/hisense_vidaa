@@ -8,10 +8,15 @@ from typing import Any
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .client import HisenseTvClient
-from .const import DOMAIN
+from .const import (
+    CONF_ENABLE_PICTURE_CONTROLS,
+    DEFAULT_ENABLE_PICTURE_CONTROLS,
+    DOMAIN,
+)
 from .entity import HisenseVidaaEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -168,6 +173,19 @@ async def async_setup_entry(
     """Set up the Hisense VIDAA number platform."""
     data = hass.data[DOMAIN][config_entry.entry_id]
     client: HisenseTvClient = data["client"]
+
+    enable_picture = config_entry.options.get(
+        CONF_ENABLE_PICTURE_CONTROLS, DEFAULT_ENABLE_PICTURE_CONTROLS
+    )
+
+    # Clean up disabled/unsupported number entities from entity registry
+    entity_reg = er.async_get(hass)
+    if not enable_picture:
+        for suffix in ("backlight", "brightness", "contrast"):
+            unique_id = f"{config_entry.entry_id}_{suffix}"
+            if entity_id := entity_reg.async_get_entity_id("number", DOMAIN, unique_id):
+                entity_reg.async_remove(entity_id)
+        return
 
     entities: list[NumberEntity] = [
         HisenseVidaaBacklightNumber(client=client, entry=config_entry),

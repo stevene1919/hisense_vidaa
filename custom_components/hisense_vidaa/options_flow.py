@@ -11,7 +11,9 @@ from .const import (
     CONF_ENABLE_CEC_NAMES,
     CONF_ENABLE_MEDIA_CONTROLS,
     CONF_ENABLE_NOTIFY,
+    CONF_ENABLE_PICTURE_CONTROLS,
     CONF_ENABLE_REMOTE,
+    CONF_ENABLE_SOUND_CONTROLS,
     CONF_ENABLE_WOL,
     CONF_INCLUDE_APPS_IN_SOURCES,
     CONF_KEY_DELAY,
@@ -23,7 +25,9 @@ from .const import (
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_NOTIFY,
+    DEFAULT_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
+    DEFAULT_ENABLE_SOUND_CONTROLS,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
     DEFAULT_KEY_DELAY,
@@ -45,6 +49,7 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
             menu_options=[
                 "general",
                 "sources",
+                "picture_sound",
                 "remote_keys",
                 "certs",
             ],
@@ -121,6 +126,36 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
                     default=options.get(
                         CONF_ENABLE_CEC_NAMES,
                         DEFAULT_ENABLE_CEC_NAMES,
+                    ),
+                ): bool,
+            }),
+        )
+
+    async def async_step_picture_sound(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Picture calibration and sound mode controls."""
+        if user_input is not None:
+            updated_options = {**self.config_entry.options, **user_input}
+            return self.async_create_entry(title="", data=updated_options)
+
+        options = self.config_entry.options
+
+        return self.async_show_form(
+            step_id="picture_sound",
+            data_schema=vol.Schema({
+                vol.Optional(
+                    CONF_ENABLE_PICTURE_CONTROLS,
+                    default=options.get(
+                        CONF_ENABLE_PICTURE_CONTROLS,
+                        DEFAULT_ENABLE_PICTURE_CONTROLS,
+                    ),
+                ): bool,
+                vol.Optional(
+                    CONF_ENABLE_SOUND_CONTROLS,
+                    default=options.get(
+                        CONF_ENABLE_SOUND_CONTROLS,
+                        DEFAULT_ENABLE_SOUND_CONTROLS,
                     ),
                 ): bool,
             }),

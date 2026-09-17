@@ -526,20 +526,20 @@ async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeyp
     hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
 
-    # 1. Setup entry with notify disabled
+    # 1. Setup entry with notify and picture_controls disabled
     mock_entry.options = {"enable_remote": True, "enable_notify": False}
     result = await async_setup_entry(hass, mock_entry)
     assert result is True
 
-    # Forward entry setups should have received 8 platforms (excluding notify)
-    expected_platforms = ["media_player", "sensor", "binary_sensor", "button", "switch", "select", "number", "remote"]
+    # Forward entry setups should have received 7 platforms (excluding notify and number)
+    expected_platforms = ["media_player", "sensor", "binary_sensor", "button", "switch", "select", "remote"]
     hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(mock_entry, expected_platforms)
     assert hass.data[DOMAIN][mock_entry.entry_id]["platforms"] == expected_platforms
 
     # 2. Unload entry
     unload_result = await async_unload_entry(hass, mock_entry)
     assert unload_result is True
-    # Unload platforms must ONLY be called with the 8 loaded platforms, never all PLATFORMS
+    # Unload platforms must ONLY be called with the 7 loaded platforms, never all PLATFORMS
     hass.config_entries.async_unload_platforms.assert_awaited_once_with(mock_entry, expected_platforms)
     mock_client.disconnect.assert_called_once()
     assert mock_entry.entry_id not in hass.data.get(DOMAIN, {})
@@ -615,9 +615,13 @@ async def test_in_use_binary_sensor_and_live_tv_metadata(mock_client, mock_entry
 
 
 @pytest.mark.anyio
-async def test_select_and_number_platforms_lifecycle(mock_client, mock_entry):
-    """Test select and number platforms creation and lifecycle unregistration."""
-    from custom_components.hisense_vidaa.const import DOMAIN
+async def test_select_and_number_platforms_lifecycle(mock_client, mock_entry, monkeypatch):
+    """Test select and number platforms creation, options gating, and lifecycle unregistration."""
+    from custom_components.hisense_vidaa.const import (
+        CONF_ENABLE_PICTURE_CONTROLS,
+        CONF_ENABLE_SOUND_CONTROLS,
+        DOMAIN,
+    )
     from custom_components.hisense_vidaa.number import async_setup_entry as async_setup_number
     from custom_components.hisense_vidaa.select import async_setup_entry as async_setup_select
 
@@ -625,7 +629,25 @@ async def test_select_and_number_platforms_lifecycle(mock_client, mock_entry):
     hass.data = {DOMAIN: {mock_entry.entry_id: {"client": mock_client}}}
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
-    # Test select setup
+    mock_reg = MagicMock()
+    mock_reg.async_get_entity_id.return_value = None
+    monkeypatch.setattr("homeassistant.helpers.entity_registry.async_get", lambda h: mock_reg)
+
+    # 1. Default options: picture and sound controls disabled
+    mock_entry.options = {}
+    default_select_entities = []
+    await async_setup_select(hass, mock_entry, lambda entities: default_select_entities.extend(entities))
+    assert len(default_select_entities) == 1  # Only audio output select
+
+    default_number_entities = []
+    await async_setup_number(hass, mock_entry, lambda entities: default_number_entities.extend(entities))
+    assert len(default_number_entities) == 0
+
+    # 2. Enabled options: picture and sound controls enabled
+    mock_entry.options = {
+        CONF_ENABLE_PICTURE_CONTROLS: True,
+        CONF_ENABLE_SOUND_CONTROLS: True,
+    }
     select_entities = []
     await async_setup_select(hass, mock_entry, lambda entities: select_entities.extend(entities))
     assert len(select_entities) == 3
@@ -634,7 +656,6 @@ async def test_select_and_number_platforms_lifecycle(mock_client, mock_entry):
         await sel.async_added_to_hass()
         await sel.async_will_remove_from_hass()
 
-    # Test number setup
     number_entities = []
     await async_setup_number(hass, mock_entry, lambda entities: number_entities.extend(entities))
     assert len(number_entities) == 3

@@ -23,13 +23,14 @@ CONF_MANUFACTURER = "manufacturer"
 CONF_SW_VERSION = "sw_version"
 CONF_SECONDARY_MAC_ADDRESS = "secondary_mac_address"
 
-# Integration Options
 CONF_ENABLE_REMOTE = "enable_remote"
 CONF_ENABLE_NOTIFY = "enable_notify"
 CONF_ENABLE_WOL = "enable_wol"
 CONF_INCLUDE_APPS_IN_SOURCES = "include_apps_in_sources"
 CONF_ENABLE_MEDIA_CONTROLS = "enable_media_controls"
 CONF_ENABLE_CEC_NAMES = "enable_cec_names"
+CONF_ENABLE_PICTURE_CONTROLS = "enable_picture_controls"
+CONF_ENABLE_SOUND_CONTROLS = "enable_sound_controls"
 CONF_KEY_DELAY = "key_delay"
 CONF_KEY_REPEAT = "key_repeat"
 
@@ -49,6 +50,8 @@ DEFAULT_ENABLE_WOL = False
 DEFAULT_INCLUDE_APPS_IN_SOURCES = True
 DEFAULT_ENABLE_MEDIA_CONTROLS = True
 DEFAULT_ENABLE_CEC_NAMES = True
+DEFAULT_ENABLE_PICTURE_CONTROLS = False
+DEFAULT_ENABLE_SOUND_CONTROLS = False
 DEFAULT_KEY_DELAY = 0.2
 DEFAULT_KEY_REPEAT = 1
 DEFAULT_AUTH_PROFILE = "auto"

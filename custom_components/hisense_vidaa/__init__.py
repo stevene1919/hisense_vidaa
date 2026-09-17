@@ -17,6 +17,7 @@ from .const import (
     CONF_CERTFILE,
     CONF_CLIENT_ID,
     CONF_ENABLE_NOTIFY,
+    CONF_ENABLE_PICTURE_CONTROLS,
     CONF_ENABLE_REMOTE,
     CONF_IP_ADDRESS,
     CONF_KEYFILE,
@@ -28,6 +29,7 @@ from .const import (
     CONF_USE_SSL,
     CONF_USERNAME,
     DEFAULT_ENABLE_NOTIFY,
+    DEFAULT_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
     DEFAULT_USE_SSL,
     DOMAIN,
@@ -152,8 +154,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "button",
         "switch",
         "select",
-        "number",
     ]
+    if entry.options.get(
+        CONF_ENABLE_PICTURE_CONTROLS, DEFAULT_ENABLE_PICTURE_CONTROLS
+    ):
+        platforms_to_setup.append("number")
     if entry.options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE):
         platforms_to_setup.append("remote")
     if entry.options.get(

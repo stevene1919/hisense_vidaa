@@ -8,10 +8,17 @@ from typing import Any
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .client import HisenseTvClient
-from .const import DOMAIN
+from .const import (
+    CONF_ENABLE_PICTURE_CONTROLS,
+    CONF_ENABLE_SOUND_CONTROLS,
+    DEFAULT_ENABLE_PICTURE_CONTROLS,
+    DEFAULT_ENABLE_SOUND_CONTROLS,
+    DOMAIN,
+)
 from .entity import HisenseVidaaEntity
 from .tv.settings import (
     DEFAULT_MENU_ID_PICTURE_MODE,
@@ -214,10 +221,35 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][config_entry.entry_id]
     client: HisenseTvClient = data["client"]
 
+    enable_picture = config_entry.options.get(
+        CONF_ENABLE_PICTURE_CONTROLS, DEFAULT_ENABLE_PICTURE_CONTROLS
+    )
+    enable_sound = config_entry.options.get(
+        CONF_ENABLE_SOUND_CONTROLS, DEFAULT_ENABLE_SOUND_CONTROLS
+    )
+
+    # Clean up disabled/unsupported entities from entity registry
+    entity_reg = er.async_get(hass)
+    if not enable_picture:
+        unique_id = f"{config_entry.entry_id}_picture_mode"
+        if entity_id := entity_reg.async_get_entity_id("select", DOMAIN, unique_id):
+            entity_reg.async_remove(entity_id)
+
+    if not enable_sound:
+        unique_id = f"{config_entry.entry_id}_sound_mode"
+        if entity_id := entity_reg.async_get_entity_id("select", DOMAIN, unique_id):
+            entity_reg.async_remove(entity_id)
+
     entities: list[SelectEntity] = [
         HisenseVidaaAudioOutputSelect(client=client, entry=config_entry),
-        HisenseVidaaPictureModeSelect(client=client, entry=config_entry),
-        HisenseVidaaSoundModeSelect(client=client, entry=config_entry),
     ]
+    if enable_picture:
+        entities.append(
+            HisenseVidaaPictureModeSelect(client=client, entry=config_entry)
+        )
+    if enable_sound:
+        entities.append(
+            HisenseVidaaSoundModeSelect(client=client, entry=config_entry)
+        )
 
     async_add_entities(entities)

@@ -380,6 +380,14 @@ if "homeassistant" not in sys.modules:
     helpers.entity_platform = entity_platform
     sys.modules["homeassistant.helpers.entity_platform"] = entity_platform
 
+    # helpers.entity_registry
+    entity_registry = types.ModuleType("homeassistant.helpers.entity_registry")
+    def async_get(hass):
+        return MagicMock()
+    entity_registry.async_get = async_get
+    helpers.entity_registry = entity_registry
+    sys.modules["homeassistant.helpers.entity_registry"] = entity_registry
+
     # helpers.issue_registry
     issue_registry = types.ModuleType("homeassistant.helpers.issue_registry")
     class IssueSeverity:

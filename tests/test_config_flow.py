@@ -214,6 +214,7 @@ async def test_options_flow(monkeypatch):
     assert result["step_id"] == "init"
     assert "general" in result["menu_options"]
     assert "sources" in result["menu_options"]
+    assert "picture_sound" in result["menu_options"]
     assert "remote_keys" in result["menu_options"]
     assert "certs" in result["menu_options"]
 
@@ -244,6 +245,21 @@ async def test_options_flow(monkeypatch):
     )
     assert result_src_submit["type"] == "create_entry"
     assert result_src_submit["data"]["enable_cec_names"] is True
+
+    # Test picture_sound step
+    result_ps_form = await handler.async_step_picture_sound()
+    assert result_ps_form["type"] == "form"
+    assert result_ps_form["step_id"] == "picture_sound"
+
+    result_ps_submit = await handler.async_step_picture_sound(
+        user_input={
+            "enable_picture_controls": True,
+            "enable_sound_controls": True,
+        }
+    )
+    assert result_ps_submit["type"] == "create_entry"
+    assert result_ps_submit["data"]["enable_picture_controls"] is True
+    assert result_ps_submit["data"]["enable_sound_controls"] is True
 
     # Test remote_keys step
     result_keys_submit = await handler.async_step_remote_keys(
