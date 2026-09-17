@@ -20,10 +20,14 @@ try:
         get_device_fingerprint as discover_device_fingerprint,
         get_tv_timestamp,
         ping_tv,
+    )
+    from .protocol.auth import (
+        apply_mqtt_tls,
+        is_token_expired,
+        perform_token_refresh,
         probe_tv_auth_methods,
         test_tv_ssl_connection,
     )
-    from .protocol.auth import apply_mqtt_tls, is_token_expired, perform_token_refresh
     from .protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
     from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
     from .protocol.wol import send_wake_on_lan
@@ -62,10 +66,14 @@ except (ImportError, ValueError):
         get_device_fingerprint as discover_device_fingerprint,
         get_tv_timestamp,
         ping_tv,
+    )
+    from protocol.auth import (
+        apply_mqtt_tls,
+        is_token_expired,
+        perform_token_refresh,
         probe_tv_auth_methods,
         test_tv_ssl_connection,
     )
-    from protocol.auth import apply_mqtt_tls, is_token_expired, perform_token_refresh
     from protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
     from protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
     from protocol.wol import send_wake_on_lan
