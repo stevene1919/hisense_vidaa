@@ -4,12 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import ipaddress
 import json
 import logging
-import os
-import socket
-import ssl
 import threading
 import time
 from collections import defaultdict
@@ -27,8 +23,13 @@ try:
         probe_tv_auth_methods,
         test_tv_ssl_connection,
     )
-    from .navigation import get_next_cycled_source, match_app, resolve_command_key, resolve_source
-    from .settings import (
+    from .features.navigation import (
+        get_next_cycled_source,
+        match_app,
+        resolve_command_key,
+        resolve_source,
+    )
+    from .features.settings import (
         DEFAULT_MENU_ID_BACKLIGHT,
         DEFAULT_MENU_ID_BRIGHTNESS,
         DEFAULT_MENU_ID_CONTRAST,
@@ -38,6 +39,9 @@ try:
         find_menu_item_by_name,
         parse_settings_payload,
     )
+    from .protocol.auth import apply_mqtt_tls, is_token_expired, perform_token_refresh
+    from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
+    from .protocol.wol import send_wake_on_lan
 except ImportError:
     from crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
     from discovery import (
@@ -47,8 +51,13 @@ except ImportError:
         probe_tv_auth_methods,
         test_tv_ssl_connection,
     )
-    from navigation import get_next_cycled_source, match_app, resolve_command_key, resolve_source
-    from settings import (
+    from features.navigation import (
+        get_next_cycled_source,
+        match_app,
+        resolve_command_key,
+        resolve_source,
+    )
+    from features.settings import (
         DEFAULT_MENU_ID_BACKLIGHT,
         DEFAULT_MENU_ID_BRIGHTNESS,
         DEFAULT_MENU_ID_CONTRAST,
@@ -58,12 +67,15 @@ except ImportError:
         find_menu_item_by_name,
         parse_settings_payload,
     )
+    from protocol.auth import apply_mqtt_tls, is_token_expired, perform_token_refresh
+    from protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
+    from protocol.wol import send_wake_on_lan
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class HisenseTvClient:
-    """Client for connecting, authenticating, and controlling Hisense VIDAA TVs."""
+    """Client communicating with Hisense VIDAA TV over local TLS/MQTT broker."""
 
     def __init__(
         self,
@@ -74,94 +86,90 @@ class HisenseTvClient:
         password: str | None = None,
         access_token: str | None = None,
         access_token_time: int = 0,
-        access_token_duration: int = 0,
+        access_token_duration: int = 2,
         refresh_token: str | None = None,
         refresh_token_time: int = 0,
-        refresh_token_duration: int = 0,
+        refresh_token_duration: int = 30,
         certfile: str | None = None,
         keyfile: str | None = None,
         ca_cert: str | None = None,
-        auth_profile: str = "auto",
         use_ssl: bool = True,
         verify_ssl: bool = False,
+        auth_profile: str = "auto",
+        name: str | None = None,
     ) -> None:
+        """Initialize the client."""
         self.ip = ip
         self.mac = mac
-        self.client_id = client_id
-        self.username = username
-        self.password = password
+        self.client_id = client_id or ""
+        self.username = username or ""
+        self.password = password or ""
         self.access_token = access_token
-        self.access_token_time = access_token_time
-        self.access_token_duration = access_token_duration
+        self.access_token_time = int(access_token_time)
+        self.access_token_duration = int(access_token_duration)
         self.refresh_token = refresh_token
-        self.refresh_token_time = refresh_token_time
-        self.refresh_token_duration = refresh_token_duration
-        self.auth_profile = (auth_profile or "auto").lower()
+        self.refresh_token_time = int(refresh_token_time)
+        self.refresh_token_duration = int(refresh_token_duration)
+        self.auth_profile = auth_profile
+        self.name = name or f"Hisense TV ({self.ip})"
+
+        self.certfile, self.keyfile = resolve_certificates(certfile, keyfile)
+        self.ca_cert = resolve_ca_certificate(ca_cert)
         self.use_ssl = use_ssl
         self.verify_ssl = verify_ssl
 
-        if self.use_ssl:
-            self.certfile, self.keyfile = resolve_certificates(
-                auth_profile=self.auth_profile,
-                certfile=certfile,
-                keyfile=keyfile,
-            )
-            self.ca_cert = resolve_ca_certificate(ca_cert)
-        else:
-            self.certfile, self.keyfile, self.ca_cert = None, None, None
-
-        self.mqtt_client: mqtt.Client | None = None
-        self.connected = False
-        self.is_on = False
-        self._callbacks: dict[str, list[Callable]] = defaultdict(list)
-
-        self._auth_future: asyncio.Future | None = None
-        self._auth_code_future: asyncio.Future | None = None
-        self._token_future: asyncio.Future | None = None
-        self._loop: asyncio.AbstractEventLoop | None = None
-        self._refreshing_token = False
-        self._last_refresh_attempt = 0.0
-        self._refresh_lock = threading.Lock()
-        self._last_reconnect_time = 0.0
-        self._reconnect_lock = threading.Lock()
-
-        self.topicTVUIBasepath = ""
-        self.topicTVPSBasepath = ""
-        self.topicMobiBasepath = ""
-        self.topicBrcsBasepath = "/remoteapp/mobile/broadcast/"
-        self.topicRemoBasepath = ""
-
+        # Runtime State
+        self.connected: bool = False
+        self.state: str = "off"
+        self.volume: int = 0
+        self.muted: bool = False
         self.sources: list[dict[str, Any]] = []
-        self.apps: list[dict[str, Any]] = []
         self.current_source: str | None = None
-        self.has_notifications: bool = False
-
-        # Picture and Sound Settings state
-        self.picture_settings: dict[int, SettingMenuItem] = {}
-        self.sound_settings: dict[int, SettingMenuItem] = {}
+        self.current_source_id: str | None = None
+        self.apps: list[dict[str, Any]] = []
+        self.current_app: str | None = None
+        self.current_app_id: str | None = None
+        self.current_channel: str | None = None
+        self.current_program: str | None = None
+        self.channel_number: str | None = None
         self.picture_mode: str | None = None
+        self.sound_mode: str | None = None
         self.backlight: int | None = None
         self.brightness: int | None = None
         self.contrast: int | None = None
-        self.sound_mode: str | None = None
+        self.picture_settings: dict[int, SettingMenuItem] = {}
+        self.sound_settings: dict[int, SettingMenuItem] = {}
+        self.audio_output_mode: str | None = None
+        self.hdr_mode: str | None = None
+        self.audio_format: str | None = None
+        self.sleep_timer: int | None = None
+        self.has_notifications: bool = False
 
-        # Live TV & Channel metadata
-        self.channel_name: str | None = None
-        self.channel_number: str | None = None
-        self.program_title: str | None = None
-        self.program_detail: str | None = None
-        self.program_start: str | None = None
-        self.program_end: str | None = None
-        self.last_volume_update_time: float = 0.0
+        self.mqtt_client: mqtt.Client | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._auth_future: asyncio.Future | None = None
+        self._auth_code_future: asyncio.Future | None = None
+        self._token_future: asyncio.Future | None = None
+        self._callbacks: dict[str, list[Callable]] = defaultdict(list)
+        self._refresh_lock = threading.Lock()
+        self._refreshing_token: bool = False
+        self._last_refresh_attempt: float = 0.0
+        self._reconnect_lock = threading.Lock()
+        self._last_reconnect_time: float = 0.0
 
-        if self.client_id:
-            self.define_topic_paths()
+        # Topic paths
+        self.topicBrcsBasepath = TOPIC_BROADCAST_BASEPATH
+        self.topicTVUIBasepath = ""
+        self.topicTVPSBasepath = ""
+        self.topicMobiBasepath = ""
+        self.topicRemoBasepath = ""
+        self.define_topic_paths()
 
     # --------------------------------------------------------------------------
-    # Callback Registry & Dispatch
+    # Callbacks & Event Dispatch
     # --------------------------------------------------------------------------
     def _register_callback(self, event: str, cb: Callable) -> None:
-        if cb and cb not in self._callbacks[event]:
+        if cb not in self._callbacks[event]:
             self._callbacks[event].append(cb)
 
     def _unregister_callback(self, event: str, cb: Callable) -> None:
@@ -173,61 +181,55 @@ class HisenseTvClient:
             try:
                 cb(*args)
             except Exception as e:
-                _LOGGER.error("Error in %s callback: %s", event, e)
+                _LOGGER.error("Error in callback for %s: %s", event, e)
 
     @property
     def on_state_update(self) -> Callable | None:
-        cbs = self._callbacks["state"]
-        return cbs[0] if cbs else None
+        return self._callbacks["state"][0] if self._callbacks["state"] else None
 
     @on_state_update.setter
     def on_state_update(self, cb: Callable) -> None:
-        self._register_callback("state", cb)
+        self._callbacks["state"] = [cb] if cb else []
 
     @property
     def on_volume_update(self) -> Callable | None:
-        cbs = self._callbacks["volume"]
-        return cbs[0] if cbs else None
+        return self._callbacks["volume"][0] if self._callbacks["volume"] else None
 
     @on_volume_update.setter
     def on_volume_update(self, cb: Callable) -> None:
-        self._register_callback("volume", cb)
+        self._callbacks["volume"] = [cb] if cb else []
 
     @property
     def on_sourcelist_update(self) -> Callable | None:
-        cbs = self._callbacks["sourcelist"]
-        return cbs[0] if cbs else None
+        return self._callbacks["sourcelist"][0] if self._callbacks["sourcelist"] else None
 
     @on_sourcelist_update.setter
     def on_sourcelist_update(self, cb: Callable) -> None:
-        self._register_callback("sourcelist", cb)
+        self._callbacks["sourcelist"] = [cb] if cb else []
 
     @property
     def on_applist_update(self) -> Callable | None:
-        cbs = self._callbacks["applist"]
-        return cbs[0] if cbs else None
+        return self._callbacks["applist"][0] if self._callbacks["applist"] else None
 
     @on_applist_update.setter
     def on_applist_update(self, cb: Callable) -> None:
-        self._register_callback("applist", cb)
+        self._callbacks["applist"] = [cb] if cb else []
 
     @property
     def on_disconnected_callback(self) -> Callable | None:
-        cbs = self._callbacks["disconnected"]
-        return cbs[0] if cbs else None
+        return self._callbacks["disconnected"][0] if self._callbacks["disconnected"] else None
 
     @on_disconnected_callback.setter
     def on_disconnected_callback(self, cb: Callable) -> None:
-        self._register_callback("disconnected", cb)
+        self._callbacks["disconnected"] = [cb] if cb else []
 
     @property
     def on_token_refreshed(self) -> Callable | None:
-        cbs = self._callbacks["token_refreshed"]
-        return cbs[0] if cbs else None
+        return self._callbacks["token_refreshed"][0] if self._callbacks["token_refreshed"] else None
 
     @on_token_refreshed.setter
     def on_token_refreshed(self, cb: Callable) -> None:
-        self._register_callback("token_refreshed", cb)
+        self._callbacks["token_refreshed"] = [cb] if cb else []
 
     def register_state_callback(self, cb: Callable) -> None:
         self._register_callback("state", cb)
@@ -290,162 +292,150 @@ class HisenseTvClient:
         self._unregister_callback("sound", cb)
 
     def _dispatch_auth_failed(self) -> None:
-        self._dispatch("auth_failed", self)
+        self._dispatch("auth_failed")
 
     def _dispatch_connected(self) -> None:
-        self.is_on = True
         self._dispatch("connected")
 
     def _dispatch_disconnected(self) -> None:
-        self.is_on = False
         self._dispatch("disconnected")
 
     def _dispatch_state_update(self, data: Any) -> None:
         if isinstance(data, dict):
-            statetype = data.get("statetype")
-            if statetype == "fake_sleep_0":
-                self.is_on = False
-            elif statetype == "fake_sleep_1":
-                self.is_on = True
-            else:
-                self.is_on = True
-            if statetype == "sourceswitch":
-                self.current_source = data.get("sourcename") or data.get("displayname") or data.get("sourceid")
-                if data.get("displayname"):
-                    self.program_title = data.get("displayname")
-            elif statetype in ("livetv", "tv"):
-                self.current_source = "TV"
-                if data.get("channel_name"):
-                    self.channel_name = data.get("channel_name")
-                if data.get("channel_num") is not None:
-                    self.channel_number = str(data.get("channel_num"))
-                if data.get("progname") or data.get("title"):
-                    self.program_title = data.get("progname") or data.get("title")
-                if data.get("detail"):
-                    self.program_detail = data.get("detail")
-                if data.get("starttime"):
-                    self.program_start = data.get("starttime")
-                if data.get("endtime"):
-                    self.program_end = data.get("endtime")
-            elif statetype == "app":
-                self.current_source = data.get("name") or data.get("appId")
-                if data.get("name"):
-                    self.program_title = data.get("name")
+            statetype = str(data.get("statetype", "")).lower()
+            if "sleep" in statetype or "off" in statetype or statetype == "fake_sleep_0":
+                self.state = "off"
+            elif statetype in ("screen_saver", "screensaver"):
+                self.state = "screensaver"
+            elif statetype or data.get("is_power_on") in (1, "1", True):
+                self.state = "on"
+
+            if "sourcename" in data:
+                self.current_source = data["sourcename"]
+            if "sourceid" in data:
+                self.current_source_id = str(data["sourceid"])
+            if "appname" in data:
+                self.current_app = data["appname"]
+            if "appid" in data:
+                self.current_app_id = str(data["appid"])
+            if "channel_name" in data:
+                self.current_channel = data["channel_name"]
+            if "program_title" in data:
+                self.current_program = data["program_title"]
+            if "channel_num" in data:
+                self.channel_number = str(data["channel_num"])
+            if "audio_output" in data:
+                self.audio_output_mode = str(data["audio_output"])
+            if "hdr_mode" in data:
+                self.hdr_mode = str(data["hdr_mode"])
+            if "audio_format" in data:
+                self.audio_format = str(data["audio_format"])
+            if "sleep_time" in data:
+                with contextlib.suppress(ValueError, TypeError):
+                    self.sleep_timer = int(data["sleep_time"])
+
         self._dispatch("state", data)
 
     def _dispatch_volume_update(self, data: Any) -> None:
-        self.is_on = True
-        self.last_volume_update_time = time.time()
+        if isinstance(data, dict):
+            if "volume_value" in data:
+                with contextlib.suppress(ValueError, TypeError):
+                    self.volume = int(data["volume_value"])
+            elif "volume" in data:
+                with contextlib.suppress(ValueError, TypeError):
+                    self.volume = int(data["volume"])
+
+            if "volume_type" in data:
+                self.muted = bool(data["volume_type"] == 1 or data["volume_type"] == "1")
+            elif "is_mute" in data:
+                self.muted = bool(data["is_mute"] in (1, "1", True))
+            elif "muted" in data:
+                self.muted = bool(data["muted"])
+
         self._dispatch("volume", data)
 
     def _dispatch_sourcelist_update(self, data: Any) -> None:
         if isinstance(data, list):
             self.sources = data
-            if data:
-                self.is_on = True
-        self._dispatch("sourcelist", data)
+        elif isinstance(data, dict) and "sourcelist" in data:
+            self.sources = data["sourcelist"]
+        self._dispatch("sourcelist", self.sources)
 
     def _dispatch_applist_update(self, data: Any) -> None:
         if isinstance(data, list):
             self.apps = data
-            if data:
-                self.is_on = True
-        self._dispatch("applist", data)
+        elif isinstance(data, dict) and "applist" in data:
+            self.apps = data["applist"]
+        self._dispatch("applist", self.apps)
 
     def _dispatch_picture_update(self, data: Any) -> None:
-        if isinstance(data, dict):
-            if "menu_info" in data or "menu_list" in data or "items" in data:
-                self.picture_settings = parse_settings_payload(data)
-                pm_item = find_menu_item_by_name(self.picture_settings, "Picture Mode", DEFAULT_MENU_ID_PICTURE_MODE)
-                if pm_item and pm_item.value:
-                    self.picture_mode = str(pm_item.value)
-                bl_item = find_menu_item_by_name(self.picture_settings, "Backlight", DEFAULT_MENU_ID_BACKLIGHT)
-                if bl_item and bl_item.value is not None:
-                    with contextlib.suppress(ValueError, TypeError):
-                        self.backlight = int(bl_item.value)
-                br_item = find_menu_item_by_name(self.picture_settings, "Brightness", DEFAULT_MENU_ID_BRIGHTNESS)
-                if br_item and br_item.value is not None:
-                    with contextlib.suppress(ValueError, TypeError):
-                        self.brightness = int(br_item.value)
-                ct_item = find_menu_item_by_name(self.picture_settings, "Contrast", DEFAULT_MENU_ID_CONTRAST)
-                if ct_item and ct_item.value is not None:
-                    with contextlib.suppress(ValueError, TypeError):
-                        self.contrast = int(ct_item.value)
-            elif data.get("action") == "notify_value_changed":
-                try:
-                    menu_id = int(data.get("menu_id", 0))
-                    menu_val = data.get("menu_value")
-                    if menu_id in self.picture_settings:
-                        self.picture_settings[menu_id].value = menu_val
-                    if menu_id == DEFAULT_MENU_ID_PICTURE_MODE or "picture" in str(self.picture_settings.get(menu_id, "")).lower():
-                        self.picture_mode = str(menu_val)
-                    elif menu_id == DEFAULT_MENU_ID_BACKLIGHT or "backlight" in str(self.picture_settings.get(menu_id, "")).lower():
-                        with contextlib.suppress(ValueError, TypeError):
-                            self.backlight = int(menu_val)
-                except Exception as e:
-                    _LOGGER.debug("Error updating notify_value_changed for picture: %s", e)
+        parsed_items = parse_settings_payload(data)
+        for item in parsed_items:
+            self.picture_settings[item.menu_id] = item
+            name_clean = item.name.lower()
+            if "mode" in name_clean:
+                self.picture_mode = str(item.value)
+            elif "backlight" in name_clean:
+                with contextlib.suppress(ValueError, TypeError):
+                    self.backlight = int(item.value)
+            elif "brightness" in name_clean:
+                with contextlib.suppress(ValueError, TypeError):
+                    self.brightness = int(item.value)
+            elif "contrast" in name_clean:
+                with contextlib.suppress(ValueError, TypeError):
+                    self.contrast = int(item.value)
         self._dispatch("picture", data)
 
     def _dispatch_sound_update(self, data: Any) -> None:
-        if isinstance(data, dict):
-            if "menu_info" in data or "menu_list" in data or "items" in data:
-                self.sound_settings = parse_settings_payload(data)
-                sm_item = find_menu_item_by_name(self.sound_settings, "Sound Mode", DEFAULT_MENU_ID_SOUND_MODE)
-                if sm_item and sm_item.value:
-                    self.sound_mode = str(sm_item.value)
-            elif data.get("action") == "notify_value_changed":
-                try:
-                    menu_id = int(data.get("menu_id", 0))
-                    menu_val = data.get("menu_value")
-                    if menu_id in self.sound_settings:
-                        self.sound_settings[menu_id].value = menu_val
-                    if menu_id == DEFAULT_MENU_ID_SOUND_MODE or "sound" in str(self.sound_settings.get(menu_id, "")).lower():
-                        self.sound_mode = str(menu_val)
-                except Exception as e:
-                    _LOGGER.debug("Error updating notify_value_changed for sound: %s", e)
+        parsed_items = parse_settings_payload(data)
+        for item in parsed_items:
+            self.sound_settings[item.menu_id] = item
+            if "mode" in item.name.lower():
+                self.sound_mode = str(item.value)
         self._dispatch("sound", data)
 
-    def _dispatch_disconnected(self) -> None:
-        self.connected = False
-        self._dispatch("disconnected")
-
     def _dispatch_token_refreshed(self) -> None:
-        self._dispatch("token_refreshed", self)
+        self._dispatch(
+            "token_refreshed",
+            {
+                "access_token": self.access_token,
+                "access_token_time": self.access_token_time,
+                "access_token_duration": self.access_token_duration,
+                "refresh_token": self.refresh_token,
+                "refresh_token_time": self.refresh_token_time,
+                "refresh_token_duration": self.refresh_token_duration,
+            },
+        )
 
     # --------------------------------------------------------------------------
-    # Discovery, Fingerprinting & Network Wrappers
+    # Discovery, Network Diagnostics & SSL Checks
     # --------------------------------------------------------------------------
     def validate_certificates(self) -> None:
-        """Verifies that the SSL certificate and private key files exist and are readable."""
-        if not self.certfile or not os.path.isfile(self.certfile):
+        """Validates that local client certificates exist on disk."""
+        self.certfile, self.keyfile = resolve_certificates(self.certfile, self.keyfile)
+        self.ca_cert = resolve_ca_certificate(self.ca_cert)
+        if not self.certfile or not self.keyfile:
             raise FileNotFoundError(
-                f"SSL Certificate file not found: '{self.certfile}'. "
-                "Please place certificate files in '/config/ssl' or specify --cert."
-            )
-        if not self.keyfile or not os.path.isfile(self.keyfile):
-            raise FileNotFoundError(
-                f"SSL Private Key file not found: '{self.keyfile}'. "
-                "Please place key files in '/config/ssl' or specify --key."
+                f"Client certificate ({self.certfile}) or private key ({self.keyfile}) could not be resolved."
             )
 
     def test_ssl_connection(self, timeout: float = 5.0) -> dict[str, Any]:
-        """Tests the raw TLS handshake with the TV on port 36669 without authenticating."""
-        self.validate_certificates()
+        """Performs a raw TLS handshake to test SSL reachability and cipher negotiation."""
         return test_tv_ssl_connection(
             self.ip,
-            self.certfile,
-            self.keyfile,
+            certfile=self.certfile,
+            keyfile=self.keyfile,
             ca_cert=self.ca_cert,
             verify_ssl=self.verify_ssl,
             timeout=timeout,
         )
 
     def get_device_fingerprint(self, timeout: float = 2.0) -> dict[str, Any]:
-        """Fetches UPnP, DLNA, and mDNS device metadata for model and capability identification."""
+        """Fetches UPnP/SSDP device description XML from the TV."""
         return discover_device_fingerprint(self.ip, timeout=timeout)
 
     def probe_auth_methods(self, timeout: float = 2.0) -> dict[str, Any]:
-        """Probes TV MQTT broker with various auth algorithms to diagnose compatibility."""
+        """Probes which authentication handshake profiles are accepted by the TV broker."""
         return probe_tv_auth_methods(
             self.ip,
             certfile=self.certfile,
@@ -476,10 +466,12 @@ class HisenseTvClient:
     # --------------------------------------------------------------------------
     def define_topic_paths(self) -> None:
         """Sets up topic paths for the specific client ID."""
-        self.topicTVUIBasepath = f"/remoteapp/tv/ui_service/{self.client_id}/"
-        self.topicTVPSBasepath = f"/remoteapp/tv/platform_service/{self.client_id}/"
-        self.topicMobiBasepath = f"/remoteapp/mobile/{self.client_id}/"
-        self.topicRemoBasepath = f"/remoteapp/tv/remote_service/{self.client_id}/"
+        paths = build_topic_paths(self.client_id)
+        self.topicTVUIBasepath = paths.ui
+        self.topicTVPSBasepath = paths.platform
+        self.topicMobiBasepath = paths.mobile
+        self.topicRemoBasepath = paths.remote
+        self.topicBrcsBasepath = paths.broadcast
 
     def generate_initial_creds(
         self,
@@ -512,27 +504,14 @@ class HisenseTvClient:
     # --------------------------------------------------------------------------
     def _apply_tls(self, client: mqtt.Client) -> None:
         """Applies TLS certificate configuration to an MQTT client instance."""
-        if not self.use_ssl or not self.certfile or not self.keyfile:
-            return
-
-        if self.verify_ssl and self.ca_cert and os.path.isfile(self.ca_cert):
-            client.tls_set(
-                ca_certs=self.ca_cert,
-                certfile=self.certfile,
-                keyfile=self.keyfile,
-                cert_reqs=ssl.CERT_REQUIRED,
-                tls_version=ssl.PROTOCOL_TLS,
-            )
-            client.tls_insecure_set(True)
-        else:
-            client.tls_set(
-                ca_certs=None,
-                certfile=self.certfile,
-                keyfile=self.keyfile,
-                cert_reqs=ssl.CERT_NONE,
-                tls_version=ssl.PROTOCOL_TLS,
-            )
-            client.tls_insecure_set(True)
+        apply_mqtt_tls(
+            client=client,
+            certfile=self.certfile,
+            keyfile=self.keyfile,
+            ca_cert=self.ca_cert,
+            verify_ssl=self.verify_ssl,
+            use_ssl=self.use_ssl,
+        )
 
     def create_mqtt_client(self, client_id: str, username: str, password: str) -> mqtt.Client:
         """Creates and configures an authenticated MQTT client."""
@@ -565,33 +544,31 @@ class HisenseTvClient:
             self.connected = True
             _LOGGER.info("Connected to TV MQTT Broker")
             self._dispatch_connected()
-            if hasattr(self, "topicBrcsBasepath"):
-                client.subscribe([
-                    (self.topicBrcsBasepath + "ui_service/state", 0),
-                    (self.topicBrcsBasepath + "platform_service/actions/volumechange", 0),
-                    (self.topicBrcsBasepath + "ui_service/volume", 0),
-                    (self.topicBrcsBasepath + "platform_service/actions/tvsleep", 0),
-                    (self.topicBrcsBasepath + "ui_service/data/hotelmodechange", 0),
-                    (self.topicMobiBasepath + "ui_service/data/sourcelist", 0),
-                    (self.topicMobiBasepath + "ui_service/data/applist", 0),
-                    (self.topicMobiBasepath + "ui_service/data/gettvstate", 0),
-                    (self.topicMobiBasepath + "ui_service/data/state", 0),
-                    (self.topicMobiBasepath + "platform_service/data/getvolume", 0),
-                    (self.topicMobiBasepath + "platform_service/data/gettvinfo", 0),
-                    (self.topicMobiBasepath + "platform_service/data/getdeviceinfo", 0),
-                    (self.topicMobiBasepath + "ui_service/data/capability", 0),
-                    (self.topicMobiBasepath + "platform_service/data/picturesetting", 0),
-                    (self.topicBrcsBasepath + "platform_service/data/picturesetting", 0),
-                    (self.topicMobiBasepath + "platform_service/data/soundsetting", 0),
-                    (self.topicBrcsBasepath + "platform_service/data/soundsetting", 0),
-                ])
-                threading.Timer(0.5, self.query_initial_state).start()
+            client.subscribe([
+                (self.topicBrcsBasepath + "ui_service/state", 0),
+                (self.topicBrcsBasepath + "platform_service/actions/volumechange", 0),
+                (self.topicBrcsBasepath + "ui_service/volume", 0),
+                (self.topicBrcsBasepath + "platform_service/actions/tvsleep", 0),
+                (self.topicBrcsBasepath + "ui_service/data/hotelmodechange", 0),
+                (self.topicMobiBasepath + "ui_service/data/sourcelist", 0),
+                (self.topicMobiBasepath + "ui_service/data/applist", 0),
+                (self.topicMobiBasepath + "ui_service/data/gettvstate", 0),
+                (self.topicMobiBasepath + "ui_service/data/state", 0),
+                (self.topicMobiBasepath + "platform_service/data/getvolume", 0),
+                (self.topicMobiBasepath + "platform_service/data/gettvinfo", 0),
+                (self.topicMobiBasepath + "platform_service/data/getdeviceinfo", 0),
+                (self.topicMobiBasepath + "ui_service/data/capability", 0),
+                (self.topicMobiBasepath + "platform_service/data/picturesetting", 0),
+                (self.topicBrcsBasepath + "platform_service/data/picturesetting", 0),
+                (self.topicMobiBasepath + "platform_service/data/soundsetting", 0),
+                (self.topicBrcsBasepath + "platform_service/data/soundsetting", 0),
+            ])
+            threading.Timer(0.5, self.query_initial_state).start()
         else:
             self.connected = False
             _LOGGER.error("Failed to connect to TV MQTT Broker, rc: %d", rc)
 
             if rc in (4, 5):
-                # Immediately halt paho-mqtt auto-reconnect loop to avoid flapping/broker storm
                 with contextlib.suppress(Exception):
                     client.loop_stop()
 
@@ -911,91 +888,33 @@ class HisenseTvClient:
             return False
 
         if not force and self.access_token:
-            if not self.access_token_time or not self.access_token_duration:
+            if not is_token_expired(self.access_token_time, self.access_token_duration):
                 return False
-            now = int(time.time())
-            token_expiration = self.access_token_time + (self.access_token_duration * 86400)
-            time_remaining = token_expiration - now
-            if time_remaining > 0:
-                return False
-            _LOGGER.info("Access token expired (remaining: %ds). Refreshing...", time_remaining)
+            _LOGGER.info("Access token expired. Refreshing...")
 
         return self.refresh_tokens()
 
     def refresh_tokens(self) -> bool:
         """Connects with the refresh token to obtain a fresh access token."""
-        if not self.refresh_token or not self.client_id or not self.username:
-            _LOGGER.warning("Cannot refresh token: missing refresh_token, client_id, or username")
-            return False
-
         was_connected = self.connected
         main_client = self.mqtt_client
         if main_client:
-            try:
+            with contextlib.suppress(Exception):
                 main_client.loop_stop()
                 main_client.disconnect()
-            except Exception:
-                pass
             self.mqtt_client = None
             self.connected = False
 
-        client = mqtt.Client(client_id=self.client_id, clean_session=True, protocol=mqtt.MQTTv311, transport="tcp")
-        self._apply_tls(client)
-        client.username_pw_set(username=self.username, password=self.refresh_token)
-
-        lock = threading.Event()
-        updated_data: dict[str, Any] = {}
-        connect_rc = [None]
-
-        def on_refresh_connect(cl, userdata, flags, rc):
-            connect_rc[0] = rc
-            if rc == 0:
-                _LOGGER.info("Refresh client connected successfully. Subscribing to token topics...")
-                cl.subscribe(self.topicMobiBasepath + "#")
-                payload = json.dumps({"refreshtoken": self.refresh_token or ""})
-                cl.publish(self.topicTVPSBasepath + "data/gettoken", payload)
-            else:
-                _LOGGER.error("Refresh client connection failed, rc: %d", rc)
-                lock.set()
-
-        def on_refresh_subscribe(cl, userdata, mid, granted_qos):
-            payload = json.dumps({"refreshtoken": self.refresh_token or ""})
-            cl.publish(self.topicTVPSBasepath + "data/gettoken", payload)
-
-        def on_token_msg(cl, userdata, msg):
-            nonlocal updated_data
-            try:
-                payload_str = msg.payload.decode("utf-8", errors="ignore")
-                _LOGGER.debug("Refresh client received message on %s: %s", msg.topic, payload_str)
-                data = json.loads(payload_str)
-                if isinstance(data, dict) and "accesstoken" in data:
-                    updated_data = data
-                    lock.set()
-            except Exception as e:
-                _LOGGER.error("Error parsing refreshed token: %s", e)
-
-        client.on_connect = on_refresh_connect
-        client.on_subscribe = on_refresh_subscribe
-        client.on_message = on_token_msg
-        client.on_disconnect = lambda cl, userdata, rc: _LOGGER.debug("Refresh client disconnected: %d", rc)
-
-        try:
-            client.connect(self.ip, 36669, 60)
-            client.loop_start()
-
-            start = time.time()
-            while not lock.is_set() and time.time() - start < 10:
-                time.sleep(0.1)
-        except (OSError, TimeoutError) as e:
-            _LOGGER.debug("TV is offline or unreachable during token refresh: %s", e)
-        except Exception as e:
-            _LOGGER.error("Unexpected error during refresh client connection: %s", e)
-        finally:
-            try:
-                client.loop_stop()
-                client.disconnect()
-            except Exception:
-                pass
+        updated_data = perform_token_refresh(
+            ip=self.ip,
+            client_id=self.client_id,
+            username=self.username,
+            refresh_token=self.refresh_token or "",
+            certfile=self.certfile,
+            keyfile=self.keyfile,
+            ca_cert=self.ca_cert,
+            verify_ssl=self.verify_ssl,
+        )
 
         if updated_data:
             self.access_token = updated_data["accesstoken"]
@@ -1003,14 +922,14 @@ class HisenseTvClient:
             self.access_token_duration = int(updated_data.get("accesstoken_duration_day", 2))
             self.refresh_token = updated_data.get("refreshtoken", self.refresh_token)
             self.refresh_token_time = int(updated_data.get("refreshtoken_time", int(time.time())))
-            self.refresh_token_duration = int(updated_data.get("refreshtoken_duration_day") or updated_data.get("refresh_token_duration_day", 30))
+            self.refresh_token_duration = int(
+                updated_data.get("refreshtoken_duration_day")
+                or updated_data.get("refresh_token_duration_day", 30)
+            )
             self._dispatch_token_refreshed()
             if was_connected or main_client:
                 self.connect_and_run()
             return True
-
-        if connect_rc[0] is not None:
-            _LOGGER.error("Failed to refresh token. Connect RC: %d", connect_rc[0])
 
         return False
 
@@ -1090,51 +1009,7 @@ class HisenseTvClient:
         ip: str | None = None,
     ) -> bool:
         """Sends standard Wake-on-LAN magic packet UDP broadcasts for one or multiple MACs."""
-        if not mac:
-            return False
-
-        mac_list = [mac] if isinstance(mac, str) else list(mac)
-        success = False
-
-        for single_mac in mac_list:
-            if not single_mac or not isinstance(single_mac, str):
-                continue
-            cleaned_mac = single_mac.replace(":", "").replace("-", "").replace(".", "").strip()
-            if len(cleaned_mac) != 12:
-                continue
-            try:
-                mac_bytes = bytes.fromhex(cleaned_mac)
-                magic_packet = b"\xff" * 6 + mac_bytes * 16
-
-                broadcast_targets = set()
-                if broadcast_ip:
-                    broadcast_targets.add(broadcast_ip)
-                else:
-                    broadcast_targets.add("255.255.255.255")
-                    if ip:
-                        try:
-                            ip_obj = ipaddress.ip_address(ip)
-                            if isinstance(ip_obj, ipaddress.IPv4Address):
-                                subnet_broadcast = f"{ip.rsplit('.', 1)[0]}.255"
-                                broadcast_targets.add(subnet_broadcast)
-                        except ValueError:
-                            pass
-
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                    for target in broadcast_targets:
-                        for p in (port, 7 if port == 9 else port):
-                            try:
-                                sock.sendto(magic_packet, (target, p))
-                            except Exception as target_err:
-                                _LOGGER.debug("WoL target %s:%s send error: %s", target, p, target_err)
-
-                _LOGGER.debug("Sent Wake-on-LAN magic packet to %s (targets: %s)", single_mac, broadcast_targets)
-                success = True
-            except Exception as e:
-                _LOGGER.warning("Failed to send Wake-on-LAN packet to %s: %s", single_mac, e)
-
-        return success
+        return send_wake_on_lan(mac=mac, broadcast_ip=broadcast_ip, port=port, ip=ip)
 
     def show_message(self, message: str, title: str | None = None, duration: int = 5) -> bool:
         """Displays an on-screen toast popup notification on the TV."""
@@ -1270,7 +1145,7 @@ class HisenseTvClient:
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/launchapp", payload)
 
     # --------------------------------------------------------------------------
-    # Picture & Sound Settings Controls (Issue #20 & Beyond)
+    # Picture & Sound Settings Controls
     # --------------------------------------------------------------------------
     def get_picture_settings(self) -> None:
         """Requests current picture settings menu information from the TV."""
@@ -1368,7 +1243,7 @@ class HisenseTvClient:
         loop = asyncio.get_running_loop()
         future = loop.create_future()
 
-        def on_msg(client, userdata, msg):
+        def on_msg(client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
             loop.call_soon_threadsafe(future.set_result, msg.payload.decode("utf-8"))
 
         self.mqtt_client.message_callback_add(sub_topic, on_msg)
