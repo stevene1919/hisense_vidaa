@@ -1,6 +1,5 @@
 import logging
 from typing import Any
-from urllib.parse import urlparse
 
 import voluptuous as vol
 from homeassistant import config_entries
@@ -41,7 +40,7 @@ from .const import (
     DOMAIN,
 )
 from .crypto import check_certs_exist, get_profile_default_cert_paths, resolve_certificates
-from .discovery import get_arp_mac
+from .discovery import get_arp_mac, parse_ssdp_discovery, parse_zeroconf_discovery
 from .options_flow import (
     AUTH_PROFILE_SELECTOR,
     HisenseVidaaOptionsFlowHandler,
@@ -421,58 +420,18 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, discovery_info: SsdpServiceInfo
     ) -> config_entries.ConfigFlowResult:
         """Handle SSDP discovery."""
-        upnp = discovery_info.upnp or {}
-        model_desc = upnp.get("modelDescription") or ""
-        friendly_name = upnp.get("friendlyName", "")
-        manufacturer = upnp.get("manufacturer", "")
-
-        # Filter non-VIDAA devices
-        is_vidaa = (
-            "vidaa_support" in model_desc
-            or "transport_protocol" in model_desc
-            or "hisense" in manufacturer.lower()
-            or "vidaa" in friendly_name.lower()
-            or "hisense" in friendly_name.lower()
-        )
-        if not is_vidaa:
+        parsed = parse_ssdp_discovery(discovery_info)
+        if not parsed:
             return self.async_abort(reason="not_vidaa_tv")
 
-        host = discovery_info.ssdp_headers.get("_host") or discovery_info.ssdp_location
-        if host and "://" in host:
-            host = urlparse(host).hostname
+        self.ip_address = parsed.host
+        self.discovered_title = parsed.title
+        self.manufacturer = parsed.manufacturer
+        self.model = parsed.model
+        self.mac_address = parsed.mac_address
 
-        if not host:
-            return self.async_abort(reason="cannot_connect")
-
-        self.ip_address = host
-        self.discovered_title = (
-            friendly_name
-            if friendly_name and friendly_name != "Renderer"
-            else f"Hisense TV ({host})"
-        )
-        self.manufacturer = manufacturer or "Hisense"
-        self.model = upnp.get("modelName") or upnp.get("modelNumber") or "VIDAA TV"
-
-        for line in model_desc.splitlines():
-            if "=" in line:
-                k, v = line.split("=", 1)
-                k, v = k.strip(), v.strip()
-                if k in ("macWifi", "macEthernet") and v:
-                    from homeassistant.helpers.device_registry import format_mac
-
-                    self.mac_address = format_mac(v)
-                    break
-
-        if not self.mac_address:
-            raw_mac = await self.hass.async_add_executor_job(get_arp_mac, host)
-            if raw_mac:
-                from homeassistant.helpers.device_registry import format_mac
-
-                self.mac_address = format_mac(raw_mac)
-
-        unique_id = self.mac_address or discovery_info.ssdp_udn
-        if unique_id:
-            await self.async_set_unique_id(unique_id)
+        if parsed.unique_id:
+            await self.async_set_unique_id(parsed.unique_id)
             self._abort_if_unique_id_configured(
                 updates={CONF_IP_ADDRESS: self.ip_address}
             )
@@ -483,18 +442,16 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, discovery_info: ZeroconfServiceInfo
     ) -> config_entries.ConfigFlowResult:
         """Handle Zeroconf / mDNS discovery."""
-        host = discovery_info.host
-        if not host:
+        parsed = parse_zeroconf_discovery(discovery_info)
+        if not parsed or not parsed.host:
             return self.async_abort(reason="cannot_connect")
 
-        self.ip_address = host
-        self.discovered_title = f"Hisense TV ({host})"
-        raw_mac = await self.hass.async_add_executor_job(get_arp_mac, host)
-        if raw_mac:
-            from homeassistant.helpers.device_registry import format_mac
+        self.ip_address = parsed.host
+        self.discovered_title = parsed.title
+        self.mac_address = parsed.mac_address
 
-            self.mac_address = format_mac(raw_mac)
-            await self.async_set_unique_id(self.mac_address)
+        if parsed.unique_id:
+            await self.async_set_unique_id(parsed.unique_id)
             self._abort_if_unique_id_configured(
                 updates={CONF_IP_ADDRESS: self.ip_address}
             )
