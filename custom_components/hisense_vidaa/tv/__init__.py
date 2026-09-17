@@ -32,6 +32,7 @@ from .aliases import (
     REGIONAL_APP_ALIASES_NA,
     REGIONAL_APP_ALIASES_UK_EU,
 )
+from .callbacks import CallbackRegistryMixin
 from .fingerprint import (
     UPNP_PORTS,
     get_arp_mac,
@@ -114,6 +115,7 @@ __all__ = [
     "STANDARD_PICTURE_MODES",
     "STANDARD_SOUND_MODES",
     "UPNP_PORTS",
+    "CallbackRegistryMixin",
     "FeatureProbeResult",
     "SettingMenuItem",
     "apply_device_info_update",
