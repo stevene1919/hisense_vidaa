@@ -4,6 +4,7 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
@@ -155,8 +156,6 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 get_arp_mac, self.ip_address
             )
             if raw_mac:
-                from homeassistant.helpers.device_registry import format_mac
-
                 self.mac_address = format_mac(raw_mac)
 
         if self.mac_address:
@@ -225,8 +224,6 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Attempt automatic MAC address resolution from ARP cache
             raw_mac = await self.hass.async_add_executor_job(get_arp_mac, self.ip_address)
             if raw_mac:
-                from homeassistant.helpers.device_registry import format_mac
-
                 self.mac_address = format_mac(raw_mac)
 
             if self.auth_profile == "auto" or self.auth_profile == "legacy":

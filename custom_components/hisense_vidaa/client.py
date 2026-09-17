@@ -59,6 +59,8 @@ from .tv.actions import (
     set_sound_setting as act_set_sound_setting,
     set_volume as act_set_volume,
     show_message as act_show_message,
+    turn_off_tv as act_turn_off_tv,
+    turn_on_tv as act_turn_on_tv,
 )
 from .tv.callbacks import CallbackRegistryMixin
 from .tv.settings import SettingMenuItem
@@ -516,6 +518,14 @@ class HisenseTvClient(CallbackRegistryMixin):
     ) -> bool:
         """Sends standard Wake-on-LAN magic packet UDP broadcasts for one or multiple MACs."""
         return send_wake_on_lan(mac=mac, broadcast_ip=broadcast_ip, port=port, ip=ip)
+
+    def turn_on(self, mac_targets: list[str] | None = None) -> None:
+        """Powers on or wakes the TV safely and idempotently."""
+        act_turn_on_tv(self, mac_targets=mac_targets)
+
+    def turn_off(self) -> None:
+        """Powers off the TV safely."""
+        act_turn_off_tv(self)
 
     def show_message(self, message: str, title: str | None = None, duration: int = 5) -> bool:
         """Displays an on-screen toast popup notification on the TV."""

@@ -23,6 +23,8 @@ from .actions import (
     set_sound_setting,
     set_volume,
     show_message,
+    turn_off_tv,
+    turn_on_tv,
 )
 from .aliases import (
     ALL_KEY_AND_APP_ALIASES,
@@ -172,4 +174,6 @@ __all__ = [
     "set_sound_setting",
     "set_volume",
     "show_message",
+    "turn_off_tv",
+    "turn_on_tv",
 ]

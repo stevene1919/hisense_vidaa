@@ -158,6 +158,30 @@ def resolve_ca_certificate(
     return None
 
 
+PROFILE_CERT_CANDIDATES: dict[str, tuple[list[str], list[str], list[str]]] = {
+    "modern": (
+        ["vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_2024_cert.pem", "vidaa2024_cert.pem", "vidaa_client.pem", "hisense.crt", "client_cert.pem", "cert.pem"],
+        ["vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_2024_key.pem", "vidaa2024_key.pem", "vidaa_client.key", "hisense.key", "client_key.pem", "key.pem"],
+        ["vidaa_2024_client_mobile_android.p12", "client_mobile_android.p12", "3R.p12", "vidaa_cert.p12", "vidaa.p12"],
+    ),
+    "middle": (
+        ["vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_client.pem", "remotenow_2018_cert.pem", "hisense.crt", "client_cert.pem", "cert.pem"],
+        ["vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_client.key", "remotenow_2018_key.pem", "hisense.key", "client_key.pem", "key.pem"],
+        ["client_mobile_android.p12", "vidaa_2024_client_mobile_android.p12", "3R.p12", "rcamobile.p12", "hisense.p12"],
+    ),
+    "remotenow": (
+        ["remotenow_2018_cert.pem", "vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client.pem", "hisense.crt", "client_cert.pem", "cert.pem"],
+        ["remotenow_2018_key.pem", "vidaa_client_v01.key", "vidaa_client.key", "hisense.key", "client_key.pem", "key.pem"],
+        ["rcamobile.p12", "hisense.p12", "remotenow.p12"],
+    ),
+    "auto": (
+        ["vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_client.pem", "hisense.crt", "client_cert.pem", "vidaa_2024_cert.pem", "vidaa2024_cert.pem", "remotenow_2018_cert.pem", "cert.pem"],
+        ["vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_client.key", "hisense.key", "client_key.pem", "vidaa_2024_key.pem", "vidaa2024_key.pem", "remotenow_2018_key.pem", "key.pem"],
+        ["client_mobile_android.p12", "vidaa_2024_client_mobile_android.p12", "3R.p12", "vidaa_cert.p12", "vidaa.p12", "rcamobile.p12", "hisense.p12"],
+    ),
+}
+
+
 def resolve_certificates(
     auth_profile: str = "auto",
     certfile: str | None = None,
@@ -187,119 +211,16 @@ def resolve_certificates(
             return extracted
 
     profile_clean = (auth_profile or "auto").lower()
-
     if profile_clean in ("modern", "vidaa_2024", "vidaa"):
-        cert_names = [
-            "vidaa_client_v01.pem",
-            "vidaa_client_v01.crt",
-            "vidaa_client_v02.pem",
-            "vidaa_2024_cert.pem",
-            "vidaa2024_cert.pem",
-            "vidaa_client.pem",
-            "hisense.crt",
-            "client_cert.pem",
-            "cert.pem",
-        ]
-        key_names = [
-            "vidaa_client_v01.key",
-            "vidaa_client_v02.key",
-            "vidaa_2024_key.pem",
-            "vidaa2024_key.pem",
-            "vidaa_client.key",
-            "hisense.key",
-            "client_key.pem",
-            "key.pem",
-        ]
-        p12_names = [
-            "vidaa_2024_client_mobile_android.p12",
-            "client_mobile_android.p12",
-            "3R.p12",
-            "vidaa_cert.p12",
-            "vidaa.p12",
-        ]
+        profile_key = "modern"
     elif profile_clean in ("middle", "vidaa_15", "vidaa_middle"):
-        cert_names = [
-            "vidaa_client_v01.pem",
-            "vidaa_client_v01.crt",
-            "vidaa_client_v02.pem",
-            "vidaa_client.pem",
-            "remotenow_2018_cert.pem",
-            "hisense.crt",
-            "client_cert.pem",
-            "cert.pem",
-        ]
-        key_names = [
-            "vidaa_client_v01.key",
-            "vidaa_client_v02.key",
-            "vidaa_client.key",
-            "remotenow_2018_key.pem",
-            "hisense.key",
-            "client_key.pem",
-            "key.pem",
-        ]
-        p12_names = [
-            "client_mobile_android.p12",
-            "vidaa_2024_client_mobile_android.p12",
-            "3R.p12",
-            "rcamobile.p12",
-            "hisense.p12",
-        ]
+        profile_key = "middle"
     elif profile_clean in ("remotenow", "remotenow_2018", "standard"):
-        cert_names = [
-            "remotenow_2018_cert.pem",
-            "vidaa_client_v01.pem",
-            "vidaa_client_v01.crt",
-            "vidaa_client.pem",
-            "hisense.crt",
-            "client_cert.pem",
-            "cert.pem",
-        ]
-        key_names = [
-            "remotenow_2018_key.pem",
-            "vidaa_client_v01.key",
-            "vidaa_client.key",
-            "hisense.key",
-            "client_key.pem",
-            "key.pem",
-        ]
-        p12_names = [
-            "rcamobile.p12",
-            "hisense.p12",
-            "remotenow.p12",
-        ]
-    else:  # auto
-        cert_names = [
-            "vidaa_client_v01.pem",
-            "vidaa_client_v01.crt",
-            "vidaa_client_v02.pem",
-            "vidaa_client.pem",
-            "hisense.crt",
-            "client_cert.pem",
-            "vidaa_2024_cert.pem",
-            "vidaa2024_cert.pem",
-            "remotenow_2018_cert.pem",
-            "cert.pem",
-        ]
-        key_names = [
-            "vidaa_client_v01.key",
-            "vidaa_client_v02.key",
-            "vidaa_client.key",
-            "hisense.key",
-            "client_key.pem",
-            "vidaa_2024_key.pem",
-            "vidaa2024_key.pem",
-            "remotenow_2018_key.pem",
-            "key.pem",
-        ]
-        p12_names = [
-            "client_mobile_android.p12",
-            "vidaa_2024_client_mobile_android.p12",
-            "3R.p12",
-            "vidaa_cert.p12",
-            "vidaa.p12",
-            "rcamobile.p12",
-            "hisense.p12",
-        ]
+        profile_key = "remotenow"
+    else:
+        profile_key = "auto"
+
+    cert_names, key_names, p12_names = PROFILE_CERT_CANDIDATES[profile_key]
 
     resolved_cert = None
     resolved_key = None

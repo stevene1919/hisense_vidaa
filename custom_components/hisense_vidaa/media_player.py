@@ -1,6 +1,4 @@
 import logging
-import threading
-import time
 from typing import Any
 
 from homeassistant.components.media_player import (
@@ -244,48 +242,21 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         return base
 
     def turn_on(self) -> None:
-        # Send Wake-on-LAN magic packet if enabled in options
-        enable_wol = self._options.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL)
-        if enable_wol:
-            mac_targets = []
+        """Turn on or wake the TV."""
+        mac_targets = []
+        if self._options.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL):
             if self._mac:
                 mac_targets.append(self._mac)
             sec_mac = self._options.get(CONF_SECONDARY_MAC_ADDRESS)
             if sec_mac and sec_mac not in mac_targets:
                 mac_targets.append(sec_mac)
-            if mac_targets:
-                self._client.send_wake_on_lan(mac_targets, ip=getattr(self._client, "ip", None))
 
-        # Send KEY_POWER via MQTT to wake/turn on the TV if in standby/fake sleep.
-        if self._client.connected:
-            if not self._client.is_on:
-                _LOGGER.debug("TV MQTT connected in standby/fake_sleep. Sending KEY_POWER to wake screen")
-                self._client.send_key("KEY_POWER")
-            else:
-                _LOGGER.debug("TV already connected and running. Skipping KEY_POWER to prevent powering down")
-        else:
-            _LOGGER.debug("TV MQTT not connected. Attempting background token refresh and reconnect to send KEY_POWER")
-            def reconnect_and_send():
-                try:
-                    if self._client.ensure_connected():
-                        for _ in range(50):
-                            if self._client.connected:
-                                _LOGGER.debug("TV MQTT connected after reconnect. Sending KEY_POWER")
-                                self._client.send_key("KEY_POWER")
-                                break
-                            time.sleep(0.1)
-                except Exception as e:
-                    _LOGGER.error("Failed to reconnect and send KEY_POWER: %s", e)
-
-            threading.Thread(target=reconnect_and_send, daemon=True).start()
-
-        self._client.is_on = True
+        self._client.turn_on(mac_targets=mac_targets if mac_targets else None)
         self.schedule_update_ha_state()
 
     def turn_off(self) -> None:
-        if self._client.connected and self._client.is_on:
-            self._client.send_key("KEY_POWER")
-        self._client.is_on = False
+        """Turn off the TV."""
+        self._client.turn_off()
         self.schedule_update_ha_state()
 
     def set_volume_level(self, volume: float) -> None:

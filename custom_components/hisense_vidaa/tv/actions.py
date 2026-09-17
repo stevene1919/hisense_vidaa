@@ -287,3 +287,52 @@ def send_text_input(client: HisenseTvClient, text: str, action: str = "insert") 
         payload = json.dumps({"text": text, "action": action})
         client.mqtt_client.publish(client.topicTVPSBasepath + "actions/txtinputdata", payload)
         client.mqtt_client.publish(client.topicTVPSBasepath + "actions/bwsinputdata", payload)
+
+
+def turn_on_tv(
+    client: HisenseTvClient,
+    mac_targets: list[str] | None = None,
+) -> None:
+    """Powers on or wakes the TV safely and idempotently."""
+    if mac_targets:
+        client.send_wake_on_lan(mac_targets, ip=getattr(client, "ip", None))
+
+    if client.connected:
+        if not client.is_on:
+            _LOGGER.debug(
+                "[%s] TV connected in standby/fake_sleep. Sending KEY_POWER to wake screen",
+                getattr(client, "ip", "unknown"),
+            )
+            client.send_key("KEY_POWER")
+        else:
+            _LOGGER.debug(
+                "[%s] TV already connected and running. Skipping KEY_POWER to prevent powering down",
+                getattr(client, "ip", "unknown"),
+            )
+    else:
+        _LOGGER.debug(
+            "[%s] TV MQTT not connected. Attempting reconnect to send KEY_POWER",
+            getattr(client, "ip", "unknown"),
+        )
+        try:
+            if client.ensure_connected():
+                for _ in range(50):
+                    if client.connected:
+                        client.send_key("KEY_POWER")
+                        break
+                    time.sleep(0.1)
+        except Exception as e:
+            _LOGGER.error(
+                "[%s] Failed to reconnect and send KEY_POWER: %s",
+                getattr(client, "ip", "unknown"),
+                e,
+            )
+
+    client.is_on = True
+
+
+def turn_off_tv(client: HisenseTvClient) -> None:
+    """Powers off the TV safely."""
+    if client.connected and client.is_on:
+        client.send_key("KEY_POWER")
+    client.is_on = False

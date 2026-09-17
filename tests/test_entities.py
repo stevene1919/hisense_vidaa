@@ -37,6 +37,7 @@ from custom_components.hisense_vidaa.sensor import (
     HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
 )
+from custom_components.hisense_vidaa.tv.actions import turn_off_tv, turn_on_tv
 
 
 @pytest.fixture
@@ -73,6 +74,8 @@ def mock_client():
     client.model_name = None
     client.manufacturer = None
     client.firmware_version = None
+    client.turn_on.side_effect = lambda mac_targets=None: turn_on_tv(client, mac_targets)
+    client.turn_off.side_effect = lambda: turn_off_tv(client)
     return client
 
 

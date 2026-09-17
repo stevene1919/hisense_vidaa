@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import time
 from collections.abc import Iterable
 from typing import Any
 
@@ -83,53 +82,20 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the TV on."""
-        enable_wol = self._options.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL)
-        if enable_wol:
-            mac_targets = []
+        mac_targets = []
+        if self._options.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL):
             if self._mac:
                 mac_targets.append(self._mac)
             sec_mac = self._options.get(CONF_SECONDARY_MAC_ADDRESS)
             if sec_mac and sec_mac not in mac_targets:
                 mac_targets.append(sec_mac)
-            if mac_targets:
-                await self._async_exec(
-                    self._client.send_wake_on_lan,
-                    mac_targets,
-                    None,
-                    9,
-                    getattr(self._client, "ip", None),
-                )
 
-        if self._client.connected:
-            # If the TV is in fake_sleep_0 (screen off / standby), send KEY_POWER to wake it.
-            # If it is already ON, do NOT send KEY_POWER because KEY_POWER is a toggle and will turn it off!
-            if not self._client.is_on:
-                _LOGGER.debug("TV connected in standby/fake sleep. Sending KEY_POWER to wake display")
-                await self._async_exec(self._client.send_key, "KEY_POWER")
-            else:
-                _LOGGER.debug("TV already connected and running. Skipping KEY_POWER to prevent powering off")
-        else:
-            await self._async_exec(self._ensure_connected_and_send_power)
-
-        self._client.is_on = True
+        await self._async_exec(self._client.turn_on, mac_targets if mac_targets else None)
         self.async_write_ha_state()
-
-    def _ensure_connected_and_send_power(self) -> None:
-        try:
-            if self._client.ensure_connected():
-                for _ in range(50):
-                    if self._client.connected:
-                        self._client.send_key("KEY_POWER")
-                        break
-                    time.sleep(0.1)
-        except Exception as e:
-            _LOGGER.error("Failed to reconnect and send KEY_POWER from remote: %s", e)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the TV off."""
-        if self._client.connected and self._client.is_on:
-            await self._async_exec(self._client.send_key, "KEY_POWER")
-        self._client.is_on = False
+        await self._async_exec(self._client.turn_off)
         self.async_write_ha_state()
 
     async def async_send_command(self, command: Iterable[str], **kwargs: Any) -> None:
