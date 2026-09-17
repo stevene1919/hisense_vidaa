@@ -844,15 +844,17 @@ class HisenseTvClient:
         if not self.refresh_token:
             return False
 
-        now = int(time.time())
-        token_expiration = self.access_token_time + (self.access_token_duration * 86400)
-        time_remaining = token_expiration - now
+        if not force and self.access_token:
+            if not self.access_token_time or not self.access_token_duration:
+                return False
+            now = int(time.time())
+            token_expiration = self.access_token_time + (self.access_token_duration * 86400)
+            time_remaining = token_expiration - now
+            if time_remaining > 0:
+                return False
+            _LOGGER.info("Access token expired (remaining: %ds). Refreshing...", time_remaining)
 
-        if force or (self.access_token and time_remaining < 43200) or not self.access_token:
-            _LOGGER.info("Access token expired or expiring soon (remaining: %ds). Refreshing...", time_remaining)
-            return self.refresh_tokens()
-
-        return False
+        return self.refresh_tokens()
 
     def refresh_tokens(self) -> bool:
         """Connects with the refresh token to obtain a fresh access token."""
