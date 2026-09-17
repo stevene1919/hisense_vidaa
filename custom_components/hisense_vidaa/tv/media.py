@@ -5,10 +5,61 @@ from __future__ import annotations
 import time
 from typing import Any
 
+__all__ = [
+    "build_media_channel_label",
+    "build_media_player_current_source",
+    "build_media_player_source_list",
+    "clean_source_label",
+    "execute_play_media",
+    "execute_select_source",
+]
+
 
 def clean_source_label(source: str) -> str:
     """Strips trailing HDMI-CEC device annotations (e.g. 'HDMI 2 (PlayStation 5)' -> 'HDMI 2')."""
     return source.split(" (")[0].strip() if " (" in source else source.strip()
+
+
+def build_media_channel_label(channel_name: str | None, channel_num: str | None) -> str | None:
+    """Formats human-readable Live TV channel identifier."""
+    if channel_name and channel_num:
+        return f"{channel_num} {channel_name}"
+    return channel_name or channel_num
+
+
+def build_media_player_current_source(
+    source: str | None,
+    connected_device: str | None,
+    enable_cec: bool = True,
+) -> str | None:
+    """Builds the active source name, optionally augmenting with HDMI-CEC connected device names."""
+    if enable_cec and source and connected_device and "hdmi" in source.lower():
+        return f"{source} ({connected_device})"
+    return source
+
+
+def build_media_player_source_list(
+    source_dict: dict[str, dict[str, Any]],
+    app_dict: dict[str, dict[str, Any]],
+    current_source: str | None = None,
+    connected_device: str | None = None,
+    enable_cec: bool = True,
+    include_apps: bool = True,
+) -> list[str]:
+    """Builds the full sorted list of selectable inputs and smart TV apps."""
+    sources: list[str] = []
+    for s in source_dict.keys():
+        if "hdmi" in s.lower() or s.lower() in ("tv", "av"):
+            if enable_cec and s == current_source and connected_device and "hdmi" in s.lower():
+                sources.append(f"{s} ({connected_device})")
+            else:
+                sources.append(s)
+
+    if include_apps and app_dict:
+        app_names = sorted(app_dict.keys())
+        return sorted(sources) + app_names
+
+    return sorted(sources)
 
 
 def execute_play_media(

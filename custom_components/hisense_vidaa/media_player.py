@@ -30,7 +30,13 @@ from .const import (
     DOMAIN,
 )
 from .entity import HisenseVidaaEntity
-from .tv.media import execute_play_media, execute_select_source
+from .tv.media import (
+    build_media_channel_label,
+    build_media_player_current_source,
+    build_media_player_source_list,
+    execute_play_media,
+    execute_select_source,
+)
 from .tv.settings import (
     DEFAULT_MENU_ID_SOUND_MODE,
     STANDARD_SOUND_MODES,
@@ -149,9 +155,7 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
     @property
     def media_channel(self) -> str | None:
         """Channel currently tuned to for TV tuner sources."""
-        if self._channel_name and self._channel_num:
-            return f"{self._channel_num} {self._channel_name}"
-        return self._channel_name or self._channel_num
+        return build_media_channel_label(self._channel_name, self._channel_num)
 
     @property
     def volume_level(self) -> float:
@@ -164,9 +168,11 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
     @property
     def source(self) -> str | None:
         enable_cec = self._options.get(CONF_ENABLE_CEC_NAMES, DEFAULT_ENABLE_CEC_NAMES)
-        if enable_cec and self._source and self._connected_device and "hdmi" in self._source.lower():
-            return f"{self._source} ({self._connected_device})"
-        return self._source
+        return build_media_player_current_source(
+            source=self._source,
+            connected_device=self._connected_device,
+            enable_cec=enable_cec,
+        )
 
     @property
     def media_image_url(self) -> str | None:
@@ -181,23 +187,17 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
     @property
     def source_list(self) -> list[str]:
         enable_cec = self._options.get(CONF_ENABLE_CEC_NAMES, DEFAULT_ENABLE_CEC_NAMES)
-        sources = []
-        for s in self._source_dict.keys():
-            if "hdmi" in s.lower() or s.lower() in ("tv", "av"):
-                if enable_cec and s == self._source and self._connected_device and "hdmi" in s.lower():
-                    sources.append(f"{s} ({self._connected_device})")
-                else:
-                    sources.append(s)
-
         include_apps = self._options.get(
             CONF_INCLUDE_APPS_IN_SOURCES, DEFAULT_INCLUDE_APPS_IN_SOURCES
         )
-        if include_apps and self._app_dict:
-            # Include all installed apps sorted by name
-            app_names = sorted(self._app_dict.keys())
-            return sorted(sources) + app_names
-
-        return sorted(sources)
+        return build_media_player_source_list(
+            source_dict=self._source_dict,
+            app_dict=self._app_dict,
+            current_source=self._source,
+            connected_device=self._connected_device,
+            enable_cec=enable_cec,
+            include_apps=include_apps,
+        )
 
     @property
     def media_title(self) -> str | None:

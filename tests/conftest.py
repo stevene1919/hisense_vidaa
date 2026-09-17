@@ -500,3 +500,19 @@ def mock_paho_client(monkeypatch):
     mock_client_class = MagicMock(return_value=mock_client_instance)
     monkeypatch.setattr("paho.mqtt.client.Client", mock_client_class)
     return mock_client_instance
+
+
+@pytest.fixture(autouse=True)
+def isolate_host_network_environment(monkeypatch):
+    """Ensures test suite does not query real host ARP tables or network devices by default."""
+    import os
+
+    real_exists = os.path.exists
+
+    def mock_exists(path):
+        if path == "/proc/net/arp":
+            return False
+        return real_exists(path)
+
+    monkeypatch.setattr("os.path.exists", mock_exists)
+

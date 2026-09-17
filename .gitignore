@@ -62,3 +62,9 @@ AGENTS.md
 CLAUDE.md
 .cursorrules
 .copilot*
+
+# Local deployment & developer scripts
+scripts/sync_vodka.sh
+scripts/*.local.*
+*.local.*
+scratch/

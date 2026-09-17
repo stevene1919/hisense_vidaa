@@ -41,6 +41,9 @@ from .fingerprint import (
     query_upnp_descriptor,
 )
 from .media import (
+    build_media_channel_label,
+    build_media_player_current_source,
+    build_media_player_source_list,
     clean_source_label,
     execute_play_media,
     execute_select_source,
@@ -116,6 +119,9 @@ __all__ = [
     "apply_sound_update",
     "apply_state_update",
     "apply_volume_update",
+    "build_media_channel_label",
+    "build_media_player_current_source",
+    "build_media_player_source_list",
     "change_source",
     "change_source_by_name_or_id",
     "clean_source_label",
