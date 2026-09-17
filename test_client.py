@@ -344,14 +344,14 @@ async def do_listen(creds: dict, certfile: str | None, keyfile: str | None, save
         creds["refreshtoken_time"] = c.refresh_token_time
         save_credentials_file(save_path, creds)
 
-    client.on_token_refreshed = on_token_refreshed
-    client.on_state_update = lambda data: print(f"📡 [STATE] {json.dumps(data)}")
-    client.on_volume_update = lambda data: print(f"🔊 [VOLUME] {json.dumps(data)}")
-    client.on_picture_update = lambda data: print(f"🖼️ [PICTURE] {json.dumps(data)}")
-    client.on_sound_update = lambda data: print(f"🎵 [SOUND] {json.dumps(data)}")
-    client.on_sourcelist_update = lambda data: print(f"🔌 [SOURCES] Found {len(data)} inputs")
-    client.on_applist_update = lambda data: print(f"📱 [APPS] Found {len(data)} installed apps")
-    client.on_disconnected_callback = lambda: print("⚠️ [DISCONNECTED] TV disconnected")
+    client.register_token_refreshed_callback(on_token_refreshed)
+    client.register_state_callback(lambda data: print(f"📡 [STATE] {json.dumps(data)}"))
+    client.register_volume_callback(lambda data: print(f"🔊 [VOLUME] {json.dumps(data)}"))
+    client.register_picture_callback(lambda data: print(f"🖼️ [PICTURE] {json.dumps(data)}"))
+    client.register_sound_callback(lambda data: print(f"🎵 [SOUND] {json.dumps(data)}"))
+    client.register_sourcelist_callback(lambda data: print(f"🔌 [SOURCES] Found {len(data)} inputs"))
+    client.register_applist_callback(lambda data: print(f"📱 [APPS] Found {len(data)} installed apps"))
+    client.register_disconnected_callback(lambda: print("⚠️ [DISCONNECTED] TV disconnected"))
 
     client.connect_and_run()
     print("Listening for TV events (Press Ctrl+C to stop)...")

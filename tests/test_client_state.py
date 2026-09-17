@@ -77,7 +77,7 @@ def test_volume_alternate_topic_dispatch():
     client.define_topic_paths()
 
     received_volume = []
-    client.on_volume_update = lambda data: received_volume.append(data)
+    client.register_volume_callback(lambda data: received_volume.append(data))
 
     mock_msg = MagicMock()
     mock_msg.topic = client.topicBrcsBasepath + "ui_service/volume"

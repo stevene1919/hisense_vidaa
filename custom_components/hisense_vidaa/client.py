@@ -211,53 +211,6 @@ class HisenseTvClient:
             except Exception as e:
                 _LOGGER.error("Error in callback for %s: %s", event, e)
 
-    @property
-    def on_state_update(self) -> Callable | None:
-        return self._callbacks["state"][0] if self._callbacks["state"] else None
-
-    @on_state_update.setter
-    def on_state_update(self, cb: Callable) -> None:
-        self._callbacks["state"] = [cb] if cb else []
-
-    @property
-    def on_volume_update(self) -> Callable | None:
-        return self._callbacks["volume"][0] if self._callbacks["volume"] else None
-
-    @on_volume_update.setter
-    def on_volume_update(self, cb: Callable) -> None:
-        self._callbacks["volume"] = [cb] if cb else []
-
-    @property
-    def on_sourcelist_update(self) -> Callable | None:
-        return self._callbacks["sourcelist"][0] if self._callbacks["sourcelist"] else None
-
-    @on_sourcelist_update.setter
-    def on_sourcelist_update(self, cb: Callable) -> None:
-        self._callbacks["sourcelist"] = [cb] if cb else []
-
-    @property
-    def on_applist_update(self) -> Callable | None:
-        return self._callbacks["applist"][0] if self._callbacks["applist"] else None
-
-    @on_applist_update.setter
-    def on_applist_update(self, cb: Callable) -> None:
-        self._callbacks["applist"] = [cb] if cb else []
-
-    @property
-    def on_disconnected_callback(self) -> Callable | None:
-        return self._callbacks["disconnected"][0] if self._callbacks["disconnected"] else None
-
-    @on_disconnected_callback.setter
-    def on_disconnected_callback(self, cb: Callable) -> None:
-        self._callbacks["disconnected"] = [cb] if cb else []
-
-    @property
-    def on_token_refreshed(self) -> Callable | None:
-        return self._callbacks["token_refreshed"][0] if self._callbacks["token_refreshed"] else None
-
-    @on_token_refreshed.setter
-    def on_token_refreshed(self, cb: Callable) -> None:
-        self._callbacks["token_refreshed"] = [cb] if cb else []
 
     def register_state_callback(self, cb: Callable) -> None:
         self._register_callback("state", cb)
