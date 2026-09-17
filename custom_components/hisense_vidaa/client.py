@@ -606,6 +606,9 @@ class HisenseTvClient:
     def _on_disconnect(self, client: mqtt.Client, userdata: Any, rc: int) -> None:
         self.connected = False
         _LOGGER.info("Disconnected from TV MQTT Broker, rc: %d", rc)
+        if (self._auth_future and not self._auth_future.done()) or (self._auth_code_future and not self._auth_code_future.done()):
+            with contextlib.suppress(Exception):
+                client.loop_stop()
         self._dispatch_disconnected()
 
     def _on_message(self, client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
@@ -740,6 +743,7 @@ class HisenseTvClient:
         self.mqtt_client = await loop.run_in_executor(
             None, self.create_mqtt_client, self.client_id, self.username, self.password
         )
+        self.mqtt_client.reconnect_delay_set(min_delay=30, max_delay=60)
 
         self._auth_future = loop.create_future()
         self.mqtt_client.connect_async(self.ip, 36669, 60)

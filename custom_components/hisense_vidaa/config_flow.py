@@ -129,8 +129,19 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except Exception:
             pass
 
+    async def _async_disconnect_existing_client(self) -> None:
+        """Disconnect any running client for this IP/MAC to avoid MQTT session collision during pairing."""
+        if not hasattr(self.hass, "data") or not isinstance(self.hass.data, dict):
+            return
+        for entry_id, entry_data in list(self.hass.data.get(DOMAIN, {}).items()):
+            client = entry_data.get("client") if isinstance(entry_data, dict) else entry_data
+            if client and (getattr(client, "ip", None) == self.ip_address or (self.mac_address and getattr(client, "mac", None) == self.mac_address)):
+                _LOGGER.debug("Disconnecting existing running client for %s during pairing flow", self.ip_address)
+                await self.hass.async_add_executor_job(client.disconnect)
+
     async def _async_init_client_and_auth(self) -> config_entries.ConfigFlowResult:
         """Helper to initialize client, perform static auth check, and route to PIN or options."""
+        await self._async_disconnect_existing_client()
         self.client = HisenseTvClient(
             self.ip_address,
             self.mac_address,
@@ -357,11 +368,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_certs()
 
             # Disconnect existing running client to avoid MQTT session collision during re-pairing
-            if self._reauth_entry and self._reauth_entry.entry_id in self.hass.data.get(DOMAIN, {}):
-                existing_entry_data = self.hass.data[DOMAIN][self._reauth_entry.entry_id]
-                existing_client = existing_entry_data.get("client") if isinstance(existing_entry_data, dict) else None
-                if existing_client:
-                    await self.hass.async_add_executor_job(existing_client.disconnect)
+            await self._async_disconnect_existing_client()
 
             self.client = HisenseTvClient(
                 self.ip_address,
