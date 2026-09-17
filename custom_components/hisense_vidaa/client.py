@@ -1016,10 +1016,6 @@ class HisenseTvClient:
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/sourcelist", "")
             time.sleep(0.1)
             self.mqtt_client.publish(self.topicTVUIBasepath + "actions/applist", "")
-            time.sleep(0.1)
-            self.get_picture_settings()
-            time.sleep(0.1)
-            self.get_sound_settings()
 
     # --------------------------------------------------------------------------
     # TV Commands, Navigation, Settings & Controls
