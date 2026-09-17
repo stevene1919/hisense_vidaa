@@ -10,11 +10,19 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
   - Added thread lock and `ensure_connected(min_interval=5.0)` rate-limiting to throttle connection attempts from media player and remote entity commands.
   - Properly clean up active MQTT background loops and event handlers before instantiating new client instances in `connect_and_run()`.
   - Removed duplicate unthrottled reconnect logic from token refresh failure paths.
+- **PAIRING SESSION COLLISION & PIN POPUP STORM PREVENTION**:
+  - In `config_flow.py`, proactively disconnect and shut down running background clients prior to launching the pairing handshake, preventing identical Client ID session ping-pong collisions (`rc: 7`) and repeated TV PIN modals.
+  - Stopped paho-mqtt auto-reconnect loops on pairing clients during in-flight PIN verification.
+- **PROACTIVE TOKEN REFRESH & STARTUP PIN SUPPRESSION**:
+  - `check_and_refresh_token()` now avoids proactive token refresh on startup whenever the access token is valid (`time_remaining > 0`), preventing unwanted TV pairing dialogs while watching TV.
+  - Removed automatic `actions/picturesetting` and `actions/soundsetting` menu queries from initial connection sequence to avoid prompting protected engineering menu authorization modals on boot.
 - **VERSIONED CERTIFICATE RESOLUTION (Issues #6, #21)**:
   - Extended certificate resolver to recognize versioned certificate bundles (`vidaa_client_v01.pem`/`.crt`/`.key`, `vidaa_client_v02.pem`/`.key`).
   - Added automatic matching key resolution alongside explicit or discovered certificate files.
 - **AUDIO OUTPUT SELECTION STABILITY**:
   - Filtered volume update handler in `select.py` and `media_player.py` to only process master volume (`0`) and ARC (`1`) channels, preventing mute broadcast packets (`volume_type: 2`) from momentarily toggling audio output selection to `Headphone / Bluetooth`.
+- **UNIT TEST EXPANSION**:
+  - Added unit test cases covering token validity thresholds, missing metadata safety, and auth fallback (55 passing tests).
 
 ## [2.8.5] - 2026-09-15
 
