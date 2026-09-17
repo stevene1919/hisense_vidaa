@@ -59,8 +59,8 @@ async def test_services_registration_and_send_key():
         data={ATTR_KEY: "KEY_POWER", ATTR_REPEAT: 2, ATTR_DELAY: 0.01},
     )
     await registered_services[f"{DOMAIN}.{SERVICE_SEND_KEY}"](call_send_key)
-    assert mock_client.send_key.call_count == 2
-    mock_client.send_key.assert_called_with("KEY_POWER")
+    assert mock_client.send_command.call_count == 2
+    mock_client.send_command.assert_called_with("KEY_POWER")
 
 
 @pytest.mark.anyio
@@ -161,3 +161,42 @@ async def test_picture_sound_and_text_input_services():
     )
     await registered_services[f"{DOMAIN}.{SERVICE_SEND_TEXT_INPUT}"](call_txt)
     mock_client.send_text_input.assert_called_with("hello world", "insert")
+
+
+@pytest.mark.anyio
+async def test_service_target_resolution():
+    """Test targeted service execution against specific entries vs fallback broadcast."""
+    from custom_components.hisense_vidaa.services import _get_target_clients
+
+    hass = MagicMock(spec=HomeAssistant)
+    client_1 = MagicMock()
+    client_1.ip = "192.168.50.12"
+    client_1.mac = "e8:51:77:ec:98:1c"
+
+    client_2 = MagicMock()
+    client_2.ip = "192.168.50.15"
+    client_2.mac = "e8:51:77:ec:98:2d"
+
+    hass.data = {
+        DOMAIN: {
+            "entry_1": {"client": client_1},
+            "entry_2": {"client": client_2},
+        }
+    }
+
+    # 1. Target by entry_id
+    call_entry = ServiceCall(domain=DOMAIN, service=SERVICE_SEND_KEY, data={"entry_id": "entry_1"})
+    assert _get_target_clients(hass, call_entry) == [client_1]
+
+    # 2. Target by IP
+    call_ip = ServiceCall(domain=DOMAIN, service=SERVICE_SEND_KEY, data={"ip_address": "192.168.50.15"})
+    assert _get_target_clients(hass, call_ip) == [client_2]
+
+    # 3. Target by MAC
+    call_mac = ServiceCall(domain=DOMAIN, service=SERVICE_SEND_KEY, data={"mac": "e8:51:77:ec:98:1c"})
+    assert _get_target_clients(hass, call_mac) == [client_1]
+
+    # 4. Fallback to all when no target filter specified
+    call_all = ServiceCall(domain=DOMAIN, service=SERVICE_SEND_KEY, data={})
+    assert len(_get_target_clients(hass, call_all)) == 2
+

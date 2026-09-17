@@ -101,6 +101,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         keyfile=keyfile,
         use_ssl=use_ssl,
     )
+    client._loop = hass.loop
 
     # Check for missing certificates and manage Repairs issue
     if use_ssl and (not client.certfile or not client.keyfile or not os.path.isfile(client.certfile) or not os.path.isfile(client.keyfile)):
@@ -131,8 +132,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             },
         )
 
-    client.on_token_refreshed = lambda c: hass.loop.call_soon_threadsafe(
-        update_entry_tokens, c
+    client.register_token_refreshed_callback(
+        lambda c: hass.loop.call_soon_threadsafe(update_entry_tokens, c)
     )
     client.register_auth_failed_callback(
         lambda c: hass.loop.call_soon_threadsafe(entry.async_start_reauth, hass)

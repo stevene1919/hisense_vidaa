@@ -115,7 +115,7 @@ class CallbackRegistryMixin:
         self._unregister_callback("device_info", cb)
 
     def _dispatch_auth_failed(self) -> None:
-        self._dispatch("auth_failed")
+        self._dispatch("auth_failed", self)
 
     def _dispatch_connected(self) -> None:
         self._dispatch("connected")
@@ -158,14 +158,4 @@ class CallbackRegistryMixin:
         self._dispatch("sound", data)
 
     def _dispatch_token_refreshed(self) -> None:
-        self._dispatch(
-            "token_refreshed",
-            {
-                "access_token": self.access_token,
-                "access_token_time": self.access_token_time,
-                "access_token_duration": self.access_token_duration,
-                "refresh_token": self.refresh_token,
-                "refresh_token_time": self.refresh_token_time,
-                "refresh_token_duration": self.refresh_token_duration,
-            },
-        )
+        self._dispatch("token_refreshed", self)

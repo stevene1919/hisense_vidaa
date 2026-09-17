@@ -88,15 +88,24 @@ def apply_volume_update(client: Any, data: Any) -> None:
     if not isinstance(data, dict):
         return
 
-    if "volume_value" in data:
-        with contextlib.suppress(ValueError, TypeError):
-            client.volume = int(data["volume_value"])
-    elif "volume" in data:
-        with contextlib.suppress(ValueError, TypeError):
-            client.volume = int(data["volume"])
+    vol_type = data.get("volume_type")
+    # Volume level updates on master (0), ARC/eARC (1), or unspecifed volume broadcasts
+    if vol_type in (0, "0", 1, "1", None):
+        if "volume_value" in data:
+            with contextlib.suppress(ValueError, TypeError):
+                client.volume = int(data["volume_value"])
+        elif "volume" in data:
+            with contextlib.suppress(ValueError, TypeError):
+                client.volume = int(data["volume"])
 
-    if "volume_type" in data:
-        client.muted = bool(data["volume_type"] == 1 or data["volume_type"] == "1")
+    # Mute status updates on mute broadcast (2) or explicit is_mute/muted fields
+    if vol_type in (2, "2"):
+        if "volume_value" in data:
+            client.muted = bool(data["volume_value"] in (1, "1", True))
+        elif "is_mute" in data:
+            client.muted = bool(data["is_mute"] in (1, "1", True))
+        elif "muted" in data:
+            client.muted = bool(data["muted"])
     elif "is_mute" in data:
         client.muted = bool(data["is_mute"] in (1, "1", True))
     elif "muted" in data:

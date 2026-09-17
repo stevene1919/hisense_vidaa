@@ -45,6 +45,10 @@ async def test_repairs_flow_confirm_certs_found(monkeypatch):
         "custom_components.hisense_vidaa.repairs.resolve_certificates",
         lambda: ("/path/to/cert.pem", "/path/to/key.pem"),
     )
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.repairs.check_certs_exist",
+        lambda c, k: True,
+    )
 
     flow = CertificateMissingRepairFlow()
     flow.hass = hass

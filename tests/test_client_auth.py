@@ -235,3 +235,29 @@ def test_check_and_refresh_token_network_error_resilience():
         refreshed = client.check_and_refresh_token(force=True)
         assert refreshed is False
 
+
+def test_auth_failed_and_token_refreshed_callback_dispatches():
+    """Test auth_failed and token_refreshed dispatch callbacks pass the client instance."""
+    client = HisenseTvClient(ip="192.168.50.12")
+
+    auth_failed_calls = []
+    token_refreshed_calls = []
+
+    def on_auth_failed(c):
+        auth_failed_calls.append(c)
+
+    def on_token_refreshed(c):
+        token_refreshed_calls.append(c)
+
+    client.register_auth_failed_callback(on_auth_failed)
+    client.register_token_refreshed_callback(on_token_refreshed)
+
+    client._dispatch_auth_failed()
+    assert len(auth_failed_calls) == 1
+    assert auth_failed_calls[0] is client
+
+    client._dispatch_token_refreshed()
+    assert len(token_refreshed_calls) == 1
+    assert token_refreshed_calls[0] is client
+
+

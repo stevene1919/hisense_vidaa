@@ -54,6 +54,7 @@ async def test_ssdp_discovery_vidaa_tv(monkeypatch):
 @pytest.mark.anyio
 async def test_ssdp_discovery_non_vidaa_ignored():
     hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
     flow = HisenseVidaaConfigFlow()
     flow.hass = hass
     flow.context = {}

@@ -133,6 +133,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             keyfile=self.keyfile if self.use_ssl else None,
             use_ssl=self.use_ssl,
         )
+        self.client._loop = self.hass.loop
 
         # If auto-detect is selected, probe if TV uses legacy static credentials
         if self.auth_profile == "auto":
@@ -404,7 +405,9 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, discovery_info: SsdpServiceInfo
     ) -> config_entries.ConfigFlowResult:
         """Handle SSDP discovery."""
-        parsed = parse_ssdp_discovery(discovery_info)
+        parsed = await self.hass.async_add_executor_job(
+            parse_ssdp_discovery, discovery_info
+        )
         if not parsed:
             return self.async_abort(reason="not_vidaa_tv")
 
@@ -426,13 +429,19 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, discovery_info: ZeroconfServiceInfo
     ) -> config_entries.ConfigFlowResult:
         """Handle Zeroconf / mDNS discovery."""
-        parsed = parse_zeroconf_discovery(discovery_info)
+        parsed = await self.hass.async_add_executor_job(
+            parse_zeroconf_discovery, discovery_info
+        )
         if not parsed or not parsed.host:
             return self.async_abort(reason="cannot_connect")
 
         self.ip_address = parsed.host
         self.discovered_title = parsed.title
-        self.mac_address = parsed.mac_address or get_arp_mac(parsed.host)
+        self.mac_address = parsed.mac_address
+        if not self.mac_address and parsed.host:
+            raw_mac = await self.hass.async_add_executor_job(get_arp_mac, parsed.host)
+            if raw_mac:
+                self.mac_address = format_mac(raw_mac)
 
         unique_id = self.mac_address or parsed.unique_id
         if unique_id:

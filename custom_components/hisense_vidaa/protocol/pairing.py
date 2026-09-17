@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import time
 from typing import Any
 
 from ..tv.fingerprint import get_tv_timestamp
@@ -163,12 +164,12 @@ async def async_submit_pin_code(client: Any, pin_code: str) -> dict[str, Any]:
         token_payload_str = await asyncio.wait_for(client._token_future, timeout=15)
         token_data = json.loads(token_payload_str)
 
-        client.access_token = token_data["accesstoken"]
-        client.access_token_time = int(token_data["accesstoken_time"])
-        client.access_token_duration = int(token_data["accesstoken_duration_day"])
-        client.refresh_token = token_data["refreshtoken"]
-        client.refresh_token_time = int(token_data["refreshtoken_time"])
-        client.refresh_token_duration = int(token_data["refreshtoken_duration_day"])
+        client.access_token = str(token_data.get("accesstoken", ""))
+        client.access_token_time = int(token_data.get("accesstoken_time") or time.time())
+        client.access_token_duration = int(token_data.get("accesstoken_duration_day") or 30)
+        client.refresh_token = str(token_data.get("refreshtoken", ""))
+        client.refresh_token_time = int(token_data.get("refreshtoken_time") or time.time())
+        client.refresh_token_duration = int(token_data.get("refreshtoken_duration_day") or 30)
 
         _LOGGER.info(
             "[%s] Pairing successful! Received access_token (valid %d days) and refresh_token (valid %d days)",

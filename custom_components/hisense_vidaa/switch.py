@@ -50,6 +50,11 @@ class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
         return self._attr_unique_id
 
     @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return super().available and bool(self._client and self._client.connected)
+
+    @property
     def is_on(self) -> bool:
         return self._is_on
 

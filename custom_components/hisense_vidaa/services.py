@@ -38,11 +38,44 @@ def _get_target_clients(hass: HomeAssistant, call: ServiceCall) -> list[Any]:
     target_mac = call.data.get("mac_address") or call.data.get("mac")
     target_entry_id = call.data.get("entry_id")
 
+    target_entry_ids: set[str] = set()
+    if target_entry_id:
+        target_entry_ids.add(target_entry_id)
+
+    entity_ids = call.data.get("entity_id")
+    if entity_ids:
+        if isinstance(entity_ids, str):
+            entity_ids = [entity_ids]
+        try:
+            from homeassistant.helpers import entity_registry as er
+            ent_reg = er.async_get(hass)
+            for eid in entity_ids:
+                entry = ent_reg.async_get(eid)
+                if entry and entry.config_entry_id:
+                    target_entry_ids.add(entry.config_entry_id)
+        except Exception:
+            pass
+
+    device_ids = call.data.get("device_id")
+    if device_ids:
+        if isinstance(device_ids, str):
+            device_ids = [device_ids]
+        try:
+            from homeassistant.helpers import device_registry as dr
+            dev_reg = dr.async_get(hass)
+            for did in device_ids:
+                device = dev_reg.async_get(did)
+                if device:
+                    for ce_id in device.config_entries:
+                        target_entry_ids.add(ce_id)
+        except Exception:
+            pass
+
     for entry_id, data in domain_data.items():
         client = data.get("client") if isinstance(data, dict) else data
         if not client:
             continue
-        if target_entry_id and entry_id != target_entry_id:
+        if target_entry_ids and entry_id not in target_entry_ids:
             continue
         if target_ip and getattr(client, "ip", None) != target_ip:
             continue
@@ -50,7 +83,7 @@ def _get_target_clients(hass: HomeAssistant, call: ServiceCall) -> list[Any]:
             continue
         clients.append(client)
 
-    if not clients and not (target_entry_id or target_ip or target_mac):
+    if not clients and not (target_entry_ids or target_ip or target_mac or entity_ids or device_ids):
         for entry_id, data in domain_data.items():
             client = data.get("client") if isinstance(data, dict) else data
             if client:
@@ -71,7 +104,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             for i in range(repeat):
                 if i > 0 and delay > 0:
                     await asyncio.sleep(delay)
-                await hass.async_add_executor_job(client.send_key, key)
+                await hass.async_add_executor_job(client.send_command, key)
 
     async def handle_launch_app(call: ServiceCall) -> None:
         """Handle launch_app service call."""

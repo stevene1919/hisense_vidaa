@@ -127,10 +127,7 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
 
     def _handle_update(self, *args: Any) -> None:
         """Handle state update from TV."""
-        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
-            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
-        elif self.hass:
-            self.schedule_update_ha_state()
+        self.schedule_update_ha_state()
 
     def _handle_connected(self, *args: Any) -> None:
         self._handle_update()

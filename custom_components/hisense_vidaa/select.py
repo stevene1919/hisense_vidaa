@@ -60,6 +60,11 @@ class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
     def unique_id(self) -> str:
         return self._attr_unique_id
 
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return super().available and bool(self._client and self._client.connected)
+
     async def async_added_to_hass(self) -> None:
         self._client.register_volume_callback(self._handle_volume_update)
 
@@ -74,10 +79,7 @@ class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
         vol_type = data.get("volume_type")
         if vol_type in (0, 1):
             self._volume_type = int(vol_type)
-            if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
-                self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
-            else:
-                self.schedule_update_ha_state()
+            self.schedule_update_ha_state()
 
     async def async_select_option(self, option: str) -> None:
         """Change the audio output option."""
@@ -112,6 +114,11 @@ class HisenseVidaaPictureModeSelect(HisenseVidaaEntity, SelectEntity):
     def unique_id(self) -> str:
         return self._attr_unique_id
 
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return super().available and bool(self._client and self._client.connected)
+
     async def async_added_to_hass(self) -> None:
         self._client.register_picture_callback(self._handle_picture_update)
 
@@ -134,10 +141,7 @@ class HisenseVidaaPictureModeSelect(HisenseVidaaEntity, SelectEntity):
     def _handle_picture_update(self, data: dict[str, Any]) -> None:
         if self._client.picture_mode:
             self._current_mode = self._client.picture_mode
-        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
-            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
-        else:
-            self.schedule_update_ha_state()
+        self.schedule_update_ha_state()
 
     async def async_select_option(self, option: str) -> None:
         """Change picture mode option."""
@@ -165,6 +169,11 @@ class HisenseVidaaSoundModeSelect(HisenseVidaaEntity, SelectEntity):
     def unique_id(self) -> str:
         return self._attr_unique_id
 
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return super().available and bool(self._client and self._client.connected)
+
     async def async_added_to_hass(self) -> None:
         self._client.register_sound_callback(self._handle_sound_update)
 
@@ -187,10 +196,7 @@ class HisenseVidaaSoundModeSelect(HisenseVidaaEntity, SelectEntity):
     def _handle_sound_update(self, data: dict[str, Any]) -> None:
         if self._client.sound_mode:
             self._current_mode = self._client.sound_mode
-        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
-            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
-        else:
-            self.schedule_update_ha_state()
+        self.schedule_update_ha_state()
 
     async def async_select_option(self, option: str) -> None:
         """Change sound mode option."""

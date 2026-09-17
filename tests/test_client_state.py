@@ -207,3 +207,29 @@ def test_source_cycling_and_command_helpers():
     assert client.send_command("app:netflix") is True
     client.send_key.assert_called_with("KEY_NETFLIX")
 
+
+def test_volume_and_mute_state_parsing():
+    """Test volume and mute parsing properly distinguishes ARC volume from mute packets."""
+    client = HisenseTvClient(ip="192.168.50.12", client_id="test_client")
+    client.define_topic_paths()
+
+    mock_msg = MagicMock()
+    mock_msg.topic = client.topicBrcsBasepath + "platform_service/actions/volumechange"
+
+    # ARC / eARC volume broadcast (volume_type = 1): updates volume, must not set muted=True
+    mock_msg.payload = b'{"volume_value": 35, "volume_type": 1}'
+    client._on_message(None, None, mock_msg)
+    assert client.volume == 35
+    assert client.muted is False
+
+    # Mute broadcast (volume_type = 2, volume_value = 1): sets muted=True
+    mock_msg.payload = b'{"volume_value": 1, "volume_type": 2}'
+    client._on_message(None, None, mock_msg)
+    assert client.muted is True
+
+    # Unmute broadcast (volume_type = 2, volume_value = 0): sets muted=False
+    mock_msg.payload = b'{"volume_value": 0, "volume_type": 2}'
+    client._on_message(None, None, mock_msg)
+    assert client.muted is False
+
+

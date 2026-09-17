@@ -176,16 +176,30 @@ def execute_select_source(
     source: str,
 ) -> None:
     """Resolves and selects a source input or smart TV application."""
+    if not source:
+        return
     clean_src = clean_source_label(source)
+    source_lower = source.strip().lower()
+    clean_lower = clean_src.strip().lower()
 
-    # Check app dictionary for direct match or cleaned match
+    # 1. Check app dictionary (exact and case-insensitive)
     app = app_dict.get(source) or app_dict.get(clean_src)
+    if not app:
+        for name, a in app_dict.items():
+            if isinstance(a, dict) and name.lower() in (source_lower, clean_lower):
+                app = a
+                break
     if app:
-        client.launch_app(app.get("appId", ""), app.get("name", ""), app.get("url", ""))
+        client.launch_app(str(app.get("appId", "")), str(app.get("name", "")), str(app.get("url", "")))
         return
 
-    # Input source match
+    # 2. Input source match (exact and case-insensitive)
     src = source_dict.get(source) or source_dict.get(clean_src)
+    if not src:
+        for name, s in source_dict.items():
+            if isinstance(s, dict) and name.lower() in (source_lower, clean_lower):
+                src = s
+                break
     if src:
         sid = str(src.get("sourceid") or src.get("sourcename") or "")
         sname = str(src.get("sourcename") or clean_src)

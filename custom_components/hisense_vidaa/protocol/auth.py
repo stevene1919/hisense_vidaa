@@ -138,10 +138,7 @@ def perform_token_refresh(
     try:
         client.connect(ip, port, 60)
         client.loop_start()
-
-        start = time.time()
-        while not lock.is_set() and time.time() - start < timeout:
-            time.sleep(0.1)
+        lock.wait(timeout=timeout)
     except (OSError, TimeoutError) as e:
         _LOGGER.debug("[%s] TV is offline or unreachable during token refresh: %s", ip, e)
     except Exception as e:

@@ -340,6 +340,9 @@ class HisenseTvClient(CallbackRegistryMixin):
                     current_time = time.time()
                     with self._refresh_lock:
                         should_refresh = not self._refreshing_token and (current_time - self._last_refresh_attempt > 15)
+                        if should_refresh:
+                            self._refreshing_token = True
+                            self._last_refresh_attempt = current_time
                     if should_refresh:
                         _LOGGER.info("[%s] Authentication failed on connect. Refreshing token in background...", self.ip)
                         threading.Thread(target=self._refresh_token_and_update_creds, daemon=True).start()
@@ -349,20 +352,16 @@ class HisenseTvClient(CallbackRegistryMixin):
                     self._dispatch_auth_failed()
 
     def _refresh_token_and_update_creds(self) -> None:
-        with self._refresh_lock:
-            if self._refreshing_token or not self.refresh_token:
-                return
-            self._refreshing_token = True
-            self._last_refresh_attempt = time.time()
-
         try:
             if self.check_and_refresh_token(force=True):
                 _LOGGER.info("[%s] Token successfully refreshed on connection failure.", self.ip)
+                # Reconnect with new access token
+                self.connect_and_run()
             else:
-                _LOGGER.warning("[%s] Token refresh failed (token expired on TV). Stopping auto-reconnect.", self.ip)
+                _LOGGER.warning("[%s] Failed to refresh token in background.", self.ip)
                 self._dispatch_auth_failed()
         except Exception as e:
-            _LOGGER.error("[%s] Error during background token refresh: %s", self.ip, e)
+            _LOGGER.warning("[%s] Background token refresh error: %s", self.ip, e)
             self._dispatch_auth_failed()
         finally:
             with self._refresh_lock:

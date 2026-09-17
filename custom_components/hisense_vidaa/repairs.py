@@ -9,7 +9,7 @@ from homeassistant import data_entry_flow
 from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
 
-from .crypto import resolve_certificates
+from .crypto import check_certs_exist, resolve_certificates
 
 
 class CertificateMissingRepairFlow(RepairsFlow):
@@ -29,7 +29,7 @@ class CertificateMissingRepairFlow(RepairsFlow):
         if user_input is not None:
             try:
                 cert, key = await self.hass.async_add_executor_job(resolve_certificates)
-                if cert and key:
+                if cert and key and check_certs_exist(cert, key):
                     return self.async_create_entry(data={})
             except Exception:
                 pass

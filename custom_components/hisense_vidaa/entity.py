@@ -57,4 +57,4 @@ class HisenseVidaaEntity(Entity):
     @property
     def available(self) -> bool:
         """Return True if the TV entity is available."""
-        return bool(self._client and self._client.connected)
+        return bool(self._entry_id and self._client)

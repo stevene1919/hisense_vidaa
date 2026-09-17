@@ -207,49 +207,64 @@ async def test_remote_send_command(mock_client, mock_entry):
     assert mock_client.send_command.call_count == 3
 
 
-def test_media_player_play_media(mock_client, mock_entry):
+@pytest.mark.anyio
+async def test_media_player_play_media(mock_client, mock_entry):
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
     mp = HisenseVidaaMediaPlayer(
         client=mock_client,
         entry=mock_entry,
     )
+    mp.hass = hass
     mp._app_dict = {"Netflix": {"appId": "1", "name": "Netflix", "url": "netflix://"}}
 
     # App launch by name
-    mp.play_media("app", "Netflix")
+    await mp.async_play_media("app", "Netflix")
     mock_client.launch_app.assert_called_with("1", "Netflix", "netflix://")
 
     # Deep link URL
-    mp.play_media("url", "https://youtube.com/watch?v=123")
+    await mp.async_play_media("url", "https://youtube.com/watch?v=123")
     mock_client.launch_app.assert_called_with("", "https://youtube.com/watch?v=123", "https://youtube.com/watch?v=123")
 
     # Channel tuning with dot
     mock_client.send_key.reset_mock()
-    mp.play_media("channel", "7.1")
+    await mp.async_play_media("channel", "7.1")
     assert mock_client.send_key.call_count == 3
 
 
-def test_media_player_sound_mode_and_waking_state(mock_client, mock_entry):
+@pytest.mark.anyio
+async def test_media_player_sound_mode_and_waking_state(mock_client, mock_entry):
     from homeassistant.components.media_player import MediaPlayerEntityFeature
     from homeassistant.const import STATE_OFF, STATE_ON
+
+    from custom_components.hisense_vidaa.tv.settings import SettingMenuItem
+
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     mp = HisenseVidaaMediaPlayer(
         client=mock_client,
         entry=mock_entry,
     )
-    mp.hass = MagicMock()
+    mp.hass = hass
 
-    # Supported features check
+    # 1. When TV does NOT report sound mode settings: feature is omitted and sound_mode_list is None
+    mock_client.sound_settings = {}
+    mock_client.sound_mode = None
+    assert mp.sound_mode_list is None
+    assert bool(mp.supported_features & MediaPlayerEntityFeature.SELECT_SOUND_MODE) is False
+
+    # 2. When TV reports sound mode menu options: feature is enabled dynamically
+    sm_item = SettingMenuItem(menu_id=1, name="Sound Mode", value="Standard", options=["Standard", "Theatre", "Music"])
+    mock_client.sound_settings = {1: sm_item}
+    mock_client.sound_mode = "Theatre"
+    assert mp.sound_mode == "Theatre"
+    assert mp.sound_mode_list == ["Standard", "Theatre", "Music"]
     assert bool(mp.supported_features & MediaPlayerEntityFeature.SELECT_SOUND_MODE) is True
 
-    # Sound mode property & list
-    mock_client.sound_mode = "Theatre"
-    mock_client.sound_settings = []
-    assert mp.sound_mode == "Theatre"
-    assert "Standard" in mp.sound_mode_list
-    assert "Theatre" in mp.sound_mode_list
-
     # Select sound mode
-    mp.select_sound_mode("Music")
+    await mp.async_select_sound_mode("Music")
     mock_client.set_sound_mode.assert_called_with("Music")
 
     # Waking state transition: fake_sleep_1
@@ -399,13 +414,22 @@ async def test_picture_calibration_numbers(mock_client, mock_entry):
     mock_client.set_contrast.assert_called_with(90)
 
 
-def test_media_player_cec_source_naming(mock_client, mock_entry):
+@pytest.mark.anyio
+async def test_media_player_cec_source_naming(mock_client, mock_entry):
+    import threading
+    hass = MagicMock(spec=HomeAssistant)
+    hass.loop_thread_id = threading.get_ident()
+    hass.loop = MagicMock()
+    hass.data = {}
+    hass.states = MagicMock()
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
     mock_entry.options = {"enable_cec_names": True, "include_apps_in_sources": True}
     mp = HisenseVidaaMediaPlayer(
         client=mock_client,
         entry=mock_entry,
     )
-    mp.hass = MagicMock()
+    mp.hass = hass
     mp._source_dict = {
         "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1"},
         "HDMI2": {"sourceid": "HDMI2", "sourcename": "HDMI2"},
@@ -418,7 +442,7 @@ def test_media_player_cec_source_naming(mock_client, mock_entry):
     assert "HDMI1" in mp.source_list
 
     # Test select_source stripping HDMI-CEC device label
-    mp.select_source("HDMI2 (PlayStation 5)")
+    await mp.async_select_source("HDMI2 (PlayStation 5)")
     mock_client.change_source.assert_called_with("HDMI2", "HDMI2")
 
 
@@ -468,14 +492,14 @@ async def test_remote_and_media_player_idempotent_power_control(mock_client, moc
 
     # Calling turn_on when already connected & on must NOT send KEY_POWER
     mock_client.send_key.reset_mock()
-    mp.turn_on()
+    await mp.async_turn_on()
     mock_client.send_key.assert_not_called()
     assert mp.state == "on"
 
     # In fake sleep, turn_on should wake display
     mp._handle_state_update({"statetype": "fake_sleep_0"})
     assert mp.state == "off"
-    mp.turn_on()
+    await mp.async_turn_on()
     mock_client.send_key.assert_called_once_with("KEY_POWER")
     assert mp.state == "on"
 
@@ -618,6 +642,48 @@ async def test_select_and_number_platforms_lifecycle(mock_client, mock_entry):
     for num in number_entities:
         await num.async_added_to_hass()
         await num.async_will_remove_from_hass()
+
+
+@pytest.mark.anyio
+async def test_entity_availability_matrix(mock_client, mock_entry):
+    """Test availability of various entities during online and offline TV states."""
+    from custom_components.hisense_vidaa.binary_sensor import HisenseVidaaMqttConnectedBinarySensor
+    from custom_components.hisense_vidaa.button import HisenseVidaaForceReconnectButton
+    from custom_components.hisense_vidaa.number import HisenseVidaaBacklightNumber
+    from custom_components.hisense_vidaa.select import HisenseVidaaPictureModeSelect
+    from custom_components.hisense_vidaa.sensor import HisenseVidaaSessionStatusSensor
+    from custom_components.hisense_vidaa.switch import HisenseVidaaAudioOnlySwitch, HisenseVidaaDebugLoggingSwitch
+
+    s_status = HisenseVidaaSessionStatusSensor(mock_client, mock_entry)
+    bs_mqtt = HisenseVidaaMqttConnectedBinarySensor(mock_client, mock_entry)
+    btn_reconnect = HisenseVidaaForceReconnectButton(mock_client, mock_entry)
+    sw_debug = HisenseVidaaDebugLoggingSwitch(mock_client, mock_entry)
+    sw_audio = HisenseVidaaAudioOnlySwitch(mock_client, mock_entry)
+    sel_pic = HisenseVidaaPictureModeSelect(mock_client, mock_entry)
+    num_backlight = HisenseVidaaBacklightNumber(mock_client, mock_entry)
+
+    # 1. When connected: all entities available
+    mock_client.connected = True
+    assert s_status.available is True
+    assert bs_mqtt.available is True
+    assert btn_reconnect.available is True
+    assert sw_debug.available is True
+    assert sw_audio.available is True
+    assert sel_pic.available is True
+    assert num_backlight.available is True
+
+    # 2. When disconnected (standby): status sensors, buttons, and diagnostic switches stay available
+    mock_client.connected = False
+    assert s_status.available is True
+    assert bs_mqtt.available is True
+    assert btn_reconnect.available is True
+    assert sw_debug.available is True
+
+    # Control entities become unavailable while TV is offline
+    assert sw_audio.available is False
+    assert sel_pic.available is False
+    assert num_backlight.available is False
+
 
 
 

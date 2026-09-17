@@ -33,6 +33,11 @@ class HisenseVidaaBaseNumber(HisenseVidaaEntity, NumberEntity):
         super().__init__(client=client, entry=entry)
         self._value = 50.0
 
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return super().available and bool(self._client and self._client.connected)
+
     async def async_added_to_hass(self) -> None:
         self._client.register_picture_callback(self._handle_picture_update)
 
@@ -41,10 +46,7 @@ class HisenseVidaaBaseNumber(HisenseVidaaEntity, NumberEntity):
 
     def _handle_picture_update(self, data: dict[str, Any]) -> None:
         self._update_value_from_client()
-        if self.hass and hasattr(self.hass, "loop") and self.hass.loop:
-            self.hass.loop.call_soon_threadsafe(self.schedule_update_ha_state)
-        elif self.hass:
-            self.schedule_update_ha_state()
+        self.schedule_update_ha_state()
 
     def _update_value_from_client(self) -> None:
         """Override in subclasses to read specific attribute."""

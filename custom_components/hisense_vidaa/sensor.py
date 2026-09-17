@@ -266,6 +266,8 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaMqttTrackingSensor):
         self._schedule_state_update()
 
     def _handle_state_update(self, state: dict[str, Any]) -> None:
+        if not isinstance(state, dict):
+            return
         statetype = state.get("statetype")
         if statetype == "fake_sleep_0" or not self._client.connected:
             self._attr_native_value = "Off"
@@ -420,6 +422,8 @@ class HisenseVidaaAudioOutputSensor(HisenseVidaaMqttTrackingSensor):
         self._client.unregister_volume_callback(self._handle_volume_update)
 
     def _handle_volume_update(self, data: dict[str, Any]) -> None:
+        if not isinstance(data, dict):
+            return
         vol_type = data.get("volume_type")
         if vol_type == 1:
             self._attr_native_value = "ARC / eARC"
@@ -428,6 +432,8 @@ class HisenseVidaaAudioOutputSensor(HisenseVidaaMqttTrackingSensor):
         self._schedule_state_update()
 
     def _handle_state_update(self, state: dict[str, Any]) -> None:
+        if not isinstance(state, dict):
+            return
         if state.get("statetype") == "fake_sleep_0" or not self._client.connected:
             self._attr_native_value = "Off"
             self._schedule_state_update()

@@ -30,11 +30,11 @@ async def test_diagnostics_redaction():
 
     mock_client = MagicMock()
     mock_client.connected = True
-    mock_client.source = "HDMI 1"
+    mock_client.current_source = "HDMI 1"
     mock_client.current_app = "Netflix"
     mock_client.volume = 20
     mock_client.muted = False
-    mock_client.tv_state = "on"
+    mock_client.state = "on"
     mock_client.client_id = "hisense_client_1"
     mock_client.auth_profile = "modern"
     mock_client.access_token_time = 1700000000
