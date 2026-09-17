@@ -11,10 +11,8 @@ from typing import Any
 
 import paho.mqtt.client as mqtt
 
-try:
-    from .auth import probe_tv_auth_methods, test_tv_ssl_connection
-except (ImportError, ValueError):
-    from protocol.auth import probe_tv_auth_methods, test_tv_ssl_connection
+from ..tv.fingerprint import get_device_fingerprint
+from .auth import probe_tv_auth_methods, test_tv_ssl_connection
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -130,10 +128,6 @@ def ping_tv(
 
     # 5. Device fingerprint
     with contextlib.suppress(Exception):
-        try:
-            from ..tv.fingerprint import get_device_fingerprint
-        except (ImportError, ValueError):
-            from tv.fingerprint import get_device_fingerprint
         results["device_info"] = get_device_fingerprint(ip, timeout=1.5)
 
     return results

@@ -12,7 +12,77 @@ __all__ = [
     "clean_source_label",
     "execute_play_media",
     "execute_select_source",
+    "parse_applist_payload",
+    "parse_sourcelist_payload",
 ]
+
+
+def parse_applist_payload(
+    apps: list[dict[str, Any]] | None,
+) -> tuple[dict[str, str], dict[str, str], list[str]]:
+    """Parses raw TV app list payload into app_dict, icon_map, and favorite_apps.
+
+    Returns:
+        (app_dict: {app_id: name}, app_icons: {name_or_id: clean_url}, favorite_apps: [name, ...])
+    """
+    app_dict: dict[str, str] = {}
+    app_icons: dict[str, str] = {}
+    favorite_apps: list[str] = []
+    if not apps:
+        return app_dict, app_icons, favorite_apps
+
+    for a in apps:
+        if isinstance(a, dict) and (a.get("appId") or a.get("app_id")):
+            a_id = str(a.get("appId") or a.get("app_id", ""))
+            name = a.get("appName") or a.get("name", "")
+            if name:
+                app_dict[a_id] = name
+                if a.get("isFav") in (True, "true", 1, "1"):
+                    favorite_apps.append(name)
+                icon_raw = a.get("httpIcon")
+                if icon_raw and "http" in icon_raw:
+                    clean_url = "http" + icon_raw.split("http", 1)[1]
+                    app_icons[name] = clean_url
+                    app_icons[a_id] = clean_url
+
+    return app_dict, app_icons, favorite_apps
+
+
+def parse_sourcelist_payload(
+    sources: list[dict[str, Any]] | None,
+) -> tuple[list[str], list[str], dict[str, str], str | None]:
+    """Parses raw TV source list payload.
+
+    Returns:
+        (available_sources: [name, ...], connected_inputs: [name, ...], custom_labels: {name: custom_label}, active_source: str | None)
+    """
+    available_sources: list[str] = []
+    connected_inputs: list[str] = []
+    custom_labels: dict[str, str] = {}
+    active_source: str | None = None
+    if not sources:
+        return available_sources, connected_inputs, custom_labels, active_source
+
+    for s in sources:
+        if isinstance(s, dict):
+            src_name = s.get("sourcename") or s.get("sourceName") or s.get("displayname") or s.get("name")
+            if src_name:
+                available_sources.append(src_name)
+                if s.get("has_signal") in ("1", 1, True):
+                    connected_inputs.append(src_name)
+                custom_label = s.get("displayname2")
+                if custom_label and str(custom_label).strip():
+                    custom_labels[src_name] = str(custom_label).strip()
+
+            if (
+                s.get("is_signal") in ("1", 1, True)
+                or s.get("is_active")
+                or s.get("isactive")
+                or s.get("active")
+            ):
+                active_source = src_name
+
+    return available_sources, connected_inputs, custom_labels, active_source
 
 
 def clean_source_label(source: str) -> str:

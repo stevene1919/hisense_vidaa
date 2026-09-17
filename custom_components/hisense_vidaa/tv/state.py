@@ -5,10 +5,7 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
-try:
-    from .settings import parse_settings_payload
-except (ImportError, ValueError):
-    from tv.settings import parse_settings_payload
+from .settings import parse_settings_payload
 
 
 def apply_state_update(client: Any, data: Any) -> None:

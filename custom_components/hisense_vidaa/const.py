@@ -78,7 +78,20 @@ AUTH_PROFILES = {
     "legacy": "Legacy Static (Pre-2022 / Static Credentials)",
 }
 
-try:
-    from .tv.aliases import ALL_KEY_AND_APP_ALIASES as KEY_ALIASES
-except (ImportError, ValueError):
-    from tv.aliases import ALL_KEY_AND_APP_ALIASES as KEY_ALIASES  # noqa: F401
+from homeassistant.helpers import selector
+
+AUTH_PROFILE_OPTIONS = [
+    selector.SelectOptionDict(value="auto", label="Auto Detect (Recommended)"),
+    selector.SelectOptionDict(value="modern", label="VIDAA 2.0 / 2024+ (vidaa_2024)"),
+    selector.SelectOptionDict(value="middle", label="VIDAA 1.5 / Middle (3000–3285)"),
+    selector.SelectOptionDict(value="remotenow", label="RemoteNOW / 2018–2023 (standard)"),
+    selector.SelectOptionDict(value="legacy", label="Legacy Static (Pre-2022 / Static Credentials)"),
+]
+
+AUTH_PROFILE_SELECTOR = selector.SelectSelector(
+    selector.SelectSelectorConfig(
+        options=AUTH_PROFILE_OPTIONS,
+        mode=selector.SelectSelectorMode.DROPDOWN,
+        translation_key="auth_profile",
+    )
+)

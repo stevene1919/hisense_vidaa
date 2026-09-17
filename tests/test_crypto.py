@@ -4,7 +4,12 @@ import hashlib
 import os
 from datetime import UTC, datetime, timedelta
 
-from crypto import (
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization import pkcs12
+
+from custom_components.hisense_vidaa.crypto import (
     CLIENT_ID_PATTERN,
     XOR_TIMESTAMP_MASK,
     clean_mac,
@@ -13,10 +18,6 @@ from crypto import (
     resolve_ca_certificate,
     resolve_certificates,
 )
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.serialization import pkcs12
 
 
 def test_clean_mac():

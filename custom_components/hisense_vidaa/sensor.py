@@ -22,6 +22,7 @@ from .const import (
     DOMAIN,
 )
 from .entity import HisenseVidaaEntity
+from .tv.media import parse_applist_payload, parse_sourcelist_payload
 from .tv.navigation import get_app_icon, get_source_icon
 
 _LOGGER = logging.getLogger(__name__)
@@ -261,22 +262,7 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaMqttTrackingSensor):
     def _handle_applist_update(self, apps: list[dict[str, Any]]) -> None:
         if not apps:
             return
-        self._app_dict = {}
-        self._app_icons = {}
-        self._favorite_apps = []
-        for a in apps:
-            if isinstance(a, dict) and (a.get("appId") or a.get("app_id")):
-                a_id = str(a.get("appId") or a.get("app_id", ""))
-                name = a.get("appName") or a.get("name", "")
-                if name:
-                    self._app_dict[a_id] = name
-                    if a.get("isFav") in (True, "true", 1, "1"):
-                        self._favorite_apps.append(name)
-                    icon_raw = a.get("httpIcon")
-                    if icon_raw and "http" in icon_raw:
-                        clean_url = "http" + icon_raw.split("http", 1)[1]
-                        self._app_icons[name] = clean_url
-                        self._app_icons[a_id] = clean_url
+        self._app_dict, self._app_icons, self._favorite_apps = parse_applist_payload(apps)
         self._schedule_state_update()
 
     def _handle_state_update(self, state: dict[str, Any]) -> None:
@@ -379,27 +365,16 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
         self._schedule_state_update()
 
     def _handle_sourcelist_update(self, sources: list[dict[str, Any]]) -> None:
-        self._available_sources = []
-        self._connected_inputs = []
-        self._custom_labels = {}
-        for s in sources:
-            if isinstance(s, dict):
-                src_name = s.get("sourcename") or s.get("sourceName") or s.get("displayname") or s.get("name")
-                if src_name:
-                    self._available_sources.append(src_name)
-                    if s.get("has_signal") in ("1", 1, True):
-                        self._connected_inputs.append(src_name)
-                    custom_label = s.get("displayname2")
-                    if custom_label and str(custom_label).strip():
-                        self._custom_labels[src_name] = str(custom_label).strip()
-
-                if (
-                    s.get("is_signal") in ("1", 1, True)
-                    or s.get("is_active")
-                    or s.get("isactive")
-                    or s.get("active")
-                ):
-                    self._attr_native_value = src_name
+        if not sources:
+            return
+        (
+            self._available_sources,
+            self._connected_inputs,
+            self._custom_labels,
+            active_src,
+        ) = parse_sourcelist_payload(sources)
+        if active_src:
+            self._attr_native_value = active_src
         self._schedule_state_update()
 
     @property

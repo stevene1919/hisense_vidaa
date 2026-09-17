@@ -7,13 +7,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-# Ensure custom_components/hisense_vidaa is in Python path for test execution
+# Ensure repository root is in Python path for test execution
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(TEST_DIR)
-INTEGRATION_DIR = os.path.join(PROJECT_DIR, "custom_components", "hisense_vidaa")
 
-if INTEGRATION_DIR not in sys.path:
-    sys.path.insert(0, INTEGRATION_DIR)
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 

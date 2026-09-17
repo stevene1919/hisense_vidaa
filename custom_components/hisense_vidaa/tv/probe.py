@@ -10,16 +10,10 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-try:
-    from ..protocol.auth import probe_tv_auth_methods
-    from ..protocol.certs import resolve_ca_certificate, resolve_certificates
-    from .fingerprint import get_arp_mac
-    from .settings import SettingMenuItem
-except (ImportError, ValueError):
-    from protocol.auth import probe_tv_auth_methods
-    from protocol.certs import resolve_ca_certificate, resolve_certificates
-    from tv.fingerprint import get_arp_mac
-    from tv.settings import SettingMenuItem
+from ..protocol.auth import probe_tv_auth_methods
+from ..protocol.certs import resolve_ca_certificate, resolve_certificates
+from .fingerprint import get_arp_mac
+from .settings import SettingMenuItem
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,10 +70,7 @@ def create_client_from_creds(
     auth_profile: str = "auto",
 ) -> Any:
     """Create a configured HisenseTvClient from credentials."""
-    try:
-        from ..client import HisenseTvClient
-    except (ImportError, ValueError):
-        from client import HisenseTvClient  # type: ignore
+    from ..client import HisenseTvClient
 
     resolved_cert, resolved_key = resolve_certificates(certfile, keyfile)
     resolved_ca = resolve_ca_certificate(ca_cert)

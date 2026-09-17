@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock
 
-from client import HisenseTvClient
-from const import KEY_ALIASES
+from custom_components.hisense_vidaa.client import HisenseTvClient
+from custom_components.hisense_vidaa.tv.aliases import ALL_KEY_AND_APP_ALIASES as KEY_ALIASES
 
 
 def test_key_aliases():

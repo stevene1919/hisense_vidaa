@@ -3,7 +3,11 @@
 import email.utils
 from unittest.mock import MagicMock, mock_open, patch
 
-from discovery import get_arp_mac, get_device_fingerprint, get_tv_timestamp
+from custom_components.hisense_vidaa.discovery import (
+    get_arp_mac,
+    get_device_fingerprint,
+    get_tv_timestamp,
+)
 
 
 def test_get_tv_timestamp():

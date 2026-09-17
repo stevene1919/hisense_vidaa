@@ -9,6 +9,7 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .client import HisenseTvClient
 from .const import (
+    AUTH_PROFILE_SELECTOR,
     CONF_ACCESS_TOKEN,
     CONF_ACCESS_TOKEN_DURATION,
     CONF_ACCESS_TOKEN_TIME,
@@ -41,10 +42,7 @@ from .const import (
 )
 from .crypto import check_certs_exist, get_profile_default_cert_paths, resolve_certificates
 from .discovery import get_arp_mac, parse_ssdp_discovery, parse_zeroconf_discovery
-from .options_flow import (
-    AUTH_PROFILE_SELECTOR,
-    HisenseVidaaOptionsFlowHandler,
-)
+from .options_flow import HisenseVidaaOptionsFlowHandler
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -171,6 +169,51 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self.async_step_auth()
 
+    def _get_client_auth_data(self) -> dict[str, Any]:
+        """Collect authentication credentials and device attributes dictionary."""
+        data: dict[str, Any] = {
+            CONF_IP_ADDRESS: self.ip_address,
+            CONF_AUTH_PROFILE: self.auth_profile,
+            CONF_USE_SSL: self.use_ssl,
+        }
+        if self.mac_address:
+            data[CONF_MAC_ADDRESS] = self.mac_address
+        if self.client:
+            data.update({
+                CONF_CLIENT_ID: self.client.client_id,
+                CONF_USERNAME: self.client.username,
+                CONF_PASSWORD: self.client.password,
+                CONF_ACCESS_TOKEN: self.client.access_token,
+                CONF_ACCESS_TOKEN_TIME: self.client.access_token_time,
+                CONF_ACCESS_TOKEN_DURATION: self.client.access_token_duration,
+                CONF_REFRESH_TOKEN: self.client.refresh_token,
+                CONF_REFRESH_TOKEN_TIME: self.client.refresh_token_time,
+                CONF_REFRESH_TOKEN_DURATION: self.client.refresh_token_duration,
+            })
+        if self.certfile:
+            data[CONF_CERTFILE] = self.certfile
+        if self.keyfile:
+            data[CONF_KEYFILE] = self.keyfile
+        if self.model:
+            data[CONF_MODEL] = self.model
+        if self.manufacturer:
+            data[CONF_MANUFACTURER] = self.manufacturer
+        if self.sw_version:
+            data[CONF_SW_VERSION] = self.sw_version
+        return data
+
+    async def _async_finish_reauth(
+        self, reason: str = "reauth_successful"
+    ) -> config_entries.ConfigFlowResult:
+        """Update existing config entry with new credentials and reload."""
+        if self._reauth_entry:
+            self.hass.config_entries.async_update_entry(
+                self._reauth_entry,
+                data={**self._reauth_entry.data, **self._get_client_auth_data()},
+            )
+            await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
+        return self.async_abort(reason=reason)
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
@@ -238,26 +281,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.client.async_submit_pin(pin_code)
 
                 if self._reauth_entry:
-                    self.hass.config_entries.async_update_entry(
-                        self._reauth_entry,
-                        data={
-                            **self._reauth_entry.data,
-                            CONF_IP_ADDRESS: self.ip_address,
-                            CONF_MAC_ADDRESS: self.mac_address or self._reauth_entry.data.get(CONF_MAC_ADDRESS),
-                            CONF_AUTH_PROFILE: self.auth_profile,
-                            CONF_CLIENT_ID: self.client.client_id,
-                            CONF_USERNAME: self.client.username,
-                            CONF_PASSWORD: self.client.password,
-                            CONF_ACCESS_TOKEN: self.client.access_token,
-                            CONF_ACCESS_TOKEN_TIME: self.client.access_token_time,
-                            CONF_ACCESS_TOKEN_DURATION: self.client.access_token_duration,
-                            CONF_REFRESH_TOKEN: self.client.refresh_token,
-                            CONF_REFRESH_TOKEN_TIME: self.client.refresh_token_time,
-                            CONF_REFRESH_TOKEN_DURATION: self.client.refresh_token_duration,
-                        },
-                    )
-                    await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
-                    return self.async_abort(reason="reauth_successful")
+                    return await self._async_finish_reauth(reason="reauth_successful")
 
                 await self._async_discover_device_name()
                 return await self.async_step_options()
@@ -298,25 +322,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.client.async_start_auth()
 
                 if self.auth_profile == "legacy" and self._reauth_entry:
-                    self.hass.config_entries.async_update_entry(
-                        self._reauth_entry,
-                        data={
-                            **self._reauth_entry.data,
-                            CONF_IP_ADDRESS: self.ip_address,
-                            CONF_AUTH_PROFILE: self.auth_profile,
-                            CONF_CLIENT_ID: self.client.client_id,
-                            CONF_USERNAME: self.client.username,
-                            CONF_PASSWORD: self.client.password,
-                            CONF_ACCESS_TOKEN: self.client.access_token,
-                            CONF_ACCESS_TOKEN_TIME: self.client.access_token_time,
-                            CONF_ACCESS_TOKEN_DURATION: self.client.access_token_duration,
-                            CONF_REFRESH_TOKEN: self.client.refresh_token,
-                            CONF_REFRESH_TOKEN_TIME: self.client.refresh_token_time,
-                            CONF_REFRESH_TOKEN_DURATION: self.client.refresh_token_duration,
-                        },
-                    )
-                    await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
-                    return self.async_abort(reason="reauth_successful")
+                    return await self._async_finish_reauth(reason="reauth_successful")
 
                 return await self.async_step_auth()
             except Exception as e:
@@ -379,26 +385,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.client.async_start_auth()
 
                 if self.auth_profile == "legacy" and self._reauth_entry:
-                    self.hass.config_entries.async_update_entry(
-                        self._reauth_entry,
-                        data={
-                            **self._reauth_entry.data,
-                            CONF_IP_ADDRESS: self.ip_address,
-                            CONF_AUTH_PROFILE: self.auth_profile,
-                            CONF_CLIENT_ID: self.client.client_id,
-                            CONF_USERNAME: self.client.username,
-                            CONF_PASSWORD: self.client.password,
-                            CONF_ACCESS_TOKEN: self.client.access_token,
-                            CONF_ACCESS_TOKEN_TIME: self.client.access_token_time,
-                            CONF_ACCESS_TOKEN_DURATION: self.client.access_token_duration,
-                            CONF_REFRESH_TOKEN: self.client.refresh_token,
-                            CONF_REFRESH_TOKEN_TIME: self.client.refresh_token_time,
-                            CONF_REFRESH_TOKEN_DURATION: self.client.refresh_token_duration,
-                            CONF_USE_SSL: self.use_ssl,
-                        },
-                    )
-                    await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
-                    return self.async_abort(reason="reconfigure_successful")
+                    return await self._async_finish_reauth(reason="reconfigure_successful")
 
                 return await self.async_step_auth()
             except Exception as e:
@@ -542,31 +529,7 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         """Allow configuring initial options during setup."""
         if user_input is not None and self.client:
-            entry_data = {
-                CONF_IP_ADDRESS: self.ip_address,
-                CONF_MAC_ADDRESS: self.mac_address,
-                CONF_AUTH_PROFILE: self.auth_profile,
-                CONF_CLIENT_ID: self.client.client_id,
-                CONF_USERNAME: self.client.username,
-                CONF_PASSWORD: self.client.password,
-                CONF_ACCESS_TOKEN: self.client.access_token,
-                CONF_ACCESS_TOKEN_TIME: self.client.access_token_time,
-                CONF_ACCESS_TOKEN_DURATION: self.client.access_token_duration,
-                CONF_REFRESH_TOKEN: self.client.refresh_token,
-                CONF_REFRESH_TOKEN_TIME: self.client.refresh_token_time,
-                CONF_REFRESH_TOKEN_DURATION: self.client.refresh_token_duration,
-                CONF_USE_SSL: self.use_ssl,
-            }
-            if self.certfile:
-                entry_data[CONF_CERTFILE] = self.certfile
-            if self.keyfile:
-                entry_data[CONF_KEYFILE] = self.keyfile
-            if self.model:
-                entry_data[CONF_MODEL] = self.model
-            if self.manufacturer:
-                entry_data[CONF_MANUFACTURER] = self.manufacturer
-            if self.sw_version:
-                entry_data[CONF_SW_VERSION] = self.sw_version
+            entry_data = self._get_client_auth_data()
 
             return self.async_create_entry(
                 title=self.discovered_title or f"Hisense TV ({self.ip_address})",

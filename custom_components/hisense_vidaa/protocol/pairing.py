@@ -8,10 +8,7 @@ import json
 import logging
 from typing import Any
 
-try:
-    from ..tv.fingerprint import get_tv_timestamp
-except (ImportError, ValueError):
-    from tv.fingerprint import get_tv_timestamp
+from ..tv.fingerprint import get_tv_timestamp
 
 _LOGGER = logging.getLogger(__name__)
 

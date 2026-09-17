@@ -76,26 +76,15 @@ def generate_initial_credentials(
     return client_id, username, fourth_hash
 
 
-try:
-    from .protocol.certs import (
-        HAS_CRYPTOGRAPHY,
-        KNOWN_P12_PASSWORDS,
-        check_certs_exist,
-        extract_pkcs12_to_pem,
-        get_profile_default_cert_paths,
-        resolve_ca_certificate,
-        resolve_certificates,
-    )
-except (ImportError, ValueError):
-    from protocol.certs import (
-        HAS_CRYPTOGRAPHY,
-        KNOWN_P12_PASSWORDS,
-        check_certs_exist,
-        extract_pkcs12_to_pem,
-        get_profile_default_cert_paths,
-        resolve_ca_certificate,
-        resolve_certificates,
-    )
+from .protocol.certs import (
+    HAS_CRYPTOGRAPHY,
+    KNOWN_P12_PASSWORDS,
+    check_certs_exist,
+    extract_pkcs12_to_pem,
+    get_profile_default_cert_paths,
+    resolve_ca_certificate,
+    resolve_certificates,
+)
 
 __all__ = [
     "CLIENT_ID_PATTERN",

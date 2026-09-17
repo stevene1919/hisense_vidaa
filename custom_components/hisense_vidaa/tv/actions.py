@@ -7,36 +7,20 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-try:
-    from .navigation import (
-        get_next_cycled_source,
-        match_app,
-        resolve_command_key,
-        resolve_source,
-    )
-    from .settings import (
-        DEFAULT_MENU_ID_BACKLIGHT,
-        DEFAULT_MENU_ID_BRIGHTNESS,
-        DEFAULT_MENU_ID_CONTRAST,
-        DEFAULT_MENU_ID_PICTURE_MODE,
-        DEFAULT_MENU_ID_SOUND_MODE,
-        find_menu_item_by_name,
-    )
-except (ImportError, ValueError):
-    from tv.navigation import (
-        get_next_cycled_source,
-        match_app,
-        resolve_command_key,
-        resolve_source,
-    )
-    from tv.settings import (
-        DEFAULT_MENU_ID_BACKLIGHT,
-        DEFAULT_MENU_ID_BRIGHTNESS,
-        DEFAULT_MENU_ID_CONTRAST,
-        DEFAULT_MENU_ID_PICTURE_MODE,
-        DEFAULT_MENU_ID_SOUND_MODE,
-        find_menu_item_by_name,
-    )
+from .navigation import (
+    get_next_cycled_source,
+    match_app,
+    resolve_command_key,
+    resolve_source,
+)
+from .settings import (
+    DEFAULT_MENU_ID_BACKLIGHT,
+    DEFAULT_MENU_ID_BRIGHTNESS,
+    DEFAULT_MENU_ID_CONTRAST,
+    DEFAULT_MENU_ID_PICTURE_MODE,
+    DEFAULT_MENU_ID_SOUND_MODE,
+    find_menu_item_by_name,
+)
 
 if TYPE_CHECKING:
     from ..client import HisenseTvClient

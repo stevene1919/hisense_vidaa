@@ -7,26 +7,15 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
 
-try:
-    from .protocol.ping import ping_tv
-    from .tv.fingerprint import (
-        UPNP_PORTS,
-        get_arp_mac,
-        get_device_fingerprint,
-        get_tv_timestamp,
-        query_mdns_fingerprint,
-        query_upnp_descriptor,
-    )
-except (ImportError, ValueError):
-    from protocol.ping import ping_tv
-    from tv.fingerprint import (
-        UPNP_PORTS,
-        get_arp_mac,
-        get_device_fingerprint,
-        get_tv_timestamp,
-        query_mdns_fingerprint,
-        query_upnp_descriptor,
-    )
+from .protocol.ping import ping_tv
+from .tv.fingerprint import (
+    UPNP_PORTS,
+    get_arp_mac,
+    get_device_fingerprint,
+    get_tv_timestamp,
+    query_mdns_fingerprint,
+    query_upnp_descriptor,
+)
 
 _LOGGER = logging.getLogger(__name__)
 

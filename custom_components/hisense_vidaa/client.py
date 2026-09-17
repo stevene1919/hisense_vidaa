@@ -12,100 +12,56 @@ from typing import Any
 
 import paho.mqtt.client as mqtt
 
-try:
-    from .crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
-    from .discovery import (
-        get_device_fingerprint as discover_device_fingerprint,
-        get_tv_timestamp,
-        ping_tv,
-    )
-    from .protocol.auth import (
-        apply_mqtt_tls,
-        is_token_expired,
-        perform_token_refresh,
-        probe_tv_auth_methods,
-        test_tv_ssl_connection,
-    )
-    from .protocol.connection import (
-        build_mqtt_client,
-        clean_disconnect_mqtt_client,
-        subscribe_standard_tv_topics,
-    )
-    from .protocol.dispatcher import dispatch_incoming_mqtt_message
-    from .protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
-    from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
-    from .protocol.wol import send_wake_on_lan
-    from .tv.actions import (
-        change_source as act_change_source,
-        change_source_by_name_or_id as act_change_source_by_name_or_id,
-        cycle_source as act_cycle_source,
-        get_picture_settings as act_get_picture_settings,
-        get_sound_settings as act_get_sound_settings,
-        launch_app as act_launch_app,
-        launch_app_by_name as act_launch_app_by_name,
-        query_initial_state as act_query_initial_state,
-        send_command as act_send_command,
-        send_key as act_send_key,
-        send_text_input as act_send_text_input,
-        set_backlight as act_set_backlight,
-        set_brightness as act_set_brightness,
-        set_contrast as act_set_contrast,
-        set_picture_mode as act_set_picture_mode,
-        set_picture_setting as act_set_picture_setting,
-        set_sound_mode as act_set_sound_mode,
-        set_sound_setting as act_set_sound_setting,
-        set_volume as act_set_volume,
-        show_message as act_show_message,
-    )
-    from .tv.callbacks import CallbackRegistryMixin
-    from .tv.settings import SettingMenuItem
-except (ImportError, ValueError):
-    from crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
-    from discovery import (
-        get_device_fingerprint as discover_device_fingerprint,
-        get_tv_timestamp,
-        ping_tv,
-    )
-    from protocol.auth import (
-        apply_mqtt_tls,
-        is_token_expired,
-        perform_token_refresh,
-        probe_tv_auth_methods,
-        test_tv_ssl_connection,
-    )
-    from protocol.connection import (
-        build_mqtt_client,
-        clean_disconnect_mqtt_client,
-        subscribe_standard_tv_topics,
-    )
-    from protocol.dispatcher import dispatch_incoming_mqtt_message
-    from protocol.pairing import async_start_pairing_handshake, async_submit_pin_code
-    from protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
-    from protocol.wol import send_wake_on_lan
-    from tv.actions import (
-        change_source as act_change_source,
-        change_source_by_name_or_id as act_change_source_by_name_or_id,
-        cycle_source as act_cycle_source,
-        get_picture_settings as act_get_picture_settings,
-        get_sound_settings as act_get_sound_settings,
-        launch_app as act_launch_app,
-        launch_app_by_name as act_launch_app_by_name,
-        query_initial_state as act_query_initial_state,
-        send_command as act_send_command,
-        send_key as act_send_key,
-        send_text_input as act_send_text_input,
-        set_backlight as act_set_backlight,
-        set_brightness as act_set_brightness,
-        set_contrast as act_set_contrast,
-        set_picture_mode as act_set_picture_mode,
-        set_picture_setting as act_set_picture_setting,
-        set_sound_mode as act_set_sound_mode,
-        set_sound_setting as act_set_sound_setting,
-        set_volume as act_set_volume,
-        show_message as act_show_message,
-    )
-    from tv.callbacks import CallbackRegistryMixin
-    from tv.settings import SettingMenuItem
+from .crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
+from .discovery import (
+    get_device_fingerprint as discover_device_fingerprint,
+    get_tv_timestamp,
+    ping_tv,
+)
+from .protocol.auth import (
+    apply_mqtt_tls,
+    is_token_expired,
+    perform_token_refresh,
+    probe_tv_auth_methods,
+    test_tv_ssl_connection,
+)
+from .protocol.connection import (
+    build_mqtt_client,
+    clean_disconnect_mqtt_client,
+    subscribe_standard_tv_topics,
+)
+from .protocol.dispatcher import dispatch_incoming_mqtt_message
+from .protocol.pairing import (
+    _async_execute_pairing_attempt,
+    async_start_pairing_handshake,
+    async_submit_pin_code,
+)
+from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
+from .protocol.wol import send_wake_on_lan
+from .tv.actions import (
+    change_source as act_change_source,
+    change_source_by_name_or_id as act_change_source_by_name_or_id,
+    cycle_source as act_cycle_source,
+    get_picture_settings as act_get_picture_settings,
+    get_sound_settings as act_get_sound_settings,
+    launch_app as act_launch_app,
+    launch_app_by_name as act_launch_app_by_name,
+    query_initial_state as act_query_initial_state,
+    send_command as act_send_command,
+    send_key as act_send_key,
+    send_text_input as act_send_text_input,
+    set_backlight as act_set_backlight,
+    set_brightness as act_set_brightness,
+    set_contrast as act_set_contrast,
+    set_picture_mode as act_set_picture_mode,
+    set_picture_setting as act_set_picture_setting,
+    set_sound_mode as act_set_sound_mode,
+    set_sound_setting as act_set_sound_setting,
+    set_volume as act_set_volume,
+    show_message as act_show_message,
+)
+from .tv.callbacks import CallbackRegistryMixin
+from .tv.settings import SettingMenuItem
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -433,10 +389,6 @@ class HisenseTvClient(CallbackRegistryMixin):
         self, profile: str = "modern", use_new_auth: bool | None = None
     ) -> None:
         """Internal helper attempting a single auth handshake attempt."""
-        try:
-            from .protocol.pairing import _async_execute_pairing_attempt
-        except (ImportError, ValueError):
-            from protocol.pairing import _async_execute_pairing_attempt
         await _async_execute_pairing_attempt(self, profile=profile, use_new_auth=use_new_auth)
 
     async def async_submit_pin(self, pin_code: str) -> dict[str, Any]:

@@ -7,22 +7,13 @@ from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
 
-try:
-    from .state import (
-        apply_device_info_update,
-        apply_picture_update,
-        apply_sound_update,
-        apply_state_update,
-        apply_volume_update,
-    )
-except (ImportError, ValueError):
-    from tv.state import (
-        apply_device_info_update,
-        apply_picture_update,
-        apply_sound_update,
-        apply_state_update,
-        apply_volume_update,
-    )
+from .state import (
+    apply_device_info_update,
+    apply_picture_update,
+    apply_sound_update,
+    apply_state_update,
+    apply_volume_update,
+)
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -15,20 +15,18 @@ import os
 import sys
 import time
 
-# Ensure local or HA custom_components/hisense_vidaa directory is in Python path
+# Ensure script directory or HA config is in Python path for package resolution
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 COMP_DIR = os.path.join(SCRIPT_DIR, "custom_components", "hisense_vidaa")
-HA_COMP_DIR = "/config/custom_components/hisense_vidaa"
-if os.path.isdir(COMP_DIR) and COMP_DIR not in sys.path:
-    sys.path.insert(0, COMP_DIR)
-elif os.path.isdir(HA_COMP_DIR) and HA_COMP_DIR not in sys.path:
-    sys.path.insert(0, HA_COMP_DIR)
-elif SCRIPT_DIR not in sys.path:
+HA_CONFIG_DIR = "/config"
+if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
+if os.path.isdir(HA_CONFIG_DIR) and HA_CONFIG_DIR not in sys.path:
+    sys.path.insert(0, HA_CONFIG_DIR)
 
-from client import HisenseTvClient
-from discovery import get_arp_mac
-from tv.probe import (
+from custom_components.hisense_vidaa.client import HisenseTvClient
+from custom_components.hisense_vidaa.discovery import get_arp_mac
+from custom_components.hisense_vidaa.tv.probe import (
     create_client_from_creds,
     generate_markdown_report,
     load_credentials_file,

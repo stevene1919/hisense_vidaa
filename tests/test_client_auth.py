@@ -5,7 +5,8 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
-from client import HisenseTvClient
+
+from custom_components.hisense_vidaa.client import HisenseTvClient
 
 
 def test_legacy_static_auth():

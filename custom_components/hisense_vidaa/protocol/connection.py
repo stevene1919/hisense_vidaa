@@ -8,10 +8,7 @@ from collections.abc import Callable
 
 import paho.mqtt.client as mqtt
 
-try:
-    from .auth import apply_mqtt_tls
-except (ImportError, ValueError):
-    from auth import apply_mqtt_tls
+from .auth import apply_mqtt_tls
 
 _LOGGER = logging.getLogger(__name__)
 

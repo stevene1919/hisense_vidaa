@@ -6,10 +6,7 @@ import logging
 import re
 from typing import Any
 
-try:
-    from .aliases import KEY_ALIASES
-except (ImportError, ValueError):
-    from tv.aliases import KEY_ALIASES
+from .aliases import KEY_ALIASES
 
 _LOGGER = logging.getLogger(__name__)
 
