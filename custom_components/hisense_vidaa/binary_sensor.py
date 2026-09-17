@@ -124,7 +124,7 @@ class HisenseVidaaInUseBinarySensor(HisenseVidaaEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return True when TV is active and not in standby."""
-        return bool(self._client and self._client.connected and self._client.is_on)
+        return bool(self._client and self._client.connected and self._client.state not in ("off", ""))
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -133,10 +133,9 @@ class HisenseVidaaInUseBinarySensor(HisenseVidaaEntity, BinarySensorEntity):
             return {}
         return {
             "current_source": self._client.current_source,
-            "channel_name": self._client.channel_name,
+            "channel_name": self._client.current_channel,
             "channel_number": self._client.channel_number,
-            "program_title": self._client.program_title,
-            "program_detail": self._client.program_detail,
+            "program_title": self._client.current_program,
         }
 
     async def async_added_to_hass(self) -> None:

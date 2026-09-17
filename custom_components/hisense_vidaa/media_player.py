@@ -132,22 +132,15 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
             attrs["mac_address"] = self._mac
         if self._connected_device:
             attrs["connected_device"] = self._connected_device
-        ch_name = self._channel_name or (self._client.channel_name if self._client else None)
+        ch_name = self._channel_name or (self._client.current_channel if self._client else None)
         if ch_name:
             attrs["channel_name"] = ch_name
         ch_num = self._channel_num or (self._client.channel_number if self._client else None)
         if ch_num:
             attrs["channel_num"] = ch_num
             attrs["channel_number"] = ch_num
-        if self._client:
-            if self._client.program_title:
-                attrs["program_title"] = self._client.program_title
-            if self._client.program_detail:
-                attrs["program_detail"] = self._client.program_detail
-            if self._client.program_start:
-                attrs["program_start"] = self._client.program_start
-            if self._client.program_end:
-                attrs["program_end"] = self._client.program_end
+        if self._client and self._client.current_program:
+                attrs["program_title"] = self._client.current_program
         if self._volume_type is not None:
             attrs["audio_output"] = "ARC / eARC" if self._volume_type == 1 else "TV Speakers"
         return attrs
@@ -210,8 +203,8 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         """Return the title of current playing media or Live TV program."""
         if self._state == STATE_OFF:
             return None
-        if self._client and self._client.program_title:
-            return self._client.program_title
+        if self._client and self._client.current_program:
+            return self._client.current_program
         return self._source
 
     @property
@@ -219,8 +212,8 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         """Return the channel or series title if watching Live TV."""
         if self._state == STATE_OFF:
             return None
-        if self._channel_name or (self._client and self._client.channel_name):
-            ch_name = self._channel_name or self._client.channel_name
+        if self._channel_name or (self._client and self._client.current_channel):
+            ch_name = self._channel_name or self._client.current_channel
             ch_num = self._channel_num or (self._client.channel_number if self._client else None)
             if ch_num:
                 return f"{ch_name} ({ch_num})"

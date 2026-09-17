@@ -153,7 +153,7 @@ class HisenseTvClient:
         self.auth_profile = auth_profile
         self.name = name or f"Hisense TV ({self.ip})"
 
-        self.certfile, self.keyfile = resolve_certificates(certfile, keyfile)
+        self.certfile, self.keyfile = resolve_certificates(auth_profile=auth_profile, certfile=certfile, keyfile=keyfile)
         self.ca_cert = resolve_ca_certificate(ca_cert)
         self.use_ssl = use_ssl
         self.verify_ssl = verify_ssl
@@ -355,7 +355,7 @@ class HisenseTvClient:
     # --------------------------------------------------------------------------
     def validate_certificates(self) -> None:
         """Validates that local client certificates exist on disk."""
-        self.certfile, self.keyfile = resolve_certificates(self.certfile, self.keyfile)
+        self.certfile, self.keyfile = resolve_certificates(auth_profile=self.auth_profile, certfile=self.certfile, keyfile=self.keyfile)
         self.ca_cert = resolve_ca_certificate(self.ca_cert)
         if not self.certfile or not self.keyfile:
             raise FileNotFoundError(

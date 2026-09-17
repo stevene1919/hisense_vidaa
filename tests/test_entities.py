@@ -605,12 +605,11 @@ async def test_in_use_binary_sensor_and_live_tv_metadata(mock_client, mock_entry
     """Test In Use binary sensor and Live TV channel attributes on media player."""
     from custom_components.hisense_vidaa.binary_sensor import HisenseVidaaInUseBinarySensor
 
-    mock_client.is_on = True
+    mock_client.state = "on"
     mock_client.connected = True
-    mock_client.channel_name = "ABC HD"
+    mock_client.current_channel = "ABC HD"
     mock_client.channel_number = "20"
-    mock_client.program_title = "News 7pm"
-    mock_client.program_detail = "Evening news broadcast"
+    mock_client.current_program = "News 7pm"
 
     bin_in_use = HisenseVidaaInUseBinarySensor(mock_client, mock_entry)
     assert bin_in_use.is_on is True
@@ -627,6 +626,5 @@ async def test_in_use_binary_sensor_and_live_tv_metadata(mock_client, mock_entry
     assert mp.media_series_title == "ABC HD (20)"
     assert mp.media_title == "News 7pm"
     assert mp.extra_state_attributes["channel_name"] == "ABC HD"
-    assert mp.extra_state_attributes["program_detail"] == "Evening news broadcast"
 
 

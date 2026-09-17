@@ -2,7 +2,27 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.9.0] - 2026-09-17
+
+### Added
+- **PROTOCOL & TV SUBPACKAGE ARCHITECTURE**: Refactored internal module structure into two dedicated subpackages:
+  - `protocol/` — `auth.py` (TLS setup, token refresh), `certs.py` (certificate resolution), `dispatcher.py` (MQTT topic dispatch), `pairing.py` (PIN challenge flow), `topics.py` (topic path builders), `wol.py` (Wake-on-LAN).
+  - `tv/` — `actions.py` (command senders), `navigation.py` (source/app cycling), `probe.py` (capability probing), `settings.py` (picture/sound menu models), `state.py` (state attribute updaters).
+- **BASE ENTITY CLASS (`entity.py`)**: All 9 entity platforms now inherit from a single `HisenseVidaaEntity` base class, eliminating duplicated `device_info`, availability, and name scaffolding.
+- **SWITCH PLATFORM**: Added `switch.{tv}_audio_only` (idempotent screen-off audio control) and `switch.{tv}_debug_logging` (dynamic verbose logging toggle without HA restart).
+- **76 AUTOMATED TESTS**: Expanded test suite to 76 passing unit tests covering the full refactored module structure.
+
+### Fixed
+- **CERTIFICATE RESOLUTION CALL-SITE MISMATCH**: `resolve_certificates` signature changed from `(certfile, keyfile)` to `(auth_profile, certfile, keyfile)` during refactor — both call sites in `client.py` (`__init__` and `validate_certificates`) were still passing positional args, causing `ssl.SSLError: [SSL] PEM lib` on every startup and triggering the rapid connect/disconnect loop in entity activity logs.
+- **STALE CLIENT ATTRIBUTE NAMES**: Several entity platforms still referenced old attribute names removed or renamed during the `tv/state.py` refactor:
+  - `client.channel_name` → `client.current_channel` (`media_player.py`, `binary_sensor.py`)
+  - `client.program_title` → `client.current_program` (`media_player.py`, `binary_sensor.py`)
+  - `client.program_detail`, `client.program_start`, `client.program_end` — removed entirely from client state model.
+  - `client.is_on` (boolean) → `client.state not in ("off", "")` (`binary_sensor.py`)
+- **ENTITY ACTIVITY LOG LOOP**: The root cause of the rapid entity state-change loop was the `ssl.SSLError` crash on every setup attempt — each failure triggered an immediate reconnect cycle, re-firing all MQTT subscription bursts (sourceswitch, applist, sourcelist) in the activity log. Fixed by resolving all three call-site and attribute mismatches above.
+
 ## [2.8.6] - 2026-09-17
+
 
 ### Added
 - **4-TIER AUTHENTICATION MATRIX & PROTOCOL FALLBACK CASCADE (Issues #6, #22)**:
