@@ -13,6 +13,18 @@ except (ImportError, ValueError):
 
 _LOGGER = logging.getLogger(__name__)
 
+__all__ = [
+    "KEY_ALIASES",
+    "change_source_by_name_or_id",
+    "cycle_tv_source",
+    "get_next_cycled_source",
+    "launch_app_by_name",
+    "match_app",
+    "normalize_string",
+    "resolve_command_key",
+    "resolve_source",
+]
+
 
 def normalize_string(s: str) -> str:
     """Normalizes a string by stripping non-alphanumeric characters and lowercasing."""

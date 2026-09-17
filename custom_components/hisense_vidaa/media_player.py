@@ -30,7 +30,7 @@ from .const import (
     DOMAIN,
 )
 from .entity import HisenseVidaaEntity
-from .settings import (
+from .tv.settings import (
     DEFAULT_MENU_ID_SOUND_MODE,
     STANDARD_SOUND_MODES,
     find_menu_item_by_name,

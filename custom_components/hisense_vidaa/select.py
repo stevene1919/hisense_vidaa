@@ -12,7 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .entity import HisenseVidaaEntity
-from .settings import (
+from .tv.settings import (
     DEFAULT_MENU_ID_PICTURE_MODE,
     DEFAULT_MENU_ID_SOUND_MODE,
     STANDARD_PICTURE_MODES,

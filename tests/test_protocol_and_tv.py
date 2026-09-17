@@ -1,22 +1,10 @@
-"""Tests for protocol and features subpackages."""
+"""Tests for protocol and tv subpackages."""
 
 from __future__ import annotations
 
+import time
 from unittest.mock import MagicMock, patch
 
-from custom_components.hisense_vidaa.features.navigation import (
-    change_source_by_name_or_id,
-    cycle_tv_source,
-    launch_app_by_name,
-)
-from custom_components.hisense_vidaa.features.probe import (
-    probe_tv_features_and_report,
-)
-from custom_components.hisense_vidaa.features.settings import (
-    SettingMenuItem,
-    find_menu_item_by_name,
-    parse_settings_payload,
-)
 from custom_components.hisense_vidaa.protocol.auth import (
     apply_mqtt_tls,
     is_token_expired,
@@ -28,6 +16,19 @@ from custom_components.hisense_vidaa.protocol.topics import (
     build_topic_paths,
 )
 from custom_components.hisense_vidaa.protocol.wol import send_wake_on_lan
+from custom_components.hisense_vidaa.tv.navigation import (
+    change_source_by_name_or_id,
+    cycle_tv_source,
+    launch_app_by_name,
+)
+from custom_components.hisense_vidaa.tv.probe import (
+    probe_tv_features_and_report,
+)
+from custom_components.hisense_vidaa.tv.settings import (
+    SettingMenuItem,
+    find_menu_item_by_name,
+    parse_settings_payload,
+)
 
 
 def test_topic_paths() -> None:
@@ -65,7 +66,6 @@ def test_token_expiration_logic() -> None:
     assert is_token_expired(1000, 0) is False
 
     # Valid unexpired token (valid for 30 days, created just now)
-    import time
     now = int(time.time())
     assert is_token_expired(now, 30) is False
 

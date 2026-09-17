@@ -43,6 +43,24 @@ STANDARD_SOUND_MODES = [
     "Sports",
 ]
 
+__all__ = [
+    "DEFAULT_MENU_ID_BACKLIGHT",
+    "DEFAULT_MENU_ID_BASS",
+    "DEFAULT_MENU_ID_BRIGHTNESS",
+    "DEFAULT_MENU_ID_COLOR",
+    "DEFAULT_MENU_ID_CONTRAST",
+    "DEFAULT_MENU_ID_EQUALIZER",
+    "DEFAULT_MENU_ID_PICTURE_MODE",
+    "DEFAULT_MENU_ID_SHARPNESS",
+    "DEFAULT_MENU_ID_SOUND_MODE",
+    "DEFAULT_MENU_ID_TREBLE",
+    "STANDARD_PICTURE_MODES",
+    "STANDARD_SOUND_MODES",
+    "SettingMenuItem",
+    "find_menu_item_by_name",
+    "parse_settings_payload",
+]
+
 
 @dataclass
 class SettingMenuItem:
@@ -56,6 +74,16 @@ class SettingMenuItem:
     max_value: int | float | None = None
     step: int | float | None = None
     raw_data: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def menu_name(self) -> str:
+        """Alias for name."""
+        return self.name
+
+    @property
+    def menu_value(self) -> str | int | float:
+        """Alias for value."""
+        return self.value
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SettingMenuItem | None:
@@ -106,79 +134,58 @@ class SettingMenuItem:
             raw_data=data,
         )
 
-    @property
-    def menu_name(self) -> str:
-        """Alias for name."""
-        return self.name
 
-    @property
-    def menu_value(self) -> str | int | float:
-        """Alias for value."""
-        return self.value
+def parse_settings_payload(payload: dict[str, Any] | list[Any]) -> list[SettingMenuItem]:
+    """Parses a TV settings JSON payload (either dict with menu_info/item list, or raw list) into SettingMenuItems."""
+    items_to_parse: list[Any] = []
+    if isinstance(payload, list):
+        items_to_parse = payload
+    elif isinstance(payload, dict):
+        if "menu_info" in payload and isinstance(payload["menu_info"], list):
+            items_to_parse = payload["menu_info"]
+        elif "items" in payload and isinstance(payload["items"], list):
+            items_to_parse = payload["items"]
+        elif "data" in payload and isinstance(payload["data"], list):
+            items_to_parse = payload["data"]
+        elif "menu_id" in payload or "id" in payload:
+            items_to_parse = [payload]
 
-    @property
-    def menu_type(self) -> str:
-        """Return inferred or raw menu type."""
-        return str(self.raw_data.get("menu_type") or ("list" if self.options else "slider" if self.min_value is not None else "setting"))
-
-
-def normalize_setting_name(name: str) -> str:
-    """Normalizes setting name for fuzzy key lookup."""
-    return re.sub(r"[^a-z0-9]", "", str(name).lower())
-
-
-def parse_settings_payload(payload_dict: dict[str, Any]) -> dict[int, SettingMenuItem]:
-    """Parses a full menu_info response from the TV into a dictionary of SettingMenuItems."""
-    items: dict[int, SettingMenuItem] = {}
-    if not isinstance(payload_dict, dict):
-        return items
-
-    menu_info = (
-        payload_dict.get("menu_info")
-        or payload_dict.get("menu_list")
-        or payload_dict.get("items")
-        or []
-    )
-
-    if isinstance(menu_info, list):
-        for raw in menu_info:
-            item = SettingMenuItem.from_dict(raw)
-            if item:
-                items[item.menu_id] = item
-
-    return items
+    results: list[SettingMenuItem] = []
+    for raw_item in items_to_parse:
+        item = SettingMenuItem.from_dict(raw_item)
+        if item:
+            results.append(item)
+    return results
 
 
 def find_menu_item_by_name(
-    items: dict[int, SettingMenuItem] | list | None,
+    menu_items: list[SettingMenuItem] | dict[int, SettingMenuItem],
     target_name: str,
     default_id: int | None = None,
 ) -> SettingMenuItem | None:
-    """Finds a setting item by name or alias."""
+    """Finds a SettingMenuItem matching target name or fallback ID."""
+    items = list(menu_items.values()) if isinstance(menu_items, dict) else menu_items
     if not items:
         return None
-    if isinstance(items, list):
-        parsed_items = {}
-        for x in items:
-            if isinstance(x, SettingMenuItem):
-                parsed_items[x.menu_id] = x
-            elif isinstance(x, dict) and "menu_id" in x:
-                item = SettingMenuItem.from_dict(x)
-                if item:
-                    parsed_items[item.menu_id] = item
-        items = parsed_items
 
-    if not isinstance(items, dict):
-        return None
+    clean_target = re.sub(r"[^a-z0-9]", "", str(target_name).lower())
 
-    norm_target = normalize_setting_name(target_name)
-    for item in items.values():
-        if normalize_setting_name(item.name) == norm_target:
-            return item
-        if norm_target in normalize_setting_name(item.name):
+    # 1. Normalized exact match on name
+    for item in items:
+        norm_name = re.sub(r"[^a-z0-9]", "", str(item.name).lower())
+        if clean_target and norm_name == clean_target:
             return item
 
-    if default_id is not None and default_id in items:
-        return items[default_id]
+    # 2. Substring match
+    for item in items:
+        norm_name = re.sub(r"[^a-z0-9]", "", str(item.name).lower())
+        if clean_target and (clean_target in norm_name or norm_name in clean_target):
+            return item
+
+    # 3. Fallback by menu ID
+    if default_id is not None:
+        for item in items:
+            if item.menu_id == default_id:
+                return item
 
     return None

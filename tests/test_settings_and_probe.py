@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from custom_components.hisense_vidaa.probe import (
+from custom_components.hisense_vidaa.tv.probe import (
     generate_markdown_report,
     load_credentials_file,
     probe_tv_features,
     save_credentials_file,
 )
-from custom_components.hisense_vidaa.settings import (
+from custom_components.hisense_vidaa.tv.settings import (
     DEFAULT_MENU_ID_BACKLIGHT,
     SettingMenuItem,
     find_menu_item_by_name,

@@ -27,7 +27,7 @@ elif SCRIPT_DIR not in sys.path:
 
 from client import HisenseTvClient
 from discovery import get_device_fingerprint, get_tv_timestamp
-from probe import (
+from tv.probe import (
     create_client_from_creds,
     load_credentials_file,
 )

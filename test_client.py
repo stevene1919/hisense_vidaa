@@ -28,7 +28,7 @@ elif SCRIPT_DIR not in sys.path:
 
 from client import HisenseTvClient
 from discovery import get_arp_mac
-from probe import (
+from tv.probe import (
     create_client_from_creds,
     generate_markdown_report,
     load_credentials_file,

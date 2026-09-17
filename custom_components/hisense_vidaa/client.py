@@ -23,13 +23,16 @@ try:
         probe_tv_auth_methods,
         test_tv_ssl_connection,
     )
-    from .features.navigation import (
+    from .protocol.auth import apply_mqtt_tls, is_token_expired, perform_token_refresh
+    from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
+    from .protocol.wol import send_wake_on_lan
+    from .tv.navigation import (
         get_next_cycled_source,
         match_app,
         resolve_command_key,
         resolve_source,
     )
-    from .features.settings import (
+    from .tv.settings import (
         DEFAULT_MENU_ID_BACKLIGHT,
         DEFAULT_MENU_ID_BRIGHTNESS,
         DEFAULT_MENU_ID_CONTRAST,
@@ -39,10 +42,7 @@ try:
         find_menu_item_by_name,
         parse_settings_payload,
     )
-    from .protocol.auth import apply_mqtt_tls, is_token_expired, perform_token_refresh
-    from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
-    from .protocol.wol import send_wake_on_lan
-except ImportError:
+except (ImportError, ValueError):
     from crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
     from discovery import (
         get_device_fingerprint as discover_device_fingerprint,
@@ -51,13 +51,16 @@ except ImportError:
         probe_tv_auth_methods,
         test_tv_ssl_connection,
     )
-    from features.navigation import (
+    from protocol.auth import apply_mqtt_tls, is_token_expired, perform_token_refresh
+    from protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
+    from protocol.wol import send_wake_on_lan
+    from tv.navigation import (
         get_next_cycled_source,
         match_app,
         resolve_command_key,
         resolve_source,
     )
-    from features.settings import (
+    from tv.settings import (
         DEFAULT_MENU_ID_BACKLIGHT,
         DEFAULT_MENU_ID_BRIGHTNESS,
         DEFAULT_MENU_ID_CONTRAST,
@@ -67,9 +70,6 @@ except ImportError:
         find_menu_item_by_name,
         parse_settings_payload,
     )
-    from protocol.auth import apply_mqtt_tls, is_token_expired, perform_token_refresh
-    from protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
-    from protocol.wol import send_wake_on_lan
 
 _LOGGER = logging.getLogger(__name__)
 

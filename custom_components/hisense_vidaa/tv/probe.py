@@ -17,7 +17,7 @@ try:
 except (ImportError, ValueError):
     from crypto import resolve_ca_certificate, resolve_certificates
     from discovery import get_arp_mac, probe_tv_auth_methods
-    from features.settings import SettingMenuItem
+    from tv.settings import SettingMenuItem
 
 _LOGGER = logging.getLogger(__name__)
 
