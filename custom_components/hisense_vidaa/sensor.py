@@ -22,6 +22,7 @@ from .const import (
     DOMAIN,
 )
 from .entity import HisenseVidaaEntity
+from .tv.navigation import get_app_icon, get_source_icon
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -320,30 +321,7 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaMqttTrackingSensor):
     @property
     def icon(self) -> str:
         """Return dynamic MDI icon for the active app or state."""
-        val = (self._attr_native_value or "").lower()
-        if "netflix" in val:
-            return "mdi:netflix"
-        if "youtube" in val:
-            return "mdi:youtube"
-        if "spotify" in val:
-            return "mdi:spotify"
-        if "plex" in val:
-            return "mdi:plex"
-        if "disney" in val:
-            return "mdi:movie-open"
-        if "prime" in val or "amazon" in val:
-            return "mdi:video"
-        if "live tv" in val or val == "tv":
-            return "mdi:television-box"
-        if "home launcher" in val or "launcher" in val:
-            return "mdi:view-dashboard"
-        if "tv input" in val or "none" in val:
-            return "mdi:video-input-hdmi"
-        if "standby" in val:
-            return "mdi:television-ambient-light"
-        if "off" in val:
-            return "mdi:television-off"
-        return "mdi:application"
+        return get_app_icon(self._attr_native_value)
 
 
 class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
@@ -445,16 +423,7 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
     @property
     def icon(self) -> str:
         """Return dynamic MDI icon based on active input source."""
-        val = (self._attr_native_value or "").lower()
-        if "hdmi" in val:
-            return "mdi:video-input-hdmi"
-        if "tv" in val:
-            return "mdi:television-classic"
-        if "av" in val:
-            return "mdi:video-input-component"
-        if "off" in val:
-            return "mdi:power-plug-off"
-        return "mdi:video-input-hdmi"
+        return get_source_icon(self._attr_native_value)
 
 
 class HisenseVidaaAudioOutputSensor(HisenseVidaaMqttTrackingSensor):

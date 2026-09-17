@@ -50,7 +50,9 @@ from .media import (
 )
 from .navigation import (
     cycle_tv_source,
+    get_app_icon,
     get_next_cycled_source,
+    get_source_icon,
     match_app,
     normalize_string,
     resolve_command_key,
@@ -133,11 +135,13 @@ __all__ = [
     "find_menu_item_by_name",
     "format_probe_results_markdown",
     "generate_markdown_report",
+    "get_app_icon",
     "get_arp_mac",
     "get_device_fingerprint",
     "get_next_cycled_source",
     "get_picture_settings",
     "get_sound_settings",
+    "get_source_icon",
     "get_tv_timestamp",
     "launch_app",
     "launch_app_by_name",

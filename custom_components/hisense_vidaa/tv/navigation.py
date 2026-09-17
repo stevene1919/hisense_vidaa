@@ -17,7 +17,9 @@ __all__ = [
     "KEY_ALIASES",
     "change_source_by_name_or_id",
     "cycle_tv_source",
+    "get_app_icon",
     "get_next_cycled_source",
+    "get_source_icon",
     "launch_app_by_name",
     "match_app",
     "normalize_string",
@@ -29,6 +31,48 @@ __all__ = [
 def normalize_string(s: str) -> str:
     """Normalizes a string by stripping non-alphanumeric characters and lowercasing."""
     return re.sub(r"[^a-z0-9]", "", str(s).lower())
+
+
+def get_app_icon(app_name: str | None) -> str:
+    """Returns dynamic MDI icon based on active application name."""
+    val = (app_name or "").lower()
+    if "netflix" in val:
+        return "mdi:netflix"
+    if "youtube" in val:
+        return "mdi:youtube"
+    if "spotify" in val:
+        return "mdi:spotify"
+    if "plex" in val:
+        return "mdi:plex"
+    if "disney" in val:
+        return "mdi:movie-open"
+    if "prime" in val or "amazon" in val:
+        return "mdi:video"
+    if "live tv" in val or val == "tv":
+        return "mdi:television-box"
+    if "home launcher" in val or "launcher" in val:
+        return "mdi:view-dashboard"
+    if "tv input" in val or "none" in val:
+        return "mdi:video-input-hdmi"
+    if "standby" in val:
+        return "mdi:television-ambient-light"
+    if "off" in val:
+        return "mdi:television-off"
+    return "mdi:application"
+
+
+def get_source_icon(source_name: str | None) -> str:
+    """Returns dynamic MDI icon based on active input source name."""
+    val = (source_name or "").lower()
+    if "hdmi" in val:
+        return "mdi:video-input-hdmi"
+    if "tv" in val:
+        return "mdi:television-classic"
+    if "av" in val:
+        return "mdi:video-input-component"
+    if "off" in val:
+        return "mdi:power-plug-off"
+    return "mdi:video-input-hdmi"
 
 
 def match_app(
