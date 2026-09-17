@@ -12,6 +12,7 @@ from .auth import (
 from .certs import (
     check_certs_exist,
     extract_pkcs12_to_pem,
+    get_profile_default_cert_paths,
     resolve_ca_certificate,
     resolve_certificates,
 )
@@ -28,6 +29,7 @@ __all__ = [
     "build_topic_paths",
     "check_certs_exist",
     "extract_pkcs12_to_pem",
+    "get_profile_default_cert_paths",
     "is_token_expired",
     "perform_token_refresh",
     "probe_tv_auth_methods",

@@ -29,6 +29,7 @@ __all__ = [
     "KNOWN_P12_PASSWORDS",
     "check_certs_exist",
     "extract_pkcs12_to_pem",
+    "get_profile_default_cert_paths",
     "resolve_ca_certificate",
     "resolve_certificates",
 ]
@@ -349,3 +350,35 @@ def resolve_certificates(
     default_key = "/config/ssl/hisense.key"
 
     return resolved_cert or default_cert, resolved_key or default_key
+
+
+def get_profile_default_cert_paths(
+    auth_profile: str,
+    config_dir: str = "/config",
+) -> tuple[str, str, str, str, str]:
+    """Returns (default_cert_path, default_key_path, default_cert_dir, default_cert_name, default_key_name)."""
+    default_cert_dir = os.path.join(config_dir, "ssl")
+
+    profile_clean = (auth_profile or "auto").lower()
+    if profile_clean in ("modern", "vidaa_2024", "vidaa"):
+        default_cert_name = "vidaa_2024_cert.pem"
+        default_key_name = "vidaa_2024_key.pem"
+    elif profile_clean in ("middle", "vidaa_15", "vidaa_middle"):
+        default_cert_name = "vidaa_client_v01.pem"
+        default_key_name = "vidaa_client_v01.key"
+    elif profile_clean in ("remotenow", "remotenow_2018", "standard"):
+        default_cert_name = "remotenow_2018_cert.pem"
+        default_key_name = "remotenow_2018_key.pem"
+    else:
+        default_cert_name = "hisense.crt"
+        default_key_name = "hisense.key"
+
+    resolved_cert, resolved_key = resolve_certificates(auth_profile)
+    if check_certs_exist(resolved_cert, resolved_key):
+        default_cert_path = resolved_cert
+        default_key_path = resolved_key
+    else:
+        default_cert_path = os.path.join(default_cert_dir, default_cert_name)
+        default_key_path = os.path.join(default_cert_dir, default_key_name)
+
+    return default_cert_path, default_key_path, default_cert_dir, default_cert_name, default_key_name

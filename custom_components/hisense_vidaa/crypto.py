@@ -82,6 +82,7 @@ try:
         KNOWN_P12_PASSWORDS,
         check_certs_exist,
         extract_pkcs12_to_pem,
+        get_profile_default_cert_paths,
         resolve_ca_certificate,
         resolve_certificates,
     )
@@ -91,6 +92,7 @@ except (ImportError, ValueError):
         KNOWN_P12_PASSWORDS,
         check_certs_exist,
         extract_pkcs12_to_pem,
+        get_profile_default_cert_paths,
         resolve_ca_certificate,
         resolve_certificates,
     )
@@ -106,6 +108,7 @@ __all__ = [
     "clean_mac",
     "extract_pkcs12_to_pem",
     "generate_initial_credentials",
+    "get_profile_default_cert_paths",
     "resolve_ca_certificate",
     "resolve_certificates",
 ]

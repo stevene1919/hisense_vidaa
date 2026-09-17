@@ -1,5 +1,4 @@
 import logging
-import os
 from typing import Any
 from urllib.parse import urlparse
 
@@ -34,17 +33,14 @@ from .const import (
     CONF_USE_SSL,
     CONF_USERNAME,
     DEFAULT_AUTH_PROFILE,
-    DEFAULT_CERT_DIR,
-    DEFAULT_CERT_FILENAME,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
-    DEFAULT_KEY_FILENAME,
     DEFAULT_USE_SSL,
     DOMAIN,
 )
-from .crypto import check_certs_exist, resolve_certificates
+from .crypto import check_certs_exist, get_profile_default_cert_paths, resolve_certificates
 from .discovery import get_arp_mac
 from .options_flow import (
     AUTH_PROFILE_SELECTOR,
@@ -540,29 +536,13 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle certificate file configuration step."""
         errors: dict[str, str] = {}
         config_dir = self.hass.config.config_dir if hasattr(self.hass, "config") else "/config"
-        default_cert_dir = os.path.join(config_dir, DEFAULT_CERT_DIR)
-
-        # Determine profile-specific default filenames
-        if self.auth_profile == "modern":
-            default_cert_name = "vidaa_2024_cert.pem"
-            default_key_name = "vidaa_2024_key.pem"
-        elif self.auth_profile == "middle":
-            default_cert_name = "vidaa_client_v01.pem"
-            default_key_name = "vidaa_client_v01.key"
-        elif self.auth_profile == "remotenow":
-            default_cert_name = "remotenow_2018_cert.pem"
-            default_key_name = "remotenow_2018_key.pem"
-        else:
-            default_cert_name = DEFAULT_CERT_FILENAME
-            default_key_name = DEFAULT_KEY_FILENAME
-
-        resolved_cert, resolved_key = resolve_certificates(self.auth_profile)
-        if check_certs_exist(resolved_cert, resolved_key):
-            default_cert_path = resolved_cert
-            default_key_path = resolved_key
-        else:
-            default_cert_path = os.path.join(default_cert_dir, default_cert_name)
-            default_key_path = os.path.join(default_cert_dir, default_key_name)
+        (
+            default_cert_path,
+            default_key_path,
+            default_cert_dir,
+            default_cert_name,
+            default_key_name,
+        ) = get_profile_default_cert_paths(self.auth_profile, config_dir=config_dir)
 
         if user_input is not None:
             self.use_ssl = user_input.get(CONF_USE_SSL, DEFAULT_USE_SSL)
