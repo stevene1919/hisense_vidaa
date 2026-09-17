@@ -135,6 +135,9 @@
       },
       "audio_output": {
         "name": "Audio Output"
+      },
+      "reported_name": {
+        "name": "Reported Name"
       }
     },
     "binary_sensor": {

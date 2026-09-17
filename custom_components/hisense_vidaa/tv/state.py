@@ -44,9 +44,46 @@ def apply_state_update(client: Any, data: Any) -> None:
         client.hdr_mode = str(data["hdr_mode"])
     if "audio_format" in data:
         client.audio_format = str(data["audio_format"])
+    if "devicename" in data or "device_name" in data or "friendly_name" in data:
+        name = data.get("devicename") or data.get("device_name") or data.get("friendly_name")
+        if name and str(name).strip() and str(name).strip() != "Renderer":
+            client.device_name = str(name).strip()
     if "sleep_time" in data:
         with contextlib.suppress(ValueError, TypeError):
             client.sleep_timer = int(data["sleep_time"])
+
+
+def apply_device_info_update(client: Any, data: Any) -> None:
+    """Updates client device information attributes from TV device info payload."""
+    if not isinstance(data, dict):
+        return
+
+    name = (
+        data.get("devicename")
+        or data.get("device_name")
+        or data.get("friendly_name")
+        or data.get("tv_name")
+        or data.get("name")
+    )
+    if name and str(name).strip() and str(name).strip() != "Renderer":
+        client.device_name = str(name).strip()
+
+    model = (
+        data.get("model_name")
+        or data.get("model_code")
+        or data.get("model")
+        or data.get("modelNumber")
+    )
+    if model and str(model).strip():
+        client.model_name = str(model).strip()
+
+    mfg = data.get("manufacturer") or data.get("brand")
+    if mfg and str(mfg).strip():
+        client.manufacturer = str(mfg).strip()
+
+    fw = data.get("firmware_version") or data.get("sw_version") or data.get("version")
+    if fw and str(fw).strip():
+        client.firmware_version = str(fw).strip()
 
 
 def apply_volume_update(client: Any, data: Any) -> None:

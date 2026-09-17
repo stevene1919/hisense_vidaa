@@ -48,12 +48,16 @@ def query_initial_state(client: HisenseTvClient) -> None:
     """Queries initial state, volume, source list, app list, and settings from TV."""
     if client.connected and client.mqtt_client:
         client.mqtt_client.publish(client.topicTVUIBasepath + "actions/gettvstate", "")
-        time.sleep(0.1)
+        time.sleep(0.05)
         client.mqtt_client.publish(client.topicTVPSBasepath + "actions/getvolume", "")
-        time.sleep(0.1)
+        time.sleep(0.05)
         client.mqtt_client.publish(client.topicTVUIBasepath + "actions/sourcelist", "")
-        time.sleep(0.1)
+        time.sleep(0.05)
         client.mqtt_client.publish(client.topicTVUIBasepath + "actions/applist", "")
+        time.sleep(0.05)
+        client.mqtt_client.publish(client.topicTVPSBasepath + "actions/getdeviceinfo", "")
+        time.sleep(0.05)
+        client.mqtt_client.publish(client.topicTVPSBasepath + "actions/gettvinfo", "")
 
 
 def show_message(

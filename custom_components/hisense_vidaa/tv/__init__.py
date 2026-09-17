@@ -62,6 +62,7 @@ from .settings import (
     parse_settings_payload,
 )
 from .state import (
+    apply_device_info_update,
     apply_picture_update,
     apply_sound_update,
     apply_state_update,
@@ -84,6 +85,7 @@ __all__ = [
     "STANDARD_SOUND_MODES",
     "FeatureProbeResult",
     "SettingMenuItem",
+    "apply_device_info_update",
     "apply_picture_update",
     "apply_sound_update",
     "apply_state_update",

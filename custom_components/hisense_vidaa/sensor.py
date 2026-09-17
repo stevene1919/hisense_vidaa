@@ -38,6 +38,7 @@ async def async_setup_entry(
     async_add_entities([
         HisenseVidaaSessionStatusSensor(client, entry),
         HisenseVidaaAuthProfileSensor(client, entry),
+        HisenseVidaaReportedNameSensor(client, entry),
         HisenseVidaaActiveAppSensor(client, entry),
         HisenseVidaaActiveSourceSensor(client, entry),
         HisenseVidaaAudioOutputSensor(client, entry),
@@ -129,6 +130,72 @@ class HisenseVidaaAuthProfileSensor(HisenseVidaaBaseSensor):
         self._attr_unique_id = f"{self._entry_id}_auth_profile"
         profile_key = entry.data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
         self._attr_native_value = AUTH_PROFILES.get(profile_key, profile_key.title())
+
+
+class HisenseVidaaReportedNameSensor(HisenseVidaaBaseSensor):
+    """Sensor displaying live reported friendly TV name and system hardware details."""
+
+    _attr_translation_key = "reported_name"
+    _attr_icon = "mdi:television-guide"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+        super().__init__(client, entry)
+        self._attr_unique_id = f"{self._entry_id}_reported_name"
+        self._update_value()
+
+    async def async_added_to_hass(self) -> None:
+        self._client.register_connected_callback(self._handle_update)
+        self._client.register_state_callback(self._handle_state_or_info)
+        self._client.register_device_info_callback(self._handle_device_info)
+        self._client.register_disconnected_callback(self._handle_update)
+        self._update_value()
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_connected_callback(self._handle_update)
+        self._client.unregister_state_callback(self._handle_state_or_info)
+        self._client.unregister_device_info_callback(self._handle_device_info)
+        self._client.unregister_disconnected_callback(self._handle_update)
+
+    def _handle_device_info(self, data: dict[str, Any]) -> None:
+        self._update_value()
+        self._schedule_state_update()
+
+    def _handle_state_or_info(self, data: dict[str, Any]) -> None:
+        if isinstance(data, dict) and any(
+            k in data for k in ("devicename", "device_name", "friendly_name", "tv_name", "name")
+        ):
+            self._update_value()
+            self._schedule_state_update()
+
+    def _handle_update(self) -> None:
+        self._update_value()
+        self._schedule_state_update()
+
+    def _update_value(self) -> None:
+        name = (
+            getattr(self._client, "device_name", None)
+            or (self._entry.title if self._entry else None)
+            or getattr(self._client, "name", None)
+            or f"Hisense TV ({self._client.ip})"
+        )
+        self._attr_native_value = name
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return diagnostic device details."""
+        attrs: dict[str, Any] = {
+            "ip_address": self._client.ip,
+        }
+        if self._mac:
+            attrs["mac_address"] = self._mac
+        if self._client.model_name or self._model:
+            attrs["model_name"] = self._client.model_name or self._model
+        if self._client.manufacturer or self._manufacturer:
+            attrs["manufacturer"] = self._client.manufacturer or self._manufacturer
+        if self._client.firmware_version or self._sw_version:
+            attrs["firmware_version"] = self._client.firmware_version or self._sw_version
+        return attrs
 
 
 class HisenseVidaaMqttTrackingSensor(HisenseVidaaBaseSensor):

@@ -55,6 +55,7 @@ try:
     )
     from .tv.settings import SettingMenuItem
     from .tv.state import (
+        apply_device_info_update,
         apply_picture_update,
         apply_sound_update,
         apply_state_update,
@@ -101,6 +102,7 @@ except (ImportError, ValueError):
     )
     from tv.settings import SettingMenuItem
     from tv.state import (
+        apply_device_info_update,
         apply_picture_update,
         apply_sound_update,
         apply_state_update,
@@ -180,6 +182,10 @@ class HisenseTvClient:
         self.audio_format: str | None = None
         self.sleep_timer: int | None = None
         self.has_notifications: bool = False
+        self.device_name: str | None = None
+        self.model_name: str | None = None
+        self.manufacturer: str | None = None
+        self.firmware_version: str | None = None
 
         self.mqtt_client: mqtt.Client | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -280,6 +286,12 @@ class HisenseTvClient:
     def unregister_sound_callback(self, cb: Callable) -> None:
         self._unregister_callback("sound", cb)
 
+    def register_device_info_callback(self, cb: Callable) -> None:
+        self._register_callback("device_info", cb)
+
+    def unregister_device_info_callback(self, cb: Callable) -> None:
+        self._unregister_callback("device_info", cb)
+
     def _dispatch_auth_failed(self) -> None:
         self._dispatch("auth_failed")
 
@@ -292,6 +304,10 @@ class HisenseTvClient:
     def _dispatch_state_update(self, data: Any) -> None:
         apply_state_update(self, data)
         self._dispatch("state", data)
+
+    def _dispatch_device_info_update(self, data: Any) -> None:
+        apply_device_info_update(self, data)
+        self._dispatch("device_info", data)
 
     def _dispatch_volume_update(self, data: Any) -> None:
         apply_volume_update(self, data)
@@ -638,6 +654,15 @@ class HisenseTvClient:
                         _LOGGER.info("[%s] TV reported support for on-screen notifications: %s", self.ip, data)
             except Exception as e:
                 _LOGGER.debug("[%s] Error parsing capability descriptor: %s", self.ip, e)
+        elif topic in (
+            self.topicMobiBasepath + "platform_service/data/getdeviceinfo",
+            self.topicMobiBasepath + "platform_service/data/gettvinfo",
+        ) or topic.endswith("platform_service/data/getdeviceinfo") or topic.endswith("platform_service/data/gettvinfo"):
+            try:
+                data = json.loads(payload)
+                self._dispatch_device_info_update(data)
+            except Exception as e:
+                _LOGGER.debug("[%s] Error parsing device info: %s", self.ip, e)
 
     # --------------------------------------------------------------------------
     # Authentication & Pairing Handshake

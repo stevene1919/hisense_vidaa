@@ -15,10 +15,8 @@ from typing import Any
 import paho.mqtt.client as mqtt
 
 try:
-    from ..crypto import generate_initial_credentials
     from .topics import TopicPaths, build_topic_paths
 except (ImportError, ValueError):
-    from crypto import generate_initial_credentials
     from protocol.topics import TopicPaths, build_topic_paths
 
 _LOGGER = logging.getLogger(__name__)
@@ -219,6 +217,11 @@ def probe_tv_auth_methods(
         "middle_dynamic": {"rc": None, "supported": False},
         "modern_dynamic": {"rc": None, "supported": False},
     }
+
+    try:
+        from ..crypto import generate_initial_credentials
+    except (ImportError, ValueError):
+        from crypto import generate_initial_credentials
 
     def _setup_tls(c: mqtt.Client) -> None:
         if certfile and keyfile and os.path.isfile(certfile) and os.path.isfile(keyfile):

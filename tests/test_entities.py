@@ -34,6 +34,7 @@ from custom_components.hisense_vidaa.sensor import (
     HisenseVidaaActiveSourceSensor,
     HisenseVidaaAudioOutputSensor,
     HisenseVidaaAuthProfileSensor,
+    HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
 )
 
@@ -68,6 +69,10 @@ def mock_client():
     client.current_app = "Netflix"
     client.source = "HDMI 1"
     client.tv_state = "on"
+    client.device_name = None
+    client.model_name = None
+    client.manufacturer = None
+    client.firmware_version = None
     return client
 
 
@@ -118,6 +123,14 @@ async def test_sensor_entities(mock_client, mock_entry):
     assert s_audio.native_value == "TV Speakers"
     s_audio._handle_volume_update({"volume_type": 1, "volume_value": 20})
     assert s_audio.native_value == "ARC / eARC"
+
+    s_name = HisenseVidaaReportedNameSensor(mock_client, mock_entry)
+    assert s_name.native_value == "Living Room TV"
+    mock_client.device_name = "Bedroom VIDAA TV"
+    s_name._handle_device_info({"friendly_name": "Bedroom VIDAA TV"})
+    assert s_name.native_value == "Bedroom VIDAA TV"
+    assert s_name.extra_state_attributes["ip_address"] == "192.168.50.12"
+    assert s_name.extra_state_attributes["mac_address"] == "e8:51:77:ec:98:1c"
 
 
 def test_binary_sensor_entities(mock_client, mock_entry):
