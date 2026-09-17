@@ -196,6 +196,13 @@ def generate_markdown_report(
     lines.append(f"- **Standard Dynamic Auth (`his$<timestamp>`):** {std_str}")
     lines.append(f"- **Modern Dynamic Auth (`his$<timestamp ^ XOR>`):** {mod_str}")
 
+    if not legacy.get("supported") and not std.get("supported") and not modern.get("supported"):
+        lines.append(
+            "\n> [!WARNING]\n"
+            "> **All standard authentication profiles rejected (rc=5)**: The TV broker accepted the TLS handshake but rejected initial MQTT credentials. "
+            "This typically indicates the TV is running a newer firmware generation (e.g. VIDAA U7+ / build Q0704+ / App v1.09+) with updated credential hashing or pairing handshakes."
+        )
+
     if ping_result.get("mqtt_rc") is not None:
         stored_str = "✅ ACCEPTED (rc=0)" if ping_result.get("mqtt_connected") else f"❌ REJECTED (rc={ping_result.get('mqtt_rc')})"
         lines.append(f"- **Stored Credentials Auth:** {stored_str}")

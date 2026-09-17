@@ -311,9 +311,22 @@ async def do_auth(ip: str, mac: str | None, certfile: str | None, keyfile: str |
         save_credentials_file(save_path, creds)
     except FileNotFoundError as e:
         print(f"\n❌ Certificate Error: {e}")
+        print("  💡 Tip: Ensure your client certificate (.pem/.crt) and private key (.key) are placed in ssl/ or specified via --cert / --key.")
         sys.exit(1)
     except Exception as e:
         print(f"\n❌ Authentication failed: {e}")
+        err_str = str(e).lower()
+        if "code 5" in err_str or "not authorized" in err_str:
+            print("\n💡 Diagnosis (MQTT RC 5):")
+            print("  • The TV broker rejected the initial credentials during pairing.")
+            print("  • If your TV is running a newer firmware build (e.g. VIDAA U7+ / Q0704+),")
+            print("    it may require a newer authentication signature currently under development.")
+            print("  • Run the diagnostic report to capture TV details:")
+            print(f"    python3 test_client.py report --ip {ip} --probe")
+        elif "timed out" in err_str:
+            print("\n💡 Diagnosis (Timeout):")
+            print("  • The TV did not respond to the PIN handshake request in time.")
+            print("  • Ensure the TV screen is turned ON and connected to the same local network subnet.")
         sys.exit(1)
 
 

@@ -39,9 +39,9 @@ sequenceDiagram
 
 ## 🔐 Multi-Tier Authentication Models
 
-The TV's internal MQTT broker (`libmqttcrypt`) enforces a strict client ID whitelist format during initial pairing: `${mac}$his${md5_prefix}_vidaacommon_001`. The suffix must be `_vidaacommon_001` or the connection is rejected (`rc: 2`).
+The TV's internal MQTT broker (`libmqttcrypt`) enforces structured client credentials during initial pairing:
 
-### 🟢 1. Generation 2: Modern VIDAA 2.0 (`libmqttcrypt.so` / Firmware `Q0704`+)
+### 🟢 1. Generation 2: Modern VIDAA 2.0 (VIDAA U6 / U6+ 2024 Models)
 - **Pattern:** `PATTERN = "38D65DC30F45109A369A86FCE866A85B"`
 - **Client ID:** `f"{mac}$his${md5(f'{PATTERN}${mac}')[:6]}_vidaacommon_001"`
 - **Username:** `f"his${timestamp ^ 6239759785777146216}"` *(XOR 64-bit mask `0x5689ab4102ef1908`)*
@@ -49,16 +49,20 @@ The TV's internal MQTT broker (`libmqttcrypt`) enforces a strict client ID white
 - **Modern Salt:** `h!i@s#$v%i^d&a*a` *("hisvidaa")*
 - **Password Hash:** `md5(f"{timestamp}${md5(f'his{sum_digit}h!i@s#$v%i^d&a*a')[:6]}").upper()`
 
-### 🟡 2. Generation 1: RemoteNOW (Standard / Firmware `P1027` and older)
+### 🟡 2. Generation 1: RemoteNOW (Standard / VIDAA U4, U5, early U6 / Firmware `P1027`, `N0812`)
 - **Client ID:** `f"{mac}$his${md5(f'{PATTERN}${mac}')[:6]}_vidaacommon_001"`
 - **Username:** `f"his${timestamp}"`
 - **Standard Salt:** `h*i&s%e!r^v0i1c9` *("hiserv0i1c9")*
 - **Password Hash:** `md5(f"{timestamp}${md5(f'his{sum_digit}h*i&s%e!r^v0i1c9')[:6]}").upper()`
 
-### ⚪ 3. Generation 0: Legacy Static (Pre-2022)
+### ⚪ 3. Generation 0: Legacy Static (Pre-2022 / VIDAA U2, U3)
 - **Username:** `hisenseservice`
 - **Password:** `multimqttservice`
 - **Pairing:** Bypasses PIN challenge; connects directly with static credentials.
+
+### 🟣 4. Generation 3: Newer VIDAA OS (VIDAA U7+ / Firmware `Q0704`+ / VIDAA App `v1.09+`)
+- **Status:** *Under active reverse-engineering (Issue #6)*
+- **Characteristics:** TLS mutual authentication succeeds with standard certificates, but broker rejects older generation credentials (`rc: 5`). New official Android app (`v1.09.06.002.3`) utilizes an updated auth token/handshake. Full thread-safety and graceful rejection handling are supported in v2.8.6+.
 
 ---
 

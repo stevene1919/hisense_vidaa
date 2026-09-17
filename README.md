@@ -19,13 +19,14 @@ Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using 
 
 ## 🧭 Supported Generations & Models
 
-The integration automatically detects and supports all generations of Hisense smart TVs:
+The integration automatically detects and supports multiple generations of Hisense smart TVs:
 
 | TV Generation / Firmware | Profile | Auth Model | Pairing Method |
 | :--- | :--- | :--- | :--- |
-| **Modern VIDAA OS (2024+ / U7, U8, Q0704+)** | `modern` | **Modern VIDAA 2.0** (`libmqttcrypt` XOR mask) | 4-Digit Screen PIN |
-| **Standard VIDAA OS (2018–2023 / U4, U5, U6)** | `remotenow` | **RemoteNOW Dynamic** (`his$<timestamp>`) | 4-Digit Screen PIN |
-| **Legacy Hisense / Older Models (Pre-2022)** | `legacy` | **Legacy Static** (`hisenseservice`) | Instant Setup (No PIN) |
+| **Modern VIDAA OS (2024+ / U6+, U7)** | `modern` | **Modern VIDAA 2.0** (`libmqttcrypt` XOR mask) | 4-Digit Screen PIN |
+| **Standard VIDAA OS (2018–2023 / U4, U5, U6, P1027)** | `remotenow` | **RemoteNOW Dynamic** (`his$<timestamp>`) | 4-Digit Screen PIN |
+| **Legacy Hisense / Older Models (Pre-2022 / U2, U3)** | `legacy` | **Legacy Static** (`hisenseservice`) | Instant Setup (No PIN) |
+| **Newer VIDAA OS (U7+ / Q0704+ / App v1.09+)** | `auto` | *Under Active Reverse-Engineering (Issue #6)* | PIN Handshake v3 |
 
 ---
 
