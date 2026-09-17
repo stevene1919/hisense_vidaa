@@ -614,16 +614,27 @@ class HisenseTvClient:
         _LOGGER.debug("Message received: %s on topic %s", payload, topic)
 
         # Check authentication futures
-        if self._auth_future and topic in (
-            self.topicMobiBasepath + "ui_service/data/authentication",
-            self.topicMobiBasepath + "ui_service/data/vidaa_app_connect",
+        if self._auth_future and (
+            topic in (
+                self.topicMobiBasepath + "ui_service/data/authentication",
+                self.topicMobiBasepath + "ui_service/data/vidaa_app_connect",
+            )
+            or topic.endswith("ui_service/data/authentication")
+            or topic.endswith("ui_service/data/vidaa_app_connect")
         ):
             self._safe_set_future_result(self._auth_future, payload)
-        elif self._auth_code_future and topic == self.topicMobiBasepath + "ui_service/data/authenticationcode":
+        elif self._auth_code_future and (
+            topic == self.topicMobiBasepath + "ui_service/data/authenticationcode"
+            or topic.endswith("ui_service/data/authenticationcode")
+        ):
             self._safe_set_future_result(self._auth_code_future, payload)
-        elif self._token_future and topic in (
-            self.topicMobiBasepath + "platform_service/data/tokenissuance",
-            self.topicMobiBasepath + "platform_service/data/gettoken",
+        elif self._token_future and (
+            topic in (
+                self.topicMobiBasepath + "platform_service/data/tokenissuance",
+                self.topicMobiBasepath + "platform_service/data/gettoken",
+            )
+            or topic.endswith("platform_service/data/tokenissuance")
+            or topic.endswith("platform_service/data/gettoken")
         ):
             self._safe_set_future_result(self._token_future, payload)
 
@@ -749,6 +760,7 @@ class HisenseTvClient:
 
         self.mqtt_client.subscribe([
             (self.topicTVUIBasepath + "actions/vidaa_app_connect", 0),
+            (self.topicMobiBasepath + "#", 0),
             (self.topicMobiBasepath + "ui_service/data/authentication", 0),
             (self.topicMobiBasepath + "ui_service/data/authenticationcode", 0),
             (self.topicMobiBasepath + "ui_service/data/vidaa_app_connect", 0),

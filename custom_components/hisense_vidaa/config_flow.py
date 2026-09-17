@@ -356,6 +356,13 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 return await self.async_step_certs()
 
+            # Disconnect existing running client to avoid MQTT session collision during re-pairing
+            if self._reauth_entry and self._reauth_entry.entry_id in self.hass.data.get(DOMAIN, {}):
+                existing_entry_data = self.hass.data[DOMAIN][self._reauth_entry.entry_id]
+                existing_client = existing_entry_data.get("client") if isinstance(existing_entry_data, dict) else None
+                if existing_client:
+                    await self.hass.async_add_executor_job(existing_client.disconnect)
+
             self.client = HisenseTvClient(
                 self.ip_address,
                 self.mac_address,
