@@ -24,8 +24,8 @@ The integration natively supports both **auto-extracted PKCS#12 archives** (`.p1
 | Format / Profile | Firmware / Model Generation | Certificate / Bundle Filename | Private Key Filename |
 | :--- | :--- | :--- | :--- |
 | **PKCS#12 Bundle (Auto-Extracted)** | Any Modern VIDAA / RemoteNOW | `client_mobile_android.p12` or `rcamobile.p12` | *(Bundled in .p12 archive)* |
-| **Modern VIDAA 2.0 (PEM)** | VIDAA U7 / U8 / OS 7.x+ (`Q0704`+) | `vidaa_client_v01.pem`, `vidaa_2024_cert.pem`, or `vidaa_client.pem` | `vidaa_client_v01.key`, `vidaa_2024_key.pem`, or `vidaa_client.key` |
-| **RemoteNOW Standard (PEM)** | VIDAA U4 / U5 / U6 (2018–2023) | `remotenow_2018_cert.pem` or `hisense.crt` | `remotenow_2018_key.pem` or `hisense.key` |
+| **Modern VIDAA 2.0 (PEM)** | VIDAA U6+ / U7 (2024+) | `vidaa_client_v01.pem`, `vidaa_client_v02.pem`, `vidaa_2024_cert.pem`, or `vidaa_client.pem` | `vidaa_client_v01.key`, `vidaa_client_v02.key`, `vidaa_2024_key.pem`, or `vidaa_client.key` |
+| **RemoteNOW Standard (PEM)** | VIDAA U4 / U5 / U6 (2018–2023) | `vidaa_client_v01.pem`, `remotenow_2018_cert.pem`, or `hisense.crt` | `vidaa_client_v01.key`, `remotenow_2018_key.pem`, or `hisense.key` |
 | **Generic / Custom PEM** | Standard fallback for any profile | `cert.pem` | `key.pem` |
 | **Optional Root CA** | Optional TLS server verification | `remote_ca.pem` or `RemoteCA.crt` | *(Public root CA)* |
 
