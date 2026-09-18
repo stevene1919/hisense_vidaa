@@ -2,6 +2,18 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.9.2] - 2026-09-18
+
+### Fixed
+- **TOKEN REFRESH RESILIENCE & STANDBY REAUTH SUPPRESSION**:
+  - Suppressed spurious `auth_failed` callback and HA reauth prompts when the TV's internal MQTT broker rejects connections with `rc: 4` or `rc: 5` while entering/in standby (`fake_sleep_0`), preserving valid 30-day `refresh_token` credentials for automatic reconnection upon TV wake.
+  - Eliminated race condition in `_on_connect` where in-flight or throttled token refresh attempts prematurely dispatched `_dispatch_auth_failed()`.
+  - Only triggers Home Assistant interactive reauth if the `refresh_token` is completely missing or expired (`>30 days`).
+- **PROACTIVE TOKEN RENEWAL**:
+  - Added `_proactive_token_refresh` to renew tokens in the background when connected and the 2-day `access_token` has `<12 hours` remaining, preventing token expiration during overnight standby.
+- **TOKEN LIFESPAN DIAGNOSTICS**:
+  - Added `access_token_expires_at` and `refresh_token_expires_at` ISO datetime attributes to `sensor.{tv}_session_status`.
+
 ## [2.9.1] - 2026-09-17
 
 ### Added

@@ -87,6 +87,8 @@ async def test_sensor_entities(mock_client, mock_entry):
     assert s_status.extra_state_attributes["encryption"] == "TLSv1.2 (Port 36669)"
     assert s_status.extra_state_attributes["local_only"] is True
     assert "paired_at" in s_status.extra_state_attributes
+    assert "access_token_expires_at" in s_status.extra_state_attributes
+    assert "refresh_token_expires_at" in s_status.extra_state_attributes
 
     mock_client.connected = False
     s_status._update_state()

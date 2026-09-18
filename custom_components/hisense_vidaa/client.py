@@ -319,6 +319,9 @@ class HisenseTvClient(CallbackRegistryMixin):
                 broadcast_basepath=self.topicBrcsBasepath,
                 mobile_basepath=self.topicMobiBasepath,
             )
+            if self.refresh_token and not self._refreshing_token:
+                threading.Thread(target=self._proactive_token_refresh, daemon=True).start()
+
             threading.Timer(0.5, self.query_initial_state).start()
         else:
             self.connected = False
@@ -336,7 +339,7 @@ class HisenseTvClient(CallbackRegistryMixin):
                 return
 
             if rc in (4, 5):
-                if self.refresh_token:
+                if self.refresh_token and not is_token_expired(self.refresh_token_time, self.refresh_token_duration):
                     current_time = time.time()
                     with self._refresh_lock:
                         should_refresh = not self._refreshing_token and (current_time - self._last_refresh_attempt > 15)
@@ -346,9 +349,8 @@ class HisenseTvClient(CallbackRegistryMixin):
                     if should_refresh:
                         _LOGGER.info("[%s] Authentication failed on connect. Refreshing token in background...", self.ip)
                         threading.Thread(target=self._refresh_token_and_update_creds, daemon=True).start()
-                    else:
-                        self._dispatch_auth_failed()
                 else:
+                    _LOGGER.warning("[%s] MQTT authentication rejected and no valid refresh token available. Reauthentication required.", self.ip)
                     self._dispatch_auth_failed()
 
     def _refresh_token_and_update_creds(self) -> None:
@@ -358,11 +360,33 @@ class HisenseTvClient(CallbackRegistryMixin):
                 # Reconnect with new access token
                 self.connect_and_run()
             else:
-                _LOGGER.warning("[%s] Failed to refresh token in background.", self.ip)
-                self._dispatch_auth_failed()
+                _LOGGER.debug("[%s] Background token refresh did not complete (TV may be in standby/unreachable).", self.ip)
+                if not self.refresh_token or is_token_expired(self.refresh_token_time, self.refresh_token_duration):
+                    _LOGGER.warning("[%s] Refresh token is missing or expired. Reauthentication required.", self.ip)
+                    self._dispatch_auth_failed()
         except Exception as e:
             _LOGGER.warning("[%s] Background token refresh error: %s", self.ip, e)
-            self._dispatch_auth_failed()
+            if not self.refresh_token or is_token_expired(self.refresh_token_time, self.refresh_token_duration):
+                self._dispatch_auth_failed()
+        finally:
+            with self._refresh_lock:
+                self._refreshing_token = False
+
+    def _proactive_token_refresh(self) -> None:
+        """Proactively refreshes the token if access token is within 12h of expiration."""
+        try:
+            if self.access_token and is_token_expired(self.access_token_time, self.access_token_duration, margin_seconds=43200):
+                current_time = time.time()
+                with self._refresh_lock:
+                    should_refresh = not self._refreshing_token and (current_time - self._last_refresh_attempt > 60)
+                    if should_refresh:
+                        self._refreshing_token = True
+                        self._last_refresh_attempt = current_time
+                if should_refresh:
+                    _LOGGER.info("[%s] Access token is near expiration (<12h remaining). Proactively renewing tokens...", self.ip)
+                    self.refresh_tokens()
+        except Exception as e:
+            _LOGGER.debug("[%s] Proactive token refresh check error: %s", self.ip, e)
         finally:
             with self._refresh_lock:
                 self._refreshing_token = False
@@ -396,15 +420,15 @@ class HisenseTvClient(CallbackRegistryMixin):
         """Submits the PIN code entered by the user and retrieves token pair."""
         return await async_submit_pin_code(self, pin_code)
 
-    def check_and_refresh_token(self, force: bool = False) -> bool:
+    def check_and_refresh_token(self, force: bool = False, margin_seconds: int = 0) -> bool:
         """Checks access token expiration and triggers refresh via refresh token if necessary."""
         if not self.refresh_token:
             return False
 
         if not force and self.access_token:
-            if not is_token_expired(self.access_token_time, self.access_token_duration):
+            if not is_token_expired(self.access_token_time, self.access_token_duration, margin_seconds=margin_seconds):
                 return False
-            _LOGGER.debug("[%s] Access token expired, initiating refresh", self.ip)
+            _LOGGER.debug("[%s] Access token expired or within margin, initiating refresh", self.ip)
 
         return self.refresh_tokens()
 

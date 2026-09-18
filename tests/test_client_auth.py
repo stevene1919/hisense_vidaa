@@ -261,3 +261,76 @@ def test_auth_failed_and_token_refreshed_callback_dispatches():
     assert token_refreshed_calls[0] is client
 
 
+def test_on_connect_rc4_with_valid_refresh_token_triggers_background_refresh():
+    """Test rc=4 connection rejection with valid refresh token starts background thread and does not dispatch auth_failed immediately."""
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        refresh_token="valid_refresh_token",
+        refresh_token_time=now - 86400,  # 1 day old (valid 30 days)
+        refresh_token_duration=30,
+    )
+    mock_mqtt = MagicMock()
+    mock_auth_failed = MagicMock()
+    client.register_auth_failed_callback(mock_auth_failed)
+
+    with patch("threading.Thread") as mock_thread:
+        client._on_connect(mock_mqtt, None, None, rc=4)
+        mock_mqtt.loop_stop.assert_called_once()
+        mock_thread.assert_called_once()
+        mock_auth_failed.assert_not_called()
+
+
+def test_refresh_failure_with_valid_refresh_token_suppresses_auth_failed():
+    """Test failed background refresh (e.g. TV in standby) suppresses auth_failed if refresh token is still unexpired."""
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        refresh_token="valid_refresh_token",
+        refresh_token_time=now - 86400,  # 1 day old (valid 30 days)
+        refresh_token_duration=30,
+    )
+    mock_auth_failed = MagicMock()
+    client.register_auth_failed_callback(mock_auth_failed)
+
+    with patch.object(client, "check_and_refresh_token", return_value=False):
+        client._refresh_token_and_update_creds()
+        mock_auth_failed.assert_not_called()
+
+
+def test_refresh_failure_with_expired_refresh_token_dispatches_auth_failed():
+    """Test failed background refresh when refresh token IS expired (>30 days) dispatches auth_failed."""
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        refresh_token="expired_refresh_token",
+        refresh_token_time=now - (31 * 86400),  # 31 days old (expired)
+        refresh_token_duration=30,
+    )
+    mock_auth_failed = MagicMock()
+    client.register_auth_failed_callback(mock_auth_failed)
+
+    with patch.object(client, "check_and_refresh_token", return_value=False):
+        client._refresh_token_and_update_creds()
+        mock_auth_failed.assert_called_once()
+
+
+def test_proactive_token_refresh_triggers_within_12_hours():
+    """Test proactive token refresh triggers renewal when access token has <12h remaining."""
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        access_token="expiring_soon_token",
+        access_token_time=now - (40 * 3600),  # 40 hours old (8h left on 48h token)
+        access_token_duration=2,
+        refresh_token="valid_refresh",
+        refresh_token_time=now - (40 * 3600),
+        refresh_token_duration=30,
+    )
+
+    with patch.object(client, "refresh_tokens") as mock_refresh:
+        client._proactive_token_refresh()
+        mock_refresh.assert_called_once()
+
+
+

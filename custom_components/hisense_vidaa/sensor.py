@@ -118,6 +118,12 @@ class HisenseVidaaSessionStatusSensor(HisenseVidaaBaseSensor):
             attrs["paired_at"] = datetime.fromtimestamp(
                 self._client.access_token_time, tz=UTC
             ).isoformat()
+        if self._client.access_token_time and self._client.access_token_duration:
+            access_expires = self._client.access_token_time + (self._client.access_token_duration * 86400)
+            attrs["access_token_expires_at"] = datetime.fromtimestamp(access_expires, tz=UTC).isoformat()
+        if self._client.refresh_token_time and self._client.refresh_token_duration:
+            refresh_expires = self._client.refresh_token_time + (self._client.refresh_token_duration * 86400)
+            attrs["refresh_token_expires_at"] = datetime.fromtimestamp(refresh_expires, tz=UTC).isoformat()
         return attrs
 
 
