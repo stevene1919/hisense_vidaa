@@ -144,8 +144,29 @@ def resolve_source(
                 sid = str(src.get("sourceid") or "").strip()
                 if clean in (sname.lower(), dname.lower(), sid.lower()):
                     return sid or sname, sname or dname or sid
+                if clean in ("tv", "live tv", "livetv", "dtv", "antenna") and (
+                    sname.lower() in ("tv", "live tv", "livetv", "dtv", "antenna")
+                    or sid.lower() in ("tv", "live tv", "livetv", "dtv", "antenna")
+                ):
+                    return sid or sname, sname or dname or sid
+
+    if clean in ("tv", "live tv", "livetv", "dtv", "antenna"):
+        return "TV", "TV"
 
     return target.strip(), None
+
+
+def _is_hardware_source(src: dict[str, Any]) -> bool:
+    """Checks if a source entry represents a physical TV hardware input."""
+    sname = str(src.get("sourcename") or "").strip().lower()
+    sid = str(src.get("sourceid") or "").strip().lower()
+    dname = str(src.get("displayname") or "").strip().lower()
+    for val in (sname, sid, dname):
+        if any(val.startswith(p) for p in ("hdmi", "av", "tv", "dtv", "atv", "antenna", "comp", "vga")):
+            return True
+        if val in ("tv", "live tv", "livetv", "av", "avs"):
+            return True
+    return False
 
 
 def get_next_cycled_source(
@@ -168,18 +189,28 @@ def get_next_cycled_source(
     if not valid_sources:
         return None
 
+    # Filter for hardware/physical input sources first to prevent cycling into apps (e.g. VIDAA tv ID 284)
+    hardware_sources = [s for s in valid_sources if _is_hardware_source(s)]
+    candidate_sources = hardware_sources if hardware_sources else valid_sources
+
     curr_clean = str(current_source or "").strip().lower()
     curr_idx = -1
-    for idx, src in enumerate(valid_sources):
+    for idx, src in enumerate(candidate_sources):
         sname = str(src.get("sourcename") or "").strip().lower()
         dname = str(src.get("displayname") or "").strip().lower()
         sid = str(src.get("sourceid") or "").strip().lower()
         if curr_clean and (curr_clean in (sname, dname, sid)):
             curr_idx = idx
             break
+        if curr_clean in ("tv", "live tv", "livetv", "dtv", "antenna") and (
+            sname in ("tv", "live tv", "livetv", "dtv", "antenna")
+            or sid in ("tv", "live tv", "livetv", "dtv", "antenna")
+        ):
+            curr_idx = idx
+            break
 
-    next_idx = (curr_idx + 1) % len(valid_sources)
-    next_source = valid_sources[next_idx]
+    next_idx = (curr_idx + 1) % len(candidate_sources)
+    next_source = candidate_sources[next_idx]
     sid = str(next_source.get("sourceid") or next_source.get("sourcename") or "")
     sname = str(next_source.get("sourcename") or next_source.get("displayname") or sid)
     return sid, sname

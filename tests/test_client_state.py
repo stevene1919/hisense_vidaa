@@ -233,3 +233,37 @@ def test_volume_and_mute_state_parsing():
     assert client.muted is False
 
 
+def test_livetv_state_parsing_and_cycling():
+    """Test Live TV broadcast parsing without sourcename and cycling over hardware sources."""
+    client = HisenseTvClient(ip="192.168.50.12", client_id="test_client")
+    client.define_topic_paths()
+    client.change_source = MagicMock()
+
+    client.sources = [
+        {"sourceid": "TV", "sourcename": "TV", "displayname": "TV"},
+        {"sourceid": "284", "sourcename": "VIDAA tv", "displayname": "VIDAA tv"},
+        {"sourceid": "HDMI1", "sourcename": "HDMI1", "displayname": "HDMI1"},
+        {"sourceid": "HDMI2", "sourcename": "HDMI2", "displayname": "HDMI2"},
+        {"sourceid": "HDMI3", "sourcename": "HDMI3", "displayname": "HDMI3"},
+        {"sourceid": "AVS", "sourcename": "AV", "displayname": "AV"},
+    ]
+
+    mock_msg = MagicMock()
+    mock_msg.topic = client.topicBrcsBasepath + "ui_service/state"
+    mock_msg.payload = b'{"statetype":"livetv","list_param":"400001","channel_num":"5000","channel_name":"Mythbusters","sourceid":"TV"}'
+    client._on_message(None, None, mock_msg)
+
+    assert client.current_source == "TV"
+    assert client.current_source_id == "TV"
+    assert client.current_channel == "Mythbusters"
+
+    # Cycling from TV should skip virtual app ID 284 (VIDAA tv) and advance to HDMI1
+    assert client.send_command("input") is True
+    client.change_source.assert_called_with("HDMI1", "HDMI1")
+
+    # Cycling from AV should wrap around to TV
+    client.current_source = "AV"
+    assert client.send_command("input") is True
+    client.change_source.assert_called_with("TV", "TV")
+
+

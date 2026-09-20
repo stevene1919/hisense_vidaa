@@ -153,8 +153,15 @@ def change_source(
     if not client.connected or not client.mqtt_client:
         return
 
-    sid = str(source_id)
-    sname = source_name
+    sid = str(source_id).strip()
+    sname = source_name.strip() if source_name else None
+
+    if not sname:
+        resolved_id, resolved_name = resolve_source(getattr(client, "sources", []), sid)
+        if resolved_name:
+            sname = resolved_name
+        if resolved_id:
+            sid = resolved_id
 
     payload_dict: dict[str, Any] = {}
     if sid:

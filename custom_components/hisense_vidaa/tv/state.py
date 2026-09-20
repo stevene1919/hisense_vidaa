@@ -23,8 +23,26 @@ def apply_state_update(client: Any, data: Any) -> None:
 
     if "sourcename" in data:
         client.current_source = data["sourcename"]
+    elif "sourceid" in data:
+        sid_str = str(data["sourceid"])
+        if sid_str.upper() == "TV" or statetype == "livetv":
+            client.current_source = "TV"
+        else:
+            sources = getattr(client, "sources", [])
+            matched_name = None
+            if sources:
+                for s in sources:
+                    if isinstance(s, dict) and str(s.get("sourceid", "")).strip().lower() == sid_str.strip().lower():
+                        matched_name = s.get("sourcename") or s.get("displayname")
+                        break
+            client.current_source = matched_name or sid_str
+    elif statetype == "livetv":
+        client.current_source = "TV"
+
     if "sourceid" in data:
         client.current_source_id = str(data["sourceid"])
+    elif statetype == "livetv":
+        client.current_source_id = "TV"
     if "appname" in data:
         client.current_app = data["appname"]
     if "appid" in data:
