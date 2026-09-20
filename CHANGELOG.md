@@ -2,6 +2,19 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.9.3] - 2026-09-21
+
+### Fixed
+- **CONFIG FLOW MQTT CLIENT LEAK & 30s RECONNECT FLAPPING (Issue #25)**:
+  - Cleanly disconnects the pairing flow MQTT client in the executor before creating the configuration entry in `async_step_options`, eliminating duplicate client sessions with identical `client_id`s that caused 30-second disconnect/reconnect flapping until HA restart.
+  - Cleanly disconnects the flow client before entry reload in `_async_finish_reauth`.
+  - Implemented `@callback def async_remove(self)` in `HisenseVidaaConfigFlow` to stop background client threads when a pairing flow is aborted, dismissed, or closed.
+
+### Added
+- **VIDAA 2024 APK KEYSTORE AUTO-DISCOVERY (`El.p12`) (Issue #6)**:
+  - Added `El.p12` and `el.p12` to PKCS#12 bundle candidate lists for `modern`, `middle`, and `auto` profiles, allowing raw keystores extracted directly from official VIDAA Android APKs (`res/El.p12`) to be auto-discovered and unpacked to PEM without manual renaming.
+  - Documented client certificate identity validation (`CN=VidaaAppAndroidV01`) on 2024+ VIDAA firmware (`p20.09.6030...`) and guidance for resolving `rc: 5` (Not Authorized) pairing rejections.
+
 ## [2.9.2] - 2026-09-18
 
 ### Fixed

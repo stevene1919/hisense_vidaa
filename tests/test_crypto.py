@@ -227,3 +227,65 @@ def test_extract_el_pkcs12_and_resolve(tmp_path):
     assert "El_cert.pem" in resolved_cert
     assert "El_key.pem" in resolved_key
 
+
+def test_resolve_certificates_direct_p12_argument(tmp_path):
+    """Test passing a direct .p12 certfile path to resolve_certificates."""
+    key = rsa.generate_private_key(public_exponent=65537, key_size=1024)
+    subject = issuer = x509.Name([x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "DirectP12")])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.now(UTC) - timedelta(days=1))
+        .not_valid_after(datetime.now(UTC) + timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
+    p12_bytes = pkcs12.serialize_key_and_certificates(
+        b"DirectP12",
+        key,
+        cert,
+        None,
+        serialization.BestAvailableEncryption(b"186e990688070325a1c4b0ce275d2388"),
+    )
+
+    custom_p12 = tmp_path / "custom_bundle.p12"
+    custom_p12.write_bytes(p12_bytes)
+
+    resolved_cert, resolved_key = resolve_certificates(certfile=str(custom_p12))
+    assert os.path.isfile(resolved_cert)
+    assert os.path.isfile(resolved_key)
+    assert "custom_bundle_cert.pem" in resolved_cert
+    assert "custom_bundle_key.pem" in resolved_key
+
+
+def test_profile_cert_candidates_el_p12_membership():
+    """Verify El.p12 and el.p12 exist in candidate lists for appropriate profiles."""
+    from custom_components.hisense_vidaa.protocol.certs import PROFILE_CERT_CANDIDATES
+
+    for profile in ("modern", "middle", "auto"):
+        _, _, p12_names = PROFILE_CERT_CANDIDATES[profile]
+        assert "El.p12" in p12_names
+        assert "el.p12" in p12_names
+
+
+def test_get_profile_default_cert_paths(tmp_path):
+    """Test get_profile_default_cert_paths for different auth profiles."""
+    from custom_components.hisense_vidaa.crypto import get_profile_default_cert_paths
+
+    _cert, _key, cert_dir, cert_name, key_name = get_profile_default_cert_paths(
+        "modern", config_dir=str(tmp_path)
+    )
+    assert cert_name == "vidaa_2024_cert.pem"
+    assert key_name == "vidaa_2024_key.pem"
+    assert cert_dir == str(tmp_path / "ssl")
+
+    _cert2, _key2, _dir2, cert_name2, key_name2 = get_profile_default_cert_paths(
+        "remotenow", config_dir=str(tmp_path)
+    )
+    assert cert_name2 == "remotenow_2018_cert.pem"
+    assert key_name2 == "remotenow_2018_key.pem"
+
+
+

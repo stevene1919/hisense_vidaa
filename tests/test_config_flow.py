@@ -552,3 +552,47 @@ async def test_finish_reauth_disconnects_client():
     assert hass.config_entries.async_reload.called
 
 
+@pytest.mark.anyio
+async def test_config_flow_async_remove_noop_without_client():
+    """Test async_remove executes cleanly when client is None."""
+    flow = HisenseVidaaConfigFlow()
+    flow.client = None
+    flow.async_remove()
+    assert flow.client is None
+
+
+@pytest.mark.anyio
+async def test_config_flow_async_remove_without_hass():
+    """Test async_remove calls disconnect synchronously if hass is not set."""
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = None
+    mock_client = MagicMock()
+    flow.client = mock_client
+
+    flow.async_remove()
+    assert mock_client.disconnect.called
+    assert flow.client is None
+
+
+@pytest.mark.anyio
+async def test_finish_reauth_without_client():
+    """Test _async_finish_reauth works when client is already None."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.config_entries.async_update_entry = MagicMock()
+    hass.config_entries.async_reload = AsyncMock(return_value=True)
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    mock_entry = MagicMock()
+    mock_entry.entry_id = "test_entry_456"
+    mock_entry.data = {CONF_IP_ADDRESS: "192.168.50.12"}
+    flow._reauth_entry = mock_entry
+    flow.client = None
+
+    result = await flow._async_finish_reauth(reason="reauth_successful")
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    assert hass.config_entries.async_reload.called
+
+
+
