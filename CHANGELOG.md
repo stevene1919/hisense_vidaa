@@ -5,6 +5,11 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 ## [2.9.3] - 2026-09-21
 
 ### Fixed
+- **LIVE TV SOURCE STATE PARSING & INPUT CYCLING**:
+  - Fixed `client.current_source` not updating to `"TV"` when receiving `statetype: "livetv"` broadcasts without a `sourcename` key, which previously caused remote `input` cycling to calculate the next source from stale previous states and loop on Live TV.
+  - Filtered `get_next_cycled_source` candidates to physical hardware inputs (`HDMI1`, `HDMI2`, `HDMI3`, `AV`, `TV`), preventing input cycling from stalling on virtual app entries (such as `VIDAA tv` app ID `284`).
+  - Added Live TV alias matching (`tv`, `live tv`, `livetv`, `dtv`, `antenna`) to cleanly wrap cycling around from `TV` back to `HDMI1`.
+  - Ensured both `sourceid` and `sourcename` are populated in `actions/changesource` MQTT payloads when switching inputs.
 - **CONFIG FLOW MQTT CLIENT LEAK & 30s RECONNECT FLAPPING (Issue #25)**:
   - Cleanly disconnects the pairing flow MQTT client in the executor before creating the configuration entry in `async_step_options`, eliminating duplicate client sessions with identical `client_id`s that caused 30-second disconnect/reconnect flapping until HA restart.
   - Cleanly disconnects the flow client before entry reload in `_async_finish_reauth`.
