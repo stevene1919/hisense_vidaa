@@ -192,3 +192,38 @@ def test_resolve_ca_certificate(tmp_path):
     # Explicit ca_path
     assert resolve_ca_certificate(ca_path=str(ca_file)) == str(ca_file)
     assert resolve_ca_certificate(ca_path="/nonexistent/path.pem") is None
+
+
+def test_extract_el_pkcs12_and_resolve(tmp_path):
+    """Test discovering and extracting El.p12 from VIDAA APK."""
+    key = rsa.generate_private_key(public_exponent=65537, key_size=1024)
+    subject = issuer = x509.Name([x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "VidaaAppAndroidV01")])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.now(UTC) - timedelta(days=1))
+        .not_valid_after(datetime.now(UTC) + timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
+    p12_bytes = pkcs12.serialize_key_and_certificates(
+        b"VidaaAppAndroidV01",
+        key,
+        cert,
+        None,
+        serialization.BestAvailableEncryption(b"186e990688070325a1c4b0ce275d2388"),
+    )
+
+    el_file = tmp_path / "El.p12"
+    el_file.write_bytes(p12_bytes)
+
+    resolved_cert, resolved_key = resolve_certificates(
+        auth_profile="auto", search_dirs=[str(tmp_path)]
+    )
+    assert os.path.isfile(resolved_cert)
+    assert os.path.isfile(resolved_key)
+    assert "El_cert.pem" in resolved_cert
+    assert "El_key.pem" in resolved_key
+

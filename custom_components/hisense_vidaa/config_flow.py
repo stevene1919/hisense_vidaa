@@ -226,9 +226,13 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         """Update existing config entry with new credentials and reload."""
         if self._reauth_entry:
+            auth_data = self._get_client_auth_data()
+            if self.client:
+                await self.hass.async_add_executor_job(self.client.disconnect)
+                self.client = None
             self.hass.config_entries.async_update_entry(
                 self._reauth_entry,
-                data={**self._reauth_entry.data, **self._get_client_auth_data()},
+                data={**self._reauth_entry.data, **auth_data},
             )
             await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
         return self.async_abort(reason=reason)
@@ -560,6 +564,10 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None and self.client:
             entry_data = self._get_client_auth_data()
 
+            # Disconnect the flow client before creating entry to avoid MQTT session collision
+            await self.hass.async_add_executor_job(self.client.disconnect)
+            self.client = None
+
             return self.async_create_entry(
                 title=self.discovered_title or f"Hisense TV ({self.ip_address})",
                 data=entry_data,
@@ -622,3 +630,16 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ): bool,
             }),
         )
+
+    @callback
+    def async_remove(self) -> None:
+        """Clean up running flow client when config flow is aborted or closed."""
+        if self.client:
+            client = self.client
+            self.client = None
+            if hasattr(self, "hass") and self.hass:
+                self.hass.async_create_task(self.hass.async_add_executor_job(client.disconnect))
+            else:
+                client.disconnect()
+
+

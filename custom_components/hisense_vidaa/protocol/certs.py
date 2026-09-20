@@ -162,12 +162,12 @@ PROFILE_CERT_CANDIDATES: dict[str, tuple[list[str], list[str], list[str]]] = {
     "modern": (
         ["vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_2024_cert.pem", "vidaa2024_cert.pem", "vidaa_client.pem", "hisense.crt", "client_cert.pem", "cert.pem"],
         ["vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_2024_key.pem", "vidaa2024_key.pem", "vidaa_client.key", "hisense.key", "client_key.pem", "key.pem"],
-        ["vidaa_2024_client_mobile_android.p12", "client_mobile_android.p12", "3R.p12", "vidaa_cert.p12", "vidaa.p12"],
+        ["vidaa_2024_client_mobile_android.p12", "client_mobile_android.p12", "El.p12", "el.p12", "3R.p12", "vidaa_cert.p12", "vidaa.p12"],
     ),
     "middle": (
         ["vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_client.pem", "remotenow_2018_cert.pem", "hisense.crt", "client_cert.pem", "cert.pem"],
         ["vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_client.key", "remotenow_2018_key.pem", "hisense.key", "client_key.pem", "key.pem"],
-        ["client_mobile_android.p12", "vidaa_2024_client_mobile_android.p12", "3R.p12", "rcamobile.p12", "hisense.p12"],
+        ["client_mobile_android.p12", "vidaa_2024_client_mobile_android.p12", "El.p12", "el.p12", "3R.p12", "rcamobile.p12", "hisense.p12"],
     ),
     "remotenow": (
         ["remotenow_2018_cert.pem", "vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client.pem", "hisense.crt", "client_cert.pem", "cert.pem"],
@@ -177,7 +177,7 @@ PROFILE_CERT_CANDIDATES: dict[str, tuple[list[str], list[str], list[str]]] = {
     "auto": (
         ["vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_client.pem", "hisense.crt", "client_cert.pem", "vidaa_2024_cert.pem", "vidaa2024_cert.pem", "remotenow_2018_cert.pem", "cert.pem"],
         ["vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_client.key", "hisense.key", "client_key.pem", "vidaa_2024_key.pem", "vidaa2024_key.pem", "remotenow_2018_key.pem", "key.pem"],
-        ["client_mobile_android.p12", "vidaa_2024_client_mobile_android.p12", "3R.p12", "vidaa_cert.p12", "vidaa.p12", "rcamobile.p12", "hisense.p12"],
+        ["client_mobile_android.p12", "vidaa_2024_client_mobile_android.p12", "El.p12", "el.p12", "3R.p12", "vidaa_cert.p12", "vidaa.p12", "rcamobile.p12", "hisense.p12"],
     ),
 }
 

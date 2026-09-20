@@ -1,5 +1,6 @@
 """Tests for Hisense VIDAA config flow and auto-discovery."""
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -80,6 +81,7 @@ async def test_ssdp_discovery_non_vidaa_ignored():
 @pytest.mark.anyio
 async def test_options_step_creates_entry():
     hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
     flow = HisenseVidaaConfigFlow()
     flow.hass = hass
     flow.context = {}
@@ -125,6 +127,8 @@ async def test_options_step_creates_entry():
     assert result["options"]["enable_picture_controls"] is False
     assert result["options"]["enable_sound_controls"] is False
     assert result["options"]["enable_audio_only"] is False
+    assert mock_client.disconnect.called
+    assert flow.client is None
 
 
 @pytest.mark.anyio
@@ -483,4 +487,68 @@ async def test_zeroconf_discovery(monkeypatch):
     assert result["step_id"] == "discovery_confirm"
     assert flow.ip_address == "192.168.50.12"
     assert flow.mac_address == "e8:51:77:ec:98:1c"
+
+
+@pytest.mark.anyio
+async def test_config_flow_async_remove_cleans_up_client():
+    """Test async_remove disconnects running flow client."""
+    hass = MagicMock(spec=HomeAssistant)
+    tasks = []
+
+    def mock_create_task(coro):
+        task = asyncio.create_task(coro)
+        tasks.append(task)
+        return task
+
+    hass.async_create_task = MagicMock(side_effect=mock_create_task)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    mock_client = MagicMock()
+    flow.client = mock_client
+
+    flow.async_remove()
+    if tasks:
+        await asyncio.gather(*tasks)
+    assert mock_client.disconnect.called
+    assert flow.client is None
+
+
+
+@pytest.mark.anyio
+async def test_finish_reauth_disconnects_client():
+    """Test _async_finish_reauth disconnects client before reloading entry."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    hass.config_entries.async_update_entry = MagicMock()
+    hass.config_entries.async_reload = AsyncMock(return_value=True)
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    mock_entry = MagicMock()
+    mock_entry.entry_id = "test_entry_123"
+    mock_entry.data = {CONF_IP_ADDRESS: "192.168.50.12"}
+    flow._reauth_entry = mock_entry
+
+    mock_client = MagicMock()
+    mock_client.client_id = "reauth_client_id"
+    mock_client.username = "hisense"
+    mock_client.password = "pass"
+    mock_client.access_token = "token_reauth"
+    mock_client.access_token_time = 1700000000
+    mock_client.access_token_duration = 3600
+    mock_client.refresh_token = "reftoken_reauth"
+    mock_client.refresh_token_time = 1700000000
+    mock_client.refresh_token_duration = 86400
+    flow.client = mock_client
+    flow.ip_address = "192.168.50.12"
+
+    result = await flow._async_finish_reauth(reason="reauth_successful")
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    assert mock_client.disconnect.called
+    assert flow.client is None
+    assert hass.config_entries.async_reload.called
+
 
