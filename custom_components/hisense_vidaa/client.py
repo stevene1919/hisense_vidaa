@@ -154,6 +154,15 @@ class HisenseTvClient(CallbackRegistryMixin):
         self._last_refresh_attempt: float = 0.0
         self._reconnect_lock = threading.Lock()
         self._last_reconnect_time: float = 0.0
+        # Token refresh retry while the TV is awake (the TV answers gettoken only when on)
+        self._token_watch: threading.Timer | None = None
+        self._token_watch_closed: bool = False
+        self._awake_refresh_failures: int = 0
+        self._last_awake_refresh_attempt: float = 0.0
+        # Consecutive failed refreshes after the broker rejected the access token (rc 4/5);
+        # drives the retry backoff (1 min .. 30 min) so a TV in standby is not hammered.
+        self._rejected_refresh_failures: int = 0
+        self._rejected_retry_timer: threading.Timer | None = None
 
         # Topic paths
         self.topicBrcsBasepath = TOPIC_BROADCAST_BASEPATH
@@ -342,25 +351,62 @@ class HisenseTvClient(CallbackRegistryMixin):
                 if self.refresh_token and not is_token_expired(self.refresh_token_time, self.refresh_token_duration):
                     current_time = time.time()
                     with self._refresh_lock:
-                        should_refresh = not self._refreshing_token and (current_time - self._last_refresh_attempt > 15)
+                        retry_after = min(60 * (2 ** self._rejected_refresh_failures), 1800)
+                        should_refresh = not self._refreshing_token and (current_time - self._last_refresh_attempt > retry_after)
                         if should_refresh:
                             self._refreshing_token = True
                             self._last_refresh_attempt = current_time
                     if should_refresh:
                         _LOGGER.info("[%s] Authentication failed on connect. Refreshing token in background...", self.ip)
                         threading.Thread(target=self._refresh_token_and_update_creds, daemon=True).start()
+                    else:
+                        # paho's loop is stopped on rc 4/5, so nothing would retry by itself:
+                        # reconnect (and thereby retry the refresh) once the backoff has passed.
+                        self._schedule_rejected_retry(max(5.0, retry_after - (current_time - self._last_refresh_attempt)))
                 else:
                     _LOGGER.warning("[%s] MQTT authentication rejected and no valid refresh token available. Reauthentication required.", self.ip)
                     self._dispatch_auth_failed()
+
+    def _schedule_rejected_retry(self, delay: float) -> None:
+        with self._refresh_lock:
+            if self._rejected_retry_timer is not None:
+                return
+            timer = threading.Timer(delay, self._rejected_retry_fire)
+            timer.daemon = True
+            self._rejected_retry_timer = timer
+            timer.start()
+        _LOGGER.debug("[%s] Next reconnect attempt in %.0f s", self.ip, delay)
+
+    def _rejected_retry_fire(self) -> None:
+        with self._refresh_lock:
+            self._rejected_retry_timer = None
+        try:
+            self.connect_and_run()
+        except Exception as e:
+            _LOGGER.debug("[%s] Scheduled reconnect failed: %s", self.ip, e)
+
+    def _cancel_rejected_retry(self) -> None:
+        with self._refresh_lock:
+            timer, self._rejected_retry_timer = self._rejected_retry_timer, None
+        if timer:
+            with contextlib.suppress(Exception):
+                timer.cancel()
 
     def _refresh_token_and_update_creds(self) -> None:
         try:
             if self.check_and_refresh_token(force=True):
                 _LOGGER.info("[%s] Token successfully refreshed on connection failure.", self.ip)
+                self._rejected_refresh_failures = 0
                 # Reconnect with new access token
                 self.connect_and_run()
             else:
-                _LOGGER.debug("[%s] Background token refresh did not complete (TV may be in standby/unreachable).", self.ip)
+                self._rejected_refresh_failures += 1
+                _LOGGER.warning(
+                    "[%s] Token refresh after rejected connection failed (attempt %d); next retry in %d min",
+                    self.ip,
+                    self._rejected_refresh_failures,
+                    min(60 * (2 ** self._rejected_refresh_failures), 1800) // 60,
+                )
                 if not self.refresh_token or is_token_expired(self.refresh_token_time, self.refresh_token_duration):
                     _LOGGER.warning("[%s] Refresh token is missing or expired. Reauthentication required.", self.ip)
                     self._dispatch_auth_failed()
@@ -376,6 +422,17 @@ class HisenseTvClient(CallbackRegistryMixin):
         """Proactively refreshes the token if access token is within 12h of expiration."""
         try:
             if self.access_token and is_token_expired(self.access_token_time, self.access_token_duration, margin_seconds=43200):
+                # Give the retained broadcast state (fake_sleep_0 in standby) time to arrive.
+                # A TV in standby keeps its broker up but never answers gettoken, so the
+                # refresh would only drop the working connection for nothing; the token
+                # watch retries as soon as the TV is awake.
+                time.sleep(self.PROACTIVE_REFRESH_SETTLE_SECONDS)
+                if not self.is_on:
+                    _LOGGER.info(
+                        "[%s] Access token is near expiration, but the TV is in standby; deferring token refresh until it is awake",
+                        self.ip,
+                    )
+                    return
                 current_time = time.time()
                 with self._refresh_lock:
                     should_refresh = not self._refreshing_token and (current_time - self._last_refresh_attempt > 60)
@@ -469,6 +526,16 @@ class HisenseTvClient(CallbackRegistryMixin):
                 self.connect_and_run()
             return True
 
+        # Refresh failed: the TV answers ``gettoken`` only while it is awake, so a refresh
+        # attempted in standby just times out. Do not leave the integration disconnected —
+        # the current access token may still be valid — restore the main connection and
+        # let the awake-retry logic try again later.
+        if was_connected or main_client:
+            _LOGGER.warning(
+                "[%s] Token refresh failed (TV in standby or unreachable); restoring MQTT connection with the current access token",
+                self.ip,
+            )
+            self.connect_and_run()
         return False
 
     # --------------------------------------------------------------------------
@@ -498,6 +565,79 @@ class HisenseTvClient(CallbackRegistryMixin):
         _LOGGER.debug("[%s] Starting background MQTT connection loop", self.ip)
         self.mqtt_client.connect_async(self.ip, 36669, 60)
         self.mqtt_client.loop_start()
+        self._token_watch_closed = False
+        self._start_token_watch()
+
+    # --------------------------------------------------------------------------
+    # Token watch: periodic refresh retry while the TV is awake
+    # --------------------------------------------------------------------------
+    TOKEN_WATCH_INTERVAL = 300
+    PROACTIVE_REFRESH_SETTLE_SECONDS = 3.0
+
+    def _start_token_watch(self) -> None:
+        with self._refresh_lock:
+            if self._token_watch_closed or self._token_watch is not None:
+                return
+            timer = threading.Timer(self.TOKEN_WATCH_INTERVAL, self._token_watch_tick)
+            timer.daemon = True
+            self._token_watch = timer
+            timer.start()
+
+    def _stop_token_watch(self) -> None:
+        with self._refresh_lock:
+            self._token_watch_closed = True
+            timer, self._token_watch = self._token_watch, None
+        if timer:
+            with contextlib.suppress(Exception):
+                timer.cancel()
+
+    def _token_watch_tick(self) -> None:
+        with self._refresh_lock:
+            self._token_watch = None
+        try:
+            self._maybe_refresh_while_awake()
+        except Exception as e:
+            _LOGGER.debug("[%s] Token watch error: %s", self.ip, e)
+        self._start_token_watch()
+
+    def _maybe_refresh_while_awake(self) -> None:
+        """Renews a near-expiry access token once the TV is awake (with backoff on failure)."""
+        if not (self.connected and self.is_on and self.access_token and self.refresh_token):
+            return
+        if not is_token_expired(self.access_token_time, self.access_token_duration, margin_seconds=43200):
+            return
+        backoff = min(600 * (2 ** self._awake_refresh_failures), 6 * 3600)
+        now = time.time()
+        with self._refresh_lock:
+            if (
+                self._refreshing_token
+                or now - self._last_awake_refresh_attempt < backoff
+                or now - self._last_refresh_attempt < 60
+            ):
+                return
+            self._refreshing_token = True
+            self._last_refresh_attempt = now
+            self._last_awake_refresh_attempt = now
+        ok = False
+        try:
+            _LOGGER.info("[%s] TV is awake and the access token is near expiration. Renewing tokens...", self.ip)
+            ok = self.refresh_tokens()
+        except Exception as e:
+            _LOGGER.warning("[%s] Token refresh while awake failed: %s", self.ip, e)
+        finally:
+            with self._refresh_lock:
+                self._refreshing_token = False
+        if ok:
+            self._awake_refresh_failures = 0
+            _LOGGER.info("[%s] Tokens renewed successfully", self.ip)
+        else:
+            self._awake_refresh_failures += 1
+            _LOGGER.warning(
+                "[%s] Token refresh failed while the TV is awake (attempt %d); next retry in %d min",
+                self.ip,
+                self._awake_refresh_failures,
+                min(600 * (2 ** self._awake_refresh_failures), 6 * 3600) // 60,
+            )
 
     def ensure_connected(self, min_interval: float = 5.0) -> bool:
         """Ensures the MQTT client is connected, rate-limiting reconnect attempts."""
@@ -659,6 +799,8 @@ class HisenseTvClient(CallbackRegistryMixin):
 
     def disconnect(self) -> None:
         """Cleanly disconnects the MQTT client and stops the background network thread."""
+        self._stop_token_watch()
+        self._cancel_rejected_retry()
         if self.mqtt_client:
             clean_disconnect_mqtt_client(self.mqtt_client)
             self.mqtt_client = None

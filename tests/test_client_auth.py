@@ -328,9 +328,81 @@ def test_proactive_token_refresh_triggers_within_12_hours():
         refresh_token_duration=30,
     )
 
+    client.PROACTIVE_REFRESH_SETTLE_SECONDS = 0
+    client.state = "on"  # TV awake: gettoken is answered
+
     with patch.object(client, "refresh_tokens") as mock_refresh:
         client._proactive_token_refresh()
         mock_refresh.assert_called_once()
+
+
+def test_proactive_token_refresh_deferred_in_standby():
+    """Proactive refresh must not drop the working connection while the TV is in standby."""
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        access_token="expiring_soon_token",
+        access_token_time=now - (40 * 3600),
+        access_token_duration=2,
+        refresh_token="valid_refresh",
+        refresh_token_time=now - (40 * 3600),
+        refresh_token_duration=30,
+    )
+    client.PROACTIVE_REFRESH_SETTLE_SECONDS = 0
+    client.state = "off"  # retained fake_sleep_0 received
+
+    with patch.object(client, "refresh_tokens") as mock_refresh:
+        client._proactive_token_refresh()
+        mock_refresh.assert_not_called()
+    assert client._refreshing_token is False
+
+
+def test_refresh_tokens_restores_connection_on_failure():
+    """A failed refresh (TV in standby) must reconnect with the current access token."""
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        client_id="cid",
+        username="his$1",
+        access_token="still_valid",
+        refresh_token="valid_refresh",
+    )
+    client.mqtt_client = MagicMock()
+    client.connected = True
+
+    with patch("custom_components.hisense_vidaa.client.perform_token_refresh", return_value=None), \
+         patch.object(client, "connect_and_run") as mock_connect:
+        assert client.refresh_tokens() is False
+        mock_connect.assert_called_once()
+
+
+def test_rejected_connection_schedules_delayed_reconnect():
+    """On rc 5 inside the backoff window a reconnect is scheduled instead of stranding the client."""
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        client_id="cid",
+        username="his$1",
+        access_token="expired",
+        refresh_token="valid_refresh",
+        refresh_token_time=int(time.time()),
+        refresh_token_duration=30,
+    )
+    client._last_refresh_attempt = time.time()  # a refresh was attempted seconds ago
+    client._rejected_refresh_failures = 1
+
+    with patch.object(client, "_schedule_rejected_retry") as mock_schedule:
+        client._on_connect(MagicMock(), None, None, 5)
+        mock_schedule.assert_called_once()
+        assert mock_schedule.call_args[0][0] >= 5.0
+
+    # After the backoff has passed a refresh thread is started instead
+    client._last_refresh_attempt = time.time() - 10_000
+    with patch("custom_components.hisense_vidaa.client.threading.Thread") as mock_thread, \
+         patch.object(client, "_schedule_rejected_retry") as mock_schedule:
+        client._on_connect(MagicMock(), None, None, 5)
+        mock_thread.assert_called_once()
+        mock_schedule.assert_not_called()
+    client._refreshing_token = False
+    client.disconnect()
 
 
 
