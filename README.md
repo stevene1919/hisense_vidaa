@@ -1,9 +1,10 @@
 # Hisense VIDAA TV Integration for Home Assistant
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/default)
+[![GitHub Release](https://img.shields.io/github/v/release/stevene1919/hisense_vidaa)](https://github.com/stevene1919/hisense_vidaa/releases)
+[![Support on Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=flat&logo=ko-fi&logoColor=white)](https://ko-fi.com/stevene_)
 [![Validate with HACS](https://github.com/stevene1919/hisense_vidaa/actions/workflows/validate.yml/badge.svg)](https://github.com/stevene1919/hisense_vidaa/actions/workflows/validate.yml)
 [![Lint & Verify](https://github.com/stevene1919/hisense_vidaa/actions/workflows/lint.yml/badge.svg)](https://github.com/stevene1919/hisense_vidaa/actions/workflows/lint.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/stevene1919/hisense_vidaa)](https://github.com/stevene1919/hisense_vidaa/releases)
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
@@ -13,6 +14,12 @@ Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using 
 
 <p align="center">
   <img src="assets/screenshots/integration_device.png" alt="Hisense VIDAA TV in Home Assistant" width="100%" />
+</p>
+
+<p align="center">
+  <a href="https://ko-fi.com/stevene_">
+    <img src="https://img.shields.io/badge/Support%20this%20Project-Buy%20Me%20A%20Coffee%20on%20Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Buy Me A Coffee on Ko-fi" />
+  </a>
 </p>
 
 ---
@@ -195,6 +202,18 @@ python3 test_client.py ping --ip <TV_IP>
 ## 📋 Roadmap & Backlog
 
 See [`TODO.md`](TODO.md) for active development items, planned enhancements, and feature requests.
+
+---
+
+## ☕ Support the Project
+
+If this integration makes your smart home better or saved you hours of troubleshooting, consider supporting continued reverse-engineering, maintenance, and new features:
+
+<p align="center">
+  <a href="https://ko-fi.com/stevene_" target="_blank">
+    <img src="https://storage.ko-fi.com/cdn/kofi3.png?v=3" height="44" style="border:0px;height:44px;" alt="Buy Me A Coffee at ko-fi.com" />
+  </a>
+</p>
 
 ---
 
