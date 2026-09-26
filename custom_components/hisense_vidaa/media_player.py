@@ -75,9 +75,10 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         self._client.register_sound_callback(self._handle_sound_update)
         self._client.register_disconnected_callback(self._handle_disconnected)
 
-        # Sync state and query initial state now that callbacks are registered and active
+        # Sync state and query initial state now that callbacks are registered and active.
+        # Do not assume "on": the broker is also reachable in standby (fake_sleep).
         if getattr(self._client, "connected", False):
-            self._state = STATE_ON
+            self._state = STATE_ON if self._client.is_on else STATE_OFF
             await self.hass.async_add_executor_job(self._client.query_initial_state)
 
     async def async_will_remove_from_hass(self) -> None:
@@ -373,9 +374,7 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
     def _handle_volume_update(self, data: dict[str, Any]) -> None:
         if not isinstance(data, dict):
             return
-        if self._client:
-            self._client.is_on = True
-        self._state = STATE_ON
+        # Volume broadcasts also arrive in standby - they say nothing about power state.
         vol_type = data.get("volume_type")
         if vol_type in (0, 1):
             self._volume_type = int(vol_type)
@@ -388,8 +387,6 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
     def _handle_sourcelist_update(self, data: list[dict[str, Any]]) -> None:
         if not data:
             return
-        if self._client:
-            self._client.is_on = True
         self._source_dict = {
             item.get("sourcename"): item
             for item in data
@@ -400,8 +397,6 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
     def _handle_applist_update(self, data: list[dict[str, Any]]) -> None:
         if not data:
             return
-        if self._client:
-            self._client.is_on = True
         self._app_list = data
         self._app_dict = {
             item.get("name"): item
@@ -411,9 +406,8 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         self.schedule_update_ha_state()
 
     def _handle_connected(self) -> None:
-        if self._client:
-            self._client.is_on = True
-        self._state = STATE_ON
+        # Power state is set by the retained state broadcast that follows the connect.
+        self._state = STATE_ON if (self._client and self._client.is_on) else STATE_OFF
         self.schedule_update_ha_state()
 
     def _handle_disconnected(self) -> None:

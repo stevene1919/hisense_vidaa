@@ -2,6 +2,16 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **STRANDED CONNECTION AFTER FAILED TOKEN REFRESH**:
+  - `refresh_tokens()` now restores the main MQTT connection with the current access token when the refresh fails (a TV in standby never answers `gettoken`); previously the entry stayed loaded but disconnected until it was reloaded.
+  - `_proactive_token_refresh()` waits for the retained state broadcast and skips the refresh while the TV reports standby (`fake_sleep_0`); a periodic token watch retries the near-expiry refresh once the TV is awake, with exponential backoff.
+  - On `rc: 4/5` the refresh retries now back off (1 → 30 min) and a delayed reconnect is scheduled, since paho's loop is stopped on rejection and nothing retried.
+- **FALSE `on` STATE WHILE IN STANDBY**:
+  - `media_player` no longer forces `is_on = True` on connect or on `volumechange` / `sourcelist` / `applist` messages; TVs with `fake_sleep` keep the broker up and publish these in standby, which made the entity report `on` after a restart and turned `turn_off` (`KEY_POWER` toggle) into power-on. Power state is derived from state messages only.
+
 ## [2.9.3] - 2026-09-21
 
 ### Fixed
