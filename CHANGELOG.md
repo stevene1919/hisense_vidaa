@@ -2,14 +2,19 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
-## [Unreleased]
+## [2.9.4] - 2026-09-27
 
 ### Fixed
-- **STRANDED CONNECTION AFTER FAILED TOKEN REFRESH**:
+- **WILDCARD SUBACK 128 SUBSCRIPTION REJECTION FIX (Issue #28)**:
+  - In `protocol/auth.py` (`perform_token_refresh`), replaced the wildcard `#` subscription with explicit subscriptions to `platform_service/data/tokenissuance` and `platform_service/data/gettoken`. Resolves failed token refreshes on modern VIDAA TV firmwares (e.g. 65Q75QE, 65U6KE) that deny wildcard subscriptions with `SUBACK 128`.
+- **PREVENT ON/OFF FLAPPING LOOP AFTER SUCCESSFUL REFRESH (Issue #28)**:
+  - In `__init__.py`, updated `update_listener` to check whether `entry.options` actually changed before reloading the integration. Persisting refreshed tokens in `entry.data` no longer triggers entry reload, preventing duplicate MQTT client sessions from fighting over the same `client_id` and flapping every 2 seconds.
+  - Removed redundant `connect_and_run()` call in `_refresh_token_and_update_creds()` since `refresh_tokens()` already handles reconnection.
+- **STRANDED CONNECTION AFTER FAILED TOKEN REFRESH (PR #27)**:
   - `refresh_tokens()` now restores the main MQTT connection with the current access token when the refresh fails (a TV in standby never answers `gettoken`); previously the entry stayed loaded but disconnected until it was reloaded.
   - `_proactive_token_refresh()` waits for the retained state broadcast and skips the refresh while the TV reports standby (`fake_sleep_0`); a periodic token watch retries the near-expiry refresh once the TV is awake, with exponential backoff.
   - On `rc: 4/5` the refresh retries now back off (1 → 30 min) and a delayed reconnect is scheduled, since paho's loop is stopped on rejection and nothing retried.
-- **FALSE `on` STATE WHILE IN STANDBY**:
+- **FALSE `on` STATE WHILE IN STANDBY (PR #27)**:
   - `media_player` no longer forces `is_on = True` on connect or on `volumechange` / `sourcelist` / `applist` messages; TVs with `fake_sleep` keep the broker up and publish these in standby, which made the entity report `on` after a restart and turned `turn_off` (`KEY_POWER` toggle) into power-on. Power state is derived from state messages only.
 
 ## [2.9.3] - 2026-09-21

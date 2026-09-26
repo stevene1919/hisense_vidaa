@@ -91,6 +91,46 @@ def test_perform_token_refresh_validation() -> None:
     assert perform_token_refresh(ip="192.168.50.12", client_id="", username="", refresh_token="") is None
 
 
+def test_perform_token_refresh_subscriptions() -> None:
+    """Test that perform_token_refresh subscribes to exact topics rather than wildcard."""
+    from unittest.mock import patch
+
+    import paho.mqtt.client as mqtt
+
+    subscribed_topics = []
+    published_topics = []
+
+    def fake_connect(self, ip, port, keepalive):
+        # Simulate successful connect
+        self.on_connect(self, None, None, 0)
+
+    def fake_subscribe(self, topics, qos=0):
+        subscribed_topics.append(topics)
+
+    def fake_publish(self, topic, payload):
+        published_topics.append((topic, payload))
+
+    with patch.object(mqtt.Client, "connect", fake_connect), \
+         patch.object(mqtt.Client, "subscribe", fake_subscribe), \
+         patch.object(mqtt.Client, "publish", fake_publish), \
+         patch.object(mqtt.Client, "loop_start"), \
+         patch.object(mqtt.Client, "loop_stop"), \
+         patch.object(mqtt.Client, "disconnect"):
+        perform_token_refresh(
+            ip="192.168.50.12",
+            client_id="test_client_id",
+            username="his$123",
+            refresh_token="test_refresh_token",
+            timeout=0.1,
+        )
+
+    assert len(subscribed_topics) == 1
+    topics = subscribed_topics[0]
+    # Verify exact topics were subscribed (avoiding wildcard # which modern TVs reject with SUBACK 128)
+    assert ("/remoteapp/mobile/test_client_id/platform_service/data/tokenissuance", 0) in topics
+    assert ("/remoteapp/mobile/test_client_id/platform_service/data/gettoken", 0) in topics
+
+
 def test_navigation_feature_helpers() -> None:
     mock_client = MagicMock()
     mock_client.apps = [{"appId": "netflix", "name": "Netflix", "url": "https://netflix.com"}]

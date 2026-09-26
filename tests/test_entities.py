@@ -548,6 +548,40 @@ async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeyp
 
 
 @pytest.mark.anyio
+async def test_update_listener_options_filtering(mock_entry, mock_client, monkeypatch):
+    """Test that update_listener only reloads if entry.options changed (ignoring entry.data token updates)."""
+    from custom_components.hisense_vidaa import async_setup_entry, update_listener
+
+    hass = MagicMock()
+    hass.data = {}
+    hass.config_entries = MagicMock()
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    hass.loop = MagicMock()
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.HisenseTvClient",
+        lambda *args, **kwargs: mock_client,
+    )
+    mock_client.has_notifications = False
+    mock_client.check_and_refresh_token = MagicMock(return_value=False)
+    mock_client.connect_and_run = MagicMock()
+
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+    hass.config_entries.async_reload = AsyncMock()
+
+    mock_entry.options = {"enable_remote": True}
+    await async_setup_entry(hass, mock_entry)
+
+    # 1. Trigger update_listener with unchanged options (e.g. entry.data updated with refreshed tokens)
+    await update_listener(hass, mock_entry)
+    hass.config_entries.async_reload.assert_not_called()
+
+    # 2. Trigger update_listener with changed options
+    mock_entry.options = {"enable_remote": False}
+    await update_listener(hass, mock_entry)
+    hass.config_entries.async_reload.assert_awaited_once_with(mock_entry.entry_id)
+
+
+@pytest.mark.anyio
 async def test_switch_entities(mock_client, mock_entry):
     """Test AudioOnly and DebugLogging switch entities."""
     from custom_components.hisense_vidaa.switch import (

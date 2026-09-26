@@ -107,7 +107,11 @@ def perform_token_refresh(
         connect_rc[0] = rc
         if rc == 0:
             _LOGGER.debug("[%s] Refresh client connected successfully. Subscribing to token topics...", ip)
-            cl.subscribe(paths.mobile + "#")
+            # Some VIDAA firmwares deny wildcard subscriptions (SUBACK 128): subscribe to exact topics
+            cl.subscribe([
+                (paths.mobile + "platform_service/data/tokenissuance", 0),
+                (paths.mobile + "platform_service/data/gettoken", 0),
+            ])
             payload = json.dumps({"refreshtoken": refresh_token or ""})
             cl.publish(paths.platform + "data/gettoken", payload)
         else:

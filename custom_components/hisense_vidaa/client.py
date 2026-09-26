@@ -397,8 +397,6 @@ class HisenseTvClient(CallbackRegistryMixin):
             if self.check_and_refresh_token(force=True):
                 _LOGGER.info("[%s] Token successfully refreshed on connection failure.", self.ip)
                 self._rejected_refresh_failures = 0
-                # Reconnect with new access token
-                self.connect_and_run()
             else:
                 self._rejected_refresh_failures += 1
                 _LOGGER.warning(

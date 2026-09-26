@@ -174,6 +174,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = {
         "client": client,
         "platforms": platforms_to_setup,
+        "options": dict(entry.options),
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, platforms_to_setup)
@@ -183,6 +184,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
+    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+    if isinstance(entry_data, dict) and entry_data.get("options") == dict(entry.options):
+        return
     await hass.config_entries.async_reload(entry.entry_id)
 
 
