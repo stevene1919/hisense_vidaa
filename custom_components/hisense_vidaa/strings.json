@@ -278,6 +278,18 @@
           "certificates_still_missing": "Certificates are still missing. Please ensure hisense.crt and hisense.key exist."
         }
       }
+    },
+    "auth_token_invalidated": {
+      "title": "Hisense TV: Reauthentication Required",
+      "description": "Home Assistant can no longer authenticate with your Hisense TV ({ip_address}). The TV broker has rejected the stored access and refresh tokens — this usually happens after a firmware update or a hard power-cycle. Please reconfigure the integration to re-pair with your TV.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Re-pair with Hisense TV",
+            "description": "Click **Submit** to start the pairing flow. Make sure your TV is powered **on** (not in standby) — a PIN code will appear on screen."
+          }
+        }
+      }
     }
   }
 }

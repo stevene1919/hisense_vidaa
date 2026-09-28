@@ -405,6 +405,21 @@ class HisenseTvClient(CallbackRegistryMixin):
                     self._rejected_refresh_failures,
                     min(60 * (2 ** self._rejected_refresh_failures), 1800) // 60,
                 )
+                # Time-expiry alone cannot detect tokens that the TV broker has
+                # invalidated out-of-band (firmware update, hard power-cycle,
+                # factory reset).  After MAX_BROKER_REJECTION_ATTEMPTS consecutive
+                # broker rejections of the refresh token we treat the credential
+                # set as permanently dead and trigger the reauth flow.
+                if self._rejected_refresh_failures >= self.MAX_BROKER_REJECTION_ATTEMPTS:
+                    _LOGGER.warning(
+                        "[%s] Refresh token rejected by broker %d times in a row. "
+                        "TV likely invalidated all tokens (firmware update / power-cycle). "
+                        "Triggering reauthentication.",
+                        self.ip,
+                        self._rejected_refresh_failures,
+                    )
+                    self._dispatch_auth_failed()
+                    return
                 if not self.refresh_token or is_token_expired(self.refresh_token_time, self.refresh_token_duration):
                     _LOGGER.warning("[%s] Refresh token is missing or expired. Reauthentication required.", self.ip)
                     self._dispatch_auth_failed()
@@ -571,6 +586,13 @@ class HisenseTvClient(CallbackRegistryMixin):
     # --------------------------------------------------------------------------
     TOKEN_WATCH_INTERVAL = 300
     PROACTIVE_REFRESH_SETTLE_SECONDS = 3.0
+    # After this many consecutive broker rejections of the refresh token, declare
+    # auth failed regardless of the token's time-based expiry window.  This
+    # handles the case where the TV invalidated ALL tokens out-of-band (firmware
+    # update, hard power-cycle, factory reset) while they were still within their
+    # 30-day validity window, so is_token_expired() alone would never trigger the
+    # reauth flow.
+    MAX_BROKER_REJECTION_ATTEMPTS = 3
 
     def _start_token_watch(self) -> None:
         with self._refresh_lock:

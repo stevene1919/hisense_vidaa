@@ -137,8 +137,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     client.register_token_refreshed_callback(
         lambda c: hass.loop.call_soon_threadsafe(update_entry_tokens, c)
     )
+
+    def _handle_auth_failed(failed_client: HisenseTvClient) -> None:
+        """Raise a persistent Repairs issue and start the reauth flow."""
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            f"auth_token_invalidated_{entry.entry_id}",
+            is_fixable=True,
+            is_persistent=True,
+            severity=ir.IssueSeverity.ERROR,
+            translation_key="auth_token_invalidated",
+            translation_placeholders={"ip_address": failed_client.ip},
+        )
+        entry.async_start_reauth(hass)
+
     client.register_auth_failed_callback(
-        lambda c: hass.loop.call_soon_threadsafe(entry.async_start_reauth, hass)
+        lambda c: hass.loop.call_soon_threadsafe(_handle_auth_failed, c)
     )
 
     # Check and refresh tokens in executor

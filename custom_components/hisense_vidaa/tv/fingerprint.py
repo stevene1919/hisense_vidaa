@@ -154,7 +154,7 @@ def query_mdns_fingerprint(ip: str, timeout: float = 2.0, zc: Any = None) -> dic
     }
 
     try:
-        from zeroconf import ServiceBrowser, Zeroconf
+        from zeroconf import ServiceBrowser
 
         discovered: dict[str, Any] = {}
         target_ip = ip
@@ -176,25 +176,18 @@ def query_mdns_fingerprint(ip: str, timeout: float = 2.0, zc: Any = None) -> dic
             def remove_service(self, zc_inst: Any, type_: str, name: str) -> None:
                 pass
 
-        should_close_zc = False
-        if zc is None:
-            try:
-                import asyncio
-                asyncio.get_running_loop()
-                zc = None
-            except RuntimeError:
-                try:
-                    zc = Zeroconf()
-                    should_close_zc = True
-                except Exception:
-                    zc = None
+        # Never create a Zeroconf instance here.  Home Assistant 2024.1+ logs a
+        # deprecation warning for integrations that instantiate their own Zeroconf
+        # instead of using the shared instance provided by
+        # ``await homeassistant.components.zeroconf.async_get_instance(hass)``.
+        # Callers running inside HA must pass that shared instance via the ``zc``
+        # parameter.  When ``zc`` is None (standalone use or unit tests), mDNS
+        # discovery is skipped gracefully — UPnP already captures model / firmware.
 
         if zc is not None:
             browser = ServiceBrowser(zc, ["_airplay._tcp.local.", "_hap._tcp.local."], MDNSListener())
             time.sleep(1.0)
             browser.cancel()
-            if should_close_zc:
-                zc.close()
 
         airplay = discovered.get("_airplay._tcp.local.", {})
         hap = discovered.get("_hap._tcp.local.", {})

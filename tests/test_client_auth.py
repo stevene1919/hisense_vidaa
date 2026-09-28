@@ -405,4 +405,80 @@ def test_rejected_connection_schedules_delayed_reconnect():
     client.disconnect()
 
 
+# ---------------------------------------------------------------------------
+# Fix 1: broker-rejection threshold tests
+# ---------------------------------------------------------------------------
 
+def test_broker_rejection_threshold_triggers_auth_failed():
+    """Auth failed MUST fire after MAX_BROKER_REJECTION_ATTEMPTS consecutive broker rejections
+    of the refresh token, even when the token is not time-expired.
+
+    This is the core regression test for the silent-retry bug: previously the
+    integration would never call _dispatch_auth_failed() when both the access
+    and refresh tokens were invalidated by the TV out-of-band (firmware update
+    or hard power-cycle) because is_token_expired() returns False while the
+    30-day window has not elapsed.
+    """
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        refresh_token="still_time_valid_but_broker_dead",
+        refresh_token_time=now - 3600,   # 1 hour old → still 29 days valid
+        refresh_token_duration=30,
+    )
+    mock_auth_failed = MagicMock()
+    client.register_auth_failed_callback(mock_auth_failed)
+
+    # Simulate consecutive failed refresh attempts up to (but not including) the limit
+    for attempt in range(1, client.MAX_BROKER_REJECTION_ATTEMPTS):
+        client._rejected_refresh_failures = attempt - 1
+        with patch.object(client, "check_and_refresh_token", return_value=False):
+            client._refresh_token_and_update_creds()
+        mock_auth_failed.assert_not_called(), f"auth_failed fired too early at attempt {attempt}"
+        client._refreshing_token = False
+
+    # The threshold attempt must trigger auth_failed
+    client._rejected_refresh_failures = client.MAX_BROKER_REJECTION_ATTEMPTS - 1
+    with patch.object(client, "check_and_refresh_token", return_value=False):
+        client._refresh_token_and_update_creds()
+
+    mock_auth_failed.assert_called_once()
+
+
+def test_broker_rejection_threshold_not_reached_suppresses_auth_failed():
+    """Auth failed must NOT fire when the broker rejection count is below MAX_BROKER_REJECTION_ATTEMPTS,
+    even if the refresh token appears valid."""
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        refresh_token="valid_refresh",
+        refresh_token_time=now - 3600,
+        refresh_token_duration=30,
+    )
+    mock_auth_failed = MagicMock()
+    client.register_auth_failed_callback(mock_auth_failed)
+
+    # Only one failure — well below threshold
+    client._rejected_refresh_failures = 0
+    with patch.object(client, "check_and_refresh_token", return_value=False):
+        client._refresh_token_and_update_creds()
+
+    mock_auth_failed.assert_not_called()
+
+
+def test_broker_rejection_counter_resets_on_successful_refresh():
+    """A successful token refresh must reset _rejected_refresh_failures back to 0."""
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        refresh_token="valid_refresh",
+        refresh_token_time=now - 3600,
+        refresh_token_duration=30,
+    )
+    # Pre-load failures just below the trigger threshold
+    client._rejected_refresh_failures = client.MAX_BROKER_REJECTION_ATTEMPTS - 1
+
+    with patch.object(client, "check_and_refresh_token", return_value=True):
+        client._refresh_token_and_update_creds()
+
+    assert client._rejected_refresh_failures == 0
