@@ -4,6 +4,11 @@ set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR"
 
+if command -v codespell &> /dev/null; then
+  echo "==> 🔤 Running Codespell spellchecker..."
+  codespell --skip="./.git/*,./.pytest_cache/*,./.ruff_cache/*,*.png,*.p12,*.pem,*.key,credentials.json" -L "hass,vidaa,remotenow"
+fi
+
 echo "==> 🔍 Running Ruff linter..."
 ruff check .
 
@@ -16,4 +21,5 @@ if command -v docker &> /dev/null; then
 fi
 
 echo "==> ✅ All local verification and Hassfest checks passed!"
+
 

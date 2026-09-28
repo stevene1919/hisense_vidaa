@@ -16,6 +16,13 @@ repos:
         args: [--fix]
       - id: ruff-format
 
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.3.0
+    hooks:
+      - id: codespell
+        additional_dependencies:
+          - tomli
+
   - repo: local
     hooks:
       - id: pytest
@@ -24,3 +31,4 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
