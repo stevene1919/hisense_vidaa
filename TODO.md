@@ -35,3 +35,12 @@ This document tracks active pending tasks, investigations, and planned enhanceme
 - [ ] **Multi-Burst Wake-on-LAN Power On**:
   - Configurable UDP packet burst sequences for waking TVs over Wi-Fi when low-power sleep modes drop initial packets.
   - Automatic fast-polling connection recovery after power-on triggers.
+
+### 7. Cold Power Cut & AC Restoration Empirical Testing
+- [ ] **Empirical Testing of Cold AC Power Interruption**:
+  - Test physical behavior of TV and SoC when mains AC power is abruptly disconnected and restored (simulated blackout / wall switch cut).
+  - Observe and document whether the TV restores to Cold Standby (screen off, network stack/broker uninitialized) or returns to active power state.
+  - Determine if the TV reboots into Fast Power On (`fake_sleep`) or remains in cold standby until woken by physical remote, chassis button, or IR blaster pulse.
+  - Evaluate integration handling, state transitions, reconnect behavior, and token persistence after cold AC boot once network connectivity resumes.
+  - Update documentation and integration logic based on empirical findings.
+
