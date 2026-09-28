@@ -173,7 +173,7 @@ async def test_user_step_auto_certs_missing_routes_to_certs(monkeypatch):
     flow.context = {}
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.config_flow.check_certs_exist",
+        "custom_components.hisense_vidaa.crypto.check_certs_exist",
         lambda c, k: False,
     )
 
@@ -216,7 +216,11 @@ async def test_certs_step_submission_valid(monkeypatch):
     flow._abort_if_unique_id_configured = MagicMock()
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.config_flow.check_certs_exist",
+        "custom_components.hisense_vidaa.crypto.check_certs_exist",
+        lambda c, k: True,
+    )
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.flow_certs.check_certs_exist",
         lambda c, k: True,
     )
     monkeypatch.setattr(
@@ -460,7 +464,7 @@ async def test_zeroconf_discovery(monkeypatch):
     flow._abort_if_unique_id_configured = MagicMock()
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.config_flow.get_arp_mac",
+        "custom_components.hisense_vidaa.flow_helpers.get_arp_mac",
         lambda host: "e8:51:77:ec:98:1c",
     )
     monkeypatch.setattr(
