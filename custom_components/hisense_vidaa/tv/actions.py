@@ -343,3 +343,96 @@ def turn_off_tv(client: HisenseTvClient) -> None:
     if client.connected and client.is_on:
         client.send_key("KEY_POWER")
     client.is_on = False
+
+
+class TvActionsMixin:
+    """Mixin providing TV command execution, settings, and navigation actions."""
+
+    def query_initial_state(self) -> None:
+        """Queries initial state, volume, source list, app list, and settings from TV."""
+        query_initial_state(self)  # type: ignore[arg-type]
+
+    def turn_on(self, mac_targets: list[str] | None = None) -> None:
+        """Powers on or wakes the TV safely and idempotently."""
+        turn_on_tv(self, mac_targets=mac_targets)  # type: ignore[arg-type]
+
+    def turn_off(self) -> None:
+        """Powers off the TV safely."""
+        turn_off_tv(self)  # type: ignore[arg-type]
+
+    def show_message(self, message: str, title: str | None = None, duration: int = 5) -> bool:
+        """Displays an on-screen toast popup notification on the TV."""
+        return show_message(self, message=message, title=title, duration=duration)  # type: ignore[arg-type]
+
+    def send_key(self, key: str) -> None:
+        """Publishes a raw keypress event to the TV."""
+        send_key(self, key=key)  # type: ignore[arg-type]
+
+    def send_command(self, command: str) -> bool:
+        """Sends a key command to the TV, automatically resolving known key aliases."""
+        return send_command(self, command=command)  # type: ignore[arg-type]
+
+    def cycle_source(self) -> bool:
+        """Cycles to the next available input source."""
+        return cycle_source(self)  # type: ignore[arg-type]
+
+    def _launch_app_by_name(self, name_or_id: str) -> bool:
+        """Launches an app by name or app ID from cached applist."""
+        return launch_app_by_name(self, name_or_id=name_or_id)  # type: ignore[arg-type]
+
+    def _change_source_by_name_or_id(self, target: str) -> bool:
+        """Switches to source by name (e.g. HDMI1, TV) or numeric sourceid."""
+        return change_source_by_name_or_id(self, target=target)  # type: ignore[arg-type]
+
+    def set_volume(self, volume: int) -> None:
+        """Sets the absolute volume on the TV (0–100)."""
+        set_volume(self, volume=volume)  # type: ignore[arg-type]
+
+    def change_source(self, source_id: str, source_name: str | None = None) -> None:
+        """Switches the active input source on the TV."""
+        change_source(self, source_id=source_id, source_name=source_name)  # type: ignore[arg-type]
+
+    def launch_app(self, app_id: str, app_name: str, url: str) -> None:
+        """Launches an installed Smart TV application."""
+        launch_app(self, app_id=app_id, app_name=app_name, url=url)  # type: ignore[arg-type]
+
+    def get_picture_settings(self) -> None:
+        """Requests current picture settings menu information from the TV."""
+        get_picture_settings(self)  # type: ignore[arg-type]
+
+    def set_picture_setting(self, menu_id: int, menu_value: str | int | float) -> None:
+        """Changes a specific picture setting value."""
+        set_picture_setting(self, menu_id=menu_id, menu_value=menu_value)  # type: ignore[arg-type]
+
+    def set_picture_mode(self, mode: str) -> None:
+        """Sets the TV picture mode preset."""
+        set_picture_mode(self, mode=mode)  # type: ignore[arg-type]
+
+    def set_backlight(self, level: int) -> None:
+        """Sets the TV backlight level (0–100)."""
+        set_backlight(self, level=level)  # type: ignore[arg-type]
+
+    def set_brightness(self, level: int) -> None:
+        """Sets the TV brightness level (0–100)."""
+        set_brightness(self, level=level)  # type: ignore[arg-type]
+
+    def set_contrast(self, level: int) -> None:
+        """Sets the TV contrast level (0–100)."""
+        set_contrast(self, level=level)  # type: ignore[arg-type]
+
+    def get_sound_settings(self) -> None:
+        """Requests current sound settings menu information from the TV."""
+        get_sound_settings(self)  # type: ignore[arg-type]
+
+    def set_sound_setting(self, menu_id: int, menu_value: str | int | float) -> None:
+        """Changes a specific sound setting value."""
+        set_sound_setting(self, menu_id=menu_id, menu_value=menu_value)  # type: ignore[arg-type]
+
+    def set_sound_mode(self, mode: str) -> None:
+        """Sets the TV sound mode preset."""
+        set_sound_mode(self, mode=mode)  # type: ignore[arg-type]
+
+    def send_text_input(self, text: str, action: str = "insert") -> None:
+        """Sends virtual keyboard string input to active on-screen input/search field."""
+        send_text_input(self, text=text, action=action)  # type: ignore[arg-type]
+

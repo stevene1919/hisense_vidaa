@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .actions import (
+    TvActionsMixin,
     change_source,
     change_source_by_name_or_id,
     cycle_source,
@@ -120,6 +121,7 @@ __all__ = [
     "CallbackRegistryMixin",
     "FeatureProbeResult",
     "SettingMenuItem",
+    "TvActionsMixin",
     "apply_device_info_update",
     "apply_picture_update",
     "apply_sound_update",

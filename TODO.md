@@ -96,7 +96,8 @@ Tracking adherence to official [Home Assistant Integration Quality Scale](https:
 ## 🧹 Code Quality & Architecture Refactoring
 - [x] **Sensor Platform Streamlining (`sensor.py`)**: Consolidated callback registration and state dispatcher lifecycle hooks across 6 sensor entity classes.
 - [x] **Token Lifecycle Subpackage (`protocol/auth_lifecycle.py`)**: Extracted background token watch timer, proactive renewal, and exponential retry backoff from `client.py` into dedicated `TokenLifecycleManager`.
-- [x] **Config Flow Modularization (`config_flow.py`)**: Extracted reusable options and schema builders, deduplicating client initialization and pairing flow steps.
+- [x] **TV Actions Mixin (`tv/actions.py`)**: Extracted TV action execution, settings commands, and navigation methods from `client.py` into reusable `TvActionsMixin`.
+- [x] **Config Flow Modularization & Route Deduplication (`config_flow.py`)**: Extracted schema builders and unified SSDP/Zeroconf discovery resolution and reconfigure pairing flows.
 - [x] **CLI Diagnostic & Debug Script Parity (`test_client.py`, `debug_tv.py`)**: Updated CLI tools to support standalone execution outside Home Assistant container with automated fallback mocks.
 
 

@@ -39,37 +39,14 @@ from .protocol.pairing import (
 )
 from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
 from .protocol.wol import send_wake_on_lan
-from .tv.actions import (
-    change_source as act_change_source,
-    change_source_by_name_or_id as act_change_source_by_name_or_id,
-    cycle_source as act_cycle_source,
-    get_picture_settings as act_get_picture_settings,
-    get_sound_settings as act_get_sound_settings,
-    launch_app as act_launch_app,
-    launch_app_by_name as act_launch_app_by_name,
-    query_initial_state as act_query_initial_state,
-    send_command as act_send_command,
-    send_key as act_send_key,
-    send_text_input as act_send_text_input,
-    set_backlight as act_set_backlight,
-    set_brightness as act_set_brightness,
-    set_contrast as act_set_contrast,
-    set_picture_mode as act_set_picture_mode,
-    set_picture_setting as act_set_picture_setting,
-    set_sound_mode as act_set_sound_mode,
-    set_sound_setting as act_set_sound_setting,
-    set_volume as act_set_volume,
-    show_message as act_show_message,
-    turn_off_tv as act_turn_off_tv,
-    turn_on_tv as act_turn_on_tv,
-)
+from .tv.actions import TvActionsMixin
 from .tv.callbacks import CallbackRegistryMixin
 from .tv.settings import SettingMenuItem
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class HisenseTvClient(CallbackRegistryMixin):
+class HisenseTvClient(CallbackRegistryMixin, TvActionsMixin):
     """Client communicating with Hisense VIDAA TV over local TLS/MQTT broker."""
 
     TOKEN_WATCH_INTERVAL = TokenLifecycleManager.TOKEN_WATCH_INTERVAL
@@ -489,9 +466,11 @@ class HisenseTvClient(CallbackRegistryMixin):
         was_connected = self.connected
         main_client = self.mqtt_client
         if main_client:
-            with contextlib.suppress(Exception):
+            try:
                 main_client.loop_stop()
                 main_client.disconnect()
+            except Exception:
+                pass
             self.mqtt_client = None
             self.connected = False
 
@@ -587,13 +566,6 @@ class HisenseTvClient(CallbackRegistryMixin):
             _LOGGER.error("[%s] Error during ensure_connected: %s", self.ip, e)
             return False
 
-    def query_initial_state(self) -> None:
-        """Queries initial state, volume, source list, app list, and settings from TV."""
-        act_query_initial_state(self)
-
-    # --------------------------------------------------------------------------
-    # TV Commands, Navigation, Settings & Controls
-    # --------------------------------------------------------------------------
     @staticmethod
     def send_wake_on_lan(
         mac: str | list[str] | tuple[str, ...],
@@ -603,93 +575,6 @@ class HisenseTvClient(CallbackRegistryMixin):
     ) -> bool:
         """Sends standard Wake-on-LAN magic packet UDP broadcasts for one or multiple MACs."""
         return send_wake_on_lan(mac=mac, broadcast_ip=broadcast_ip, port=port, ip=ip)
-
-    def turn_on(self, mac_targets: list[str] | None = None) -> None:
-        """Powers on or wakes the TV safely and idempotently."""
-        act_turn_on_tv(self, mac_targets=mac_targets)
-
-    def turn_off(self) -> None:
-        """Powers off the TV safely."""
-        act_turn_off_tv(self)
-
-    def show_message(self, message: str, title: str | None = None, duration: int = 5) -> bool:
-        """Displays an on-screen toast popup notification on the TV."""
-        return act_show_message(self, message=message, title=title, duration=duration)
-
-    def send_key(self, key: str) -> None:
-        """Publishes a raw keypress event to the TV."""
-        act_send_key(self, key=key)
-
-    def send_command(self, command: str) -> bool:
-        """Sends a key command to the TV, automatically resolving known key aliases."""
-        return act_send_command(self, command=command)
-
-    def cycle_source(self) -> bool:
-        """Cycles to the next available input source."""
-        return act_cycle_source(self)
-
-    def _launch_app_by_name(self, name_or_id: str) -> bool:
-        """Launches an app by name or app ID from cached applist."""
-        return act_launch_app_by_name(self, name_or_id=name_or_id)
-
-    def _change_source_by_name_or_id(self, target: str) -> bool:
-        """Switches to source by name (e.g. HDMI1, TV) or numeric sourceid."""
-        return act_change_source_by_name_or_id(self, target=target)
-
-    def set_volume(self, volume: int) -> None:
-        """Sets the absolute volume on the TV (0–100)."""
-        act_set_volume(self, volume=volume)
-
-    def change_source(self, source_id: str, source_name: str | None = None) -> None:
-        """Switches the active input source on the TV."""
-        act_change_source(self, source_id=source_id, source_name=source_name)
-
-    def launch_app(self, app_id: str, app_name: str, url: str) -> None:
-        """Launches an installed Smart TV application."""
-        act_launch_app(self, app_id=app_id, app_name=app_name, url=url)
-
-    # --------------------------------------------------------------------------
-    # Picture & Sound Settings Controls
-    # --------------------------------------------------------------------------
-    def get_picture_settings(self) -> None:
-        """Requests current picture settings menu information from the TV."""
-        act_get_picture_settings(self)
-
-    def set_picture_setting(self, menu_id: int, menu_value: str | int | float) -> None:
-        """Changes a specific picture setting value."""
-        act_set_picture_setting(self, menu_id=menu_id, menu_value=menu_value)
-
-    def set_picture_mode(self, mode: str) -> None:
-        """Sets the TV picture mode preset."""
-        act_set_picture_mode(self, mode=mode)
-
-    def set_backlight(self, level: int) -> None:
-        """Sets the TV backlight level (0–100)."""
-        act_set_backlight(self, level=level)
-
-    def set_brightness(self, level: int) -> None:
-        """Sets the TV brightness level (0–100)."""
-        act_set_brightness(self, level=level)
-
-    def set_contrast(self, level: int) -> None:
-        """Sets the TV contrast level (0–100)."""
-        act_set_contrast(self, level=level)
-
-    def get_sound_settings(self) -> None:
-        """Requests current sound settings menu information from the TV."""
-        act_get_sound_settings(self)
-
-    def set_sound_setting(self, menu_id: int, menu_value: str | int | float) -> None:
-        """Changes a specific sound setting value."""
-        act_set_sound_setting(self, menu_id=menu_id, menu_value=menu_value)
-
-    def set_sound_mode(self, mode: str) -> None:
-        """Sets the TV sound mode preset."""
-        act_set_sound_mode(self, mode=mode)
-
-    def send_text_input(self, text: str, action: str = "insert") -> None:
-        """Sends virtual keyboard string input to active on-screen input/search field."""
-        act_send_text_input(self, text=text, action=action)
 
     # --------------------------------------------------------------------------
     # Async Queries & Disconnect

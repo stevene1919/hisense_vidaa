@@ -166,7 +166,9 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.debug("Disconnecting existing running client for %s during pairing flow", self.ip_address)
                 await self.hass.async_add_executor_job(client.disconnect)
 
-    async def _async_init_client_and_auth(self) -> config_entries.ConfigFlowResult:
+    async def _async_init_client_and_auth(
+        self, is_reauth: bool = False, reauth_reason: str = "reauth_successful"
+    ) -> config_entries.ConfigFlowResult:
         """Helper to initialize client, perform static auth check, and route to PIN or options."""
         await self._async_disconnect_existing_client()
         self.client = HisenseTvClient(
@@ -206,6 +208,8 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
         if self.auth_profile == "legacy":
+            if is_reauth and self._reauth_entry:
+                return await self._async_finish_reauth(reason=reauth_reason)
             await self._async_discover_device_name()
             await self._async_probe_device_capabilities()
             return await self.async_step_options()
@@ -401,35 +405,10 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 return await self.async_step_certs()
 
-            await self._async_disconnect_existing_client()
-
-            self.client = HisenseTvClient(
-                self.ip_address,
-                self.mac_address,
-                auth_profile=self.auth_profile,
-                certfile=self.certfile if self.use_ssl else None,
-                keyfile=self.keyfile if self.use_ssl else None,
-                use_ssl=self.use_ssl,
-            )
             try:
-                if self.auth_profile == "auto":
-                    probe = await self.hass.async_add_executor_job(
-                        self.client.probe_auth_methods, 1.5
-                    )
-                    if (
-                        probe.get("legacy_static", {}).get("supported")
-                        and not probe.get("modern_dynamic", {}).get("supported")
-                        and not probe.get("standard_dynamic", {}).get("supported")
-                    ):
-                        self.auth_profile = "legacy"
-                        self.client.auth_profile = "legacy"
-
-                await self.client.async_start_auth()
-
-                if self.auth_profile == "legacy" and self._reauth_entry:
-                    return await self._async_finish_reauth(reason="reconfigure_successful")
-
-                return await self.async_step_auth()
+                return await self._async_init_client_and_auth(
+                    is_reauth=True, reauth_reason="reconfigure_successful"
+                )
             except Exception as e:
                 _LOGGER.warning("[%s] Failed to initiate reconfigure pairing: %s", self.ip_address, e)
                 errors["base"] = "cannot_connect"
@@ -445,42 +424,15 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_ssdp(
-        self, discovery_info: SsdpServiceInfo
-    ) -> config_entries.ConfigFlowResult:
-        """Handle SSDP discovery."""
-        parsed = await self.hass.async_add_executor_job(
-            parse_ssdp_discovery, discovery_info
-        )
-        if not parsed:
-            return self.async_abort(reason="not_vidaa_tv")
-
-        self.ip_address = parsed.host
-        self.discovered_title = parsed.title
-        self.manufacturer = parsed.manufacturer
-        self.model = parsed.model
-        self.mac_address = parsed.mac_address
-
-        if parsed.unique_id:
-            await self.async_set_unique_id(parsed.unique_id)
-            self._abort_if_unique_id_configured(
-                updates={CONF_IP_ADDRESS: self.ip_address}
-            )
-
-        return await self.async_step_discovery_confirm()
-
-    async def async_step_zeroconf(
-        self, discovery_info: ZeroconfServiceInfo
-    ) -> config_entries.ConfigFlowResult:
-        """Handle Zeroconf / mDNS discovery."""
-        parsed = await self.hass.async_add_executor_job(
-            parse_zeroconf_discovery, discovery_info
-        )
+    async def _async_handle_discovery(self, parsed: Any) -> config_entries.ConfigFlowResult:
+        """Handle common SSDP and Zeroconf device resolution and flow routing."""
         if not parsed or not parsed.host:
-            return self.async_abort(reason="cannot_connect")
+            return self.async_abort(reason="not_vidaa_tv" if parsed is None else "cannot_connect")
 
         self.ip_address = parsed.host
         self.discovered_title = parsed.title
+        self.manufacturer = getattr(parsed, "manufacturer", None)
+        self.model = getattr(parsed, "model", None)
         self.mac_address = parsed.mac_address
         if not self.mac_address and parsed.host:
             raw_mac = await self.hass.async_add_executor_job(get_arp_mac, parsed.host)
@@ -495,6 +447,24 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         return await self.async_step_discovery_confirm()
+
+    async def async_step_ssdp(
+        self, discovery_info: SsdpServiceInfo
+    ) -> config_entries.ConfigFlowResult:
+        """Handle SSDP discovery."""
+        parsed = await self.hass.async_add_executor_job(
+            parse_ssdp_discovery, discovery_info
+        )
+        return await self._async_handle_discovery(parsed)
+
+    async def async_step_zeroconf(
+        self, discovery_info: ZeroconfServiceInfo
+    ) -> config_entries.ConfigFlowResult:
+        """Handle Zeroconf / mDNS discovery."""
+        parsed = await self.hass.async_add_executor_job(
+            parse_zeroconf_discovery, discovery_info
+        )
+        return await self._async_handle_discovery(parsed)
 
     async def async_step_discovery_confirm(
         self, user_input: dict[str, Any] | None = None
