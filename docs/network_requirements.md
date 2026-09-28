@@ -59,6 +59,8 @@ To comply with these standards, VIDAA OS implements a **two-tier standby archite
 
 ### 🛠️ Recommended TV Configuration
 
+> For the comprehensive model-by-model settings matrix (VIDAA U4 through 2024+) and multi-device setup recommendations (Chromecast, Apple TV, PC monitors), see the dedicated **[TV Power, Standby & Network Settings Guide](power_and_standby_settings.md)**.
+
 To prevent connected HDMI devices (such as **Chromecast with Google TV**, **Apple TV**, or gaming consoles) from inadvertently dragging the TV into a Tier 2 broker-killing shutdown when they sleep:
 
 | Setting | Recommended Value | Path in TV Menu | Reason |

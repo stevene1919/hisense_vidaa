@@ -71,50 +71,9 @@ Click the button below to add this repository directly to your HACS installation
 
 ---
 
-#### Option B: Manual Installation (Without HACS)
+#### Option B: Manual Installation
 
-For Home Assistant Container (Docker), Core, or instances without HACS:
-
-1. Connect to your Home Assistant server via SSH or Terminal.
-2. Navigate to your Home Assistant configuration directory (e.g. `/config` or `/home/homeassistant/.homeassistant`).
-3. Download and extract the component into `custom_components/hisense_vidaa`:
-
-```bash
-# From your Home Assistant /config directory:
-cd /config
-mkdir -p custom_components
-cd custom_components
-
-# Clone the latest integration release:
-git clone https://github.com/stevene1919/hisense_vidaa.git hisense_vidaa_tmp
-mv hisense_vidaa_tmp/custom_components/hisense_vidaa ./hisense_vidaa
-rm -rf hisense_vidaa_tmp
-```
-
-*Or via `curl` / `unzip`:*
-```bash
-cd /config/custom_components
-curl -sSL -o hisense_vidaa.zip https://github.com/stevene1919/hisense_vidaa/archive/refs/heads/main.zip
-unzip -q hisense_vidaa.zip
-mv hisense_vidaa-main/custom_components/hisense_vidaa ./hisense_vidaa
-rm -rf hisense_vidaa.zip hisense_vidaa-main
-```
-
-4. Verify your directory structure matches the expected layout:
-```text
-/config/
-├── configuration.yaml
-├── custom_components/
-│   └── hisense_vidaa/
-│       ├── __init__.py
-│       ├── manifest.json
-│       ├── const.py
-│       ├── media_player.py
-│       └── ...
-└── ssl/ (or /config/ssl/)
-    ├── hisense.crt
-    └── hisense.key
-```
+Download the latest [release ZIP](https://github.com/stevene1919/hisense_vidaa/releases/latest) and extract `custom_components/hisense_vidaa` into your Home Assistant `/config/custom_components/` directory.
 
 ---
 
@@ -132,26 +91,8 @@ Copy your client certificate / key (or `.p12` bundle) to `/config/ssl/` (or `/ss
 4. Enter the 4-digit PIN displayed on your TV screen to complete setup.
 
 > [!TIP]
-> **Recommended TV Standby Settings (Prevent Token Invalidation)**:
-> VIDAA TVs store paired MQTT tokens in volatile memory (RAM). Certain automated power-saving timers trigger deep shutdowns that flush credentials:
-> - **Fast Power On**: Set to **ON** (`Settings → System → Advanced Settings → Fast Power On`) to keep network standby active.
-> - **Auto Standby with No Signal**: Set to **OFF** (`Settings → System → Timer Settings → Auto Standby with No Signal`) to prevent deep power-down when connected HDMI devices (e.g., Chromecast, Apple TV, consoles) go to sleep.
-> - See the **[Network & Standby Guide](docs/network_requirements.md)** for the complete setting recommendations.
-
----
-
-### 🔄 Updating the Integration
-
-- **HACS**: Go to **HACS** $\rightarrow$ **Integrations** $\rightarrow$ Click **Update** on the Hisense VIDAA card.
-- **Manual**: Re-run the download commands in `custom_components/hisense_vidaa` or run:
-  ```bash
-  cd /config/custom_components
-  curl -sSL -o hisense_vidaa.zip https://github.com/stevene1919/hisense_vidaa/archive/refs/heads/main.zip
-  unzip -qo hisense_vidaa.zip
-  cp -r hisense_vidaa-main/custom_components/hisense_vidaa/* ./hisense_vidaa/
-  rm -rf hisense_vidaa.zip hisense_vidaa-main
-  ```
-  Then restart Home Assistant.
+> **Recommended TV Settings**:
+> To ensure your TV remains responsive in standby and avoids losing paired tokens when connected HDMI devices (e.g. Chromecast, Apple TV, PC) sleep, refer to the **[TV Power, Standby & Network Settings Guide](docs/power_and_standby_settings.md)**.
 
 ---
 
@@ -161,6 +102,7 @@ For deep technical details, guides, and dashboard templates, refer to the dedica
 
 | Document | Description |
 | :--- | :--- |
+| ⚡ **[TV Power, Standby & Network Settings](docs/power_and_standby_settings.md)** | Optimal TV settings across VIDAA versions (U4–U8, 2024+), two-tier standby architecture, and preventing token loss. |
 | 📱 **[Lovelace Remote Cards & Dashboards](docs/lovelace_cards.md)** | Pixel-accurate Australian EN2G30H 12-app remote, Classic FTA, Button Card, and Android TV Card templates. |
 | 🖼️ **[Screenshots & UI Gallery](docs/screenshots.md)** | Full visual tour of device controls, media player dialogs, source dropdowns, and option flows. |
 | 🔒 **[SSL Certificate Setup](docs/certificates.md)** | Certificate filename matrix, PKCS#12 extraction, and root CA verification. |
