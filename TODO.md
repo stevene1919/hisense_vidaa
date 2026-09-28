@@ -52,6 +52,13 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - Test Google Home mobile app UI controls and state accuracy during standby, source transitions, and active playback.
   - Document any edge cases or recommended setup best practices for Google Home users in integration documentation.
 
+### 9. Diagnostics Redaction & Sensitive Data Audit
+- [ ] **Diagnostics Payload Sanitization Verification (`diagnostics.py`)**:
+  - Audit exported diagnostic payload to verify that client certificates, private key paths, refresh tokens, access tokens, and MAC addresses are 100% masked before export.
+  - Ensure compatibility with official Home Assistant diagnostics download format and sanitization standards.
+
+
+
 ---
 
 ## 🏆 Home Assistant Integration Quality Scale Tracking

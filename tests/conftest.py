@@ -527,3 +527,46 @@ def isolate_host_network_environment(monkeypatch):
 
     monkeypatch.setattr("os.path.exists", mock_exists)
 
+
+@pytest.fixture
+def mock_entry():
+    from homeassistant.config_entries import ConfigEntry
+    entry = MagicMock(spec=ConfigEntry)
+    entry.entry_id = "test_entry_id"
+    entry.title = "Living Room TV"
+    entry.data = {
+        "ip_address": "192.168.50.12",
+        "mac_address": "e8:51:77:ec:98:1c",
+        "auth_profile": "modern",
+        "model": "65U7G",
+        "manufacturer": "Hisense",
+        "sw_version": "V1.0",
+    }
+    entry.options = {"enable_remote": True, "enable_wol": True}
+    return entry
+
+
+@pytest.fixture
+def mock_client():
+    from custom_components.hisense_vidaa.tv.actions import turn_off_tv, turn_on_tv
+
+    client = MagicMock()
+    client.ip = "192.168.50.12"
+    client.connected = True
+    client.auth_profile = "modern"
+    client.access_token_time = 1700000000
+    client.access_token_duration = 3600
+    client.refresh_token_time = 1700000000
+    client.refresh_token_duration = 86400
+    client.current_app = "Netflix"
+    client.source = "HDMI 1"
+    client.tv_state = "on"
+    client.device_name = None
+    client.model_name = None
+    client.manufacturer = None
+    client.firmware_version = None
+    client.turn_on.side_effect = lambda mac_targets=None: turn_on_tv(client, mac_targets)
+    client.turn_off.side_effect = lambda: turn_off_tv(client)
+    return client
+
+

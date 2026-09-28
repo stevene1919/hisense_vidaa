@@ -2,7 +2,21 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.10.0] - 2026-09-29
+
+### Added
+- **HOME ASSISTANT INTEGRATION QUALITY SCALE GOLD TIER (100% COMPLIANCE)**:
+  - **Structured Service Response Data (`SupportsResponse.OPTIONAL`)**: Registered all custom TV services (`send_key`, `launch_app`, `set_picture_setting`, `set_sound_setting`, `send_text_input`) with `supports_response=SupportsResponse.OPTIONAL`, returning detailed execution metadata and target IP arrays to Home Assistant scripts and automations.
+  - **Dynamic Options Lifecycle**: Streamlined config entry update listener with options filtering to prevent unnecessary reloads.
+- **MODULAR ARCHITECTURAL DECOMPOSITION (<300 LINES PER MODULE)**:
+  - **Config Flow Decomposition (`flow_helpers.py`, `flow_certs.py`, `flow_discovery.py`, `flow_reauth.py`)**: Split monolithic `config_flow.py` (580 lines -> 268 lines) into dedicated discovery, certificate handling, and re-authentication mixins.
+  - **Client Connection Lifecycle (`protocol/connection.py`)**: Extracted MQTT connection loops, keepalive management, async queries, and socket error recovery into `ConnectionManagerMixin` (`client.py` reduced from 842 lines -> 388 lines, -53.9%).
+  - **TV Settings & Picture/Sound Actions (`tv/settings.py`)**: Moved picture calibration sliders and sound mode get/set commands into `TvSettingsActionsMixin` (293 lines).
+  - **Diagnostic Sensors Platform (`sensors_diagnostic.py`)**: Extracted secondary diagnostic entities (`SessionStatusSensor`, `AuthProfileSensor`, `ReportedNameSensor`, `AudioOutputSensor`) into `sensors_diagnostic.py` (222 lines), reducing `sensor.py` from 409 lines -> 235 lines.
+  - **Media Player Broadcast State Parsing (`tv/media.py`)**: Modularized incoming broadcast telemetry, volume, and input handlers into pure functional parsers (`parse_media_state_broadcast`, `parse_volume_broadcast`, `parse_sourcelist_data`, `parse_applist_data`).
+
 ## [2.9.6] - 2026-09-29
+
 
 ### Fixed
 - **HASSFEST TRANSLATION SCHEMA MUTUAL EXCLUSION (`strings.json`, `translations/en.json`)**:
