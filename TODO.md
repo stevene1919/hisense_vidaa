@@ -44,3 +44,11 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - Evaluate integration handling, state transitions, reconnect behavior, and token persistence after cold AC boot once network connectivity resumes.
   - Update documentation and integration logic based on empirical findings.
 
+### 8. Google Home HA Integration Compatibility Testing
+- [ ] **Home Assistant to Google Assistant Compatibility & Trait Verification**:
+  - Set up and test exposure of the TV's `media_player` entity via Home Assistant's Google Assistant integration.
+  - Verify mapping and real-time synchronization of Google traits (`OnOff`, `Volume`, `InputSelector`, `TransportControl`, `MediaState`).
+  - Validate Google voice command responsiveness for power on/off (`KEY_POWER`), volume level/step adjustment, muting, and HDMI input/app source switching.
+  - Test Google Home mobile app UI controls and state accuracy during standby, source transitions, and active playback.
+  - Document any edge cases or recommended setup best practices for Google Home users in integration documentation.
+
