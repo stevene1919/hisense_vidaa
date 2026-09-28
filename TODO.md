@@ -52,3 +52,43 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - Test Google Home mobile app UI controls and state accuracy during standby, source transitions, and active playback.
   - Document any edge cases or recommended setup best practices for Google Home users in integration documentation.
 
+---
+
+## 🏆 Home Assistant Integration Quality Scale Tracking
+
+Tracking adherence to official [Home Assistant Integration Quality Scale](https://developers.home-assistant.io/docs/integration_quality_scale_index) rules.
+
+### 🥉 Bronze Tier (Target: Official Compliance) — Status: ✅ 100%
+- [x] **`config-flow`**: UI configuration via config flow (`config_flow.py`).
+- [x] **`test-before-setup`**: Connection test and PIN validation before adding device.
+- [x] **`unique-id`**: All entities have stable unique IDs derived from MAC/entry ID.
+- [x] **`common-modules`**: Standard entity platforms used (`media_player`, `sensor`, `binary_sensor`, `remote`, `select`, `number`, `button`, `switch`, `notify`).
+- [x] **`has-entity-name`**: `_attr_has_entity_name = True` implemented across all entity platforms.
+- [x] **`entity-category`**: `EntityCategory.DIAGNOSTIC` and `CONFIG` applied to appropriate entities.
+- [x] **`appropriate-polling`**: `should_poll = False` (pure local push via MQTT).
+- [x] **`brands`**: Brand logos and icons provided in `brand/`.
+- [x] **`reauthentication-flow`**: Interactive re-pairing flow implemented with repairs integration.
+- [x] **`discovery-update-id`**: SSDP/Zeroconf/ARP dynamic MAC tracking for IP updates.
+
+### 🥈 Silver Tier — Status: ✅ 100%
+- [x] **`config-entry-unloading`**: Clean unload lifecycle without leaking tasks, MQTT loops, or listeners.
+- [x] **`log-when-unavailable`**: Exponential backoff reconnection logging to prevent log spam.
+- [x] **`reconfiguration-flow`**: Config flow reconfiguration supported (`async_step_reconfigure`).
+- [x] **`repair-issues`**: Native Home Assistant Repairs issues created for invalidated tokens and missing certs.
+- [x] **`diagnostics`**: Sanitized diagnostics platform implemented (`diagnostics.py`).
+- [x] **`entity-disabled-by-default`**: Advanced calibration number entities and secondary diagnostic switches disabled/opt-in by default.
+- [x] **`parallel-updates`**: Explicit `PARALLEL_UPDATES = 0` declared across all platform modules.
+
+### 🥇 Gold Tier — Status: 🟡 ~95%
+- [x] **`discovery`**: Automatic background discovery via SSDP (`urn:schemas-upnp-org:device:MediaRenderer:1`) and Zeroconf.
+- [x] **`devices`**: Full Device Registry binding with MAC hardware connections, manufacturer, model, and software version.
+- [x] **`entity-translations`**: Full `_attr_translation_key` adoption across all entity platforms with 100% parity between `strings.json` and `translations/en.json`.
+- [x] **`entity-service-descriptions`**: Comprehensive `services.yaml` with selectors, names, and descriptions.
+- [x] **`exception-translations`**: Translatable exception keys in `strings.json`.
+- [x] **`icon-translations`**: Full `icons.json` mapping all entity translation keys and custom services to Material Design Icons.
+- [x] **`test-coverage`**: 111 unit tests across all flows, platforms, crypto, and network state transitions.
+- [x] **`strict-typing`**: PEP 561 `py.typed` marker file and inline type annotations.
+- [ ] **`dynamic-options-update`**: Verify runtime options modifications take effect dynamically without requiring full integration reloads where possible.
+- [ ] **`service-response-data`**: Add `SupportsResponse.OPTIONAL` on diagnostic and probe services to return structured execution data.
+
+
