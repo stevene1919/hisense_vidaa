@@ -27,11 +27,21 @@ While the integration tracks the TV across IP changes via hardware MAC matching 
 
 ---
 
-## 🔌 3. Wired Ethernet for Reliable Wake-on-LAN (WoL)
+## 🔌 3. Wake-on-LAN (WoL) & Network Power-On
 
-For dependable power-on control from Home Assistant when the TV is in standby:
+> [!WARNING]
+> **Hardware Limitation Notice (2020–2022 Models)**:
+> On several 2020–2022 VIDAA models (notably the **A6 / A53 / A7 series** running VIDAA U4/U5), **Wake-on-LAN magic packets do not work—even over a direct wired Ethernet connection**. 
+> 
+> The mainboard hardware depowers the Ethernet PHY chip completely in deep sleep to comply with $\le 0.5\text{W}$ energy standards, dropping the physical link.
+> 
+> **To turn on these TVs reliably from Home Assistant**:
+> - Ensure **Fast Power On is ON** (`Settings → System → Advanced Settings → Fast Power On`).
+> - When Fast Power On is enabled, Home Assistant wakes the display instantly via **MQTT `KEY_POWER`** over the existing local socket, bypassing the need for WoL magic packets.
+> - For true cold-boots from unpowered states, use **HDMI-CEC** or an **IR blaster**.
 
-1. **Prefer Wired Ethernet**: Many VIDAA TV models completely power down their Wi-Fi radios in deep standby/eco modes to comply with energy consumption standards. The wired Ethernet NIC typically stays powered in a low-power listening state for magic packets.
+For models that do support hardware Wake-on-LAN:
+1. **Prefer Wired Ethernet**: Many VIDAA TV models power down their Wi-Fi radios in standby, while supported wired Ethernet NICs maintain a low-power listening state for magic packets.
 2. **Enable Wake-on-LAN in TV Settings**:
    - Navigate to **Settings → Network / System → Advanced Settings → Wake on LAN / Power on by Apps** and ensure it is switched **ON**.
 3. **Enable WoL in Integration Options**:

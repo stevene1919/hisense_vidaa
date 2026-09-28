@@ -48,7 +48,7 @@ When statutory energy-saving timers force the TV into a Tier 2 shutdown, the app
 | **Auto Standby with No Signal** | **OFF** | `Settings → System → Timer Settings → Auto Standby with No Signal` | Prevents deep Tier 2 shutdown when connected HDMI devices (Chromecast, PC) sleep. Default is 15 min. |
 | **Auto Sleep** | **OFF** | `Settings → System → Timer Settings → Auto Sleep` | Prevents automated shutdown after 3h/4h of remote inactivity. |
 | **Power On Mode** | **Standby** | `Settings → System → Advanced Settings → Power On Mode` | Ensures TV boots into clean standby after mains power recovery. |
-| **Wake on LAN** | **ON** | `Settings → Network / System → Advanced Settings → Wake on LAN` | Keeps wired Ethernet NIC listening for magic packets in standby. |
+| **Wake on LAN** | **ON (limited)** | `Settings → Network / System → Advanced Settings → Wake on LAN` | Often non-functional on 2020–2022 models even over wired Ethernet (see limitation section below). |
 | **Sleep Timer** | **OFF** | `Settings → System → Timer Settings → Sleep Timer` | Ensures no countdown timers inadvertently cut power. |
 
 ---
@@ -79,6 +79,27 @@ When statutory energy-saving timers force the TV into a Tier 2 shutdown, the app
 | **Network Management in Standby** | **Always On** | `Settings → Network → Advanced → Network in Standby` | Explicitly permits network card and broker to stay active. |
 | **Wake on LAN / Wi-Fi** | **ON** | `Settings → Network → Wake on LAN / Wake on Wi-Fi` | Enables network-directed wake. |
 | **VIDAA Art / Ambient Mode** | **Review settings** | `Settings → System → Advanced Settings → VIDAA Art` | On CanvasTV, adjust ambient sleep timers so panel sleep doesn't force cold shutdown. |
+
+---
+
+## ⚠️ Wake-on-LAN Hardware Limitations (2020–2022 / VIDAA U4 & U5 Era)
+
+Extensive testing confirms that on many budget and mid-range 2020–2022 VIDAA models (such as the **A6, A53, A7, and early U-series**), **Wake-on-LAN (WoL) magic packets fail completely—even over a direct wired Ethernet connection**.
+
+### Why WoL Fails on These Models:
+1. **Unpowered Ethernet PHY in Deep Sleep**: To achieve statutory standby power limits ($\le 0.5\text{W}$), the mainboard cuts all DC power rails to the physical Ethernet transceiver (PHY) and Wi-Fi SoC when the display is off. The physical Ethernet link drops entirely (switch link light turns off), making it physically impossible for the network card to receive UDP magic packets.
+2. **Firmware WoL Toggle Flaws**: On certain VIDAA U4 and U5 firmware builds, the "Wake on LAN" menu toggle is purely cosmetic or resets its state upon shutdown.
+
+### 💡 The Solution: MQTT Wake via Fast Power On
+Because WoL packets cannot wake a depowered network chip, the **only reliable way** to turn on these TVs from Home Assistant is:
+
+1. **Keep Fast Power On = ON**:
+   - The TV remains in shallow Network Standby (**Tier 1 / `fake_sleep`**).
+   - The network card and internal MQTT broker stay alive.
+   - Home Assistant wakes the TV by sending the native `KEY_POWER` command directly over the encrypted local MQTT connection—**zero Wake-on-LAN magic packets required**.
+2. **Alternative Cold-Boot Fallbacks**:
+   - **HDMI-CEC**: Waking a connected device (e.g. Chromecast, Apple TV, gaming console, or PC with HDMI-CEC) automatically wakes the TV over the HDMI bus.
+   - **IR Blaster**: Using a network IR transmitter (e.g. Broadlink RM4, SofaBaton, or Tuya IR) as an emergency cold-boot fallback if mains power is cut.
 
 ---
 
