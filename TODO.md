@@ -100,7 +100,7 @@ Tracking adherence to official [Home Assistant Integration Quality Scale](https:
 - [x] **Client Runtime State Mixin (`tv/state.py`)**: Adopted `TvStateMixin` in `HisenseTvClient` to encapsulate telemetry and settings state attributes and power properties (`client.py` reduced from 842 -> 576 lines).
 - [x] **Config Flow Modular Decomposition (`flow_certs.py`, `flow_discovery.py`, `flow_reauth.py`, `flow_helpers.py`)**: Decomposed monolithic `config_flow.py` (580 lines -> 267 lines) into single-purpose mixins and helper functions for discovery, reauth, certificate handling, and schema generation.
 - [x] **CLI Diagnostic & Debug Script Parity (`test_client.py`, `debug_tv.py`)**: Updated CLI tools to support standalone execution outside Home Assistant container with automated fallback mocks.
-- [ ] **Media Player Broadcast State Parsing (`tv/media.py` / `media_player.py`)**: Extract incoming broadcast telemetry, state, volume, and input handlers from `media_player.py` (currently 429 lines) into modular parser functions.
+- [x] **Media Player Broadcast State Parsing (`tv/media.py` / `media_player.py`)**: Extracted incoming broadcast telemetry, state, volume, and input handlers from `media_player.py` into modular parser functions (`parse_media_state_broadcast`, `parse_volume_broadcast`, `parse_sourcelist_data`, `parse_applist_data`).
 - [ ] **Client Connection Lifecycle Management (`protocol/connection.py` / `client.py`)**: Extract MQTT connection loops, keepalive management, and socket error recovery from `client.py` into dedicated connection lifecycle handlers.
 
 
