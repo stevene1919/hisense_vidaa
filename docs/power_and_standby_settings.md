@@ -101,6 +101,11 @@ Because WoL packets cannot wake a depowered network chip, the **only reliable wa
    - **HDMI-CEC**: Waking a connected device (e.g. Chromecast, Apple TV, gaming console, or PC with HDMI-CEC) automatically wakes the TV over the HDMI bus.
    - **IR Blaster**: Using a network IR transmitter (e.g. Broadlink RM4, SofaBaton, or Tuya IR) as an emergency cold-boot fallback if mains power is cut.
 
+> [!NOTE]
+> **Daily Automations vs. Cold-Boot Recovery (e.g. Power Outages)**:
+> - **Daily Use (99.9% of the time)**: Home Assistant controls power-on natively over local MQTT (`KEY_POWER`). No IR blaster or WoL is needed.
+> - **Cold-Boot & Power Outage Behavior**: Like most consumer electronics, smart TVs typically restore into **Cold Standby** (screen off, network stack and broker uninitialized) following a mains power outage or disconnection. Because network services and internal daemons only start once the TV is actively turned on, the very first wake after an AC power cut will require a physical remote press, chassis button, or an IR blaster pulse. Once woken up, Fast Power On takes over for all subsequent automated cycles.
+
 ---
 
 ## 🔌 Multi-Device Setup Recommendations
