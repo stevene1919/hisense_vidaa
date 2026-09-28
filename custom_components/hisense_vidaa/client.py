@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
-import json
 import logging
 import threading
 import time
@@ -19,19 +17,13 @@ from .discovery import (
     ping_tv,
 )
 from .protocol.auth import (
-    apply_mqtt_tls,
     is_token_expired,
     perform_token_refresh,
     probe_tv_auth_methods,
     test_tv_ssl_connection,
 )
 from .protocol.auth_lifecycle import TokenLifecycleManager
-from .protocol.connection import (
-    build_mqtt_client,
-    clean_disconnect_mqtt_client,
-    subscribe_standard_tv_topics,
-)
-from .protocol.dispatcher import dispatch_incoming_mqtt_message
+from .protocol.connection import ConnectionManagerMixin
 from .protocol.pairing import (
     _async_execute_pairing_attempt,
     async_start_pairing_handshake,
@@ -46,7 +38,7 @@ from .tv.state import TvStateMixin
 _LOGGER = logging.getLogger(__name__)
 
 
-class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, TvActionsMixin):
+class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixin, TvActionsMixin):
     """Client communicating with Hisense VIDAA TV over local TLS/MQTT broker."""
 
     TOKEN_WATCH_INTERVAL = TokenLifecycleManager.TOKEN_WATCH_INTERVAL
@@ -307,94 +299,6 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, TvActionsMixin):
         )
 
     # --------------------------------------------------------------------------
-    # MQTT Setup & Message Handlers
-    # --------------------------------------------------------------------------
-    def _apply_tls(self, client: mqtt.Client) -> None:
-        """Applies TLS certificate configuration to an MQTT client instance."""
-        apply_mqtt_tls(
-            client=client,
-            certfile=self.certfile,
-            keyfile=self.keyfile,
-            ca_cert=self.ca_cert,
-            verify_ssl=self.verify_ssl,
-            use_ssl=self.use_ssl,
-        )
-
-    def create_mqtt_client(self, client_id: str, username: str, password: str) -> mqtt.Client:
-        """Creates and configures an authenticated MQTT client."""
-        return build_mqtt_client(
-            client_id=client_id,
-            username=username,
-            password=password,
-            certfile=self.certfile,
-            keyfile=self.keyfile,
-            ca_cert=self.ca_cert,
-            verify_ssl=self.verify_ssl,
-            use_ssl=self.use_ssl,
-            on_connect=self._on_connect,
-            on_message=self._on_message,
-            on_disconnect=self._on_disconnect,
-        )
-
-    def _safe_set_future_result(self, future: asyncio.Future | None, result: Any) -> None:
-        if future and not future.done():
-            if self._loop and self._loop.is_running():
-                self._loop.call_soon_threadsafe(future.set_result, result)
-            else:
-                future.set_result(result)
-
-    def _safe_set_future_exception(self, future: asyncio.Future | None, exc: Exception) -> None:
-        if future and not future.done():
-            if self._loop and self._loop.is_running():
-                self._loop.call_soon_threadsafe(future.set_exception, exc)
-            else:
-                future.set_exception(exc)
-
-    def _on_connect(self, client: mqtt.Client, userdata: Any, flags: Any, rc: int) -> None:
-        if rc == 0:
-            self.connected = True
-            _LOGGER.info("[%s] Connected to TV MQTT broker", self.ip)
-            self._dispatch_connected()
-            subscribe_standard_tv_topics(
-                client=client,
-                broadcast_basepath=self.topicBrcsBasepath,
-                mobile_basepath=self.topicMobiBasepath,
-            )
-            if self.refresh_token and not self._token_manager.refreshing_token:
-                self._token_manager.proactive_token_refresh()
-
-            threading.Timer(0.5, self.query_initial_state).start()
-        else:
-            self.connected = False
-            _LOGGER.warning("[%s] Failed to connect to TV MQTT broker (rc: %d)", self.ip, rc)
-
-            if rc in (4, 5):
-                with contextlib.suppress(Exception):
-                    client.loop_stop()
-
-            if self._auth_future and not self._auth_future.done():
-                self._safe_set_future_exception(
-                    self._auth_future,
-                    Exception(f"MQTT connection rejected with code {rc} (Not authorized / invalid credentials)"),
-                )
-                return
-
-            if rc in (4, 5):
-                self._token_manager.handle_auth_rejection(rc)
-
-    def _on_disconnect(self, client: mqtt.Client, userdata: Any, rc: int) -> None:
-        self.connected = False
-        _LOGGER.debug("[%s] Disconnected from TV MQTT broker (rc: %d)", self.ip, rc)
-        if (self._auth_future and not self._auth_future.done()) or (self._auth_code_future and not self._auth_code_future.done()):
-            with contextlib.suppress(Exception):
-                client.loop_stop()
-        self._dispatch_disconnected()
-
-    def _on_message(self, client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
-        payload = msg.payload.decode("utf-8", errors="ignore")
-        dispatch_incoming_mqtt_message(self, topic=msg.topic, payload=payload)
-
-    # --------------------------------------------------------------------------
     # Authentication & Pairing Handshake
     # --------------------------------------------------------------------------
     async def async_start_auth(self) -> None:
@@ -473,61 +377,6 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, TvActionsMixin):
             self.connect_and_run()
         return False
 
-    # --------------------------------------------------------------------------
-    # Main Runtime Connection Loop
-    # --------------------------------------------------------------------------
-    def connect_and_run(self) -> None:
-        """Main client connection loop using the access token as password."""
-        if not self.access_token or not self.client_id or not self.username:
-            _LOGGER.error("[%s] Cannot connect to TV: missing credentials (client_id, username, or access_token)", self.ip)
-            return
-
-        if self.mqtt_client:
-            _LOGGER.debug("[%s] Cleaning up existing MQTT client before reconnecting", self.ip)
-            try:
-                self.mqtt_client.on_connect = None
-                self.mqtt_client.on_disconnect = None
-                self.mqtt_client.on_message = None
-                self.mqtt_client.loop_stop()
-                self.mqtt_client.disconnect()
-            except Exception as e:
-                _LOGGER.debug("[%s] Error disconnecting existing MQTT client: %s", self.ip, e)
-            finally:
-                self.mqtt_client = None
-                self.connected = False
-
-        self.mqtt_client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
-        _LOGGER.debug("[%s] Starting background MQTT connection loop", self.ip)
-        self.mqtt_client.connect_async(self.ip, 36669, 60)
-        self.mqtt_client.loop_start()
-        self._token_manager.start_token_watch()
-
-    def ensure_connected(self, min_interval: float = 5.0) -> bool:
-        """Ensures the MQTT client is connected, rate-limiting reconnect attempts."""
-        if self.connected and self.mqtt_client:
-            return True
-
-        now = time.time()
-        with self._reconnect_lock:
-            if now - self._last_reconnect_time < min_interval:
-                _LOGGER.debug(
-                    "[%s] Skipping reconnection attempt: last attempt was %.1fs ago (min interval: %.1fs)",
-                    self.ip,
-                    now - self._last_reconnect_time,
-                    min_interval,
-                )
-                return False
-            self._last_reconnect_time = now
-
-        _LOGGER.debug("[%s] Ensuring MQTT connection to TV...", self.ip)
-        try:
-            self.check_and_refresh_token()
-            self.connect_and_run()
-            return True
-        except Exception as e:
-            _LOGGER.error("[%s] Error during ensure_connected: %s", self.ip, e)
-            return False
-
     @staticmethod
     def send_wake_on_lan(
         mac: str | list[str] | tuple[str, ...],
@@ -537,40 +386,3 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, TvActionsMixin):
     ) -> bool:
         """Sends standard Wake-on-LAN magic packet UDP broadcasts for one or multiple MACs."""
         return send_wake_on_lan(mac=mac, broadcast_ip=broadcast_ip, port=port, ip=ip)
-
-    # --------------------------------------------------------------------------
-    # Async Queries & Disconnect
-    # --------------------------------------------------------------------------
-    async def async_query(self, pub_topic: str, sub_topic: str, payload: str | None = None) -> Any:
-        """Publishes a query to the TV and asynchronously awaits the response topic."""
-        if not self.mqtt_client:
-            raise Exception("MQTT client not initialized")
-
-        loop = asyncio.get_running_loop()
-        future = loop.create_future()
-
-        def on_msg(client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
-            loop.call_soon_threadsafe(future.set_result, msg.payload.decode("utf-8"))
-
-        self.mqtt_client.message_callback_add(sub_topic, on_msg)
-        self.mqtt_client.subscribe(sub_topic)
-        self.mqtt_client.publish(pub_topic, payload)
-
-        try:
-            result = await asyncio.wait_for(future, timeout=10)
-            return json.loads(result)
-        except Exception as e:
-            _LOGGER.error("Error querying %s: %s", pub_topic, e)
-            raise e
-        finally:
-            self.mqtt_client.unsubscribe(sub_topic)
-            self.mqtt_client.message_callback_remove(sub_topic)
-
-    def disconnect(self) -> None:
-        """Cleanly disconnects the MQTT client and stops the background network thread."""
-        self._token_manager.stop_token_watch()
-        self._token_manager.cancel_rejected_retry()
-        if self.mqtt_client:
-            clean_disconnect_mqtt_client(self.mqtt_client)
-            self.mqtt_client = None
-            self.connected = False

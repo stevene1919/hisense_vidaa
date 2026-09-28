@@ -17,6 +17,7 @@ from .certs import (
     resolve_certificates,
 )
 from .connection import (
+    ConnectionManagerMixin,
     build_mqtt_client,
     clean_disconnect_mqtt_client,
     subscribe_standard_tv_topics,
@@ -29,6 +30,7 @@ from .wol import send_wake_on_lan
 
 __all__ = [
     "TOPIC_BROADCAST_BASEPATH",
+    "ConnectionManagerMixin",
     "TopicPaths",
     "apply_mqtt_tls",
     "async_start_pairing_handshake",
