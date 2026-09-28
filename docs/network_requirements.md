@@ -41,14 +41,30 @@ For dependable power-on control from Home Assistant when the TV is in standby:
 
 ## ⚡ 4. Recommended TV Power & Standby Settings (Prevent Token Loss)
 
-Hisense VIDAA TVs store paired dynamic MQTT credentials in volatile system memory (RAM). Certain automated power-saving timers trigger an aggressive deep shutdown that terminates the internal broker process and flushes issued tokens, requiring re-authentication.
+### 🌍 Regulatory Context & Two-Tier Standby Architecture
 
-Configure the following on your TV to maintain continuous local connectivity:
+National energy efficiency regulations—such as **Australian GEMS (AS/NZS 62087)**, **European Ecodesign / Lot 26 (Directive 2019/2021)**, and **Energy Star**—mandate that smart TVs implement automated power-down mechanisms when inactive.
+
+To comply with these standards, VIDAA OS implements a **two-tier standby architecture**:
+
+1. **Tier 1: Networked Standby ("Fast Power On" / `fake_sleep`)**:
+   - Triggered when you turn the TV off via the remote control or Home Assistant.
+   - The display panel is powered down, but the TV's application processor maintains a low-power network-listening state ($\approx 1.5\text{W}$–$2.5\text{W}$).
+   - The embedded MQTT broker (`36669`) continues running in RAM. Issued access and refresh tokens remain intact in volatile memory.
+2. **Tier 2: Regulatory Deep Standby (Auto-Power-Down)**:
+   - Mandated to trigger when an active video signal is lost (e.g. **15 minutes** default) or after 4 hours of remote inactivity.
+   - To achieve the legally required deep standby threshold ($\le 0.5\text{W}$), VIDAA OS shuts down the application processor and terminates all background userland daemons—**including the internal MQTT broker**.
+   - **Volatile Token Storage**: VIDAA does not persist dynamically paired session tokens to flash storage (to prevent NAND flash degradation and secure credential leakage). When the TV transitions to Tier 2 deep sleep, **all issued tokens in volatile RAM are wiped**.
+   - Upon next power-up or wake, the broker starts fresh with an empty credential table. Reconnection attempts with previously valid tokens are actively rejected with **`rc: 4`** (*Bad username or password*).
+
+### 🛠️ Recommended TV Configuration
+
+To prevent connected HDMI devices (such as **Chromecast with Google TV**, **Apple TV**, or gaming consoles) from inadvertently dragging the TV into a Tier 2 broker-killing shutdown when they sleep:
 
 | Setting | Recommended Value | Path in TV Menu | Reason |
 | :--- | :--- | :--- | :--- |
-| **Fast Power On** | **ON** | `Settings → System → Advanced Settings → Fast Power On` | Keeps the network interface and internal MQTT broker alive in standby ("fake sleep") so Home Assistant can read states and send commands. |
-| **Auto Standby with No Signal** | **OFF** | `Settings → System → Timer Settings → Auto Standby with No Signal` | Prevents the TV from dropping into deep power-down when connected HDMI streaming boxes (Chromecast, Apple TV, consoles) sleep. |
+| **Fast Power On** | **ON** | `Settings → System → Advanced Settings → Fast Power On` | Keeps the network interface and internal MQTT broker alive in Tier 1 standby so Home Assistant can read states and send commands. |
+| **Auto Standby with No Signal** | **OFF** | `Settings → System → Timer Settings → Auto Standby with No Signal` | Prevents the TV from initiating an aggressive Tier 2 shutdown when connected HDMI streaming boxes sleep or cut their video output. |
 | **Auto Sleep / Idle Standby** | **OFF** | `Settings → System → Timer Settings → Auto Sleep` | Prevents automated energy-saving shutdowns after continuous idle periods that kill background services. |
 | **Power On Mode** | **Standby** | `Settings → System → Advanced Settings → Power On Mode` | Ensures the TV recovers cleanly to standby following any mains power restoration. |
 

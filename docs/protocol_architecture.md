@@ -159,3 +159,11 @@ Different VIDAA models expose varying subsets of the MQTT protocol depending on 
 3. **Audio-Only / Screen-Off Control**:
    - VIDAA OS does not expose a dedicated MQTT status query topic for display panel power state.
    - The integration provides an opt-in switch entity mapping to display power toggling on models supporting panel sleep.
+
+4. **Volatile Session Tokens & Regional Energy Standby (Australia GEMS, EU Ecodesign, Energy Star)**:
+   - Dynamic credentials (`access_token` and `refresh_token`) are stored strictly in volatile system RAM (`libmqttcrypt.so` runtime process table) rather than persistent flash memory.
+   - In standard manual standby (**Tier 1 / `fake_sleep` / Fast Power On**), the embedded MQTT daemon stays resident and active tokens are preserved.
+   - Under statutory automated energy-saving shutdowns (**Tier 2 / Auto Standby with No Signal / Auto Sleep**), the TV powers down the application processor to meet mandatory standby thresholds ($\le 0.5\text{W}$), terminating the broker process.
+   - Upon next power-up or wake, the broker starts with an unpopulated token table and actively rejects previously valid credentials with `rc: 4` (*Bad username or password*).
+   - The integration (v2.9.5+) specifically tracks broker rejection return codes (`connect_rc in (4, 5)`) versus standard standby timeouts (`connect_rc == 0`), auto-escalating to the Home Assistant Repairs dashboard after 3 consecutive rejections while preserving retry backoff for ordinary standby.
+
