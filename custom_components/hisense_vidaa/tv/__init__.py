@@ -91,6 +91,7 @@ from .settings import (
     parse_settings_payload,
 )
 from .state import (
+    TvStateMixin,
     apply_device_info_update,
     apply_picture_update,
     apply_sound_update,
@@ -122,6 +123,7 @@ __all__ = [
     "FeatureProbeResult",
     "SettingMenuItem",
     "TvActionsMixin",
+    "TvStateMixin",
     "apply_device_info_update",
     "apply_picture_update",
     "apply_sound_update",

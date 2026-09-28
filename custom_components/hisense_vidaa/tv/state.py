@@ -156,3 +156,50 @@ def apply_sound_update(client: Any, data: Any) -> None:
         client.sound_settings[item.menu_id] = item
         if "mode" in item.name.lower():
             client.sound_mode = str(item.value)
+
+
+class TvStateMixin:
+    """Mixin holding all live telemetry and settings state for Hisense VIDAA TV."""
+
+    def _init_runtime_state(self) -> None:
+        """Initializes all live state variables to clean defaults."""
+        self.connected: bool = False
+        self.state: str = "off"
+        self.volume: int = 0
+        self.muted: bool = False
+        self.sources: list[dict[str, Any]] = []
+        self.current_source: str | None = None
+        self.current_source_id: str | None = None
+        self.apps: list[dict[str, Any]] = []
+        self.current_app: str | None = None
+        self.current_app_id: str | None = None
+        self.current_channel: str | None = None
+        self.current_program: str | None = None
+        self.channel_number: str | None = None
+        self.picture_mode: str | None = None
+        self.sound_mode: str | None = None
+        self.backlight: int | None = None
+        self.brightness: int | None = None
+        self.contrast: int | None = None
+        self.picture_settings: dict[int, Any] = {}
+        self.sound_settings: dict[int, Any] = {}
+        self.audio_output_mode: str | None = None
+        self.hdr_mode: str | None = None
+        self.audio_format: str | None = None
+        self.sleep_timer: int | None = None
+        self.has_notifications: bool = False
+        self.device_name: str | None = None
+        self.model_name: str | None = None
+        self.manufacturer: str | None = None
+        self.firmware_version: str | None = None
+
+    @property
+    def is_on(self) -> bool:
+        """Returns True if the TV is connected and active."""
+        return self.state not in ("off", "")
+
+    @is_on.setter
+    def is_on(self, value: bool) -> None:
+        """Sets the power state."""
+        self.state = "on" if value else "off"
+

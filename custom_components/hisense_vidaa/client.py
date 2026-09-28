@@ -41,12 +41,12 @@ from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
 from .protocol.wol import send_wake_on_lan
 from .tv.actions import TvActionsMixin
 from .tv.callbacks import CallbackRegistryMixin
-from .tv.settings import SettingMenuItem
+from .tv.state import TvStateMixin
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class HisenseTvClient(CallbackRegistryMixin, TvActionsMixin):
+class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, TvActionsMixin):
     """Client communicating with Hisense VIDAA TV over local TLS/MQTT broker."""
 
     TOKEN_WATCH_INTERVAL = TokenLifecycleManager.TOKEN_WATCH_INTERVAL
@@ -95,35 +95,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvActionsMixin):
         self.verify_ssl = verify_ssl
 
         # Runtime State
-        self.connected: bool = False
-        self.state: str = "off"
-        self.volume: int = 0
-        self.muted: bool = False
-        self.sources: list[dict[str, Any]] = []
-        self.current_source: str | None = None
-        self.current_source_id: str | None = None
-        self.apps: list[dict[str, Any]] = []
-        self.current_app: str | None = None
-        self.current_app_id: str | None = None
-        self.current_channel: str | None = None
-        self.current_program: str | None = None
-        self.channel_number: str | None = None
-        self.picture_mode: str | None = None
-        self.sound_mode: str | None = None
-        self.backlight: int | None = None
-        self.brightness: int | None = None
-        self.contrast: int | None = None
-        self.picture_settings: dict[int, SettingMenuItem] = {}
-        self.sound_settings: dict[int, SettingMenuItem] = {}
-        self.audio_output_mode: str | None = None
-        self.hdr_mode: str | None = None
-        self.audio_format: str | None = None
-        self.sleep_timer: int | None = None
-        self.has_notifications: bool = False
-        self.device_name: str | None = None
-        self.model_name: str | None = None
-        self.manufacturer: str | None = None
-        self.firmware_version: str | None = None
+        self._init_runtime_state()
 
         self.mqtt_client: mqtt.Client | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -241,16 +213,6 @@ class HisenseTvClient(CallbackRegistryMixin, TvActionsMixin):
 
     def _refresh_token_and_update_creds(self) -> None:
         self._token_manager.refresh_token_and_update_creds()
-
-    @property
-    def is_on(self) -> bool:
-        """Returns True if the TV is connected and active."""
-        return self.state not in ("off", "")
-
-    @is_on.setter
-    def is_on(self, value: bool) -> None:
-        """Sets the power state."""
-        self.state = "on" if value else "off"
 
     # --------------------------------------------------------------------------
     # Discovery, Network Diagnostics & SSL Checks
