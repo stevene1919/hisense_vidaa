@@ -35,8 +35,7 @@ class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
     Supported on select VIDAA TV models that implement KEY_AUDIO screen toggle.
     """
 
-    _attr_name = "Audio Only"
-    _attr_icon = "mdi:television-off"
+    _attr_translation_key = "audio_only"
 
     def __init__(
         self,
@@ -102,9 +101,9 @@ class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
 class HisenseVidaaDebugLoggingSwitch(HisenseVidaaEntity, SwitchEntity):
     """Switch to dynamically toggle verbose debug logging in Home Assistant runtime."""
 
-    _attr_name = "Debug Logging"
-    _attr_icon = "mdi:bug"
+    _attr_translation_key = "debug_logging"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+
 
     def __init__(
         self,

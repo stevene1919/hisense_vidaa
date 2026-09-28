@@ -52,8 +52,7 @@ VOLUME_TYPE_MAP = {
 class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
     """Hisense VIDAA Audio Output Mode selector."""
 
-    _attr_name = "Audio Output Mode"
-    _attr_icon = "mdi:speaker-multiple"
+    _attr_translation_key = "audio_output"
     _attr_options = AUDIO_OUTPUT_OPTIONS
 
     def __init__(
@@ -107,8 +106,7 @@ class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
 class HisenseVidaaPictureModeSelect(HisenseVidaaEntity, SelectEntity):
     """Hisense VIDAA Picture Mode selector."""
 
-    _attr_name = "Picture Mode"
-    _attr_icon = "mdi:television-shading"
+    _attr_translation_key = "picture_mode"
 
     def __init__(
         self,
@@ -162,8 +160,8 @@ class HisenseVidaaPictureModeSelect(HisenseVidaaEntity, SelectEntity):
 class HisenseVidaaSoundModeSelect(HisenseVidaaEntity, SelectEntity):
     """Hisense VIDAA Sound Mode selector."""
 
-    _attr_name = "Sound Mode"
-    _attr_icon = "mdi:equalizer"
+    _attr_translation_key = "sound_mode"
+
 
     def __init__(
         self,

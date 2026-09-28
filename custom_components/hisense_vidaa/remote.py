@@ -29,7 +29,8 @@ PARALLEL_UPDATES = 0
 class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
     """Hisense VIDAA Remote entity."""
 
-    _attr_name = "Remote"
+    _attr_translation_key = "remote"
+
 
     def __init__(
         self,

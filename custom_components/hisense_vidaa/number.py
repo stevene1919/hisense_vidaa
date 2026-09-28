@@ -62,8 +62,7 @@ class HisenseVidaaBaseNumber(HisenseVidaaEntity, NumberEntity):
 class HisenseVidaaBacklightNumber(HisenseVidaaBaseNumber):
     """Hisense VIDAA Backlight Slider."""
 
-    _attr_name = "Backlight"
-    _attr_icon = "mdi:brightness-6"
+    _attr_translation_key = "backlight"
 
     def __init__(
         self,
@@ -98,8 +97,7 @@ class HisenseVidaaBacklightNumber(HisenseVidaaBaseNumber):
 class HisenseVidaaBrightnessNumber(HisenseVidaaBaseNumber):
     """Hisense VIDAA Brightness Slider."""
 
-    _attr_name = "Brightness"
-    _attr_icon = "mdi:brightness-5"
+    _attr_translation_key = "brightness"
 
     def __init__(
         self,
@@ -134,8 +132,8 @@ class HisenseVidaaBrightnessNumber(HisenseVidaaBaseNumber):
 class HisenseVidaaContrastNumber(HisenseVidaaBaseNumber):
     """Hisense VIDAA Contrast Slider."""
 
-    _attr_name = "Contrast"
-    _attr_icon = "mdi:contrast-circle"
+    _attr_translation_key = "contrast"
+
 
     def __init__(
         self,

@@ -103,11 +103,11 @@
       },
       "picture_sound": {
         "title": "Picture & Sound Controls",
-        "description": "Enable picture calibration sliders, sound mode selector, and audio-only display switch (supported on select VIDAA TV models only).",
+        "description": "Configure picture calibration sliders, sound mode select, and audio-only mode.",
         "data": {
-          "enable_picture_controls": "Enable Picture Mode and calibration sliders (Backlight, Brightness, Contrast)",
-          "enable_sound_controls": "Enable Sound Mode equalizer selector",
-          "enable_audio_only": "Enable Audio-Only (Screen Off) display switch"
+          "enable_picture_controls": "Enable Picture Mode select and calibration sliders (Backlight, Brightness, Contrast)",
+          "enable_sound_controls": "Enable Sound Mode equalizer preset selector",
+          "enable_audio_only": "Enable Audio-Only (Screen Off) display toggle switch"
         }
       },
       "remote_keys": {
@@ -156,6 +156,9 @@
     "binary_sensor": {
       "mqtt_connected": {
         "name": "MQTT Connected"
+      },
+      "in_use": {
+        "name": "In Use"
       }
     },
     "button": {
@@ -194,6 +197,19 @@
       },
       "contrast": {
         "name": "Contrast"
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Remote"
+      }
+    },
+    "switch": {
+      "audio_only": {
+        "name": "Audio Only"
+      },
+      "debug_logging": {
+        "name": "Debug Logging"
       }
     }
   },
@@ -269,6 +285,14 @@
       }
     }
   },
+  "exceptions": {
+    "no_target_device": {
+      "message": "No matching Hisense VIDAA TV was found for the specified service call target."
+    },
+    "not_connected": {
+      "message": "Cannot send command: TV is currently disconnected."
+    }
+  },
   "selector": {
     "auth_profile": {
       "options": {
@@ -292,6 +316,18 @@
         },
         "error": {
           "certificates_still_missing": "Certificates are still missing. Please ensure hisense.crt and hisense.key exist."
+        }
+      }
+    },
+    "auth_token_invalidated": {
+      "title": "Hisense TV: Reauthentication Required",
+      "description": "Home Assistant can no longer authenticate with your Hisense TV ({ip_address}). The TV broker has rejected the stored access and refresh tokens — this usually happens after a firmware update or a hard power-cycle. Please reconfigure the integration to re-pair with your TV.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Re-pair with Hisense TV",
+            "description": "Click **Submit** to start the pairing flow. Make sure your TV is powered **on** (not in standby) — a PIN code will appear on screen."
+          }
         }
       }
     }

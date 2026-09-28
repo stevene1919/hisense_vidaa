@@ -21,8 +21,7 @@ PARALLEL_UPDATES = 0
 class HisenseVidaaNotifyEntity(HisenseVidaaEntity, NotifyEntity):
     """Hisense VIDAA Toast Notification entity."""
 
-    _attr_name = "Notifications"
-    _attr_icon = "mdi:television-guide"
+    _attr_translation_key = "notifications"
 
     def __init__(
         self,

@@ -1,22 +1,15 @@
 {
   "entity": {
-    "sensor": {
-      "session_status": {
-        "default": "mdi:shield-check"
-      },
-      "auth_profile": {
-        "default": "mdi:shield-key-outline"
-      },
-      "active_app": {
-        "default": "mdi:application"
-      },
-      "active_source": {
-        "default": "mdi:video-input-hdmi"
-      }
-    },
     "binary_sensor": {
       "mqtt_connected": {
         "default": "mdi:lan-connect"
+      },
+      "in_use": {
+        "default": "mdi:television",
+        "state": {
+          "on": "mdi:television",
+          "off": "mdi:television-off"
+        }
       }
     },
     "button": {
@@ -25,6 +18,69 @@
       },
       "sync_clock": {
         "default": "mdi:clock-outline"
+      },
+      "probe_capabilities": {
+        "default": "mdi:television-shimmer"
+      }
+    },
+    "notify": {
+      "notifications": {
+        "default": "mdi:television-guide"
+      }
+    },
+    "number": {
+      "backlight": {
+        "default": "mdi:brightness-7"
+      },
+      "brightness": {
+        "default": "mdi:brightness-6"
+      },
+      "contrast": {
+        "default": "mdi:contrast-circle"
+      }
+    },
+    "remote": {
+      "remote": {
+        "default": "mdi:remote"
+      }
+    },
+    "select": {
+      "audio_output": {
+        "default": "mdi:volume-source"
+      },
+      "picture_mode": {
+        "default": "mdi:image-filter-hdr"
+      },
+      "sound_mode": {
+        "default": "mdi:surround-sound"
+      }
+    },
+    "sensor": {
+      "session_status": {
+        "default": "mdi:shield-check"
+      },
+      "auth_profile": {
+        "default": "mdi:shield-key-outline"
+      },
+      "reported_name": {
+        "default": "mdi:television-ambient-light"
+      },
+      "active_app": {
+        "default": "mdi:application"
+      },
+      "active_source": {
+        "default": "mdi:video-input-hdmi"
+      },
+      "audio_output": {
+        "default": "mdi:volume-source"
+      }
+    },
+    "switch": {
+      "audio_only": {
+        "default": "mdi:television-off"
+      },
+      "debug_logging": {
+        "default": "mdi:bug-outline"
       }
     }
   },
@@ -34,6 +90,15 @@
     },
     "launch_app": {
       "service": "mdi:play-box-multiple"
+    },
+    "set_picture_setting": {
+      "service": "mdi:tune"
+    },
+    "set_sound_setting": {
+      "service": "mdi:equalizer"
+    },
+    "send_text_input": {
+      "service": "mdi:keyboard-outline"
     }
   }
 }

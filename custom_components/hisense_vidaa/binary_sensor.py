@@ -76,8 +76,7 @@ class HisenseVidaaMqttConnectedBinarySensor(HisenseVidaaEntity, BinarySensorEnti
 class HisenseVidaaInUseBinarySensor(HisenseVidaaEntity, BinarySensorEntity):
     """Binary sensor indicating whether the TV is genuinely awake and displaying content."""
 
-    _attr_name = "In Use"
-    _attr_icon = "mdi:television-play"
+    _attr_translation_key = "in_use"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
 
     def __init__(
