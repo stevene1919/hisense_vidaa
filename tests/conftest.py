@@ -57,13 +57,19 @@ if "homeassistant" not in sys.modules:
             self.service = service
             self.data = data or {}
             self.context = context
+    class SupportsResponse:
+        NONE = "none"
+        ONLY = "only"
+        OPTIONAL = "optional"
     def callback(func):
         return func
     core.HomeAssistant = HomeAssistant
     core.ServiceCall = ServiceCall
+    core.SupportsResponse = SupportsResponse
     core.callback = callback
     ha.core = core
     sys.modules["homeassistant.core"] = core
+
 
     # const
     const = types.ModuleType("homeassistant.const")

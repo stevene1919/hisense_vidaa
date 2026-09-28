@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import Any
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 
 from .const import (
     ATTR_ACTION,
@@ -94,22 +94,33 @@ def _get_target_clients(hass: HomeAssistant, call: ServiceCall) -> list[Any]:
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Register all custom services for the Hisense VIDAA TV integration."""
 
-    async def handle_send_key(call: ServiceCall) -> None:
+    async def handle_send_key(call: ServiceCall) -> dict[str, Any]:
         """Handle send_key service call."""
         key = call.data.get(ATTR_KEY)
         repeat = call.data.get(ATTR_REPEAT, 1)
         delay = call.data.get(ATTR_DELAY, 0.2)
+        target_clients = _get_target_clients(hass, call)
 
-        for client in _get_target_clients(hass, call):
+        for client in target_clients:
             for i in range(repeat):
                 if i > 0 and delay > 0:
                     await asyncio.sleep(delay)
                 await hass.async_add_executor_job(client.send_command, key)
 
-    async def handle_launch_app(call: ServiceCall) -> None:
+        return {
+            "key": key,
+            "repeat": repeat,
+            "targets": [getattr(c, "ip", "unknown") for c in target_clients],
+            "count": len(target_clients),
+        }
+
+    async def handle_launch_app(call: ServiceCall) -> dict[str, Any]:
         """Handle launch_app service call."""
         app = call.data.get(ATTR_APP)
-        for client in _get_target_clients(hass, call):
+        target_clients = _get_target_clients(hass, call)
+        launched: list[dict[str, Any]] = []
+
+        for client in target_clients:
             matched_app = None
             for a in getattr(client, "apps", []):
                 if isinstance(a, dict) and (
@@ -121,50 +132,91 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     break
 
             if matched_app:
-                await hass.async_add_executor_job(
-                    client.launch_app,
-                    str(matched_app.get("appId", "")),
-                    str(matched_app.get("name") or matched_app.get("appName") or ""),
-                    str(matched_app.get("url") or matched_app.get("appUrl") or ""),
-                )
+                app_id = str(matched_app.get("appId", ""))
+                app_name = str(matched_app.get("name") or matched_app.get("appName") or "")
+                app_url = str(matched_app.get("url") or matched_app.get("appUrl") or "")
             else:
-                await hass.async_add_executor_job(client.launch_app, "", app, app)
+                app_id = ""
+                app_name = app
+                app_url = app
 
-    async def handle_set_picture_setting(call: ServiceCall) -> None:
+            await hass.async_add_executor_job(
+                client.launch_app,
+                app_id,
+                app_name,
+                app_url,
+            )
+            launched.append({
+                "ip": getattr(client, "ip", "unknown"),
+                "app_name": app_name,
+                "app_id": app_id,
+                "app_url": app_url,
+            })
+
+        return {
+            "app": app,
+            "targets": launched,
+            "count": len(launched),
+        }
+
+    async def handle_set_picture_setting(call: ServiceCall) -> dict[str, Any]:
         """Handle set_picture_setting service call."""
         menu_id = call.data.get(ATTR_MENU_ID)
         menu_val = call.data.get(ATTR_MENU_VALUE)
-        for client in _get_target_clients(hass, call):
+        target_clients = _get_target_clients(hass, call)
+        for client in target_clients:
             await hass.async_add_executor_job(client.set_picture_setting, menu_id, menu_val)
+        return {
+            "menu_id": menu_id,
+            "menu_value": menu_val,
+            "targets": [getattr(c, "ip", "unknown") for c in target_clients],
+            "count": len(target_clients),
+        }
 
-    async def handle_set_sound_setting(call: ServiceCall) -> None:
+    async def handle_set_sound_setting(call: ServiceCall) -> dict[str, Any]:
         """Handle set_sound_setting service call."""
         menu_id = call.data.get(ATTR_MENU_ID)
         menu_val = call.data.get(ATTR_MENU_VALUE)
-        for client in _get_target_clients(hass, call):
+        target_clients = _get_target_clients(hass, call)
+        for client in target_clients:
             await hass.async_add_executor_job(client.set_sound_setting, menu_id, menu_val)
+        return {
+            "menu_id": menu_id,
+            "menu_value": menu_val,
+            "targets": [getattr(c, "ip", "unknown") for c in target_clients],
+            "count": len(target_clients),
+        }
 
-    async def handle_send_text_input(call: ServiceCall) -> None:
+    async def handle_send_text_input(call: ServiceCall) -> dict[str, Any]:
         """Handle send_text_input service call."""
         text = call.data.get(ATTR_TEXT, "")
         action = call.data.get(ATTR_ACTION, "insert")
-        for client in _get_target_clients(hass, call):
+        target_clients = _get_target_clients(hass, call)
+        for client in target_clients:
             await hass.async_add_executor_job(client.send_text_input, text, action)
+        return {
+            "text": text,
+            "action": action,
+            "targets": [getattr(c, "ip", "unknown") for c in target_clients],
+            "count": len(target_clients),
+        }
 
-    if not hass.services.has_service(DOMAIN, SERVICE_SEND_KEY):
-        hass.services.async_register(DOMAIN, SERVICE_SEND_KEY, handle_send_key)
+    services_map = [
+        (SERVICE_SEND_KEY, handle_send_key),
+        (SERVICE_LAUNCH_APP, handle_launch_app),
+        (SERVICE_SET_PICTURE_SETTING, handle_set_picture_setting),
+        (SERVICE_SET_SOUND_SETTING, handle_set_sound_setting),
+        (SERVICE_SEND_TEXT_INPUT, handle_send_text_input),
+    ]
 
-    if not hass.services.has_service(DOMAIN, SERVICE_LAUNCH_APP):
-        hass.services.async_register(DOMAIN, SERVICE_LAUNCH_APP, handle_launch_app)
-
-    if not hass.services.has_service(DOMAIN, SERVICE_SET_PICTURE_SETTING):
-        hass.services.async_register(DOMAIN, SERVICE_SET_PICTURE_SETTING, handle_set_picture_setting)
-
-    if not hass.services.has_service(DOMAIN, SERVICE_SET_SOUND_SETTING):
-        hass.services.async_register(DOMAIN, SERVICE_SET_SOUND_SETTING, handle_set_sound_setting)
-
-    if not hass.services.has_service(DOMAIN, SERVICE_SEND_TEXT_INPUT):
-        hass.services.async_register(DOMAIN, SERVICE_SEND_TEXT_INPUT, handle_send_text_input)
+    for service_name, handler in services_map:
+        if not hass.services.has_service(DOMAIN, service_name):
+            hass.services.async_register(
+                DOMAIN,
+                service_name,
+                handler,
+                supports_response=SupportsResponse.OPTIONAL,
+            )
 
 
 async def async_unload_services(hass: HomeAssistant) -> None:
@@ -183,3 +235,4 @@ async def async_unload_services(hass: HomeAssistant) -> None:
     for service_name in services_to_remove:
         if hass.services.has_service(DOMAIN, service_name):
             hass.services.async_remove(DOMAIN, service_name)
+

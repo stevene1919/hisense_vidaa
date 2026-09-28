@@ -31,7 +31,7 @@ async def test_services_registration_and_send_key():
     hass.data = {}
     registered_services = {}
 
-    def mock_async_register(domain, service, handler):
+    def mock_async_register(domain, service, handler, *args, **kwargs):
         registered_services[f"{domain}.{service}"] = handler
 
     hass.services = MagicMock()
@@ -40,6 +40,7 @@ async def test_services_registration_and_send_key():
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     mock_client = MagicMock()
+    mock_client.ip = "192.168.50.12"
     hass.data[DOMAIN] = {"entry_1": {"client": mock_client}}
 
     success = await async_setup(hass, {})
@@ -58,9 +59,15 @@ async def test_services_registration_and_send_key():
         service=SERVICE_SEND_KEY,
         data={ATTR_KEY: "KEY_POWER", ATTR_REPEAT: 2, ATTR_DELAY: 0.01},
     )
-    await registered_services[f"{DOMAIN}.{SERVICE_SEND_KEY}"](call_send_key)
+    result = await registered_services[f"{DOMAIN}.{SERVICE_SEND_KEY}"](call_send_key)
     assert mock_client.send_command.call_count == 2
     mock_client.send_command.assert_called_with("KEY_POWER")
+    assert result == {
+        "key": "KEY_POWER",
+        "repeat": 2,
+        "targets": ["192.168.50.12"],
+        "count": 1,
+    }
 
 
 @pytest.mark.anyio
@@ -70,7 +77,7 @@ async def test_launch_app_service_matching():
     hass.data = {}
     registered_services = {}
 
-    def mock_async_register(domain, service, handler):
+    def mock_async_register(domain, service, handler, *args, **kwargs):
         registered_services[f"{domain}.{service}"] = handler
 
     hass.services = MagicMock()
@@ -79,6 +86,7 @@ async def test_launch_app_service_matching():
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     mock_client = MagicMock()
+    mock_client.ip = "192.168.50.12"
     mock_client.apps = [
         {"name": "YouTube", "appId": "youtube_app_01", "url": "https://youtube.com/tv"},
         {"appName": "Netflix", "appId": "netflix_app_02", "appUrl": "netflix://"},
@@ -93,8 +101,10 @@ async def test_launch_app_service_matching():
         service=SERVICE_LAUNCH_APP,
         data={ATTR_APP: "youtube"},
     )
-    await registered_services[f"{DOMAIN}.{SERVICE_LAUNCH_APP}"](call_yt)
+    result_yt = await registered_services[f"{DOMAIN}.{SERVICE_LAUNCH_APP}"](call_yt)
     mock_client.launch_app.assert_called_with("youtube_app_01", "YouTube", "https://youtube.com/tv")
+    assert result_yt["count"] == 1
+    assert result_yt["targets"][0]["app_id"] == "youtube_app_01"
 
     # Match by appName
     call_netflix = ServiceCall(
@@ -102,8 +112,10 @@ async def test_launch_app_service_matching():
         service=SERVICE_LAUNCH_APP,
         data={ATTR_APP: "NETFLIX"},
     )
-    await registered_services[f"{DOMAIN}.{SERVICE_LAUNCH_APP}"](call_netflix)
+    result_nf = await registered_services[f"{DOMAIN}.{SERVICE_LAUNCH_APP}"](call_netflix)
     mock_client.launch_app.assert_called_with("netflix_app_02", "Netflix", "netflix://")
+    assert result_nf["count"] == 1
+    assert result_nf["targets"][0]["app_id"] == "netflix_app_02"
 
     # Fallback when app not in cached app list
     call_unknown = ServiceCall(
@@ -111,8 +123,10 @@ async def test_launch_app_service_matching():
         service=SERVICE_LAUNCH_APP,
         data={ATTR_APP: "CustomApp"},
     )
-    await registered_services[f"{DOMAIN}.{SERVICE_LAUNCH_APP}"](call_unknown)
+    result_unk = await registered_services[f"{DOMAIN}.{SERVICE_LAUNCH_APP}"](call_unknown)
     mock_client.launch_app.assert_called_with("", "CustomApp", "CustomApp")
+    assert result_unk["count"] == 1
+    assert result_unk["targets"][0]["app_name"] == "CustomApp"
 
 
 @pytest.mark.anyio
@@ -122,7 +136,7 @@ async def test_picture_sound_and_text_input_services():
     hass.data = {}
     registered_services = {}
 
-    def mock_async_register(domain, service, handler):
+    def mock_async_register(domain, service, handler, *args, **kwargs):
         registered_services[f"{domain}.{service}"] = handler
 
     hass.services = MagicMock()
@@ -131,6 +145,7 @@ async def test_picture_sound_and_text_input_services():
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     mock_client = MagicMock()
+    mock_client.ip = "192.168.50.12"
     hass.data[DOMAIN] = {"entry_1": {"client": mock_client}}
 
     await async_setup(hass, {})
@@ -141,8 +156,9 @@ async def test_picture_sound_and_text_input_services():
         service=SERVICE_SET_PICTURE_SETTING,
         data={ATTR_MENU_ID: "picture_mode", ATTR_MENU_VALUE: "Cinema Night"},
     )
-    await registered_services[f"{DOMAIN}.{SERVICE_SET_PICTURE_SETTING}"](call_pic)
+    res_pic = await registered_services[f"{DOMAIN}.{SERVICE_SET_PICTURE_SETTING}"](call_pic)
     mock_client.set_picture_setting.assert_called_with("picture_mode", "Cinema Night")
+    assert res_pic["menu_id"] == "picture_mode"
 
     # Sound setting
     call_snd = ServiceCall(
@@ -150,8 +166,9 @@ async def test_picture_sound_and_text_input_services():
         service=SERVICE_SET_SOUND_SETTING,
         data={ATTR_MENU_ID: "sound_mode", ATTR_MENU_VALUE: "Theater"},
     )
-    await registered_services[f"{DOMAIN}.{SERVICE_SET_SOUND_SETTING}"](call_snd)
+    res_snd = await registered_services[f"{DOMAIN}.{SERVICE_SET_SOUND_SETTING}"](call_snd)
     mock_client.set_sound_setting.assert_called_with("sound_mode", "Theater")
+    assert res_snd["menu_value"] == "Theater"
 
     # Text input
     call_txt = ServiceCall(
@@ -159,8 +176,9 @@ async def test_picture_sound_and_text_input_services():
         service=SERVICE_SEND_TEXT_INPUT,
         data={ATTR_TEXT: "hello world", ATTR_ACTION: "insert"},
     )
-    await registered_services[f"{DOMAIN}.{SERVICE_SEND_TEXT_INPUT}"](call_txt)
+    res_txt = await registered_services[f"{DOMAIN}.{SERVICE_SEND_TEXT_INPUT}"](call_txt)
     mock_client.send_text_input.assert_called_with("hello world", "insert")
+    assert res_txt["text"] == "hello world"
 
 
 @pytest.mark.anyio

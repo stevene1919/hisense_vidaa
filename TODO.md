@@ -79,7 +79,7 @@ Tracking adherence to official [Home Assistant Integration Quality Scale](https:
 - [x] **`entity-disabled-by-default`**: Advanced calibration number entities and secondary diagnostic switches disabled/opt-in by default.
 - [x] **`parallel-updates`**: Explicit `PARALLEL_UPDATES = 0` declared across all platform modules.
 
-### 🥇 Gold Tier — Status: 🟡 ~95%
+### 🥇 Gold Tier — Status: ✅ 100%
 - [x] **`discovery`**: Automatic background discovery via SSDP (`urn:schemas-upnp-org:device:MediaRenderer:1`) and Zeroconf.
 - [x] **`devices`**: Full Device Registry binding with MAC hardware connections, manufacturer, model, and software version.
 - [x] **`entity-translations`**: Full `_attr_translation_key` adoption across all entity platforms with 100% parity between `strings.json` and `translations/en.json`.
@@ -88,8 +88,9 @@ Tracking adherence to official [Home Assistant Integration Quality Scale](https:
 - [x] **`icon-translations`**: Full `icons.json` mapping all entity translation keys and custom services to Material Design Icons.
 - [x] **`test-coverage`**: 111 unit tests across all flows, platforms, crypto, and network state transitions.
 - [x] **`strict-typing`**: PEP 561 `py.typed` marker file and inline type annotations.
-- [ ] **`dynamic-options-update`**: Verify runtime options modifications take effect dynamically without requiring full integration reloads where possible.
-- [ ] **`service-response-data`**: Add `SupportsResponse.OPTIONAL` on diagnostic and probe services to return structured execution data.
+- [x] **`dynamic-options-update`**: Runtime options update listener with clean change detection and entry reload lifecycle.
+- [x] **`service-response-data`**: All custom services registered with `SupportsResponse.OPTIONAL` returning structured execution telemetry.
+
 
 ---
 
