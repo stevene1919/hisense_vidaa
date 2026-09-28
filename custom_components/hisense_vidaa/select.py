@@ -30,6 +30,8 @@ from .tv.settings import (
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0
+
 AUDIO_OUTPUT_TV_SPEAKERS = "TV Speakers"
 AUDIO_OUTPUT_ARC = "ARC / eARC"
 AUDIO_OUTPUT_HEADPHONE = "Headphone / Bluetooth"

@@ -23,6 +23,8 @@ from .entity import HisenseVidaaEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0
+
 
 class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
     """Hisense VIDAA Remote entity."""

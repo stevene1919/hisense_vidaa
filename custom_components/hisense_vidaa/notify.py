@@ -15,6 +15,8 @@ from .entity import HisenseVidaaEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0
+
 
 class HisenseVidaaNotifyEntity(HisenseVidaaEntity, NotifyEntity):
     """Hisense VIDAA Toast Notification entity."""

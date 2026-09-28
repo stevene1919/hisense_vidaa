@@ -22,6 +22,8 @@ from .entity import HisenseVidaaEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0
+
 AUDIO_ONLY_KEY = "KEY_AUDIO"
 WAKE_KEY = "KEY_INFO"
 KEY_GAP_SECONDS = 0.5

@@ -27,6 +27,8 @@ from .tv.navigation import get_app_icon, get_source_icon
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,

@@ -39,6 +39,8 @@ from .tv.settings import (
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0
+
 
 class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
     _attr_name = None

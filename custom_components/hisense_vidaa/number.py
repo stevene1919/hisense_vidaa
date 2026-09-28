@@ -21,6 +21,8 @@ from .entity import HisenseVidaaEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0
+
 
 class HisenseVidaaBaseNumber(HisenseVidaaEntity, NumberEntity):
     """Base number entity for Hisense VIDAA TV picture calibration."""
