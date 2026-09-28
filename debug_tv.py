@@ -16,18 +16,21 @@ from datetime import UTC, datetime
 
 # Setup module import path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-COMP_DIR = os.path.join(SCRIPT_DIR, "custom_components", "hisense_vidaa")
-HA_COMP_DIR = "/config/custom_components/hisense_vidaa"
-if os.path.isdir(COMP_DIR) and COMP_DIR not in sys.path:
-    sys.path.insert(0, COMP_DIR)
-elif os.path.isdir(HA_COMP_DIR) and HA_COMP_DIR not in sys.path:
-    sys.path.insert(0, HA_COMP_DIR)
-elif SCRIPT_DIR not in sys.path:
+HA_CONFIG_DIR = "/config"
+if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
+if os.path.isdir(HA_CONFIG_DIR) and HA_CONFIG_DIR not in sys.path:
+    sys.path.insert(0, HA_CONFIG_DIR)
 
-from client import HisenseTvClient
-from discovery import get_device_fingerprint, get_tv_timestamp
-from tv.probe import (
+if "homeassistant" not in sys.modules:
+    try:
+        import homeassistant  # noqa: F401
+    except ImportError:
+        import tests.conftest  # noqa: F401
+
+from custom_components.hisense_vidaa.client import HisenseTvClient
+from custom_components.hisense_vidaa.discovery import get_device_fingerprint, get_tv_timestamp
+from custom_components.hisense_vidaa.tv.probe import (
     create_client_from_creds,
     load_credentials_file,
 )

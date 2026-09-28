@@ -24,6 +24,12 @@ if SCRIPT_DIR not in sys.path:
 if os.path.isdir(HA_CONFIG_DIR) and HA_CONFIG_DIR not in sys.path:
     sys.path.insert(0, HA_CONFIG_DIR)
 
+if "homeassistant" not in sys.modules:
+    try:
+        import homeassistant  # noqa: F401
+    except ImportError:
+        import tests.conftest  # noqa: F401
+
 from custom_components.hisense_vidaa.client import HisenseTvClient
 from custom_components.hisense_vidaa.discovery import get_arp_mac
 from custom_components.hisense_vidaa.tv.probe import (

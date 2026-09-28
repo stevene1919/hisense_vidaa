@@ -55,6 +55,32 @@ from .options_flow import HisenseVidaaOptionsFlowHandler
 _LOGGER = logging.getLogger(__name__)
 
 
+def _build_options_schema(pic_supported: bool, sound_supported: bool) -> vol.Schema:
+    """Build the configuration options schema."""
+    return vol.Schema({
+        vol.Optional(CONF_ENABLE_REMOTE, default=DEFAULT_ENABLE_REMOTE): bool,
+        vol.Optional(CONF_ENABLE_WOL, default=DEFAULT_ENABLE_WOL): bool,
+        vol.Optional(CONF_INCLUDE_APPS_IN_SOURCES, default=DEFAULT_INCLUDE_APPS_IN_SOURCES): bool,
+        vol.Optional(CONF_ENABLE_MEDIA_CONTROLS, default=DEFAULT_ENABLE_MEDIA_CONTROLS): bool,
+        vol.Optional(CONF_ENABLE_PICTURE_CONTROLS, default=pic_supported): bool,
+        vol.Optional(CONF_ENABLE_SOUND_CONTROLS, default=sound_supported): bool,
+        vol.Optional(CONF_ENABLE_AUDIO_ONLY, default=DEFAULT_ENABLE_AUDIO_ONLY): bool,
+    })
+
+
+def _build_entry_options(user_input: dict[str, Any], pic_supported: bool, sound_supported: bool) -> dict[str, Any]:
+    """Map user input to config entry options dictionary."""
+    return {
+        CONF_ENABLE_REMOTE: user_input.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE),
+        CONF_ENABLE_WOL: user_input.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL),
+        CONF_INCLUDE_APPS_IN_SOURCES: user_input.get(CONF_INCLUDE_APPS_IN_SOURCES, DEFAULT_INCLUDE_APPS_IN_SOURCES),
+        CONF_ENABLE_MEDIA_CONTROLS: user_input.get(CONF_ENABLE_MEDIA_CONTROLS, DEFAULT_ENABLE_MEDIA_CONTROLS),
+        CONF_ENABLE_PICTURE_CONTROLS: user_input.get(CONF_ENABLE_PICTURE_CONTROLS, pic_supported),
+        CONF_ENABLE_SOUND_CONTROLS: user_input.get(CONF_ENABLE_SOUND_CONTROLS, sound_supported),
+        CONF_ENABLE_AUDIO_ONLY: user_input.get(CONF_ENABLE_AUDIO_ONLY, DEFAULT_ENABLE_AUDIO_ONLY),
+    }
+
+
 class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
@@ -153,7 +179,6 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         self.client._loop = self.hass.loop
 
-        # If auto-detect is selected, probe if TV uses legacy static credentials
         if self.auth_profile == "auto":
             probe = await self.hass.async_add_executor_job(
                 self.client.probe_auth_methods, 1.5
@@ -169,7 +194,6 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         await self.client.async_start_auth()
 
-        # If MAC was not in ARP before, try again now that TCP connection was established
         if not self.mac_address:
             raw_mac = await self.hass.async_add_executor_job(
                 get_arp_mac, self.ip_address
@@ -245,12 +269,11 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.ip_address = user_input[CONF_IP_ADDRESS]
             self.auth_profile = user_input.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
 
-            # Attempt automatic MAC address resolution from ARP cache
             raw_mac = await self.hass.async_add_executor_job(get_arp_mac, self.ip_address)
             if raw_mac:
                 self.mac_address = format_mac(raw_mac)
 
-            if self.auth_profile == "auto" or self.auth_profile == "legacy":
+            if self.auth_profile in ("auto", "legacy"):
                 if self._resolve_ssl_certs():
                     try:
                         return await self._async_init_client_and_auth()
@@ -260,7 +283,6 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 else:
                     return await self.async_step_certs()
             else:
-                # Explicit profile selected (modern / remotenow) -> route to certs configuration step
                 return await self.async_step_certs()
 
         return self.async_show_form(
@@ -279,7 +301,6 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         errors = {}
 
-        # If resumed from an existing session without an active client, initiate pairing connection
         if not self.client:
             if not self.ip_address and self._reauth_entry:
                 self.ip_address = self._reauth_entry.data.get(CONF_IP_ADDRESS)
@@ -374,13 +395,12 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.auth_profile = user_input.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
             self.mac_address = current_data.get(CONF_MAC_ADDRESS)
 
-            if self.auth_profile == "auto" or self.auth_profile == "legacy":
+            if self.auth_profile in ("auto", "legacy"):
                 if not self._resolve_ssl_certs():
                     return await self.async_step_certs()
             else:
                 return await self.async_step_certs()
 
-            # Disconnect existing running client to avoid MQTT session collision during re-pairing
             await self._async_disconnect_existing_client()
 
             self.client = HisenseTvClient(
@@ -493,7 +513,6 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                     errors["base"] = "cannot_connect"
             else:
-                # Certs not present on disk: route to certs configuration
                 return await self.async_step_certs()
 
         return self.async_show_form(
@@ -564,71 +583,18 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None and self.client:
             entry_data = self._get_client_auth_data()
 
-            # Disconnect the flow client before creating entry to avoid MQTT session collision
             await self.hass.async_add_executor_job(self.client.disconnect)
             self.client = None
 
             return self.async_create_entry(
                 title=self.discovered_title or f"Hisense TV ({self.ip_address})",
                 data=entry_data,
-                options={
-                    CONF_ENABLE_REMOTE: user_input.get(
-                        CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE
-                    ),
-                    CONF_ENABLE_WOL: user_input.get(
-                        CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL
-                    ),
-                    CONF_INCLUDE_APPS_IN_SOURCES: user_input.get(
-                        CONF_INCLUDE_APPS_IN_SOURCES,
-                        DEFAULT_INCLUDE_APPS_IN_SOURCES,
-                    ),
-                    CONF_ENABLE_MEDIA_CONTROLS: user_input.get(
-                        CONF_ENABLE_MEDIA_CONTROLS,
-                        DEFAULT_ENABLE_MEDIA_CONTROLS,
-                    ),
-                    CONF_ENABLE_PICTURE_CONTROLS: user_input.get(
-                        CONF_ENABLE_PICTURE_CONTROLS,
-                        pic_supported,
-                    ),
-                    CONF_ENABLE_SOUND_CONTROLS: user_input.get(
-                        CONF_ENABLE_SOUND_CONTROLS,
-                        sound_supported,
-                    ),
-                    CONF_ENABLE_AUDIO_ONLY: user_input.get(
-                        CONF_ENABLE_AUDIO_ONLY,
-                        DEFAULT_ENABLE_AUDIO_ONLY,
-                    ),
-                },
+                options=_build_entry_options(user_input, pic_supported, sound_supported),
             )
 
         return self.async_show_form(
             step_id="options",
-            data_schema=vol.Schema({
-                vol.Optional(
-                    CONF_ENABLE_REMOTE, default=DEFAULT_ENABLE_REMOTE
-                ): bool,
-                vol.Optional(CONF_ENABLE_WOL, default=DEFAULT_ENABLE_WOL): bool,
-                vol.Optional(
-                    CONF_INCLUDE_APPS_IN_SOURCES,
-                    default=DEFAULT_INCLUDE_APPS_IN_SOURCES,
-                ): bool,
-                vol.Optional(
-                    CONF_ENABLE_MEDIA_CONTROLS,
-                    default=DEFAULT_ENABLE_MEDIA_CONTROLS,
-                ): bool,
-                vol.Optional(
-                    CONF_ENABLE_PICTURE_CONTROLS,
-                    default=pic_supported,
-                ): bool,
-                vol.Optional(
-                    CONF_ENABLE_SOUND_CONTROLS,
-                    default=sound_supported,
-                ): bool,
-                vol.Optional(
-                    CONF_ENABLE_AUDIO_ONLY,
-                    default=DEFAULT_ENABLE_AUDIO_ONLY,
-                ): bool,
-            }),
+            data_schema=_build_options_schema(pic_supported, sound_supported),
         )
 
     @callback
@@ -641,5 +607,3 @@ class HisenseVidaaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.hass.async_create_task(self.hass.async_add_executor_job(client.disconnect))
             else:
                 client.disconnect()
-
-
