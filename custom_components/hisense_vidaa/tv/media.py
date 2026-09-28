@@ -12,8 +12,12 @@ __all__ = [
     "clean_source_label",
     "execute_play_media",
     "execute_select_source",
+    "parse_applist_data",
     "parse_applist_payload",
+    "parse_media_state_broadcast",
+    "parse_sourcelist_data",
     "parse_sourcelist_payload",
+    "parse_volume_broadcast",
 ]
 
 
@@ -207,3 +211,84 @@ def execute_select_source(
         return
 
     client.change_source(clean_src)
+
+
+def parse_media_state_broadcast(
+    data: dict[str, Any],
+) -> dict[str, Any]:
+    """Parses raw TV state broadcast message into structured media player state fields."""
+    statetype = data.get("statetype")
+    result: dict[str, Any] = {
+        "statetype": statetype,
+        "is_on": True,
+        "state": "on",
+        "source": None,
+        "connected_device": None,
+        "channel_name": None,
+        "channel_num": None,
+    }
+
+    if statetype == "fake_sleep_0":
+        result["is_on"] = False
+        result["state"] = "off"
+    elif statetype == "fake_sleep_1":
+        result["is_on"] = True
+        result["state"] = "on"
+    elif statetype == "sourceswitch":
+        result["source"] = data.get("sourcename") or data.get("displayname")
+        result["connected_device"] = data.get("displayname2") or data.get("source_detail")
+    elif statetype == "app":
+        result["source"] = data.get("name")
+    elif statetype == "livetv":
+        result["source"] = "TV"
+        result["channel_name"] = data.get("channel_name")
+        result["channel_num"] = data.get("channel_num")
+
+    return result
+
+
+def parse_volume_broadcast(
+    data: dict[str, Any],
+    current_volume: int,
+    current_volume_type: int,
+    current_muted: bool,
+) -> tuple[int, int, bool]:
+    """Parses incoming volume broadcast. Returns (volume, volume_type, muted)."""
+    vol_type = data.get("volume_type")
+    volume = current_volume
+    volume_type = current_volume_type
+    muted = current_muted
+
+    if vol_type in (0, 1):
+        volume_type = int(vol_type)
+        volume = data.get("volume_value", current_volume)
+    elif vol_type == 2:
+        muted = (data.get("volume_value") == 1)
+
+    return volume, volume_type, muted
+
+
+def parse_sourcelist_data(data: list[dict[str, Any]] | None) -> dict[str, dict[str, Any]]:
+    """Builds a lookup dictionary of sources keyed by sourcename."""
+    if not data:
+        return {}
+    return {
+        item.get("sourcename"): item
+        for item in data
+        if isinstance(item, dict) and item.get("sourcename")
+    }
+
+
+def parse_applist_data(
+    data: list[dict[str, Any]] | None,
+) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    """Builds a list and dictionary of installed apps keyed by name."""
+    if not data:
+        return [], {}
+    app_dict = {
+        item.get("name"): item
+        for item in data
+        if isinstance(item, dict) and item.get("name")
+    }
+    return data, app_dict
+

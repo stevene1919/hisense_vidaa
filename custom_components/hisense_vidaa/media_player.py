@@ -31,6 +31,10 @@ from .tv.media import (
     build_media_player_source_list,
     execute_play_media,
     execute_select_source,
+    parse_applist_data,
+    parse_media_state_broadcast,
+    parse_sourcelist_data,
+    parse_volume_broadcast,
 )
 from .tv.settings import (
     DEFAULT_MENU_ID_SOUND_MODE,
@@ -318,93 +322,57 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         if not isinstance(data, dict):
             return
 
-        statetype = data.get("statetype")
-        if statetype == "fake_sleep_0":
-            if self._client:
-                self._client.is_on = False
-            self._state = STATE_OFF
+        parsed = parse_media_state_broadcast(data)
+        statetype = parsed["statetype"]
+
+        if self._client:
+            self._client.is_on = parsed["is_on"]
+
+        was_off = (self._state == STATE_OFF)
+        self._state = STATE_ON if parsed["is_on"] else STATE_OFF
+
+        if parsed["is_on"] and statetype not in ("fake_sleep_0", "fake_sleep_1"):
+            if statetype in ("sourceswitch", "app", "livetv"):
+                self._source = parsed["source"]
+                self._connected_device = parsed["connected_device"]
+                self._channel_name = parsed["channel_name"]
+                self._channel_num = parsed["channel_num"]
+        elif not parsed["is_on"]:
             self._connected_device = None
             self._channel_name = None
             self._channel_num = None
-        elif statetype == "fake_sleep_1":
-            if self._client:
-                self._client.is_on = True
-            was_off = (self._state == STATE_OFF)
-            self._state = STATE_ON
-            if (
-                (was_off or not self._source_dict or not self._app_dict)
-                and self.hass
-                and hasattr(self.hass, "loop")
-                and self.hass.loop
-            ):
-                self.hass.loop.call_soon_threadsafe(
-                    self.hass.async_add_executor_job, self._client.query_initial_state
-                )
-        else:
-            if self._client:
-                self._client.is_on = True
-            was_off = (self._state == STATE_OFF)
-            self._state = STATE_ON
-            if statetype == "sourceswitch":
-                self._source = data.get("sourcename") or data.get("displayname")
-                self._connected_device = data.get("displayname2") or data.get("source_detail")
-                self._channel_name = None
-                self._channel_num = None
-            elif statetype == "app":
-                self._source = data.get("name")
-                self._connected_device = None
-                self._channel_name = None
-                self._channel_num = None
-            elif statetype == "livetv":
-                self._source = "TV"
-                self._connected_device = None
-                self._channel_name = data.get("channel_name")
-                self._channel_num = data.get("channel_num")
 
-            if (
-                (was_off or not self._source_dict or not self._app_dict)
-                and self.hass
-                and hasattr(self.hass, "loop")
-                and self.hass.loop
-            ):
-                self.hass.loop.call_soon_threadsafe(
-                    self.hass.async_add_executor_job, self._client.query_initial_state
-                )
+        if (
+            parsed["is_on"]
+            and (was_off or not self._source_dict or not self._app_dict)
+            and self.hass
+            and hasattr(self.hass, "loop")
+            and self.hass.loop
+        ):
+            self.hass.loop.call_soon_threadsafe(
+                self.hass.async_add_executor_job, self._client.query_initial_state
+            )
 
         self.schedule_update_ha_state()
 
     def _handle_volume_update(self, data: dict[str, Any]) -> None:
         if not isinstance(data, dict):
             return
-        # Volume broadcasts also arrive in standby - they say nothing about power state.
-        vol_type = data.get("volume_type")
-        if vol_type in (0, 1):
-            self._volume_type = int(vol_type)
-            self._volume = data.get("volume_value", self._volume)
-        elif vol_type == 2:
-            self._muted = (data.get("volume_value") == 1)
-
+        self._volume, self._volume_type, self._muted = parse_volume_broadcast(
+            data, self._volume, self._volume_type, self._muted
+        )
         self.schedule_update_ha_state()
 
     def _handle_sourcelist_update(self, data: list[dict[str, Any]]) -> None:
         if not data:
             return
-        self._source_dict = {
-            item.get("sourcename"): item
-            for item in data
-            if isinstance(item, dict) and item.get("sourcename")
-        }
+        self._source_dict = parse_sourcelist_data(data)
         self.schedule_update_ha_state()
 
     def _handle_applist_update(self, data: list[dict[str, Any]]) -> None:
         if not data:
             return
-        self._app_list = data
-        self._app_dict = {
-            item.get("name"): item
-            for item in data
-            if isinstance(item, dict) and item.get("name")
-        }
+        self._app_list, self._app_dict = parse_applist_data(data)
         self.schedule_update_ha_state()
 
     def _handle_connected(self) -> None:
