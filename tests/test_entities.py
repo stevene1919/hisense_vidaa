@@ -548,6 +548,56 @@ async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeyp
 
 
 @pytest.mark.anyio
+async def test_entry_auth_failed_callback_creates_repair_issue_and_starts_reauth(mock_entry, mock_client, monkeypatch):
+    """Test that auth_failed callback creates a persistent Repairs issue and starts reauth."""
+    from custom_components.hisense_vidaa import async_setup_entry
+
+    hass = MagicMock()
+    hass.data = {}
+    hass.config_entries = MagicMock()
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    hass.loop = MagicMock()
+    hass.loop.call_soon_threadsafe = MagicMock(side_effect=lambda func, *args: func(*args))
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.HisenseTvClient",
+        lambda *args, **kwargs: mock_client,
+    )
+    mock_client.has_notifications = False
+    mock_client.check_and_refresh_token = MagicMock(return_value=False)
+    mock_client.connect_and_run = MagicMock()
+
+    created_issues = {}
+
+    def mock_create_issue(hass_arg, domain, issue_id, **kwargs):
+        created_issues[issue_id] = kwargs
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.ir.async_create_issue",
+        mock_create_issue,
+    )
+
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+    mock_entry.async_start_reauth = MagicMock()
+
+    result = await async_setup_entry(hass, mock_entry)
+    assert result is True
+
+    # Find the callback registered with register_auth_failed_callback
+    mock_client.register_auth_failed_callback.assert_called_once()
+    auth_failed_cb = mock_client.register_auth_failed_callback.call_args[0][0]
+
+    # Trigger the callback
+    auth_failed_cb(mock_client)
+
+    issue_id = f"auth_token_invalidated_{mock_entry.entry_id}"
+    assert issue_id in created_issues
+    assert created_issues[issue_id]["translation_key"] == "auth_token_invalidated"
+    assert created_issues[issue_id]["translation_placeholders"] == {"ip_address": mock_client.ip}
+    mock_entry.async_start_reauth.assert_called_once_with(hass)
+
+
+@pytest.mark.anyio
 async def test_update_listener_options_filtering(mock_entry, mock_client, monkeypatch):
     """Test that update_listener only reloads if entry.options changed (ignoring entry.data token updates)."""
     from custom_components.hisense_vidaa import async_setup_entry, update_listener

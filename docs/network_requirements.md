@@ -39,7 +39,22 @@ For dependable power-on control from Home Assistant when the TV is in standby:
 
 ---
 
-## 🔒 4. IoT VLAN Firewall & Port Matrix
+## ⚡ 4. Recommended TV Power & Standby Settings (Prevent Token Loss)
+
+Hisense VIDAA TVs store paired dynamic MQTT credentials in volatile system memory (RAM). Certain automated power-saving timers trigger an aggressive deep shutdown that terminates the internal broker process and flushes issued tokens, requiring re-authentication.
+
+Configure the following on your TV to maintain continuous local connectivity:
+
+| Setting | Recommended Value | Path in TV Menu | Reason |
+| :--- | :--- | :--- | :--- |
+| **Fast Power On** | **ON** | `Settings → System → Advanced Settings → Fast Power On` | Keeps the network interface and internal MQTT broker alive in standby ("fake sleep") so Home Assistant can read states and send commands. |
+| **Auto Standby with No Signal** | **OFF** | `Settings → System → Timer Settings → Auto Standby with No Signal` | Prevents the TV from dropping into deep power-down when connected HDMI streaming boxes (Chromecast, Apple TV, consoles) sleep. |
+| **Auto Sleep / Idle Standby** | **OFF** | `Settings → System → Timer Settings → Auto Sleep` | Prevents automated energy-saving shutdowns after continuous idle periods that kill background services. |
+| **Power On Mode** | **Standby** | `Settings → System → Advanced Settings → Power On Mode` | Ensures the TV recovers cleanly to standby following any mains power restoration. |
+
+---
+
+## 🔒 5. IoT VLAN Firewall & Port Matrix
 
 If your Hisense TV is placed on an isolated **IoT VLAN** separate from your Home Assistant server (e.g. `HA_VLAN` $\leftrightarrow$ `IOT_VLAN`), configure the following firewall rules on your router/gateway:
 

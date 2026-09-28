@@ -2,6 +2,20 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.9.5] - 2026-09-28
+
+### Fixed
+- **BROKER-INVALIDATED TOKEN DETECTION & AUTO-ESCALATION (`client.py`)**:
+  - Added `MAX_BROKER_REJECTION_ATTEMPTS = 3` threshold. When the TV broker invalidates its token store out-of-band (firmware update, hard power-cut, or deep energy-saving standby after HDMI sources sleep), both the `access_token` and `refresh_token` are simultaneously rejected (`rc: 4`). Previously, `_dispatch_auth_failed()` was gated strictly on timestamp-based `is_token_expired()`, meaning broker-invalidated tokens still within their 30-day validity window silently retried forever with exponential backoff without notifying the user. The integration now treats 3 consecutive broker rejections as permanent credential invalidation and triggers the re-authentication flow.
+- **ZEROCONF INSTANCE DEPRECATION WARNING (`tv/fingerprint.py`)**:
+  - Removed direct `Zeroconf()` instantiation that caused Home Assistant deprecation warnings (`Detected that custom integration 'hisense_vidaa' attempted to create another Zeroconf instance`). Callers in Home Assistant should pass the shared Zeroconf instance; mDNS fingerprinting gracefully skips when `zc=None` while UPnP descriptor parsing continues to capture model, MAC, and firmware metadata.
+
+### Added
+- **PERSISTENT HA REPAIRS DASHBOARD CARD (`repairs.py`, `strings.json`, `__init__.py`)**:
+  - Introduced `auth_token_invalidated` repair issue flow. When the broker invalidates credentials, Home Assistant creates a persistent card in the Repairs panel (`Settings → System → Repairs`) explaining why tokens were invalidated and providing a 1-click prompt to display a PIN on the TV and re-pair.
+- **RECOMMENDED TV STANDBY & POWER SETTINGS GUIDANCE (`README.md`, `docs/network_requirements.md`, `GEMINI.md`)**:
+  - Documented essential TV power settings (`Fast Power On = ON`, `Auto Standby with No Signal = OFF`, `Auto Sleep = OFF`) to prevent deep energy-conservation shutdowns when connected HDMI devices (Chromecast with Google TV, Apple TV, gaming consoles) sleep.
+
 ## [2.9.4] - 2026-09-27
 
 ### Fixed

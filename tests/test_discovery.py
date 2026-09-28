@@ -7,6 +7,7 @@ from custom_components.hisense_vidaa.discovery import (
     get_arp_mac,
     get_device_fingerprint,
     get_tv_timestamp,
+    query_mdns_fingerprint,
 )
 
 
@@ -81,3 +82,15 @@ def test_get_device_fingerprint_malformed_xml():
         fp = get_device_fingerprint("192.168.50.12")
         assert fp["friendly_name"] is None
         assert fp["model_name"] is None
+
+
+def test_query_mdns_fingerprint_no_zeroconf():
+    """Test that query_mdns_fingerprint gracefully skips and does not instantiate Zeroconf when zc=None."""
+    # When zc is None, the function must not instantiate any Zeroconf object
+    # (avoiding the HA deprecation warning) and return an empty fingerprint cleanly.
+    info = query_mdns_fingerprint("192.168.50.12", timeout=0.1, zc=None)
+    assert info["model_code"] is None
+    assert info["firmware_version"] is None
+    assert info["serial_number"] is None
+    assert info["manufacturer"] is None
+

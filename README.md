@@ -131,6 +131,13 @@ Copy your client certificate / key (or `.p12` bundle) to `/config/ssl/` (or `/ss
 3. Enter your TV's IP address and select `Auto Detect (Recommended)`.
 4. Enter the 4-digit PIN displayed on your TV screen to complete setup.
 
+> [!TIP]
+> **Recommended TV Standby Settings (Prevent Token Invalidation)**:
+> VIDAA TVs store paired MQTT tokens in volatile memory (RAM). Certain automated power-saving timers trigger deep shutdowns that flush credentials:
+> - **Fast Power On**: Set to **ON** (`Settings → System → Advanced Settings → Fast Power On`) to keep network standby active.
+> - **Auto Standby with No Signal**: Set to **OFF** (`Settings → System → Timer Settings → Auto Standby with No Signal`) to prevent deep power-down when connected HDMI devices (e.g., Chromecast, Apple TV, consoles) go to sleep.
+> - See the **[Network & Standby Guide](docs/network_requirements.md)** for the complete setting recommendations.
+
 ---
 
 ### 🔄 Updating the Integration
