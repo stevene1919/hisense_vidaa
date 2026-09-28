@@ -76,19 +76,26 @@ def perform_token_refresh(
     verify_ssl: bool = False,
     port: int = 36669,
     timeout: float = 10.0,
+    out_status: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Connects synchronously using refresh_token to obtain new token credentials from TV."""
     if not refresh_token or not client_id or not username:
         _LOGGER.warning("[%s] Cannot refresh token: missing refresh_token, client_id, or username", ip)
+        if out_status is not None:
+            out_status["connect_rc"] = None
         return None
 
     paths: TopicPaths = build_topic_paths(client_id)
-    client = mqtt.Client(
-        client_id=client_id,
-        clean_session=True,
-        protocol=mqtt.MQTTv311,
-        transport="tcp",
-    )
+    client_kwargs: dict[str, Any] = {
+        "client_id": client_id,
+        "clean_session": True,
+        "protocol": mqtt.MQTTv311,
+        "transport": "tcp",
+    }
+    if hasattr(mqtt, "CallbackAPIVersion"):
+        client_kwargs["callback_api_version"] = mqtt.CallbackAPIVersion.VERSION2
+
+    client = mqtt.Client(**client_kwargs)
     apply_mqtt_tls(
         client,
         certfile=certfile,
@@ -103,9 +110,14 @@ def perform_token_refresh(
     updated_data: dict[str, Any] = {}
     connect_rc = [None]
 
-    def on_refresh_connect(cl: mqtt.Client, userdata: Any, flags: Any, rc: int) -> None:
-        connect_rc[0] = rc
-        if rc == 0:
+    def on_refresh_connect(cl: mqtt.Client, userdata: Any, flags: Any, rc: Any, *args: Any) -> None:
+        code = getattr(rc, "value", rc)
+        try:
+            code = int(code)
+        except (ValueError, TypeError):
+            code = -1
+        connect_rc[0] = code
+        if code == 0:
             _LOGGER.debug("[%s] Refresh client connected successfully. Subscribing to token topics...", ip)
             # Some VIDAA firmwares deny wildcard subscriptions (SUBACK 128): subscribe to exact topics
             cl.subscribe([
@@ -115,10 +127,10 @@ def perform_token_refresh(
             payload = json.dumps({"refreshtoken": refresh_token or ""})
             cl.publish(paths.platform + "data/gettoken", payload)
         else:
-            _LOGGER.warning("[%s] Refresh client connection rejected (rc: %d)", ip, rc)
+            _LOGGER.warning("[%s] Refresh client connection rejected (rc: %d)", ip, code)
             lock.set()
 
-    def on_refresh_subscribe(cl: mqtt.Client, userdata: Any, mid: int, granted_qos: Any) -> None:
+    def on_refresh_subscribe(cl: mqtt.Client, userdata: Any, mid: int, *args: Any) -> None:
         payload = json.dumps({"refreshtoken": refresh_token or ""})
         cl.publish(paths.platform + "data/gettoken", payload)
 
@@ -137,7 +149,7 @@ def perform_token_refresh(
     client.on_connect = on_refresh_connect
     client.on_subscribe = on_refresh_subscribe
     client.on_message = on_token_msg
-    client.on_disconnect = lambda cl, userdata, rc: _LOGGER.debug("[%s] Refresh client disconnected: %d", ip, rc)
+    client.on_disconnect = lambda cl, userdata, *args: _LOGGER.debug("[%s] Refresh client disconnected: %s", ip, args)
 
     try:
         client.connect(ip, port, 60)
@@ -151,6 +163,9 @@ def perform_token_refresh(
         with contextlib.suppress(Exception):
             client.loop_stop()
             client.disconnect()
+
+    if out_status is not None:
+        out_status["connect_rc"] = connect_rc[0]
 
     if updated_data:
         return updated_data

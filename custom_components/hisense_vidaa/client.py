@@ -163,6 +163,10 @@ class HisenseTvClient(CallbackRegistryMixin):
         # drives the retry backoff (1 min .. 30 min) so a TV in standby is not hammered.
         self._rejected_refresh_failures: int = 0
         self._rejected_retry_timer: threading.Timer | None = None
+        # Track consecutive rejections where the broker actively denied the refresh_token (rc 4/5)
+        # vs times where the refresh client connected (rc 0) but timed out in standby.
+        self._broker_rejection_failures: int = 0
+        self._last_refresh_connect_rc: int | None = None
 
         # Topic paths
         self.topicBrcsBasepath = TOPIC_BROADCAST_BASEPATH
@@ -397,26 +401,32 @@ class HisenseTvClient(CallbackRegistryMixin):
             if self.check_and_refresh_token(force=True):
                 _LOGGER.info("[%s] Token successfully refreshed on connection failure.", self.ip)
                 self._rejected_refresh_failures = 0
+                self._broker_rejection_failures = 0
             else:
                 self._rejected_refresh_failures += 1
+                if self._last_refresh_connect_rc in (4, 5):
+                    self._broker_rejection_failures += 1
+                else:
+                    self._broker_rejection_failures = 0
+
                 _LOGGER.warning(
                     "[%s] Token refresh after rejected connection failed (attempt %d); next retry in %d min",
                     self.ip,
                     self._rejected_refresh_failures,
                     min(60 * (2 ** self._rejected_refresh_failures), 1800) // 60,
                 )
-                # Time-expiry alone cannot detect tokens that the TV broker has
-                # invalidated out-of-band (firmware update, hard power-cycle,
-                # factory reset).  After MAX_BROKER_REJECTION_ATTEMPTS consecutive
-                # broker rejections of the refresh token we treat the credential
-                # set as permanently dead and trigger the reauth flow.
-                if self._rejected_refresh_failures >= self.MAX_BROKER_REJECTION_ATTEMPTS:
+                # Only escalate to auth failure if the TV broker actively rejected
+                # the refresh token credentials (rc: 4 or 5) for MAX_BROKER_REJECTION_ATTEMPTS.
+                # If the refresh client connected (rc: 0) but timed out waiting for gettoken,
+                # the TV is simply in standby (PR #27) and will respond when awakened.
+                if self._broker_rejection_failures >= self.MAX_BROKER_REJECTION_ATTEMPTS:
                     _LOGGER.warning(
-                        "[%s] Refresh token rejected by broker %d times in a row. "
+                        "[%s] Refresh token actively rejected by broker %d times (rc: %s). "
                         "TV likely invalidated all tokens (firmware update / power-cycle). "
                         "Triggering reauthentication.",
                         self.ip,
-                        self._rejected_refresh_failures,
+                        self._broker_rejection_failures,
+                        self._last_refresh_connect_rc,
                     )
                     self._dispatch_auth_failed()
                     return
@@ -513,6 +523,7 @@ class HisenseTvClient(CallbackRegistryMixin):
             self.mqtt_client = None
             self.connected = False
 
+        refresh_status: dict[str, Any] = {}
         updated_data = perform_token_refresh(
             ip=self.ip,
             client_id=self.client_id,
@@ -522,7 +533,9 @@ class HisenseTvClient(CallbackRegistryMixin):
             keyfile=self.keyfile,
             ca_cert=self.ca_cert,
             verify_ssl=self.verify_ssl,
+            out_status=refresh_status,
         )
+        self._last_refresh_connect_rc = refresh_status.get("connect_rc")
 
         if updated_data:
             self.access_token = updated_data["accesstoken"]

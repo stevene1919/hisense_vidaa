@@ -426,19 +426,19 @@ def test_broker_rejection_threshold_triggers_auth_failed():
         refresh_token_time=now - 3600,   # 1 hour old → still 29 days valid
         refresh_token_duration=30,
     )
+    # Simulate TV broker actively rejecting refresh credentials (rc: 4)
+    client._last_refresh_connect_rc = 4
     mock_auth_failed = MagicMock()
     client.register_auth_failed_callback(mock_auth_failed)
 
     # Simulate consecutive failed refresh attempts up to (but not including) the limit
     for attempt in range(1, client.MAX_BROKER_REJECTION_ATTEMPTS):
-        client._rejected_refresh_failures = attempt - 1
         with patch.object(client, "check_and_refresh_token", return_value=False):
             client._refresh_token_and_update_creds()
         mock_auth_failed.assert_not_called(), f"auth_failed fired too early at attempt {attempt}"
         client._refreshing_token = False
 
     # The threshold attempt must trigger auth_failed
-    client._rejected_refresh_failures = client.MAX_BROKER_REJECTION_ATTEMPTS - 1
     with patch.object(client, "check_and_refresh_token", return_value=False):
         client._refresh_token_and_update_creds()
 
@@ -455,15 +455,40 @@ def test_broker_rejection_threshold_not_reached_suppresses_auth_failed():
         refresh_token_time=now - 3600,
         refresh_token_duration=30,
     )
+    client._last_refresh_connect_rc = 4
     mock_auth_failed = MagicMock()
     client.register_auth_failed_callback(mock_auth_failed)
 
     # Only one failure — well below threshold
-    client._rejected_refresh_failures = 0
     with patch.object(client, "check_and_refresh_token", return_value=False):
         client._refresh_token_and_update_creds()
 
     mock_auth_failed.assert_not_called()
+
+
+def test_standby_refresh_timeout_preserves_backoff_without_auth_failed():
+    """Standby gettoken timeout (connect rc: 0) must NOT increment broker rejection count
+    or trigger auth_failed, preserving PR #27's retry backoff while TV is in standby."""
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        refresh_token="valid_refresh",
+        refresh_token_time=now - 3600,
+        refresh_token_duration=30,
+    )
+    # Refresh client connected with rc 0, but gettoken timed out because TV is in standby
+    client._last_refresh_connect_rc = 0
+    mock_auth_failed = MagicMock()
+    client.register_auth_failed_callback(mock_auth_failed)
+
+    # Even across multiple standby retry attempts, auth_failed must NEVER fire
+    for _ in range(5):
+        client._refreshing_token = False
+        with patch.object(client, "check_and_refresh_token", return_value=False):
+            client._refresh_token_and_update_creds()
+        mock_auth_failed.assert_not_called()
+        assert client._broker_rejection_failures == 0
+        assert client._rejected_refresh_failures > 0
 
 
 def test_broker_rejection_counter_resets_on_successful_refresh():
@@ -477,8 +502,11 @@ def test_broker_rejection_counter_resets_on_successful_refresh():
     )
     # Pre-load failures just below the trigger threshold
     client._rejected_refresh_failures = client.MAX_BROKER_REJECTION_ATTEMPTS - 1
+    client._broker_rejection_failures = client.MAX_BROKER_REJECTION_ATTEMPTS - 1
 
     with patch.object(client, "check_and_refresh_token", return_value=True):
         client._refresh_token_and_update_creds()
 
     assert client._rejected_refresh_failures == 0
+    assert client._broker_rejection_failures == 0
+
