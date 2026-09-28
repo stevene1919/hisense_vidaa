@@ -2,6 +2,20 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.9.6] - 2026-09-29
+
+### Fixed
+- **HASSFEST TRANSLATION SCHEMA MUTUAL EXCLUSION (`strings.json`, `translations/en.json`)**:
+  - Resolved Hassfest validation error (`two or more values in the same group of exclusion 'fixable' at 'issues.auth_token_invalidated.<fixable>'`) by merging the top-level explanation into `fix_flow.step.confirm.description` in accordance with Home Assistant core Repairs schema standards.
+
+### Added
+- **HOME ASSISTANT INTEGRATION QUALITY SCALE IMPROVEMENTS**:
+  - **`PARALLEL_UPDATES = 0`**: Declared across all 9 platform modules (`media_player.py`, `remote.py`, `sensor.py`, `binary_sensor.py`, `switch.py`, `select.py`, `number.py`, `button.py`, `notify.py`) to properly communicate local push concurrency semantics to Home Assistant Core.
+  - **Entity Translation Standardization**: Migrated all remaining entities from hardcoded `_attr_name` to official `_attr_translation_key` across `binary_sensor`, `select`, `number`, `switch`, `notify`, and `remote` platforms with 100% key parity between `strings.json` and `translations/en.json`.
+  - **Complete MDI Icon Mapping (`icons.json`)**: Fully expanded `icons.json` covering all entity translation keys, binary sensor states, select options, and custom services.
+  - **PEP 561 Type Marker (`py.typed`)**: Added package type marker for strict static type checking.
+  - **Quality Scale Declaration**: Formally declared `"quality_scale": "bronze"` in `manifest.json` adhering to Home Assistant Integration Quality Scale progression.
+
 ## [2.9.5] - 2026-09-28
 
 ### Fixed
