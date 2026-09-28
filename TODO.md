@@ -57,6 +57,18 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - Audit exported diagnostic payload to verify that client certificates, private key paths, refresh tokens, access tokens, and MAC addresses are 100% masked before export.
   - Ensure compatibility with official Home Assistant diagnostics download format and sanitization standards.
 
+### 10. Multi-Language Localization & Translation Support
+- [ ] **Popular European & Regional Language Support (`translations/`)**:
+  - Add native translated string dictionaries for high-adoption Hisense VIDAA smart TV markets:
+    - **Spanish (`es.json`)**: Spain & Latin America.
+    - **German (`de.json`)**: Germany, Austria, Switzerland.
+    - **French (`fr.json`)**: France, Belgium, Canada.
+    - **Italian (`it.json`)**: Italy.
+    - **Portuguese (`pt.json` / `pt-BR.json`)**: Brazil & Portugal.
+  - Maintain 100% key parity with master `strings.json` across config flows, options flows, entity states, repairs, and exception descriptions.
+  - Evaluate setting up a free open-source Crowdin project for ongoing community localization.
+
+
 
 
 ---
