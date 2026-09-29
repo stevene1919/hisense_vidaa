@@ -65,10 +65,25 @@ class TokenLifecycleManager:
             _LOGGER.debug("[%s] Token watch error: %s", self.client.ip, e)
         self.start_token_watch()
 
+    def can_refresh_in_standby(self) -> bool:
+        """Whether a token refresh may run while the TV is in standby (``refresh_in_standby`` option).
+
+        TVs that keep their MQTT broker up when switched off (fake sleep) answer gettoken there, too. A refresh
+        drops the main connection and a failed one restores it with the current access token, so in standby it
+        is attempted only while that token is still valid: once it has expired the open connection (which keeps
+        working) could not be re-established, and it is left alone until the TV wakes.
+        """
+        client = self.client
+        return bool(getattr(client, "refresh_in_standby", False)) and not is_token_expired(
+            client.access_token_time, client.access_token_duration
+        )
+
     def maybe_refresh_while_awake(self) -> None:
         """Renews a near-expiry access token once the TV is awake (with backoff on failure)."""
         client = self.client
-        if not (client.connected and client.is_on and client.access_token and client.refresh_token):
+        if not (client.connected and client.access_token and client.refresh_token):
+            return
+        if not client.is_on and not self.can_refresh_in_standby():
             return
         if not is_token_expired(client.access_token_time, client.access_token_duration, margin_seconds=43200):
             return
@@ -111,7 +126,7 @@ class TokenLifecycleManager:
         try:
             if client.access_token and is_token_expired(client.access_token_time, client.access_token_duration, margin_seconds=43200):
                 time.sleep(self.PROACTIVE_REFRESH_SETTLE_SECONDS)
-                if not client.is_on:
+                if not client.is_on and not self.can_refresh_in_standby():
                     _LOGGER.info(
                         "[%s] Access token is near expiration, but the TV is in standby; deferring token refresh until it is awake",
                         client.ip,

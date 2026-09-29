@@ -64,6 +64,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         use_ssl: bool = True,
         verify_ssl: bool = False,
         auth_profile: str = "auto",
+        refresh_in_standby: bool = False,
         name: str | None = None,
     ) -> None:
         """Initialize the client."""
@@ -79,6 +80,8 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         self.refresh_token_time = int(refresh_token_time)
         self.refresh_token_duration = int(refresh_token_duration)
         self.auth_profile = auth_profile
+        # Renew tokens while the TV is in standby (for TVs that keep their MQTT broker up when switched off).
+        self.refresh_in_standby = refresh_in_standby
         self.name = name or f"Hisense TV ({self.ip})"
 
         self.certfile, self.keyfile = resolve_certificates(auth_profile=auth_profile, certfile=certfile, keyfile=keyfile)

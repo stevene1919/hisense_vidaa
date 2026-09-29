@@ -23,6 +23,7 @@ from .const import (
     CONF_KEYFILE,
     CONF_MAC_ADDRESS,
     CONF_PASSWORD,
+    CONF_REFRESH_IN_STANDBY,
     CONF_REFRESH_TOKEN,
     CONF_REFRESH_TOKEN_DURATION,
     CONF_REFRESH_TOKEN_TIME,
@@ -31,6 +32,7 @@ from .const import (
     DEFAULT_ENABLE_NOTIFY,
     DEFAULT_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
+    DEFAULT_REFRESH_IN_STANDBY,
     DEFAULT_USE_SSL,
     DOMAIN,
 )
@@ -99,6 +101,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         refresh_token_time=data.get(CONF_REFRESH_TOKEN_TIME),
         refresh_token_duration=data.get(CONF_REFRESH_TOKEN_DURATION),
         auth_profile=entry.options.get(CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, "auto")),
+        refresh_in_standby=entry.options.get(CONF_REFRESH_IN_STANDBY, DEFAULT_REFRESH_IN_STANDBY),
         certfile=certfile,
         keyfile=keyfile,
         use_ssl=use_ssl,
