@@ -18,6 +18,7 @@ from .const import (
     CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
     DEFAULT_USE_SSL,
+    DOMAIN,
 )
 from .flow_helpers import async_resolve_mac
 
@@ -45,6 +46,24 @@ class ReauthFlowMixin:
             )
             await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
         return self.async_abort(reason=reason)
+
+    def _async_mac_is_configured_elsewhere(
+        self: HisenseVidaaConfigFlow,
+    ) -> bool:
+        """Check whether the resolved MAC already belongs to another entry.
+
+        [F7-leg6]: the duplicate/unique-id guard of `_async_init_client_and_auth`
+        is skipped whenever `_reauth_entry` is set, which would silently repoint
+        an entry at a different TV while keeping its old unique_id.
+        """
+        if not self.mac_address or not self._reauth_entry:
+            return False
+        for other in self.hass.config_entries.async_entries(DOMAIN):
+            if other.entry_id == self._reauth_entry.entry_id:
+                continue
+            if other.unique_id == self.mac_address:
+                return True
+        return False
 
     async def async_step_reauth(
         self: HisenseVidaaConfigFlow, entry_data: dict[str, Any]
@@ -114,9 +133,15 @@ class ReauthFlowMixin:
         if user_input is not None:
             self.ip_address = user_input[CONF_IP_ADDRESS]
             self.auth_profile = user_input.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
-            self.mac_address = current_data.get(CONF_MAC_ADDRESS)
-            if not self.mac_address and self.ip_address:
-                self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
+            # [F7-leg6]: the entry may be repointed at a different TV, so the MAC
+            # must be resolved for the *new* IP before the target is re-paired.
+            self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
+            if not self.mac_address:
+                self.mac_address = current_data.get(CONF_MAC_ADDRESS)
+
+            # [F7-leg6]: only the entry being reconfigured may keep this MAC.
+            if self._async_mac_is_configured_elsewhere():
+                return self.async_abort(reason="already_configured")
 
             if self.auth_profile in ("auto", "legacy"):
                 if not self._resolve_ssl_certs():

@@ -424,12 +424,14 @@ async def test_reconfigure_flow_success(monkeypatch):
 
     mock_entry = MagicMock()
     mock_entry.entry_id = "test_entry_reconf"
+    mock_entry.unique_id = "e8:51:77:ec:98:1c"
     mock_entry.data = {
         CONF_IP_ADDRESS: "192.168.50.12",
         CONF_MAC_ADDRESS: "e8:51:77:ec:98:1c",
         "auth_profile": "legacy",
     }
     hass.config_entries.async_get_entry = MagicMock(return_value=mock_entry)
+    hass.config_entries.async_entries = MagicMock(return_value=[mock_entry])
     hass.config_entries.async_update_entry = MagicMock()
     hass.config_entries.async_reload = AsyncMock()
 
@@ -689,6 +691,48 @@ async def test_reauth_seeds_certificates_from_entry(monkeypatch):
     assert written[CONF_USE_SSL] is True
     assert written[CONF_CERTFILE] == "/config/ssl/hisense.crt"
     assert written[CONF_KEYFILE] == "/config/ssl/hisense.key"
+
+
+@pytest.mark.anyio
+async def test_reconfigure_aborts_when_new_ip_belongs_to_another_tv(monkeypatch):
+    """[F7-leg6] reconfigure must not repoint an entry at another configured TV."""
+    hass = MagicMock(spec=HomeAssistant)
+    own_entry = MagicMock()
+    own_entry.entry_id = "own_entry"
+    own_entry.unique_id = "e8:51:77:ec:98:1c"
+    own_entry.data = {
+        CONF_IP_ADDRESS: "192.168.50.12",
+        CONF_MAC_ADDRESS: "e8:51:77:ec:98:1c",
+        CONF_AUTH_PROFILE: "legacy",
+    }
+    other_entry = MagicMock()
+    other_entry.entry_id = "other_entry"
+    other_entry.unique_id = "e8:51:77:ec:98:2d"
+
+    flow = _reauth_flow(hass, own_entry, "own_entry")
+    hass.config_entries.async_entries = MagicMock(return_value=[own_entry, other_entry])
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.flow_reauth.async_resolve_mac",
+        AsyncMock(return_value="e8:51:77:ec:98:2d"),
+    )
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.flow_reauth.ReauthFlowMixin._async_finish_reauth",
+        AsyncMock(return_value={"type": "abort", "reason": "reconfigure_successful"}),
+    )
+
+    result = await flow.async_step_reconfigure(
+        user_input={CONF_IP_ADDRESS: "192.168.50.15", CONF_AUTH_PROFILE: "legacy"}
+    )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "already_configured"
+    assert flow._async_finish_reauth.await_count == 0
+    assert hass.config_entries.async_update_entry.called is False
+
 
 
 
