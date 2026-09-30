@@ -7,6 +7,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from custom_components.hisense_vidaa import (
     DOMAIN,
+    async_remove_entry,
     async_setup_entry,
     async_unload_entry,
     update_listener,
@@ -102,7 +103,22 @@ async def test_connect_failure_raises_config_entry_not_ready(
     assert DOMAIN not in hass.data
 
 
+@pytest.mark.anyio
+async def test_remove_entry_deletes_persistent_issues(mock_entry, monkeypatch):
+    """[F4-leg2/F5-leg6] removing an entry must clear both persistent Repairs issues."""
+    hass = MagicMock()
+    deleted = []
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.ir.async_delete_issue",
+        lambda hass_arg, domain, issue_id: deleted.append((domain, issue_id)),
+    )
 
+    await async_remove_entry(hass, mock_entry)
+
+    assert deleted == [
+        (DOMAIN, f"certificate_missing_{mock_entry.entry_id}"),
+        (DOMAIN, f"auth_token_invalidated_{mock_entry.entry_id}"),
+    ]
 
 
 @pytest.mark.anyio

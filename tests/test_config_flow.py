@@ -694,6 +694,27 @@ async def test_reauth_seeds_certificates_from_entry(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_reauth_success_deletes_auth_token_issue(monkeypatch):
+    """[F4-leg2/F5-leg6] a successful reauth must delete the persistent issue."""
+    hass = MagicMock(spec=HomeAssistant)
+    entry = MagicMock()
+    entry.entry_id = "issue_entry"
+    entry.data = {CONF_IP_ADDRESS: "192.168.50.12"}
+    flow = _reauth_flow(hass, entry, "issue_entry")
+    flow._reauth_entry = entry
+
+    deleted = []
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.flow_reauth.ir.async_delete_issue",
+        lambda hass_arg, domain, issue_id: deleted.append((domain, issue_id)),
+    )
+
+    await flow._async_finish_reauth(reason="reauth_successful")
+
+    assert deleted == [(DOMAIN, "auth_token_invalidated_issue_entry")]
+
+
+@pytest.mark.anyio
 async def test_reconfigure_aborts_when_new_ip_belongs_to_another_tv(monkeypatch):
     """[F7-leg6] reconfigure must not repoint an entry at another configured TV."""
     hass = MagicMock(spec=HomeAssistant)

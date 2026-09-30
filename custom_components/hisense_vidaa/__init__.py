@@ -159,6 +159,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             severity=ir.IssueSeverity.ERROR,
             translation_key="auth_token_invalidated",
             translation_placeholders={"ip_address": failed_client.ip},
+            # [F5-leg2/F6-leg6]: gives the fix flow the entry it must re-pair.
+            data={"entry_id": entry.entry_id},
         )
         entry.async_start_reauth(hass)
 
@@ -213,6 +215,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, platforms_to_setup)
     entry.async_on_unload(entry.add_update_listener(update_listener))
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Clean up the persistent Repairs issues belonging to a removed entry."""
+    # [F4-leg2/F5-leg6]: is_persistent issues survive entry removal and would
+    # keep showing an unfixable card for a TV that is no longer configured.
+    ir.async_delete_issue(hass, DOMAIN, f"certificate_missing_{entry.entry_id}")
+    ir.async_delete_issue(hass, DOMAIN, f"auth_token_invalidated_{entry.entry_id}")
 
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:

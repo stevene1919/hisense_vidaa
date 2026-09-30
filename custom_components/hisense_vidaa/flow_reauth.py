@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.helpers import issue_registry as ir
 
 from .const import (
     AUTH_PROFILE_SELECTOR,
@@ -43,6 +44,13 @@ class ReauthFlowMixin:
             self.hass.config_entries.async_update_entry(
                 self._reauth_entry,
                 data={**self._reauth_entry.data, **auth_data},
+            )
+            # [F4-leg2/F5-leg6]: the credentials are fresh again, so the
+            # persistent "reauthentication required" card must go away.
+            ir.async_delete_issue(
+                self.hass,
+                DOMAIN,
+                f"auth_token_invalidated_{self._reauth_entry.entry_id}",
             )
             await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
         return self.async_abort(reason=reason)
