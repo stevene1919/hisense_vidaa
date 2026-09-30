@@ -59,6 +59,10 @@ python3 test_client.py ping --ip <TV_IP> --profile modern
 python3 test_client.py ping --ip <TV_IP> --profile middle
 ```
 
+> [!NOTE]
+> `ping` and `test-ssl` display whether client certificates were loaded and presented. On modern VIDAA firmware, connecting without client certificates causes all authentication methods to fail with `rc=5` (Not Authorized) and displays an on-screen compatibility warning on the TV.
+
+
 ### 4. Test Raw SSL/TLS Connection (`test-ssl`)
 Verifies TLS cipher negotiation and certificate validity without pairing:
 ```bash

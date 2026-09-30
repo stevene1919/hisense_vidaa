@@ -2,6 +2,17 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.10.2] - 2026-10-01
+
+### Fixed
+- **LEGACY PKCS#12 EXTRACTION EXCEPTION HANDLING (`protocol/certs.py`)**:
+  - Safely caught decryption/loading errors when unpacking `.p12` archives on OpenSSL 3.x systems that lack the legacy cipher provider. Extraction failures now log clear guidance rather than passing raw binary data to the SSL module and raising unhandled `[SSL] PEM lib` exceptions.
+
+### Improved
+- **CLIENT CERTIFICATE DIAGNOSTICS & MISLEADING REJECTION WARNINGS (`test_client.py`, `probe.py`)**:
+  - `test_client.py` (`ping`, `test-ssl`) and diagnostic probe reports now explicitly state whether a client certificate was loaded and presented during the TLS handshake.
+  - When all authentication profiles fail with `rc=5` (Not Authorized) and no client certificate was presented, diagnostic outputs explicitly flag that the TV's on-screen warning (*"Your TV model is no longer compatible with the current version of our mobile app"*) is triggered by unauthenticated connections rather than incompatible firmware (Issue #30).
+
 ## [2.10.1] - 2026-10-01
 
 ### Added
