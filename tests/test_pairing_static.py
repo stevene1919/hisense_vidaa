@@ -26,6 +26,8 @@ from custom_components.hisense_vidaa.config_flow import HisenseVidaaConfigFlow
 from custom_components.hisense_vidaa.protocol.dispatcher import dispatch_incoming_mqtt_message
 from custom_components.hisense_vidaa.protocol.pairing import (
     PairingStatusError,
+    _async_execute_pairing_attempt,
+    async_probe_pairing_challenge,
     async_submit_pin_code,
 )
 
@@ -452,3 +454,212 @@ def test_async_remove_registers_done_callback():
     assert fut.add_done_callback.called
     callback = fut.add_done_callback.call_args[0][0]
     callback(fut)  # must log and not raise
+
+
+# ---------------------------------------------------------------------------
+# [P4-a] The probe body itself: async_probe_pairing_challenge must clean up the
+# pairing futures on EVERY exit path (challenge, close, no-challenge timeout).
+# ---------------------------------------------------------------------------
+def _probe_client() -> tuple[HisenseTvClient, MagicMock]:
+    """A static client whose MQTT layer is faked for the pairing probe."""
+    client = HisenseTvClient(
+        ip="192.168.50.12", mac="e8:51:77:ec:98:1c", auth_profile="legacy"
+    )
+    client.client_id = "hisenseservice"
+    client.username = "hisenseservice"
+    client.password = "multimqttservice"
+    client.define_topic_paths()
+    client.mqtt_client = None
+    client.connected = True  # skip the ~10s connect-wait loop
+    mqtt = MagicMock()
+    client.create_mqtt_client = MagicMock(return_value=mqtt)
+    return client, mqtt
+
+
+@pytest.mark.anyio
+async def test_probe_no_challenge_timeout_cleans_up_futures():
+    client, _mqtt = _probe_client()
+
+    assert await async_probe_pairing_challenge(client, timeout=0.3) is False
+    assert client._auth_future is None, "probe must null _auth_future on timeout"
+    assert client._pairing_event_future is None, "probe must null the pairing event future on timeout"
+
+
+@pytest.mark.anyio
+async def test_probe_close_event_cleans_up_futures():
+    client, mqtt = _probe_client()
+
+    def fake_publish(topic, payload="", *args, **kwargs):
+        if topic.endswith("actions/gettvstate") and client._pairing_event_future is not None:
+            client._safe_set_future_result(client._pairing_event_future, "closed")
+        return (0, 1)
+
+    mqtt.publish.side_effect = fake_publish
+
+    with pytest.raises(PairingStatusError) as exc:
+        await async_probe_pairing_challenge(client, timeout=1.0)
+    assert exc.value.status == "closed"
+    assert client._auth_future is None, "probe must null _auth_future when the dialog closes"
+    assert client._pairing_event_future is None, "probe must null the pairing event future when the dialog closes"
+
+
+@pytest.mark.anyio
+async def test_probe_challenge_returns_true_and_cleans_up_futures():
+    client, mqtt = _probe_client()
+
+    def fake_publish(topic, payload="", *args, **kwargs):
+        if topic.endswith("actions/gettvstate") and client._auth_future is not None:
+            client._safe_set_future_result(client._auth_future, "")
+        return (0, 1)
+
+    mqtt.publish.side_effect = fake_publish
+
+    assert await async_probe_pairing_challenge(client, timeout=1.0) is True
+    assert client._auth_future is None, "probe must null _auth_future after a challenge"
+    assert client._pairing_event_future is None, "probe must null the pairing event future after a challenge"
+
+
+# ---------------------------------------------------------------------------
+# [P4-b] No-challenge path must drop the probe MQTT connection (same-client-id
+# collision with the running entry otherwise).
+# ---------------------------------------------------------------------------
+@pytest.mark.anyio
+async def test_static_no_challenge_disconnects_probe_client(monkeypatch, no_network_start_auth):
+    hass = _hass()
+    flow = _flow(hass)
+    monkeypatch.setattr(PROBE_PATH, AsyncMock(return_value=False))
+
+    disconnected: list[object] = []
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.client.HisenseTvClient.disconnect",
+        lambda self: disconnected.append(self),
+    )
+
+    result = await flow._async_init_client_and_auth()
+
+    assert result["step_id"] == "options"
+    assert disconnected, "the probe connection must be dropped on the no-challenge path"
+
+
+# ---------------------------------------------------------------------------
+# [P4-c] Static reauth route reaches the pairing step, and disconnects only its
+# own (live) entry before the probe connects under the fixed client-id.
+# ---------------------------------------------------------------------------
+@pytest.mark.anyio
+async def test_static_reauth_disconnects_own_entry_before_probe(monkeypatch, no_network_start_auth):
+    hass = _hass()
+    events: list[str] = []
+
+    own = MagicMock()
+    own.ip = "192.168.50.12"
+    own.mac = "e8:51:77:ec:98:1c"
+    own.disconnect = MagicMock(side_effect=lambda: events.append("disconnect:own"))
+    sibling = MagicMock()
+    sibling.ip = "192.168.50.12"  # same IP, different entry
+    sibling.mac = "e8:51:77:ec:98:1d"
+    sibling.disconnect = MagicMock(side_effect=lambda: events.append("disconnect:sibling"))
+    hass.data = {"hisense_vidaa": {"entry_1": {"client": own}, "entry_2": {"client": sibling}}}
+
+    flow = _flow(hass, profile="legacy")
+    flow._reauth_entry = MagicMock()
+    flow._reauth_entry.entry_id = "entry_1"
+
+    async def fake_probe(*_args, **_kwargs):
+        events.append("probe")
+        return True
+
+    monkeypatch.setattr(PROBE_PATH, fake_probe)
+
+    result = await flow.async_step_reauth_confirm(user_input={})
+
+    assert result["step_id"] == "auth"
+    assert "probe" in events, "legacy/static reauth must still probe the pairing challenge"
+    assert events.index("disconnect:own") < events.index("probe")
+    assert "disconnect:sibling" not in events
+
+
+# ---------------------------------------------------------------------------
+# [P3] A generic probe failure during reauth must surface as cannot_connect,
+# not escape as an unhandled "Error in flow".
+# ---------------------------------------------------------------------------
+@pytest.mark.anyio
+async def test_reauth_probe_failure_shows_cannot_connect(monkeypatch, no_network_start_auth):
+    hass = _hass()
+    flow = _flow(hass, profile="legacy")
+    flow._reauth_entry = MagicMock()
+    flow._reauth_entry.entry_id = "entry_1"
+
+    async def boom(*_args, **_kwargs):
+        raise RuntimeError("create_mqtt_client exploded")
+
+    monkeypatch.setattr(PROBE_PATH, boom)
+
+    result = await flow.async_step_reauth_confirm(user_input={})
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "reauth_confirm"
+    assert result["errors"]["base"] == "cannot_connect"
+
+
+# ---------------------------------------------------------------------------
+# [P4-d] Dynamic fallback: the vidaa_app_connect ACK unblocks the retry wait.
+# ---------------------------------------------------------------------------
+@pytest.mark.anyio
+async def test_dynamic_connect_ack_unblocks_retry_wait(monkeypatch):
+    client = HisenseTvClient(
+        ip="192.168.50.12", mac="e8:51:77:ec:98:1c", auth_profile="modern"
+    )
+    client.client_id = "aa$his$BB_vidaacommon_001"
+    client.username = "his$1"
+    client.password = "pw"
+    client.access_token = "at"
+    client.define_topic_paths()
+    client.connected = True
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.protocol.pairing.get_tv_timestamp",
+        lambda ip, timeout: 1700000000,
+    )
+
+    mqtt = MagicMock()
+
+    def fake_publish(topic, payload="", *args, **kwargs):
+        # The TV accepts the connect request but never announces a PIN dialog.
+        ack = getattr(client, "_connect_ack_future", None)
+        if ack is not None and not ack.done():
+            ack.set_result('{"connect_result":1}')
+        return (0, 1)
+
+    mqtt.publish.side_effect = fake_publish
+    client.create_mqtt_client = MagicMock(return_value=mqtt)
+
+    # Must return cleanly (ACK breaks the retry loop) instead of raising the
+    # "TV did not show PIN" timeout after three attempts.
+    await _async_execute_pairing_attempt(client, profile="modern")
+
+    assert client._auth_future is None
+    assert client._connect_ack_future is None
+
+
+# ---------------------------------------------------------------------------
+# [P4-e] Dispatcher exact-topic match: a getdeviceinfo/gettvinfo push on a
+# FOREIGN client-id basepath must not reach the device-info handler.
+# ---------------------------------------------------------------------------
+def test_dispatcher_device_info_requires_exact_topic():
+    client = _static_client()
+    client._dispatch_device_info_update = MagicMock()
+
+    # Foreign basepath: an `endswith` match would (wrongly) sweep this in.
+    dispatch_incoming_mqtt_message(
+        client, "/remoteapp/mobile/someone_else/platform_service/data/getdeviceinfo", "{}"
+    )
+    dispatch_incoming_mqtt_message(
+        client, "/remoteapp/mobile/someone_else/platform_service/data/gettvinfo", "{}"
+    )
+    assert not client._dispatch_device_info_update.called
+
+    # Exact topic for THIS client still routes.
+    dispatch_incoming_mqtt_message(
+        client, client.topicMobiBasepath + "platform_service/data/getdeviceinfo", "{}"
+    )
+    assert client._dispatch_device_info_update.called

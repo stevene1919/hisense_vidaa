@@ -70,14 +70,22 @@ class ReauthFlowMixin:
             )
             try:
                 await self.client.async_start_auth()
+
+                if self.auth_profile in ("legacy", "static"):
+                    # The static session uses the fixed client-id
+                    # "hisenseservice": drop this entry's live client first so the
+                    # probe does not kick its running MQTT session (sibling
+                    # entries are left untouched via the entry_id scoping).
+                    await self._async_disconnect_existing_client()
+                    # The TV may demand a one-off PIN pairing.
+                    return await self._async_static_pairing_step(True, "reauth_successful")
+                return await self.async_step_auth()
+            except AbortFlow:
+                # HA flow control must never be reported as cannot_connect.
+                raise
             except Exception as e:
                 _LOGGER.warning("[%s] Failed to connect to TV for reauth: %s", self.ip_address, e)
                 errors["base"] = "cannot_connect"
-            else:
-                if self.auth_profile in ("legacy", "static"):
-                    # Static session: the TV may demand a one-off PIN pairing.
-                    return await self._async_static_pairing_step(True, "reauth_successful")
-                return await self.async_step_auth()
 
         return self.async_show_form(
             step_id="reauth_confirm",
