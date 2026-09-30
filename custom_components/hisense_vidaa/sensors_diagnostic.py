@@ -37,38 +37,48 @@ class HisenseVidaaSessionStatusSensor(HisenseVidaaBaseSensor):
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_session_status"
+        self._reauth_required = False
         self._update_state()
 
     async def async_added_to_hass(self) -> None:
-        for reg in (
-            self._client.register_connected_callback,
-            self._client.register_disconnected_callback,
-            self._client.register_token_refreshed_callback,
-        ):
-            reg(self._handle_state_change)
+        self._client.register_connected_callback(self._handle_connected)
+        self._client.register_disconnected_callback(self._handle_disconnected)
+        self._client.register_token_refreshed_callback(self._handle_state_change)
         self._client.register_auth_failed_callback(self._handle_auth_failed)
         self._update_state()
 
     async def async_will_remove_from_hass(self) -> None:
-        for unreg in (
-            self._client.unregister_connected_callback,
-            self._client.unregister_disconnected_callback,
-            self._client.unregister_token_refreshed_callback,
-        ):
-            unreg(self._handle_state_change)
+        self._client.unregister_connected_callback(self._handle_connected)
+        self._client.unregister_disconnected_callback(self._handle_disconnected)
+        self._client.unregister_token_refreshed_callback(self._handle_state_change)
         self._client.unregister_auth_failed_callback(self._handle_auth_failed)
 
     def _handle_state_change(self, *args: Any) -> None:
         self._update_state()
         self._schedule_state_update()
 
+    def _handle_connected(self, *args: Any) -> None:
+        # A successful (re)connect clears the reauth latch.
+        self._reauth_required = False
+        self._update_state()
+        self._schedule_state_update()
+
+    def _handle_disconnected(self, *args: Any) -> None:
+        # Must NOT overwrite a pending "Reauth Required" state.
+        self._update_state()
+        self._schedule_state_update()
+
     def _handle_auth_failed(self, client: HisenseTvClient) -> None:
+        self._reauth_required = True
         self._attr_native_value = "Reauth Required"
         self._attr_icon = "mdi:shield-alert"
         self._schedule_state_update()
 
     def _update_state(self) -> None:
-        if self._client.connected:
+        if self._reauth_required:
+            self._attr_native_value = "Reauth Required"
+            self._attr_icon = "mdi:shield-alert"
+        elif self._client.connected:
             self._attr_native_value = "Active"
             self._attr_icon = "mdi:shield-check"
         else:
@@ -104,7 +114,10 @@ class HisenseVidaaAuthProfileSensor(HisenseVidaaBaseSensor):
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_auth_profile"
-        key = entry.data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
+        key = self._options.get(
+            CONF_AUTH_PROFILE,
+            entry.data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE),
+        )
         self._attr_native_value = AUTH_PROFILES.get(key, key.title())
 
 
@@ -210,9 +223,9 @@ class HisenseVidaaAudioOutputSensor(HisenseVidaaEntity, SensorEntity):
     def _handle_volume_update(self, data: dict[str, Any]) -> None:
         if isinstance(data, dict):
             vol_type = data.get("volume_type")
-            if vol_type == 1:
+            if vol_type in (1, "1"):
                 self._attr_native_value = "ARC / eARC"
-            elif vol_type == 0:
+            elif vol_type in (0, "0"):
                 self._attr_native_value = "TV Speakers"
             self._schedule_state_update()
 
