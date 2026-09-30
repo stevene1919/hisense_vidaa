@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 from unittest.mock import MagicMock, patch
 
+from custom_components.hisense_vidaa.client import HisenseTvClient
 from custom_components.hisense_vidaa.protocol.auth import (
     apply_mqtt_tls,
     is_token_expired,
@@ -250,3 +251,35 @@ def test_ping_tv_client_cert_tracking():
         assert res["tcp_port_open"] is True
         assert res["tls_handshake"] is True
         assert res["client_cert_presented"] is False
+
+
+def test_on_connect_subscribes_client_own_mobile_push_tree() -> None:
+    """F8-leg3: the live session must subscribe the client's own mobile/<cid>/# tree."""
+    client = HisenseTvClient(ip="192.168.50.12", client_id="cid", username="his$1", access_token="tok")
+    mqtt_mock = MagicMock()
+    client.mqtt_client = mqtt_mock
+    with patch.object(client, "query_initial_state"):
+        client._on_connect(mqtt_mock, None, None, 0)
+
+    subscribed: list[str] = []
+    for call in mqtt_mock.subscribe.call_args_list:
+        for topic, _qos in call.args[0]:
+            subscribed.append(topic)
+
+    assert client.topicMobiBasepath + "#" in subscribed
+    client.disconnect()
+
+
+def test_query_initial_state_requests_capability() -> None:
+    """F7-leg3: query_initial_state must publish ui_service/actions/capability (empty payload)."""
+    client = HisenseTvClient(ip="192.168.50.12", client_id="cid")
+    mqtt_mock = MagicMock()
+    client.mqtt_client = mqtt_mock
+    client.connected = True
+
+    client.query_initial_state()
+
+    capability_topic = client.topicTVUIBasepath + "actions/capability"
+    published = {c.args[0]: c.args[1] for c in mqtt_mock.publish.call_args_list}
+    assert capability_topic in published
+    assert published[capability_topic] == ""

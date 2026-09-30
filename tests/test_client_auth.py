@@ -1,6 +1,7 @@
 """Unit tests for HisenseTvClient authentication and token lifecycle."""
 
 import asyncio
+import threading
 import time
 from unittest.mock import MagicMock, patch
 
@@ -556,4 +557,118 @@ def test_broker_rejection_counter_resets_on_successful_refresh():
 
     assert client._rejected_refresh_failures == 0
     assert client._broker_rejection_failures == 0
+
+
+# ---------------------------------------------------------------------------
+# Transport / lifecycle fixes (FIX leg C)
+# ---------------------------------------------------------------------------
+
+def test_token_watch_restarts_after_stop():
+    """F1-leg1: stop_token_watch's one-way latch must be cleared on restart.
+
+    Force Reconnect / flow disconnect call stop_token_watch(); without clearing
+    token_watch_closed the periodic token watch can never restart on that instance.
+    """
+    client = HisenseTvClient(ip="192.168.50.12", client_id="cid", username="his$1", access_token="tok")
+    client._start_token_watch()
+    assert client._token_watch is not None
+    try:
+        client._stop_token_watch()
+        assert client._token_watch is None
+        assert client._token_watch_closed is True
+
+        # disconnect -> reconnect: the watch must be able to start again.
+        client._start_token_watch()
+        assert client._token_watch is not None
+        assert client._token_watch_closed is False
+    finally:
+        client._stop_token_watch()
+
+
+def test_proactive_refresh_noop_does_not_clear_inflight_flag():
+    """F2-leg1: a no-op proactive refresh must not clobber another thread's refreshing_token."""
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        client_id="cid",
+        username="his$1",
+        access_token="fresh_token",
+        access_token_time=now,          # just issued -> not near expiry -> early return
+        access_token_duration=2,
+    )
+    client.PROACTIVE_REFRESH_SETTLE_SECONDS = 0
+    client.state = "on"
+    client._refreshing_token = True  # another thread is mid-refresh
+    client._proactive_token_refresh()
+    assert client._refreshing_token is True
+
+
+def test_on_connect_tracks_query_timer_and_disconnect_cancels_it():
+    """F4-leg1: the query_initial_state Timer must be stored and cancelled by disconnect()."""
+    client = HisenseTvClient(ip="192.168.50.12", client_id="cid", username="his$1", access_token="tok")
+    client.mqtt_client = MagicMock()
+    with patch.object(client, "query_initial_state"):
+        client._on_connect(client.mqtt_client, None, None, 0)
+
+    timer = client._query_timer
+    assert timer is not None
+
+    real_cancel = timer.cancel
+    with patch.object(timer, "cancel", side_effect=real_cancel) as mock_cancel:
+        client.disconnect()
+        mock_cancel.assert_called_once()
+    assert client._query_timer is None
+
+
+def test_connect_and_run_is_serialized_by_reconnect_lock():
+    """F5-leg1: connect_and_run must hold _reconnect_lock so concurrent callers cannot race."""
+    client = HisenseTvClient(ip="192.168.50.12", client_id="cid", username="his$1", access_token="tok")
+    done = threading.Event()
+
+    def worker():
+        client.connect_and_run()
+        done.set()
+
+    with patch.object(client, "create_mqtt_client", return_value=MagicMock()) as mock_create:
+        client._reconnect_lock.acquire()
+        try:
+            threading.Thread(target=worker, daemon=True).start()
+            # While the lock is held (a reconnect in progress) a second caller must block.
+            assert not done.wait(0.3)
+        finally:
+            client._reconnect_lock.release()
+        assert done.wait(2)
+    assert mock_create.call_count == 1
+    client.disconnect()
+
+
+def test_refresh_tokens_unbinds_callbacks_before_teardown():
+    """F6-leg1: refresh_tokens must unbind callbacks before tearing down the main client."""
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        client_id="cid",
+        username="his$1",
+        access_token="at",
+        access_token_time=now,
+        access_token_duration=2,
+        refresh_token="rt",
+        refresh_token_time=now,
+        refresh_token_duration=30,
+    )
+    main = MagicMock()
+    main.on_connect = client._on_connect
+    main.on_disconnect = client._on_disconnect
+    main.on_message = client._on_message
+    client.mqtt_client = main
+    client.connected = True
+
+    with patch("custom_components.hisense_vidaa.client.perform_token_refresh", return_value={}), \
+         patch.object(client, "create_mqtt_client", return_value=MagicMock()):
+        client.refresh_tokens()
+
+    assert main.on_connect is None
+    assert main.on_disconnect is None
+    assert main.on_message is None
+    client.disconnect()
 
