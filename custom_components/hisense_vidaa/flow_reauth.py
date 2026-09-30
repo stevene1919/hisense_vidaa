@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.data_entry_flow import AbortFlow
 
 from .const import (
     AUTH_PROFILE_SELECTOR,
@@ -69,14 +70,14 @@ class ReauthFlowMixin:
             )
             try:
                 await self.client.async_start_auth()
-
-                if self.auth_profile == "legacy" and self._reauth_entry:
-                    return await self._async_finish_reauth(reason="reauth_successful")
-
-                return await self.async_step_auth()
             except Exception as e:
                 _LOGGER.warning("[%s] Failed to connect to TV for reauth: %s", self.ip_address, e)
                 errors["base"] = "cannot_connect"
+            else:
+                if self.auth_profile in ("legacy", "static"):
+                    # Static session: the TV may demand a one-off PIN pairing.
+                    return await self._async_static_pairing_step(True, "reauth_successful")
+                return await self.async_step_auth()
 
         return self.async_show_form(
             step_id="reauth_confirm",
@@ -113,6 +114,8 @@ class ReauthFlowMixin:
                 return await self._async_init_client_and_auth(
                     is_reauth=True, reauth_reason="reconfigure_successful"
                 )
+            except AbortFlow:
+                raise
             except Exception as e:
                 _LOGGER.warning("[%s] Failed to initiate reconfigure pairing: %s", self.ip_address, e)
                 errors["base"] = "cannot_connect"
