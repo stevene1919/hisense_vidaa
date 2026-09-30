@@ -28,7 +28,19 @@ if "homeassistant" not in sys.modules:
     try:
         import homeassistant  # noqa: F401
     except ImportError:
-        import tests.conftest  # noqa: F401
+        try:
+            import tests.conftest  # noqa: F401
+        except ImportError as exc:
+            print(
+                "\nERROR: Home Assistant is not installed and the bundled test stubs "
+                f"could not be loaded ({exc}).\n"
+                "Install the CLI dependencies (pytest is required by the stubs when Home Assistant is absent):\n"
+                "    pip install paho-mqtt defusedxml cryptography pytest\n"
+                "Or run this tool from your Home Assistant /config directory so the real "
+                "'homeassistant' package is importable.",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from exc
 
 from custom_components.hisense_vidaa.client import HisenseTvClient
 from custom_components.hisense_vidaa.discovery import get_arp_mac
@@ -214,7 +226,7 @@ def do_report(ip: str, mac: str | None, creds: dict, certfile: str | None, keyfi
         certfile=certfile,
         keyfile=keyfile,
         ca_cert=ca_cert,
-        auth_profile="auto",
+        auth_profile=profile,
         verify_ssl=verify_ssl,
     )
 
@@ -514,7 +526,7 @@ def main() -> None:
     parser.add_argument("key", nargs="?", help="Key name (for send-key) or App name (for launch-app)")
     parser.add_argument("--ip", help="IP address of the TV (required for ping/report/probe/test-ssl/auth/wake if not in config)")
     parser.add_argument("--mac", help="MAC address of the TV")
-    parser.add_argument("--profile", choices=["auto", "modern", "remotenow", "legacy", "vidaa_2024", "remotenow_2018"], default="auto", help="Authentication profile and cert selector (default: auto)")
+    parser.add_argument("--profile", choices=["auto", "modern", "middle", "remotenow", "legacy", "vidaa_2024", "remotenow_2018"], default="auto", help="Authentication profile and cert selector (default: auto)")
     parser.add_argument("--cert", help="Path to custom client certificate file (e.g. cert.pem)")
     parser.add_argument("--key", dest="key_file", help="Path to custom client private key file (e.g. key.pem)")
     parser.add_argument("--p12", help="Path to PKCS#12 certificate archive (e.g. client_mobile_android.p12)")

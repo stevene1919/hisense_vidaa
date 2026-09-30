@@ -26,7 +26,19 @@ if "homeassistant" not in sys.modules:
     try:
         import homeassistant  # noqa: F401
     except ImportError:
-        import tests.conftest  # noqa: F401
+        try:
+            import tests.conftest  # noqa: F401
+        except ImportError as exc:
+            print(
+                "\nERROR: Home Assistant is not installed and the bundled test stubs "
+                f"could not be loaded ({exc}).\n"
+                "Install the CLI dependencies (pytest is required by the stubs when Home Assistant is absent):\n"
+                "    pip install paho-mqtt defusedxml cryptography pytest\n"
+                "Or run this tool from your Home Assistant /config directory so the real "
+                "'homeassistant' package is importable.",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from exc
 
 from custom_components.hisense_vidaa.client import HisenseTvClient
 from custom_components.hisense_vidaa.discovery import get_device_fingerprint, get_tv_timestamp
