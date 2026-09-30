@@ -83,6 +83,7 @@ def test_check_and_refresh_token_expired():
     client = HisenseTvClient(
         ip="192.168.50.12",
         client_id="test_client",
+        username="test_client",
         access_token="old_token",
         access_token_time=now - (3 * 86400),  # 3 days old (expired)
         access_token_duration=2,
@@ -95,9 +96,15 @@ def test_check_and_refresh_token_expired():
     mock_mqtt_instance.connect.return_value = 0
 
     with patch("paho.mqtt.client.Client", return_value=mock_mqtt_instance), patch("ssl.create_default_context"):
-        # Trigger refresh
-        client.check_and_refresh_token(force=False)
-        assert client.access_token_time == now - (3 * 86400) or client.access_token == "new_access_token"
+        # Trigger refresh; no fresh token arrives from the (mocked) broker.
+        assert client.check_and_refresh_token(force=False) is False
+
+    # The refresh attempt must actually reach the broker: a dedicated MQTT client
+    # connects with the refresh token and requests a new access token.
+    mock_mqtt_instance.username_pw_set.assert_called_once_with(username="test_client", password="valid_refresh")
+    mock_mqtt_instance.connect.assert_called_once_with("192.168.50.12", 36669, 60)
+    mock_mqtt_instance.loop_start.assert_called_once()
+
 
 
 def test_probe_auth_methods():
