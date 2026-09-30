@@ -220,7 +220,18 @@ def generate_markdown_report(
     lines.append(f"- **Middle Dynamic Auth (`his$<timestamp ^ XOR>` / Standard Salt):** {mid_str}")
     lines.append(f"- **Modern Dynamic Auth (`his$<timestamp ^ XOR>` / Modern Salt):** {mod_str}")
 
-    if not legacy.get("supported") and not std.get("supported") and not middle.get("supported") and not modern.get("supported"):
+    # Only diagnose "all profiles rejected" when the broker actually rejected a
+    # profile (rc=5). When the TV is off/unreachable every tier reports rc=None
+    # (TCP/TLS failed) and there is no rejection to report.
+    all_unsupported = (
+        not legacy.get("supported")
+        and not std.get("supported")
+        and not middle.get("supported")
+        and not modern.get("supported")
+    )
+    any_rejected = any(tier.get("rc") == 5 for tier in (legacy, std, middle, modern))
+
+    if all_unsupported and any_rejected:
         if not cert_presented:
             lines.append(
                 "\n> [!WARNING]\n"
@@ -300,7 +311,7 @@ def generate_markdown_report(
         lines.append("- `remote.<tv>`: Fast Direct Remote Key Commands (`KEY_POWER`, `KEY_HOME`, `KEY_BACK`, etc.)")
         lines.append("- `sensor.<tv>_active_source`: Live input tracking")
         lines.append("- `sensor.<tv>_active_app`: Live foreground app tracking")
-        lines.append("- `select.<tv>_audio_output_mode`: TV Speakers / ARC / eARC routing")
+        lines.append("- `select.<tv>_audio_output`: TV Speakers / ARC / eARC / Headphone / Bluetooth routing")
         lines.append("- `sensor.<tv>_session_status`: Token session health & encryption status")
         lines.append("- `binary_sensor.<tv>_mqtt_connected`: Real-time broker connection status")
 

@@ -18,8 +18,10 @@ pytest -v
 if command -v docker &> /dev/null; then
   echo "==> 🏛️ Running official Home Assistant Hassfest validator..."
   docker run --rm -v "$DIR"://github/workspace ghcr.io/home-assistant/hassfest
+  echo "==> ✅ All local verification and Hassfest checks passed!"
+else
+  echo "==> ⚠️  Hassfest checks skipped (docker not found)"
+  echo "==> ✅ Local verification passed (Hassfest checks skipped)"
 fi
-
-echo "==> ✅ All local verification and Hassfest checks passed!"
 
 

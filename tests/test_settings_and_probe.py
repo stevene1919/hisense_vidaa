@@ -145,3 +145,64 @@ def test_create_client_from_creds_passes_cert_paths_by_keyword(tmp_path) -> None
 
     assert client.certfile == str(cert)
     assert client.keyfile == str(key)
+
+
+def test_report_no_false_rejection_when_tv_unreachable() -> None:
+    """A TV that is off/unreachable reports rc=None for every tier — not a rejection.
+
+    The report must NOT diagnose "all authentication profiles rejected (rc=5)"
+    when no profile was ever actually rejected by the broker (TCP/TLS failed).
+    """
+    ping_data = {
+        "tcp_port_open": False,
+        "tls_handshake": False,
+        "mqtt_connected": False,
+        "client_cert_presented": False,
+        "device_info": {},
+        "auth_probe": {
+            "legacy_static": {"supported": False, "rc": None},
+            "standard_dynamic": {"supported": False, "rc": None},
+            "middle_dynamic": {"supported": False, "rc": None},
+            "modern_dynamic": {"supported": False, "rc": None},
+        },
+    }
+
+    report = generate_markdown_report(
+        ip="192.0.2.1",
+        ping_result=ping_data,
+        probe_result=None,
+        mac="E8:51:77:EC:98:1C",
+        version="1.2.0",
+    )
+
+    assert "All standard authentication profiles rejected" not in report
+
+
+def test_report_warns_on_real_rejection() -> None:
+    """A broker that actually rejected every tier with rc=5 IS diagnosed."""
+    ping_data = {
+        "tcp_port_open": True,
+        "tls_handshake": True,
+        "tls_version": "TLSv1.2",
+        "cipher": "ECDHE-RSA-AES128-GCM-SHA256",
+        "mqtt_connected": False,
+        "client_cert_presented": False,
+        "device_info": {"model_name": "65U7HAU"},
+        "auth_probe": {
+            "legacy_static": {"supported": False, "rc": 5},
+            "standard_dynamic": {"supported": False, "rc": 5},
+            "middle_dynamic": {"supported": False, "rc": 5},
+            "modern_dynamic": {"supported": False, "rc": 5},
+        },
+    }
+
+    report = generate_markdown_report(
+        ip="192.168.50.12",
+        ping_result=ping_data,
+        probe_result=None,
+        mac="E8:51:77:EC:98:1C",
+        version="1.2.0",
+    )
+
+    assert "All standard authentication profiles rejected (rc=5)" in report
+

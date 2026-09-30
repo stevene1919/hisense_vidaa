@@ -11,11 +11,17 @@ Clone the repository and run the scripts directly:
 ```bash
 git clone https://github.com/stevene1919/hisense_vidaa.git
 cd hisense_vidaa
-pip install paho-mqtt defusedxml cryptography
+pip install paho-mqtt defusedxml cryptography pytest
 
 # Probe TV features & capabilities:
 python3 test_client.py probe --ip <TV_IP>
 ```
+
+> [!NOTE]
+> `pytest` is required alongside the runtime dependencies: when the `homeassistant`
+> package is not installed, the tools load the bundled Home Assistant stubs from
+> `tests/conftest.py`, which import `pytest`. The tools print an actionable error if it
+> is missing.
 
 ### Option B: Inside Home Assistant (Terminal / SSH Addon)
 If you installed the integration via HACS, you can download `test_client.py` directly into your `/config` directory:
