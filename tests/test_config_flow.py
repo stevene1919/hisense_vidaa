@@ -8,11 +8,16 @@ from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
 
 from custom_components.hisense_vidaa.config_flow import HisenseVidaaConfigFlow
 from custom_components.hisense_vidaa.const import (
+    CONF_AUTH_PROFILE,
+    CONF_CERTFILE,
     CONF_IP_ADDRESS,
+    CONF_KEYFILE,
     CONF_MAC_ADDRESS,
     CONF_MANUFACTURER,
     CONF_MODEL,
     CONF_SW_VERSION,
+    CONF_USE_SSL,
+    DOMAIN,
 )
 
 
@@ -597,6 +602,93 @@ async def test_finish_reauth_without_client():
     assert result["type"] == "abort"
     assert result["reason"] == "reauth_successful"
     assert hass.config_entries.async_reload.called
+
+
+# ---------------------------------------------------------------------------
+# HA-surface fix leg: F3-leg2 (reauth transport settings), F4-leg2/F5-leg6
+# (issue lifecycle), F7-leg6 (reconfigure duplicate guard).
+# ---------------------------------------------------------------------------
+
+
+def _reauth_flow(hass, entry, entry_id):
+    """Build a config flow wired up for a reauth/reconfigure of `entry`."""
+    hass.config_entries.async_get_entry = MagicMock(return_value=entry)
+    hass.config_entries.async_entries = MagicMock(return_value=[entry])
+    hass.config_entries.async_update_entry = MagicMock()
+    hass.config_entries.async_reload = AsyncMock()
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    flow.context = {"entry_id": entry_id}
+    return flow
+
+
+@pytest.mark.anyio
+async def test_reauth_keeps_entry_transport_settings(monkeypatch):
+    """[F3-leg2] a legacy (non-TLS) entry must stay use_ssl=False through reauth."""
+    hass = MagicMock(spec=HomeAssistant)
+    entry = MagicMock()
+    entry.entry_id = "legacy_entry"
+    entry.unique_id = "e8:51:77:ec:98:1c"
+    entry.data = {
+        CONF_IP_ADDRESS: "192.168.50.12",
+        CONF_MAC_ADDRESS: "e8:51:77:ec:98:1c",
+        CONF_AUTH_PROFILE: "legacy",
+        CONF_USE_SSL: False,
+    }
+    flow = _reauth_flow(hass, entry, "legacy_entry")
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        AsyncMock(return_value=None),
+    )
+
+    await flow.async_step_reauth(entry.data)
+    assert flow.use_ssl is False
+    assert flow.certfile is None
+
+    result = await flow.async_step_reauth_confirm(user_input={})
+    assert result["reason"] == "reauth_successful"
+
+    written = hass.config_entries.async_update_entry.call_args.kwargs["data"]
+    assert written[CONF_USE_SSL] is False
+    assert written[CONF_IP_ADDRESS] == "192.168.50.12"
+
+
+@pytest.mark.anyio
+async def test_reauth_seeds_certificates_from_entry(monkeypatch):
+    """[F3-leg2] reauth must reuse the entry's cert/key paths, not flow defaults."""
+    hass = MagicMock(spec=HomeAssistant)
+    entry = MagicMock()
+    entry.entry_id = "tls_entry"
+    entry.unique_id = "e8:51:77:ec:98:1c"
+    entry.data = {
+        CONF_IP_ADDRESS: "192.168.50.12",
+        CONF_MAC_ADDRESS: "e8:51:77:ec:98:1c",
+        CONF_AUTH_PROFILE: "modern",
+        CONF_USE_SSL: True,
+        CONF_CERTFILE: "/config/ssl/hisense.crt",
+        CONF_KEYFILE: "/config/ssl/hisense.key",
+    }
+    flow = _reauth_flow(hass, entry, "tls_entry")
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        AsyncMock(return_value=None),
+    )
+
+    await flow.async_step_reauth(entry.data)
+    assert flow.use_ssl is True
+    assert flow.certfile == "/config/ssl/hisense.crt"
+    assert flow.keyfile == "/config/ssl/hisense.key"
+
+    await flow.async_step_reauth_confirm(user_input={})
+    flow.client.access_token = "fresh_access_token"
+    await flow._async_finish_reauth(reason="reauth_successful")
+
+    written = hass.config_entries.async_update_entry.call_args.kwargs["data"]
+    assert written[CONF_USE_SSL] is True
+    assert written[CONF_CERTFILE] == "/config/ssl/hisense.crt"
+    assert written[CONF_KEYFILE] == "/config/ssl/hisense.key"
 
 
 

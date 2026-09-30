@@ -11,9 +11,13 @@ from homeassistant import config_entries
 from .const import (
     AUTH_PROFILE_SELECTOR,
     CONF_AUTH_PROFILE,
+    CONF_CERTFILE,
     CONF_IP_ADDRESS,
+    CONF_KEYFILE,
     CONF_MAC_ADDRESS,
+    CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
+    DEFAULT_USE_SSL,
 )
 from .flow_helpers import async_resolve_mac
 
@@ -54,6 +58,12 @@ class ReauthFlowMixin:
         if not self.mac_address and self.ip_address:
             self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
         self.auth_profile = entry_data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
+        # [F3-leg2]: reauth must keep the transport settings of the entry it is
+        # re-authenticating (a legacy/non-TLS entry would otherwise be rewritten
+        # as use_ssl=True by _get_client_auth_data on success).
+        self.use_ssl = entry_data.get(CONF_USE_SSL, DEFAULT_USE_SSL)
+        self.certfile = entry_data.get(CONF_CERTFILE)
+        self.keyfile = entry_data.get(CONF_KEYFILE)
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
@@ -65,7 +75,12 @@ class ReauthFlowMixin:
             from .client import HisenseTvClient
 
             self.client = HisenseTvClient(
-                self.ip_address, self.mac_address, auth_profile=self.auth_profile
+                self.ip_address,
+                self.mac_address,
+                auth_profile=self.auth_profile,
+                certfile=self.certfile if self.use_ssl else None,
+                keyfile=self.keyfile if self.use_ssl else None,
+                use_ssl=self.use_ssl,
             )
             try:
                 await self.client.async_start_auth()
