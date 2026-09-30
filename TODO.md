@@ -68,8 +68,15 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - Maintain 100% key parity with master `strings.json` across config flows, options flows, entity states, repairs, and exception descriptions.
   - Evaluate setting up a free open-source Crowdin project for ongoing community localization.
 
-
-
+### 11. Support for Non-Hisense VIDAA OEM Brands
+- [ ] **Multi-Brand VIDAA OS Pairing & Authentication (`crypto.py`, `client.py`, `flow_discovery.py`)**:
+  - Parameterize the brand identifier across the pairing handshake instead of hardcoding `"his"`:
+    - **Client ID**: Format as `{mac}${brand}${hash[:6]}_vidaacommon_{suffix}` in `crypto.py`.
+    - **Username**: Format as `{brand}${timestamp}` or `{brand}${timestamp ^ XOR_TIMESTAMP_MASK}`.
+    - **Password Hash**: Generate using `{brand}{cross_sum_digit}{salt}`.
+  - Propagate `brand` into `HisenseTvClient` and store `self.brand` (defaulting to `"his"`).
+  - Extract and persist `brand` in `flow_discovery.py` from SSDP/UPnP discovery XML metadata (`device_info.get("brand")`), falling back to `"his"` for manual entry.
+  - Enable seamless pairing for OEM television brands running licensed VIDAA OS (e.g. Toshiba, Loewe, Schneider, Akai, Beko, Telefunken, Bush).
 
 ---
 
