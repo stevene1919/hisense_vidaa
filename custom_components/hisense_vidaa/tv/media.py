@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import time
 from typing import Any
 
@@ -148,11 +149,21 @@ def execute_play_media(
         # Check app dictionary for direct match or scheme match
         app = app_dict.get(media_id)
         if app:
-            client.launch_app(app["appId"], app["name"], app["url"])
+            client.launch_app(
+                str(app.get("appId") or app.get("app_id") or ""),
+                str(app.get("name") or ""),
+                str(app.get("url") or app.get("appUrl") or ""),
+            )
             return
         for a_name, a_info in app_dict.items():
-            if a_name.lower() == media_id.lower() or a_info.get("url", "").lower() == media_id.lower():
-                client.launch_app(a_info["appId"], a_info["name"], a_info["url"])
+            if a_name.lower() == media_id.lower() or (
+                str(a_info.get("url") or "").lower() == media_id.lower()
+            ):
+                client.launch_app(
+                    str(a_info.get("appId") or a_info.get("app_id") or ""),
+                    str(a_info.get("name") or a_name),
+                    str(a_info.get("url") or a_info.get("appUrl") or ""),
+                )
                 return
 
         # Direct URL / deep-link launch
@@ -257,29 +268,41 @@ def parse_volume_broadcast(
     current_muted: bool,
 ) -> tuple[int, int, bool]:
     """Parses incoming volume broadcast. Returns (volume, volume_type, muted)."""
+    # Coerce string payloads (the TV sometimes sends "0"/"1"/"2") the same way
+    # tv/state.py::apply_volume_update tolerates them.
     vol_type = data.get("volume_type")
     volume = current_volume
     volume_type = current_volume_type
     muted = current_muted
 
-    if vol_type in (0, 1):
+    if vol_type in (0, "0", 1, "1"):
         volume_type = int(vol_type)
-        volume = data.get("volume_value", current_volume)
-    elif vol_type == 2:
-        muted = (data.get("volume_value") == 1)
+        with contextlib.suppress(ValueError, TypeError):
+            volume = int(data.get("volume_value", current_volume))
+    elif vol_type in (2, "2"):
+        muted = data.get("volume_value") in (1, "1", True)
 
     return volume, volume_type, muted
 
 
 def parse_sourcelist_data(data: list[dict[str, Any]] | None) -> dict[str, dict[str, Any]]:
     """Builds a lookup dictionary of sources keyed by sourcename."""
+    result: dict[str, dict[str, Any]] = {}
     if not data:
-        return {}
-    return {
-        item.get("sourcename"): item
-        for item in data
-        if isinstance(item, dict) and item.get("sourcename")
-    }
+        return result
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        # Accept the same key spellings as parse_sourcelist_payload.
+        name = (
+            item.get("sourcename")
+            or item.get("sourceName")
+            or item.get("displayname")
+            or item.get("name")
+        )
+        if name:
+            result[name] = item
+    return result
 
 
 def parse_applist_data(
@@ -288,10 +311,13 @@ def parse_applist_data(
     """Builds a list and dictionary of installed apps keyed by name."""
     if not data:
         return [], {}
-    app_dict = {
-        item.get("name"): item
-        for item in data
-        if isinstance(item, dict) and item.get("name")
-    }
+    app_dict: dict[str, dict[str, Any]] = {}
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        # Accept the same key spellings as parse_applist_payload.
+        name = item.get("name") or item.get("appName")
+        if name:
+            app_dict[name] = item
     return data, app_dict
 
