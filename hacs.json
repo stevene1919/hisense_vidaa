@@ -1,5 +1,7 @@
 {
   "name": "Hisense VIDAA TV",
   "render_readme": true,
-  "homeassistant": "2024.1.0"
+  "homeassistant": "2024.4.0",
+  "zip_release": true,
+  "filename": "hisense_vidaa.zip"
 }
