@@ -138,7 +138,7 @@ class HisenseVidaaConfigFlow(
         if not self.mac_address:
             self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
 
-        if self.mac_address:
+        if self.mac_address and self._reauth_entry is None:
             await self.async_set_unique_id(self.mac_address)
             self._abort_if_unique_id_configured()
 
@@ -263,6 +263,6 @@ class HisenseVidaaConfigFlow(
             client = self.client
             self.client = None
             if hasattr(self, "hass") and self.hass:
-                self.hass.async_create_task(self.hass.async_add_executor_job(client.disconnect))
+                self.hass.async_add_executor_job(client.disconnect)
             else:
                 client.disconnect()

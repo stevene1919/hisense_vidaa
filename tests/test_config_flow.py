@@ -1,6 +1,5 @@
 """Tests for Hisense VIDAA config flow and auto-discovery."""
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -433,6 +432,11 @@ async def test_reconfigure_flow_success(monkeypatch):
     flow.hass = hass
     flow.context = {"entry_id": "test_entry_reconf"}
 
+    # Regression: reconfigure must skip the duplicate-entry guard against its own
+    # entry (real HA aborts with "Flow aborted: already_configured" otherwise).
+    flow.async_set_unique_id = AsyncMock(return_value=None)
+    flow._abort_if_unique_id_configured = MagicMock()
+
     monkeypatch.setattr(
         "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
@@ -447,6 +451,8 @@ async def test_reconfigure_flow_success(monkeypatch):
     assert result_reconf["type"] == "abort"
     assert result_reconf["reason"] == "reconfigure_successful"
     assert hass.config_entries.async_update_entry.called
+    assert flow.async_set_unique_id.called is False
+    assert flow._abort_if_unique_id_configured.called is False
 
 
 @pytest.mark.anyio
@@ -497,15 +503,10 @@ async def test_zeroconf_discovery(monkeypatch):
 async def test_config_flow_async_remove_cleans_up_client():
     """Test async_remove disconnects running flow client."""
     hass = MagicMock(spec=HomeAssistant)
-    tasks = []
-
-    def mock_create_task(coro):
-        task = asyncio.create_task(coro)
-        tasks.append(task)
-        return task
-
-    hass.async_create_task = MagicMock(side_effect=mock_create_task)
-    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    # async_add_executor_job schedules the callable and returns a future: the flow
+    # must hand that future to HA directly — wrapping it in async_create_task()
+    # raises TypeError("a coroutine was expected") on real Home Assistant.
+    hass.async_add_executor_job = MagicMock(side_effect=lambda func, *args: func(*args))
 
     flow = HisenseVidaaConfigFlow()
     flow.hass = hass
@@ -513,8 +514,7 @@ async def test_config_flow_async_remove_cleans_up_client():
     flow.client = mock_client
 
     flow.async_remove()
-    if tasks:
-        await asyncio.gather(*tasks)
+    assert hass.async_add_executor_job.called
     assert mock_client.disconnect.called
     assert flow.client is None
 
