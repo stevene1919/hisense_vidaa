@@ -280,6 +280,11 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         await self.hass.async_add_executor_job(self._client.send_key, "KEY_VOLUMEDOWN")
 
     async def async_mute_volume(self, mute: bool) -> None:
+        # KEY_MUTE is a toggle: only send it when the requested state differs from
+        # the state tracked from TV broadcasts, so idempotent automations don't flip
+        # the TV on every run.
+        if bool(mute) == bool(self._muted):
+            return
         await self.hass.async_add_executor_job(self._client.send_key, "KEY_MUTE")
 
     async def async_media_play(self) -> None:
