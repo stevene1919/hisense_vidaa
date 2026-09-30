@@ -29,10 +29,18 @@ if "voluptuous" not in sys.modules:
     def Required(key, default=None): return key
     def Optional(key, default=None): return key
     def In(container): return lambda x: x
+    def Any(*validators): return validators[0] if validators else None
+    class Coerce:
+        def __init__(self, target):
+            self.type = target
+        def __call__(self, value):
+            return self.type(value)
     vol.Schema = Schema
     vol.Required = Required
     vol.Optional = Optional
     vol.In = In
+    vol.Any = Any
+    vol.Coerce = Coerce
     sys.modules["voluptuous"] = vol
 
 # If homeassistant is not installed, install lightweight mock stubs in sys.modules
@@ -132,6 +140,25 @@ if "homeassistant" not in sys.modules:
     data_entry_flow.AbortFlow = AbortFlow
     ha.data_entry_flow = data_entry_flow
     sys.modules["homeassistant.data_entry_flow"] = data_entry_flow
+
+    # exceptions
+    exceptions = types.ModuleType("homeassistant.exceptions")
+    class HomeAssistantError(Exception):
+        def __init__(self, message=None, *, translation_domain=None, translation_key=None, translation_placeholders=None):
+            super().__init__(message)
+            self.message = message
+            self.translation_domain = translation_domain
+            self.translation_key = translation_key
+            self.translation_placeholders = translation_placeholders
+    class ConfigEntryNotReady(HomeAssistantError):
+        pass
+    class ServiceValidationError(HomeAssistantError):
+        pass
+    exceptions.HomeAssistantError = HomeAssistantError
+    exceptions.ConfigEntryNotReady = ConfigEntryNotReady
+    exceptions.ServiceValidationError = ServiceValidationError
+    ha.exceptions = exceptions
+    sys.modules["homeassistant.exceptions"] = exceptions
 
     # components
     components = types.ModuleType("homeassistant.components")
@@ -382,6 +409,7 @@ if "homeassistant" not in sys.modules:
     device_registry.DeviceInfo = DeviceInfo
     device_registry.CONNECTION_NETWORK_MAC = "mac"
     device_registry.format_mac = format_mac
+    device_registry.async_get = MagicMock()
     helpers.device_registry = device_registry
     sys.modules["homeassistant.helpers.device_registry"] = device_registry
 
@@ -399,6 +427,12 @@ if "homeassistant" not in sys.modules:
     entity_registry.async_get = async_get
     helpers.entity_registry = entity_registry
     sys.modules["homeassistant.helpers.entity_registry"] = entity_registry
+
+    # helpers.area_registry
+    area_registry = types.ModuleType("homeassistant.helpers.area_registry")
+    area_registry.async_get = MagicMock()
+    helpers.area_registry = area_registry
+    sys.modules["homeassistant.helpers.area_registry"] = area_registry
 
     # helpers.issue_registry
     issue_registry = types.ModuleType("homeassistant.helpers.issue_registry")

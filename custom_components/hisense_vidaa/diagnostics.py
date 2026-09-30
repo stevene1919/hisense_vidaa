@@ -21,6 +21,12 @@ TO_REDACT = {
     "mac_address",
     "mac_wifi",
     "mac_ethernet",
+    # [F12-leg2/F8-leg6]: the client_id is derived from the MAC and is embedded
+    # in every topic basepath, so those keys leak it as well.
+    "serial_number",
+    "topic_tv_ui",
+    "topic_tv_ps",
+    "topic_mobile",
 }
 
 
@@ -31,6 +37,10 @@ async def async_get_config_entry_diagnostics(
     data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
     client = data.get("client")
 
+    # [F6-leg2/F1-leg6]: bound unconditionally - a not-loaded entry (NOT_LOADED /
+    # SETUP_RETRY) previously raised UnboundLocalError (HTTP 500) exactly when a
+    # bug report was being collected.
+    fp = None
     tv_diagnostics = None
     if client:
         now = int(time.time())
@@ -42,7 +52,6 @@ async def async_get_config_entry_diagnostics(
         fp = None
         with contextlib.suppress(Exception):
             fp = await hass.async_add_executor_job(client.get_device_fingerprint, 1.5)
-
         tv_diagnostics = {
             "connected": client.connected,
             "auth_profile": client.auth_profile,
@@ -60,17 +69,23 @@ async def async_get_config_entry_diagnostics(
             "topic_mobile": getattr(client, "topicMobiBasepath", None),
         }
 
-    return {
-        "entry": {
-            "entry_id": entry.entry_id,
-            "version": getattr(entry, "version", 1),
-            "domain": getattr(entry, "domain", DOMAIN),
-            "title": entry.title,
-            "data": async_redact_data(dict(entry.data), TO_REDACT),
-            "options": dict(entry.options),
-            "pref_disable_new_entities": getattr(entry, "pref_disable_new_entities", False),
-            "pref_disable_polling": getattr(entry, "pref_disable_polling", False),
+    # [F12-leg2/F8-leg6]: redact the whole payload, not just entry.data: the
+    # fingerprint dict carries mac_wifi/mac_ethernet/serial_number and the topic
+    # keys embed the MAC-derived client_id.
+    return async_redact_data(
+        {
+            "entry": {
+                "entry_id": entry.entry_id,
+                "version": getattr(entry, "version", 1),
+                "domain": getattr(entry, "domain", DOMAIN),
+                "title": entry.title,
+                "data": dict(entry.data),
+                "options": dict(entry.options),
+                "pref_disable_new_entities": getattr(entry, "pref_disable_new_entities", False),
+                "pref_disable_polling": getattr(entry, "pref_disable_polling", False),
+            },
+            "client": tv_diagnostics,
+            "device_fingerprint": fp,
         },
-        "client": tv_diagnostics,
-        "device_fingerprint": fp,
-    }
+        TO_REDACT,
+    )

@@ -6,6 +6,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv, issue_registry as ir
 
 from .client import HisenseTvClient
@@ -63,6 +64,12 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Hisense VIDAA TV from a config entry."""
+    # [F2-leg2/F2-leg4/F2-leg6]: services are registered by async_setup, but
+    # async_unload_entry removes them once the last entry goes away and
+    # async_setup is never called again (e.g. after an options reload).  Keep
+    # the registration idempotent and re-assert it on every setup.
+    await async_setup_services(hass)
+
     data = entry.data
     mac = data.get(CONF_MAC_ADDRESS)
     if not mac:
@@ -152,6 +159,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             severity=ir.IssueSeverity.ERROR,
             translation_key="auth_token_invalidated",
             translation_placeholders={"ip_address": failed_client.ip},
+            # [F5-leg2/F6-leg6]: gives the fix flow the entry it must re-pair.
+            data={"entry_id": entry.entry_id},
         )
         entry.async_start_reauth(hass)
 
@@ -185,8 +194,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ):
         platforms_to_setup.append("notify")
 
-    # Start running background thread loop for MQTT client in executor
-    await hass.async_add_executor_job(client.connect_and_run)
+    # Start running background thread loop for MQTT client in executor.
+    # [F10-leg2]: connect_and_run builds the TLS context, so a missing/invalid
+    # certfile or keyfile raises out of paho's tls_set.  Without this guard the
+    # raw traceback escapes setup instead of a clean, retried setup failure.
+    try:
+        await hass.async_add_executor_job(client.connect_and_run)
+    except Exception as err:
+        raise ConfigEntryNotReady(
+            f"Cannot connect to Hisense TV at {client.ip}: {err}"
+        ) from err
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
@@ -198,6 +215,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, platforms_to_setup)
     entry.async_on_unload(entry.add_update_listener(update_listener))
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Clean up the persistent Repairs issues belonging to a removed entry."""
+    # [F4-leg2/F5-leg6]: is_persistent issues survive entry removal and would
+    # keep showing an unfixable card for a TV that is no longer configured.
+    ir.async_delete_issue(hass, DOMAIN, f"certificate_missing_{entry.entry_id}")
+    ir.async_delete_issue(hass, DOMAIN, f"auth_token_invalidated_{entry.entry_id}")
 
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:

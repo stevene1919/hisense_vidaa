@@ -104,3 +104,59 @@ async def test_auth_token_invalidated_repair_flow_init_delegates_to_confirm():
     # init with input → completes
     result = await flow.async_step_init(user_input={})
     assert result["type"] == "create_entry"
+
+
+# ---------------------------------------------------------------------------
+# HA-surface fix leg: F5-leg2 / F6-leg6 - the fix flow must actually start the
+# reauth flow instead of only dismissing the issue.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_auth_token_invalidated_repair_flow_starts_reauth():
+    """[F5-leg2/F6-leg6] submitting the fix flow must start the entry's reauth flow."""
+    hass = MagicMock(spec=HomeAssistant)
+    entry = MagicMock()
+    entry.entry_id = "abc123"
+    hass.config_entries.async_get_entry = MagicMock(return_value=entry)
+
+    flow = await async_create_fix_flow(
+        hass, "auth_token_invalidated_abc123", {"entry_id": "abc123"}
+    )
+    flow.hass = hass
+
+    result = await flow.async_step_confirm(user_input={})
+
+    assert result["type"] == "create_entry"
+    hass.config_entries.async_get_entry.assert_called_once_with("abc123")
+    entry.async_start_reauth.assert_called_once_with(hass)
+
+
+@pytest.mark.anyio
+async def test_auth_token_invalidated_repair_flow_recovers_entry_from_issue_id():
+    """[F5-leg2/F6-leg6] the entry id also comes from the issue id (no issue data)."""
+    hass = MagicMock(spec=HomeAssistant)
+    entry = MagicMock()
+    hass.config_entries.async_get_entry = MagicMock(return_value=entry)
+
+    flow = await async_create_fix_flow(hass, "auth_token_invalidated_entry_9", None)
+    flow.hass = hass
+
+    await flow.async_step_confirm(user_input={})
+
+    hass.config_entries.async_get_entry.assert_called_once_with("entry_9")
+    entry.async_start_reauth.assert_called_once_with(hass)
+
+
+@pytest.mark.anyio
+async def test_auth_token_invalidated_repair_flow_without_entry_does_not_raise():
+    """[F5-leg2/F6-leg6] a stale issue pointing at a gone entry must not break the flow."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.config_entries.async_get_entry = MagicMock(return_value=None)
+
+    flow = AuthTokenInvalidatedRepairFlow(entry_id="gone")
+    flow.hass = hass
+
+    result = await flow.async_step_confirm(user_input={})
+
+    assert result["type"] == "create_entry"

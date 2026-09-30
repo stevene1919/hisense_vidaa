@@ -8,13 +8,19 @@ from typing import TYPE_CHECKING, Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import AbortFlow
+from homeassistant.helpers import issue_registry as ir
 
 from .const import (
     AUTH_PROFILE_SELECTOR,
     CONF_AUTH_PROFILE,
+    CONF_CERTFILE,
     CONF_IP_ADDRESS,
+    CONF_KEYFILE,
     CONF_MAC_ADDRESS,
+    CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
+    DEFAULT_USE_SSL,
+    DOMAIN,
 )
 from .flow_helpers import async_resolve_mac
 
@@ -40,8 +46,33 @@ class ReauthFlowMixin:
                 self._reauth_entry,
                 data={**self._reauth_entry.data, **auth_data},
             )
+            # [F4-leg2/F5-leg6]: the credentials are fresh again, so the
+            # persistent "reauthentication required" card must go away.
+            ir.async_delete_issue(
+                self.hass,
+                DOMAIN,
+                f"auth_token_invalidated_{self._reauth_entry.entry_id}",
+            )
             await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
         return self.async_abort(reason=reason)
+
+    def _async_mac_is_configured_elsewhere(
+        self: HisenseVidaaConfigFlow,
+    ) -> bool:
+        """Check whether the resolved MAC already belongs to another entry.
+
+        [F7-leg6]: the duplicate/unique-id guard of `_async_init_client_and_auth`
+        is skipped whenever `_reauth_entry` is set, which would silently repoint
+        an entry at a different TV while keeping its old unique_id.
+        """
+        if not self.mac_address or not self._reauth_entry:
+            return False
+        for other in self.hass.config_entries.async_entries(DOMAIN):
+            if other.entry_id == self._reauth_entry.entry_id:
+                continue
+            if other.unique_id == self.mac_address:
+                return True
+        return False
 
     async def async_step_reauth(
         self: HisenseVidaaConfigFlow, entry_data: dict[str, Any]
@@ -55,6 +86,12 @@ class ReauthFlowMixin:
         if not self.mac_address and self.ip_address:
             self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
         self.auth_profile = entry_data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
+        # [F3-leg2]: reauth must keep the transport settings of the entry it is
+        # re-authenticating (a legacy/non-TLS entry would otherwise be rewritten
+        # as use_ssl=True by _get_client_auth_data on success).
+        self.use_ssl = entry_data.get(CONF_USE_SSL, DEFAULT_USE_SSL)
+        self.certfile = entry_data.get(CONF_CERTFILE)
+        self.keyfile = entry_data.get(CONF_KEYFILE)
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
@@ -66,7 +103,12 @@ class ReauthFlowMixin:
             from .client import HisenseTvClient
 
             self.client = HisenseTvClient(
-                self.ip_address, self.mac_address, auth_profile=self.auth_profile
+                self.ip_address,
+                self.mac_address,
+                auth_profile=self.auth_profile,
+                certfile=self.certfile if self.use_ssl else None,
+                keyfile=self.keyfile if self.use_ssl else None,
+                use_ssl=self.use_ssl,
             )
             try:
                 await self.client.async_start_auth()
@@ -108,9 +150,15 @@ class ReauthFlowMixin:
         if user_input is not None:
             self.ip_address = user_input[CONF_IP_ADDRESS]
             self.auth_profile = user_input.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
-            self.mac_address = current_data.get(CONF_MAC_ADDRESS)
-            if not self.mac_address and self.ip_address:
-                self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
+            # [F7-leg6]: the entry may be repointed at a different TV, so the MAC
+            # must be resolved for the *new* IP before the target is re-paired.
+            self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
+            if not self.mac_address:
+                self.mac_address = current_data.get(CONF_MAC_ADDRESS)
+
+            # [F7-leg6]: only the entry being reconfigured may keep this MAC.
+            if self._async_mac_is_configured_elsewhere():
+                return self.async_abort(reason="already_configured")
 
             if self.auth_profile in ("auto", "legacy"):
                 if not self._resolve_ssl_certs():
