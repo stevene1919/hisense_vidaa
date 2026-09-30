@@ -63,6 +63,12 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Hisense VIDAA TV from a config entry."""
+    # [F2-leg2/F2-leg4/F2-leg6]: services are registered by async_setup, but
+    # async_unload_entry removes them once the last entry goes away and
+    # async_setup is never called again (e.g. after an options reload).  Keep
+    # the registration idempotent and re-assert it on every setup.
+    await async_setup_services(hass)
+
     data = entry.data
     mac = data.get(CONF_MAC_ADDRESS)
     if not mac:
