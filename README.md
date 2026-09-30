@@ -30,8 +30,8 @@ The integration automatically detects and supports multiple generations of Hisen
 
 | TV Generation / Firmware | Profile | Auth Model | Pairing Method |
 | :--- | :--- | :--- | :--- |
-| **Modern VIDAA OS (2024+ / U6+, U7 / protocol $\ge 3290$)** | `modern` | **Modern VIDAA 2.0** (`libmqttcrypt` XOR mask + modern salt) | 4-Digit Screen PIN |
-| **Middle VIDAA OS (VIDAA 1.5 / protocol $3000 \le v < 3290$)** | `middle` | **Middle VIDAA** (`libmqttcrypt` XOR mask + standard salt) | 4-Digit Screen PIN |
+| **Modern VIDAA OS (2024+ / U6+, U7 / protocol $\ge 3290$)** | `modern` | **Modern VIDAA 2.0** (64-bit XOR mask + modern salt) | 4-Digit Screen PIN |
+| **Middle VIDAA OS (VIDAA 1.5 / protocol $3000 \le v < 3290$)** | `middle` | **Middle VIDAA** (64-bit XOR mask + standard salt) | 4-Digit Screen PIN |
 | **Standard VIDAA OS (2018–2023 / U4, U5, early U6 / protocol $< 3000$)** | `remotenow` | **RemoteNOW Dynamic** (`his$<timestamp>` + standard salt) | 4-Digit Screen PIN |
 | **Legacy Hisense / Older Models (Pre-2022 / U2, U3)** | `legacy` | **Legacy Static** (`hisenseservice` / `multimqttservice`) | Instant Setup (No PIN) |
 | **Auto Detection (All Generations)** | `auto` | **Intelligent UPnP transport detection + multi-tier fallback cascade** | Automatic |
@@ -40,7 +40,7 @@ The integration automatically detects and supports multiple generations of Hisen
 
 ## ✨ Features
 
-- **100% Local LAN Control (`iot_class: local_push`)**: Connects directly to the TV's hardware MQTT broker over your local network with **zero cloud dependencies**, zero external API calls, and full support for isolated IoT VLANs (WAN blocked).
+- **100% Local LAN Control (`iot_class: local_push`)**: Connects directly to the TV's hardware MQTT broker over your local network with **zero cloud dependencies**, zero external API calls, and full support for isolated IoT VLANs (WAN blocked). All cryptographic authentication logic is implemented in **100% native Python** with zero compiled binary dependencies.
 - **Local Push Updates**: Instant feedback for power state, volume, mute, source input, and active app.
 - **Media Player Platform**: Full power toggle, volume stepping, input source switcher, dynamic app artwork, deep linking, and configurable media transport controls. Exposes `MediaPlayerDeviceClass.TV` for native Apple HomeKit and iOS Control Center virtual remote integration.
 - **Dedicated Remote Platform**: Fast key command dispatching, key aliases (`home`, `menu`, `back`, `ok`, etc.), configurable repeat counts, and inter-key delay options.

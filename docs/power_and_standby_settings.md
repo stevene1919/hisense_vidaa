@@ -31,7 +31,7 @@ Hisense smart TVs implement a **two-tier standby architecture** driven by statut
 ```
 
 ### Why Tokens Are Lost in Tier 2
-VIDAA stores dynamic session credentials (`access_token` and `refresh_token`) exclusively in **volatile system RAM** (`libmqttcrypt.so`). Tokens are deliberately never written to onboard NAND flash (to prevent wear and avoid plain-text credential retention). 
+VIDAA stores dynamic session credentials (`access_token` and `refresh_token`) exclusively in **volatile system RAM** on the TV (managed by the broker's `libmqttcrypt.so` background daemon). Tokens are deliberately never written to onboard NAND flash (to prevent wear and avoid plain-text credential retention). 
 
 When statutory energy-saving timers force the TV into a Tier 2 shutdown, the application processor powers down and wipes RAM. Upon the next power-on, the broker boots cold with an empty token table and actively rejects Home Assistant's stored credentials (`rc: 4`).
 

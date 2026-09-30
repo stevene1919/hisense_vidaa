@@ -2,6 +2,13 @@
 
 This document provides a comprehensive technical breakdown of the Hisense VIDAA OS MQTT communication protocol, reverse-engineered from `libmqttcrypt.so` and the official VIDAA / RemoteNOW Android applications.
 
+> [!NOTE]
+> **100% Pure Python Implementation (Zero Native Binaries):**
+> `libmqttcrypt.so` is the proprietary compiled C library inside the official Hisense Android APKs and TV firmware from which the dynamic hashing formulas and 64-bit XOR bitmasks were originally reverse-engineered.
+> 
+> This Home Assistant integration **does not** load, bundle, or execute any native binary files. All cryptographic calculations, dynamic timestamps, and challenge-response routines are implemented in **100% native Python** ([`crypto.py`](../custom_components/hisense_vidaa/crypto.py)), ensuring seamless cross-platform portability across any Home Assistant host architecture (Linux ARM64, AMD64, Raspberry Pi, Home Assistant OS) without external binaries or compilation steps.
+
+
 ---
 
 ## 🧭 Communication Overview
@@ -39,7 +46,7 @@ sequenceDiagram
 
 ## 🔐 Multi-Tier Authentication Models
 
-The TV's internal MQTT broker (`libmqttcrypt.so`) enforces structured client credentials during initial pairing across four firmware generations:
+The TV's internal MQTT broker validation logic (originally embedded in Hisense's `libmqttcrypt.so` native library and mirrored natively in `crypto.py`) enforces structured client credentials during initial pairing across four firmware generations:
 
 ### 🟢 1. Modern VIDAA 2.0 (VIDAA U6+, U7, 2024+ Models / Protocol $\ge 3290$)
 - **Pattern:** `PATTERN = "38D65DC30F45109A369A86FCE866A85B"`
@@ -162,7 +169,7 @@ Different VIDAA models expose varying subsets of the MQTT protocol depending on 
    - The integration provides an opt-in switch entity mapping to display power toggling on models supporting panel sleep.
 
 4. **Volatile Session Tokens & Regional Energy Standby (Australia GEMS, EU Ecodesign, Energy Star)**:
-   - Dynamic credentials (`access_token` and `refresh_token`) are stored strictly in volatile system RAM (`libmqttcrypt.so` runtime process table) rather than persistent flash memory.
+   - Dynamic credentials (`access_token` and `refresh_token`) are stored strictly in volatile system RAM on the TV (within the TV broker's `libmqttcrypt.so` runtime process table) rather than persistent flash memory.
    - In standard manual standby (**Tier 1 / `fake_sleep` / Fast Power On**), the embedded MQTT daemon stays resident and active tokens are preserved.
    - Under statutory automated energy-saving shutdowns (**Tier 2 / Auto Standby with No Signal / Auto Sleep**), the TV powers down the application processor to meet mandatory standby thresholds ($\le 0.5\text{W}$), terminating the broker process.
    - Upon next power-up or wake, the broker starts with an unpopulated token table and actively rejects previously valid credentials with `rc: 4` (*Bad username or password*).
