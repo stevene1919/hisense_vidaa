@@ -2,6 +2,38 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.10.3] - 2026-10-01
+
+### Fixed
+- **PAIRING & PIN PROMPT RELIABILITY (`flow_discovery.py`, `client.py`)**:
+  - Automatically detected PIN dialog dismissal (`authenticationcodeclose`) and remote pairing slot busy (`authenticationcodetoast`) events, returning immediate retryable user feedback instead of hanging until timeout (#33).
+  - Added support for static PIN pairing sessions without token exchange for models that require PIN entry during connection (#33).
+- **FLOW & LIFECYCLE ROBUSTNESS (`flow_reauth.py`, `__init__.py`, `discovery.py`)**:
+  - Fixed reconfigure flow aborting when selecting an existing entry (#31).
+  - Removed invalid future wrapping on `async_remove` listener registration (#31).
+  - Kept blocking TV timestamp discovery off the Home Assistant async event loop (#31).
+  - Re-armed token expiration watch latch on successful connection and reconnect (#32).
+  - Added connection concurrency lock (`_reconnect_lock`) to eliminate reconnect race conditions (#32).
+  - Preserved original MAC address casing across discovery and config entries (#32).
+  - Subscribed client directly to its own mobile push tree on connect (#32).
+- **HOME ASSISTANT CORE INTEGRATION SURFACE (`services.py`, `repairs.py`, `diagnostics.py`)**:
+  - Expanded custom TV services to resolve targets by Home Assistant Area, Floor, and Label (#34).
+  - Managed repair issue lifecycle properly, clearing issues when resolved and recovering entry from issue ID (#34).
+  - Secured diagnostics export to redact credentials and tokens safely (#34).
+- **PLATFORM BEHAVIOUR & ROBUSTNESS (`media_player.py`, `remote.py`, `tv/media.py`, `notify.py`, `sensors_diagnostic.py`)**:
+  - Made mute command idempotent, avoiding unintended mute state toggling (#35).
+  - Honoured `key_repeat` options when Home Assistant passes default `num_repeats: 1` (#35).
+  - Added key-spelling fallbacks (`sourceName`/`appName` vs snake_case) across diverse VIDAA firmware versions (#35).
+  - Coerced string volume payloads from legacy firmware broadcasts (#35).
+  - Automatically purged disabled notification entities from the entity registry (#35).
+
+### Improved
+- **CLI TOOLS & DOCUMENTATION (`test_client.py`, `debug_tv.py`, `tv/probe.py`, `docs/`)**:
+  - Added `--profile middle` CLI option and ensured profile passthrough in diagnostic reports (#36).
+  - Gated MQTT `rc=5` rejection warning so offline TVs are not falsely diagnosed as rejected (#36).
+  - Provided clear error instructions when test stubs cannot load outside Home Assistant (#36).
+  - Corrected documentation strings, service examples, and topic prefixes across all docs (#36).
+
 ## [2.10.2] - 2026-10-01
 
 ### Fixed
