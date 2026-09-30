@@ -1,0 +1,338 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hisense VIDAA TV konfigurieren",
+        "description": "Gib die IP-Adresse deines Hisense-Fernsehers ein.",
+        "data": {
+          "ip_address": "IP-Adresse",
+          "auth_profile": "Authentifizierungs- / Zertifikatsprofil"
+        }
+      },
+      "discovery_confirm": {
+        "title": "Hisense VIDAA TV entdeckt",
+        "description": "Möchtest du {name} unter {ip_address} einrichten?"
+      },
+      "auth": {
+        "title": "TV-PIN-Code eingeben",
+        "description": "Auf deinem Fernsehbildschirm sollte jetzt ein 4-stelliger PIN-Code angezeigt werden. Bitte gib ihn unten ein.",
+        "data": {
+          "pin_code": "PIN-Code"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Hisense TV neu authentifizieren",
+        "description": "Home Assistant muss sich erneut mit deinem Hisense-Fernseher ({ip_address}) koppeln. Klicke auf Absenden, um die PIN auf deinem Fernsehbildschirm anzuzeigen."
+      },
+      "reconfigure": {
+        "title": "Hisense VIDAA TV neu konfigurieren",
+        "description": "Aktualisiere die Verbindungseinstellungen oder kopple deinen Hisense-Fernseher erneut.",
+        "data": {
+          "ip_address": "IP-Adresse",
+          "auth_profile": "Authentifizierungs- / Zertifikatsprofil"
+        }
+      },
+      "certs": {
+        "title": "Client-Zertifikate",
+        "description": "Konfiguriere TLS/SSL-Client-Zertifikate für die Kommunikation mit deinem Hisense VIDAA TV. Lege deine Zertifikate in {cert_dir} ab ({cert_file} und {key_file}).",
+        "data": {
+          "use_ssl": "Verschlüsselte SSL/TLS-Verbindung verwenden",
+          "certfile": "Zertifikatsdateipfad (.crt / .pem)",
+          "keyfile": "Privater Schlüsseldateipfad (.key / .pem)"
+        }
+      },
+      "options": {
+        "title": "Gerätefunktionen & Optionen",
+        "description": "Passe die Funktionen für deinen Hisense VIDAA TV an.",
+        "data": {
+          "enable_remote": "Dedizierte Fernbedienungs-Entität aktivieren",
+          "enable_wol": "Einschalten über Wake-on-LAN aktivieren",
+          "include_apps_in_sources": "Smart-TV-Apps in die Quellenliste des Medienplayers aufnehmen",
+          "enable_media_controls": "Mediensteuerungen aktivieren (Wiedergabe/Pause, Stopp, Überspringen)",
+          "enable_picture_controls": "Bildmodus-Auswahl und Kalibrierungs-Schieberegler aktivieren (Hintergrundbeleuchtung, Helligkeit, Kontrast)",
+          "enable_sound_controls": "Tonmodus-Equalizer-Auswahl aktivieren",
+          "enable_audio_only": "Nur-Audio-Schalter (Bildschirm aus) aktivieren"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zum Fernseher fehlgeschlagen.",
+      "invalid_auth": "Ungültiger PIN-Code. Bitte versuche es erneut.",
+      "certs_not_found": "Zertifikats- oder private Schlüsseldatei wurde am angegebenen Pfad nicht gefunden. Bitte Dateipfad und Berechtigungen prüfen.",
+      "unknown": "Ein unbekannter Fehler ist aufgetreten."
+    },
+    "abort": {
+      "reauth_successful": "Neu-Authentifizierung war erfolgreich.",
+      "reconfigure_successful": "Neukonfiguration war erfolgreich.",
+      "already_configured": "Dieses Gerät ist bereits konfiguriert.",
+      "not_vidaa_tv": "Das erkannte Gerät ist kein kompatibler Hisense VIDAA TV."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hisense VIDAA TV Optionen",
+        "description": "Wähle eine Optionen-Kategorie zum Konfigurieren:",
+        "menu_options": {
+          "general": "⚡ Allgemeine & Energie-Optionen",
+          "sources": "📺 Quellen & Mediensteuerungen",
+          "picture_sound": "🎨 Bild- & Tonsteuerungen",
+          "remote_keys": "🎮 Fernbedienungs-Tastenverzögerungen & Wiederholungen",
+          "certs": "🔒 SSL-Zertifikate & Sicherheit"
+        }
+      },
+      "general": {
+        "title": "Allgemeine & Energie-Optionen",
+        "description": "Konfiguriere Einschalten, WoL und grundlegende Geräteoptionen.",
+        "data": {
+          "enable_remote": "Dedizierte Fernbedienungs-Entität aktivieren",
+          "enable_notify": "Toast-Benachrichtigungen auf dem Bildschirm aktivieren (nur unterstützte Modelle)",
+          "enable_wol": "Einschalten über Wake-on-LAN aktivieren",
+          "secondary_mac_address": "Sekundäre MAC-Adresse (WLAN oder Ethernet)",
+          "use_ssl": "Verschlüsselte SSL/TLS-Verbindung verwenden",
+          "refresh_in_standby": "Zugriffstoken erneuern, während der Fernseher im Standby ist"
+        },
+        "data_description": {
+          "refresh_in_standby": "Aktivieren, wenn der Fernseher im ausgeschalteten Zustand seine Netzwerkverbindung behält (z. B. Schnellstart / Fast Power On). Das 2-Tage-Zugriffstoken wird dann auch erneuert, wenn der Fernseher nicht eingeschaltet wird, sodass die Kopplung Home Assistant-Neustarts übersteht. Deaktiviert lassen bei Fernsehern, die im Standby vollständig herunterfahren."
+        }
+      },
+      "sources": {
+        "title": "Quellen & Mediensteuerungen",
+        "description": "Konfiguriere Eingangsquellen, App-Liste und Medienwiedergabesteuerungen.",
+        "data": {
+          "include_apps_in_sources": "Smart-TV-Apps in die Quellenliste des Medienplayers aufnehmen",
+          "enable_media_controls": "Mediensteuerungen aktivieren (Wiedergabe/Pause, Stopp, Überspringen)",
+          "enable_cec_names": "Namen angeschlossener HDMI-CEC-Geräte in Quellen anzeigen (z. B. 'HDMI 2 (PlayStation 5)')"
+        }
+      },
+      "picture_sound": {
+        "title": "Bild- & Tonsteuerungen",
+        "description": "Konfiguriere Bildkalibrierungs-Schieberegler, Tonmodus-Auswahl und Nur-Audio-Modus.",
+        "data": {
+          "enable_picture_controls": "Bildmodus-Auswahl und Kalibrierungs-Schieberegler aktivieren (Hintergrundbeleuchtung, Helligkeit, Kontrast)",
+          "enable_sound_controls": "Tonmodus-Equalizer-Preset-Auswahl aktivieren",
+          "enable_audio_only": "Nur-Audio-Schalter (Bildschirm aus) aktivieren"
+        }
+      },
+      "remote_keys": {
+        "title": "Fernbedienungs-Tastenverzögerungen & Wiederholungen",
+        "description": "Konfiguriere Standard-Befehlsverzögerungen und Tastendruck-Wiederholungen für die Fernbedienung.",
+        "data": {
+          "key_delay": "Standard-Tastenverzögerung (Sekunden)",
+          "key_repeat": "Standard-Tastenwiederholungsanzahl"
+        }
+      },
+      "certs": {
+        "title": "SSL-Zertifikate & Sicherheit",
+        "description": "Wähle das Authentifizierungsprofil und optionale benutzerdefinierte SSL/TLS-Client-Zertifikatspfade.",
+        "data": {
+          "auth_profile": "Authentifizierungs- / Zertifikatsprofil",
+          "certfile": "Zertifikatsdateipfad (.crt / .pem / .p12)",
+          "keyfile": "Privater Schlüsseldateipfad (.key / .pem)"
+        }
+      }
+    },
+    "error": {
+      "certs_not_found": "Zertifikats- oder private Schlüsseldatei wurde am angegebenen Pfad nicht gefunden. Bitte Dateipfad und Berechtigungen prüfen."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "session_status": {
+        "name": "Sitzungsstatus"
+      },
+      "auth_profile": {
+        "name": "Authentifizierungsprofil"
+      },
+      "active_app": {
+        "name": "Aktive App"
+      },
+      "active_source": {
+        "name": "Aktive Quelle"
+      },
+      "audio_output": {
+        "name": "Audioausgang"
+      },
+      "reported_name": {
+        "name": "Gemeldeter Name"
+      }
+    },
+    "binary_sensor": {
+      "mqtt_connected": {
+        "name": "MQTT verbunden"
+      },
+      "in_use": {
+        "name": "In Benutzung"
+      }
+    },
+    "button": {
+      "force_reconnect": {
+        "name": "Wiederverbindung erzwingen"
+      },
+      "sync_clock": {
+        "name": "Uhr synchronisieren"
+      },
+      "probe_capabilities": {
+        "name": "Fähigkeiten abfragen"
+      }
+    },
+    "notify": {
+      "notifications": {
+        "name": "Benachrichtigungen"
+      }
+    },
+    "select": {
+      "audio_output": {
+        "name": "Audioausgangsmodus"
+      },
+      "picture_mode": {
+        "name": "Bildmodus"
+      },
+      "sound_mode": {
+        "name": "Tonmodus"
+      }
+    },
+    "number": {
+      "backlight": {
+        "name": "Hintergrundbeleuchtung"
+      },
+      "brightness": {
+        "name": "Helligkeit"
+      },
+      "contrast": {
+        "name": "Kontrast"
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Fernbedienung"
+      }
+    },
+    "switch": {
+      "audio_only": {
+        "name": "Nur Audio"
+      },
+      "debug_logging": {
+        "name": "Debug-Protokollierung"
+      }
+    }
+  },
+  "services": {
+    "send_key": {
+      "name": "Taste senden",
+      "description": "Einen Tastendruck oder eine Tastenfolge an den Fernseher senden.",
+      "fields": {
+        "key": {
+          "name": "Taste",
+          "description": "Zu sendender Tastencode (z. B. KEY_POWER, KEY_HOME, KEY_VOLUMEUP)."
+        },
+        "repeat": {
+          "name": "Wiederholen",
+          "description": "Anzahl der Wiederholungen des Tastendrucks."
+        },
+        "delay": {
+          "name": "Verzögerung",
+          "description": "Verzögerung in Sekunden zwischen wiederholten Tastendrücken."
+        }
+      }
+    },
+    "launch_app": {
+      "name": "App starten",
+      "description": "Eine Smart-TV-Anwendung nach Namen oder direkter URL starten.",
+      "fields": {
+        "app": {
+          "name": "Anwendungsname oder URL",
+          "description": "Der Name der App (z. B. Netflix, YouTube, Prime Video) oder eine Deep-Link-URL."
+        }
+      }
+    },
+    "set_picture_setting": {
+      "name": "Bildeinstellung setzen",
+      "description": "Eine bestimmte TV-Bildmenüeinstellung oder einen Kalibrierungsparameter ändern.",
+      "fields": {
+        "menu_id": {
+          "name": "Menü-ID",
+          "description": "Numerische Menü-ID (z. B. 91 für Bildmodus, 92 für Hintergrundbeleuchtung, 93 für Helligkeit, 94 für Kontrast)."
+        },
+        "menu_value": {
+          "name": "Menüwert",
+          "description": "Einstellungswert oder Name des voreingestellten Modus."
+        }
+      }
+    },
+    "set_sound_setting": {
+      "name": "Toneinstellung setzen",
+      "description": "Eine bestimmte TV-Tonmenüeinstellung oder ein Equalizer-Preset ändern.",
+      "fields": {
+        "menu_id": {
+          "name": "Menü-ID",
+          "description": "Numerische Menü-ID (z. B. 1 für Tonmodus)."
+        },
+        "menu_value": {
+          "name": "Menüwert",
+          "description": "Tonmodusname oder -wert."
+        }
+      }
+    },
+    "send_text_input": {
+      "name": "Texteingabe senden",
+      "description": "Virtuellen Tastaturtext an ein aktives Bildschirmeingabefeld oder die Browser-Suchleiste senden.",
+      "fields": {
+        "text": {
+          "name": "Text",
+          "description": "Einzugebende Textzeichenfolge."
+        },
+        "action": {
+          "name": "Aktion",
+          "description": "Eingabeaktionstyp (insert, replace, clear)."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "no_target_device": {
+      "message": "Es wurde kein passender Hisense VIDAA TV für das angegebene Dienstaufrufziel gefunden."
+    },
+    "not_connected": {
+      "message": "Befehl kann nicht gesendet werden: Der Fernseher ist derzeit nicht verbunden."
+    }
+  },
+  "selector": {
+    "auth_profile": {
+      "options": {
+        "auto": "Automatische Erkennung (Empfohlen)",
+        "modern": "VIDAA 2.0 / 2024+ (vidaa_2024)",
+        "middle": "VIDAA 1.5 / Mittlere Generation (3000–3285)",
+        "remotenow": "RemoteNOW / 2018–2023 (Standard)",
+        "legacy": "Legacy statisch (Vor-2022 / Statische Zugangsdaten)"
+      }
+    }
+  },
+  "issues": {
+    "certificate_missing": {
+      "title": "Fehlende VIDAA-Client-Zertifikate",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Client-Zertifikate überprüfen",
+            "description": "Sobald hisense.crt und hisense.key nach /config/ssl oder /ssl kopiert wurden, dieses Formular absenden zum Überprüfen."
+          }
+        },
+        "error": {
+          "certificates_still_missing": "Zertifikate fehlen weiterhin. Bitte sicherstellen, dass hisense.crt und hisense.key vorhanden sind."
+        }
+      }
+    },
+    "auth_token_invalidated": {
+      "title": "Hisense TV: Neu-Authentifizierung erforderlich",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Erneut mit Hisense TV koppeln",
+            "description": "Home Assistant kann sich nicht mehr an deinem Hisense-Fernseher ({ip_address}) authentifizieren. Der TV-Broker hat die gespeicherten Zugriffs- und Aktualisierungstoken abgelehnt (dies geschieht normalerweise nach einem Firmware-Update oder einem Kaltstart).\n\nKlicke auf **Absenden**, um den Kopplungsprozess zu starten. Stelle sicher, dass dein Fernseher **eingeschaltet** ist (nicht im Standby) – auf dem Bildschirm erscheint ein PIN-Code."
+          }
+        }
+      }
+    }
+  }
+}

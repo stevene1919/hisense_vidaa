@@ -27,6 +27,16 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
   - Coerced string volume payloads from legacy firmware broadcasts (#35).
   - Automatically purged disabled notification entities from the entity registry (#35).
 
+### Added
+- **MULTI-LANGUAGE LOCALIZATION SUPPORT (`translations/`)**:
+  - Added comprehensive native translation dictionaries with 100% key and placeholder parity for high-adoption Hisense VIDAA markets:
+    - **Italian (`it.json`)**: Full coverage of config flows, options, entity names, diagnostics, and repairs.
+    - **Spanish (`es.json`)**: Spain and Latin America localization.
+    - **German (`de.json`)**: Germany, Austria, and Switzerland localization.
+    - **French (`fr.json`)**: France, Belgium, and Canada localization.
+    - **Portuguese (`pt.json`)**: Portugal European Portuguese localization.
+    - **Brazilian Portuguese (`pt-BR.json`)**: Brazil Portuguese localization.
+
 ### Improved
 - **CLI TOOLS & DOCUMENTATION (`test_client.py`, `debug_tv.py`, `tv/probe.py`, `docs/`)**:
   - Added `--profile middle` CLI option and ensured profile passthrough in diagnostic reports (#36).

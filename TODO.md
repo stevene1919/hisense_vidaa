@@ -58,7 +58,7 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - Ensure compatibility with official Home Assistant diagnostics download format and sanitization standards.
 
 ### 10. Multi-Language Localization & Translation Support
-- [ ] **Popular European & Regional Language Support (`translations/`)**:
+- [x] **Popular European & Regional Language Support (`translations/`)**:
   - Add native translated string dictionaries for high-adoption Hisense VIDAA smart TV markets:
     - **Spanish (`es.json`)**: Spain & Latin America.
     - **German (`de.json`)**: Germany, Austria, Switzerland.

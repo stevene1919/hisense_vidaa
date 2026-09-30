@@ -1,0 +1,338 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configura Hisense VIDAA TV",
+        "description": "Inserisci l'indirizzo IP della tua TV Hisense.",
+        "data": {
+          "ip_address": "Indirizzo IP",
+          "auth_profile": "Profilo di autenticazione / certificato"
+        }
+      },
+      "discovery_confirm": {
+        "title": "Hisense VIDAA TV rilevata",
+        "description": "Vuoi configurare {name} all'indirizzo {ip_address}?"
+      },
+      "auth": {
+        "title": "Inserisci il codice PIN della TV",
+        "description": "Un codice PIN a 4 cifre dovrebbe ora apparire sullo schermo della TV. Inseriscilo di seguito.",
+        "data": {
+          "pin_code": "Codice PIN"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Riautentica Hisense TV",
+        "description": "Home Assistant deve associare nuovamente la tua Hisense TV ({ip_address}). Premi Invia per mostrare il PIN sullo schermo della TV."
+      },
+      "reconfigure": {
+        "title": "Riconfigura Hisense VIDAA TV",
+        "description": "Aggiorna le impostazioni di connessione o associa nuovamente la tua Hisense TV.",
+        "data": {
+          "ip_address": "Indirizzo IP",
+          "auth_profile": "Profilo di autenticazione / certificato"
+        }
+      },
+      "certs": {
+        "title": "Certificati client",
+        "description": "Configura i certificati client TLS/SSL per comunicare con la tua Hisense VIDAA TV. Posiziona i certificati in {cert_dir} ({cert_file} e {key_file}).",
+        "data": {
+          "use_ssl": "Usa connessione crittografata SSL/TLS",
+          "certfile": "Percorso file certificato (.crt / .pem)",
+          "keyfile": "Percorso file chiave privata (.key / .pem)"
+        }
+      },
+      "options": {
+        "title": "Funzionalità e opzioni dispositivo",
+        "description": "Personalizza le funzionalità per la tua Hisense VIDAA TV.",
+        "data": {
+          "enable_remote": "Abilita entità Telecomando dedicata",
+          "enable_wol": "Abilita accensione tramite Wake-on-LAN",
+          "include_apps_in_sources": "Includi le app Smart TV nell'elenco sorgenti di Media Player",
+          "enable_media_controls": "Abilita controlli di riproduzione multimediale (play/pausa, stop, avanti/indietro)",
+          "enable_picture_controls": "Abilita selettore modalità immagine e cursori di calibrazione (Retroilluminazione, Luminosità, Contrasto)",
+          "enable_sound_controls": "Abilita selettore equalizzatore modalità audio",
+          "enable_audio_only": "Abilita interruttore Solo Audio (Schermo spento)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossibile connettersi alla TV.",
+      "invalid_auth": "Codice PIN non valido. Riprova.",
+      "certs_not_found": "File del certificato o della chiave privata non trovato nel percorso specificato. Verifica posizione del file e permessi.",
+      "unknown": "Si è verificato un errore sconosciuto."
+    },
+    "abort": {
+      "reauth_successful": "Riautenticazione completata con successo.",
+      "reconfigure_successful": "Riconfigurazione completata con successo.",
+      "already_configured": "Questo dispositivo è già configurato.",
+      "not_vidaa_tv": "Il dispositivo rilevato non è una Hisense VIDAA TV compatibile."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni Hisense VIDAA TV",
+        "description": "Seleziona una categoria di opzioni da configurare:",
+        "menu_options": {
+          "general": "⚡ Opzioni generali e alimentazione",
+          "sources": "📺 Sorgenti e controlli multimediali",
+          "picture_sound": "🎨 Controlli immagine e audio",
+          "remote_keys": "🎮 Tempi e ripetizioni tasti telecomando",
+          "certs": "🔒 Certificati SSL e sicurezza"
+        }
+      },
+      "general": {
+        "title": "Opzioni generali e alimentazione",
+        "description": "Configura accensione, WoL e opzioni di base del dispositivo.",
+        "data": {
+          "enable_remote": "Abilita entità Telecomando dedicata",
+          "enable_notify": "Abilita notifiche toast sullo schermo (solo modelli supportati)",
+          "enable_wol": "Abilita accensione tramite Wake-on-LAN",
+          "secondary_mac_address": "Indirizzo MAC secondario (Wi-Fi o Ethernet)",
+          "use_ssl": "Usa connessione crittografata SSL/TLS",
+          "refresh_in_standby": "Rinnova i token di accesso mentre la TV è in standby"
+        },
+        "data_description": {
+          "refresh_in_standby": "Abilita se la TV mantiene la connessione di rete da spenta (es. Avvio rapido / Fast Power On). Il token di accesso di 2 giorni viene rinnovato anche se la TV non viene accesa, preservando l'associazione attraverso i riavvii di Home Assistant. Lascia disattivato per le TV che si spengono completamente in standby."
+        }
+      },
+      "sources": {
+        "title": "Sorgenti e controlli multimediali",
+        "description": "Configura le sorgenti di ingresso, l'elenco delle app e i controlli di riproduzione multimediale.",
+        "data": {
+          "include_apps_in_sources": "Includi le app Smart TV nell'elenco sorgenti di Media Player",
+          "enable_media_controls": "Abilita controlli di riproduzione multimediale (play/pausa, stop, avanti/indietro)",
+          "enable_cec_names": "Mostra i nomi dei dispositivi HDMI-CEC connessi nelle sorgenti (es. 'HDMI 2 (PlayStation 5)')"
+        }
+      },
+      "picture_sound": {
+        "title": "Controlli immagine e audio",
+        "description": "Configura cursori di calibrazione immagine, selezione modalità audio e modalità solo audio.",
+        "data": {
+          "enable_picture_controls": "Abilita selettore modalità immagine e cursori di calibrazione (Retroilluminazione, Luminosità, Contrasto)",
+          "enable_sound_controls": "Abilita selettore preset equalizzatore modalità audio",
+          "enable_audio_only": "Abilita interruttore display Solo Audio (Schermo spento)"
+        }
+      },
+      "remote_keys": {
+        "title": "Tempi e ripetizioni tasti telecomando",
+        "description": "Configura i ritardi di comando predefiniti e le ripetizioni dei tasti per il telecomando.",
+        "data": {
+          "key_delay": "Ritardo tasto predefinito (secondi)",
+          "key_repeat": "Conteggio ripetizioni tasto predefinito"
+        }
+      },
+      "certs": {
+        "title": "Certificati SSL e sicurezza",
+        "description": "Seleziona il profilo di autenticazione e i percorsi opzionali dei certificati client SSL/TLS personalizzati.",
+        "data": {
+          "auth_profile": "Profilo di autenticazione / certificato",
+          "certfile": "Percorso file certificato (.crt / .pem / .p12)",
+          "keyfile": "Percorso file chiave privata (.key / .pem)"
+        }
+      }
+    },
+    "error": {
+      "certs_not_found": "File del certificato o della chiave privata non trovato nel percorso specificato. Verifica posizione del file e permessi."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "session_status": {
+        "name": "Stato sessione"
+      },
+      "auth_profile": {
+        "name": "Profilo di autenticazione"
+      },
+      "active_app": {
+        "name": "App attiva"
+      },
+      "active_source": {
+        "name": "Sorgente attiva"
+      },
+      "audio_output": {
+        "name": "Uscita audio"
+      },
+      "reported_name": {
+        "name": "Nome segnalato"
+      }
+    },
+    "binary_sensor": {
+      "mqtt_connected": {
+        "name": "MQTT connesso"
+      },
+      "in_use": {
+        "name": "In uso"
+      }
+    },
+    "button": {
+      "force_reconnect": {
+        "name": "Forza riconnessione"
+      },
+      "sync_clock": {
+        "name": "Sincronizza orologio"
+      },
+      "probe_capabilities": {
+        "name": "Verifica funzionalità"
+      }
+    },
+    "notify": {
+      "notifications": {
+        "name": "Notifiche"
+      }
+    },
+    "select": {
+      "audio_output": {
+        "name": "Modalità uscita audio"
+      },
+      "picture_mode": {
+        "name": "Modalità immagine"
+      },
+      "sound_mode": {
+        "name": "Modalità audio"
+      }
+    },
+    "number": {
+      "backlight": {
+        "name": "Retroilluminazione"
+      },
+      "brightness": {
+        "name": "Luminosità"
+      },
+      "contrast": {
+        "name": "Contrasto"
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Telecomando"
+      }
+    },
+    "switch": {
+      "audio_only": {
+        "name": "Solo audio"
+      },
+      "debug_logging": {
+        "name": "Registrazione debug"
+      }
+    }
+  },
+  "services": {
+    "send_key": {
+      "name": "Invia tasto",
+      "description": "Invia la pressione di un tasto o una sequenza di tasti alla TV.",
+      "fields": {
+        "key": {
+          "name": "Tasto",
+          "description": "Codice del tasto da inviare (es. KEY_POWER, KEY_HOME, KEY_VOLUMEUP)."
+        },
+        "repeat": {
+          "name": "Ripeti",
+          "description": "Numero di volte per cui ripetere la pressione del tasto."
+        },
+        "delay": {
+          "name": "Ritardo",
+          "description": "Ritardo in secondi tra pressioni di tasti ripetute."
+        }
+      }
+    },
+    "launch_app": {
+      "name": "Avvia applicazione",
+      "description": "Avvia un'applicazione Smart TV per nome o URL diretto.",
+      "fields": {
+        "app": {
+          "name": "Nome applicazione o URL",
+          "description": "Il nome dell'app (es. Netflix, YouTube, Prime Video) o un URL deep link."
+        }
+      }
+    },
+    "set_picture_setting": {
+      "name": "Imposta parametro immagine",
+      "description": "Modifica un'impostazione specifica del menu immagine della TV o un parametro di calibrazione.",
+      "fields": {
+        "menu_id": {
+          "name": "ID menu",
+          "description": "ID numerico del menu (es. 91 per Modalità immagine, 92 per Retroilluminazione, 93 per Luminosità, 94 per Contrasto)."
+        },
+        "menu_value": {
+          "name": "Valore menu",
+          "description": "Valore dell'impostazione o nome della modalità preimpostata."
+        }
+      }
+    },
+    "set_sound_setting": {
+      "name": "Imposta parametro audio",
+      "description": "Modifica un'impostazione specifica del menu audio della TV o un preset di equalizzazione.",
+      "fields": {
+        "menu_id": {
+          "name": "ID menu",
+          "description": "ID numerico del menu (es. 1 per Modalità audio)."
+        },
+        "menu_value": {
+          "name": "Valore menu",
+          "description": "Nome o valore della modalità audio."
+        }
+      }
+    },
+    "send_text_input": {
+      "name": "Invia input di testo",
+      "description": "Invia testo dalla tastiera virtuale a un campo di inserimento attivo sullo schermo o alla barra di ricerca del browser.",
+      "fields": {
+        "text": {
+          "name": "Testo",
+          "description": "Stringa di testo da inserire."
+        },
+        "action": {
+          "name": "Azione",
+          "description": "Tipo di azione di inserimento (insert, replace, clear)."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "no_target_device": {
+      "message": "Nessuna Hisense VIDAA TV corrispondente è stata trovata per la destinazione specificata della chiamata di servizio."
+    },
+    "not_connected": {
+      "message": "Impossibile inviare il comando: la TV è attualmente disconnessa."
+    }
+  },
+  "selector": {
+    "auth_profile": {
+      "options": {
+        "auto": "Rilevamento automatico (consigliato)",
+        "modern": "VIDAA 2.0 / 2024+ (vidaa_2024)",
+        "middle": "VIDAA 1.5 / Intermedio (3000–3285)",
+        "remotenow": "RemoteNOW / 2018–2023 (standard)",
+        "legacy": "Statico legacy (pre-2022 / credenziali statiche)"
+      }
+    }
+  },
+  "issues": {
+    "certificate_missing": {
+      "title": "Certificati client VIDAA mancanti",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Verifica certificati client",
+            "description": "Dopo aver copiato hisense.crt e hisense.key in /config/ssl o /ssl, invia questo modulo per verificare."
+          }
+        },
+        "error": {
+          "certificates_still_missing": "I certificati risultano ancora mancanti. Assicurati che hisense.crt e hisense.key siano presenti."
+        }
+      }
+    },
+    "auth_token_invalidated": {
+      "title": "Hisense TV: riautenticazione richiesta",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Associa nuovamente con Hisense TV",
+            "description": "Home Assistant non riesce più ad autenticarsi con la tua Hisense TV ({ip_address}). Il broker della TV ha rifiutato i token di accesso e aggiornamento memorizzati (questo accade solitamente dopo un aggiornamento firmware o un riavvio hardware forzato).\n\nFai clic su **Invia** per avviare la procedura di associazione. Assicurati che la TV sia **accesa** (non in standby): sullo schermo apparirà un codice PIN."
+          }
+        }
+      }
+    }
+  }
+}
