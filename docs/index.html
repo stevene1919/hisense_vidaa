@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+
+  <!-- Google Search Console Verification Tag -->
+  <meta name="google-site-verification" content="-3XOo5GYNS7xnXHNkNRTZ9-sW5gsbl9_ZgdGlCahYg4" />
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://stevene1919.github.io/hisense_vidaa/" />
+
+  <!-- Primary Meta Tags -->
+  <title>Hisense VIDAA TV — Home Assistant Integration</title>
+  <meta name="title" content="Hisense VIDAA TV — Home Assistant Integration" />
+  <meta name="description" content="100% local push Home Assistant integration for Hisense and VIDAA OS smart TVs. Direct MQTT control, media transport, volume, apps, and Wake-on-LAN." />
+  <meta name="keywords" content="hisense vidaa, home assistant hisense, vidaa tv home assistant, hisense mqtt, home assistant smart tv, hacs hisense, remotenow alternative, home assistant local push, vidaa os" />
+  <meta name="author" content="Steven (stevene1919)" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stevene1919.github.io/hisense_vidaa/" />
+  <meta property="og:title" content="Hisense VIDAA TV — Home Assistant Integration" />
+  <meta property="og:description" content="100% local push Home Assistant integration for Hisense and VIDAA OS smart TVs. Direct MQTT control, media transport, volume, apps, and Wake-on-LAN." />
+  <meta property="og:image" content="https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/assets/screenshots/integration_device.png" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://stevene1919.github.io/hisense_vidaa/" />
+  <meta property="twitter:title" content="Hisense VIDAA TV — Home Assistant Integration" />
+  <meta property="twitter:description" content="100% local push Home Assistant integration for Hisense and VIDAA OS smart TVs. Direct MQTT control, media transport, volume, apps, and Wake-on-LAN." />
+  <meta property="twitter:image" content="https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/assets/screenshots/integration_device.png" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/brand/icon.png" />
+
+  <!-- Schema.org Structured Data: SoftwareApplication & FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Hisense VIDAA TV Integration for Home Assistant",
+        "operatingSystem": "Home Assistant OS, Linux, Docker, Supervised, Core",
+        "applicationCategory": "HomeAutomationApplication",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "description": "Native Home Assistant integration for Hisense and VIDAA OS smart TVs with direct MQTT TLS communication, 100% local push updates, full media controls, and zero cloud dependencies.",
+        "url": "https://stevene1919.github.io/hisense_vidaa/",
+        "downloadUrl": "https://github.com/stevene1919/hisense_vidaa",
+        "license": "https://opensource.org/licenses/MIT"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the Hisense VIDAA TV integration?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "It is a native custom integration for Home Assistant that communicates directly with Hisense smart TVs running VIDAA OS over your local network using MQTT over TLS (port 36669). It requires zero cloud accounts, external bridges, or internet dependencies."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which Hisense TV generations and firmware versions are supported?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The integration supports all major generations of Hisense VIDAA smart TVs: Modern VIDAA 2.0 (2024+, U6K/U7K/U8K), Middle VIDAA 1.5, Standard RemoteNOW Dynamic (2018–2023), and Legacy Static models (pre-2022). It includes an automatic 4-tier authentication fallback cascade."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does the integration require cloud access or internet connectivity?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. The integration operates with 100% local push control (iot_class: local_push). You can isolate your TV on a dedicated IoT VLAN with external internet access completely blocked, and Home Assistant will continue to control it seamlessly."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can it turn the TV on when it is in standby?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. It supports Wake-on-LAN with dual-MAC fallback (Ethernet and Wi-Fi) as well as standby token refresh for TVs that support Fast Power On / Quick Start."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it support other TV brands running VIDAA OS?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "VIDAA OS is developed by the Hisense Group and licensed to partner OEM manufacturers (such as Toshiba, Loewe, and others). The underlying architecture and protocol are designed for the VIDAA platform."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --primary-rgb: 2, 132, 199;
+      --background: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #2d3748;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --radius: 0.75rem;
+      --max-width: 880px;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --background: #f8fafc;
+        --surface: #ffffff;
+        --surface-hover: #f1f5f9;
+        --border: #e2e8f0;
+        --text: #0f172a;
+        --text-muted: #64748b;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--background);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 0 1.5rem 3rem 1.5rem;
+    }
+
+    .container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 2rem 0 1.5rem 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 1.35rem;
+    }
+
+    .brand img {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-github {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      text-decoration: none;
+      font-weight: 600;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn-github:hover {
+      background: var(--surface-hover);
+      border-color: var(--primary);
+    }
+
+    .badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .badges-row img {
+      height: 20px;
+    }
+
+    .hero-banner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .hero-banner img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 0.5rem;
+      display: block;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    h2.subtitle {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.25rem;
+    }
+
+    .intro-p {
+      font-size: 1.05rem;
+      color: var(--text);
+      margin-bottom: 2.5rem;
+    }
+
+    h2.section-heading {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin: 2.5rem 0 1rem 0;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .highlights-list {
+      list-style: none;
+      margin-bottom: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .highlights-list li {
+      position: relative;
+      padding-left: 1.5rem;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .highlights-list li::before {
+      content: "•";
+      position: absolute;
+      left: 0.25rem;
+      color: var(--primary);
+      font-weight: bold;
+      font-size: 1.2rem;
+      line-height: 1.4;
+    }
+
+    /* Generations Table */
+    .table-wrapper {
+      overflow-x: auto;
+      margin-bottom: 2.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+
+    th, td {
+      padding: 0.85rem 1.15rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: rgba(0, 0, 0, 0.15);
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    @media (prefers-color-scheme: light) {
+      th {
+        background: #f1f5f9;
+      }
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Links Grid */
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0.875rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .link-card {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 0.875rem 1rem;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+
+    .link-card:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .link-card svg {
+      width: 20px;
+      height: 20px;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    /* FAQ Section */
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1.25rem;
+    }
+
+    .faq-question {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .faq-answer {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="#" class="brand">
+        <img src="https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/brand/icon.png" alt="Hisense VIDAA TV Logo" />
+        Hisense VIDAA TV
+      </a>
+      <div class="header-actions">
+        <a href="https://github.com/stevene1919/hisense_vidaa" class="btn-github">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+          </svg>
+          GitHub
+        </a>
+      </div>
+    </header>
+
+    <main>
+      <div class="badges-row">
+        <a href="https://github.com/hacs/default"><img src="https://img.shields.io/badge/HACS-Custom-orange.svg" alt="HACS" /></a>
+        <a href="https://github.com/stevene1919/hisense_vidaa/releases"><img src="https://img.shields.io/github/v/release/stevene1919/hisense_vidaa" alt="GitHub Release" /></a>
+        <a href="https://github.com/stevene1919/hisense_vidaa/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License" /></a>
+        <a href="https://ko-fi.com/stevene_"><img src="https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=flat&logo=ko-fi&logoColor=white" alt="Ko-fi" /></a>
+      </div>
+
+      <div class="hero-banner">
+        <img src="https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/assets/screenshots/integration_device.png" alt="Hisense VIDAA TV Integration Dashboard in Home Assistant" />
+      </div>
+
+      <h1>Hisense VIDAA TV Integration</h1>
+      <h2 class="subtitle">100% Local Push Smart TV Integration for Home Assistant</h2>
+
+      <p class="intro-p">
+        A native, zero-cloud Home Assistant custom integration for Hisense and VIDAA OS smart TVs.
+        Connects directly to the TV's internal hardware MQTT broker over TLS (port <code>36669</code>),
+        delivering instantaneous state feedback, media controls, app launching, on-screen notifications,
+        and remote navigation with zero external bridges or cloud dependencies.
+      </p>
+
+      <h2 class="section-heading">Key Features</h2>
+      <ul class="highlights-list">
+        <li><strong>100% Local LAN Control (<code>iot_class: local_push</code>)</strong>: Communicates directly with the TV's internal broker over your local network. Supports IoT VLANs with WAN access blocked.</li>
+        <li><strong>Native Python Cryptography</strong>: All challenge-response handshake algorithms and 64-bit XOR transformations run in pure native Python with zero binary library dependencies.</li>
+        <li><strong>Media Player Platform</strong>: Full power toggle, volume stepping, input source switcher, dynamic app artwork, deep linking, and transport controls. Exposes <code>MediaPlayerDeviceClass.TV</code> for Apple HomeKit / Control Center integration.</li>
+        <li><strong>Dedicated Remote Platform</strong>: High-speed key command dispatching, key aliases (<code>home</code>, <code>menu</code>, <code>back</code>, <code>ok</code>), and customizable burst repetitions.</li>
+        <li><strong>Picture &amp; Sound Modes</strong>: Fine-tune Backlight, Brightness, and Contrast sliders, and switch picture modes (Cinema, Dynamic, Filmmaker, Game) and equalizer presets.</li>
+        <li><strong>On-Screen Toast Notifications</strong>: Send custom alert banners and toast messages directly to the TV screen via <code>notify.send_message</code>.</li>
+        <li><strong>Direct Virtual Keyboard Text Input</strong>: Inject text into active on-screen search bars and browser input fields with <code>send_text_input</code>.</li>
+        <li><strong>Subnet-Directed Wake-on-LAN</strong>: Dual-MAC fallback (Ethernet + Wi-Fi) with standby token renewal for Fast Power On / Quick Start models.</li>
+        <li><strong>Multi-Language Localization</strong>: Native translations for English, Italian (<code>it</code>), Spanish (<code>es</code>), German (<code>de</code>), French (<code>fr</code>), and Portuguese (<code>pt</code>, <code>pt-BR</code>).</li>
+      </ul>
+
+      <h2 class="section-heading">Supported TV Generations</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Generation / Firmware</th>
+              <th>Profile</th>
+              <th>Authentication Model</th>
+              <th>Pairing Method</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Modern VIDAA OS</strong> (2024+ / U6K+, U7, U8 / protocol &ge; 3290)</td>
+              <td><code>modern</code></td>
+              <td>VIDAA 2.0 (64-bit XOR mask + modern salt)</td>
+              <td>4-Digit Screen PIN</td>
+            </tr>
+            <tr>
+              <td><strong>Middle VIDAA OS</strong> (VIDAA 1.5 / protocol 3000&ndash;3285)</td>
+              <td><code>middle</code></td>
+              <td>Middle VIDAA (64-bit XOR mask + standard salt)</td>
+              <td>4-Digit Screen PIN</td>
+            </tr>
+            <tr>
+              <td><strong>Standard VIDAA OS</strong> (2018&ndash;2023 / U4, U5, early U6 / protocol &lt; 3000)</td>
+              <td><code>remotenow</code></td>
+              <td>RemoteNOW Dynamic (<code>his$&lt;timestamp&gt;</code> + standard salt)</td>
+              <td>4-Digit Screen PIN</td>
+            </tr>
+            <tr>
+              <td><strong>Legacy Hisense / Older Models</strong> (Pre-2022 / U2, U3)</td>
+              <td><code>legacy</code></td>
+              <td>Legacy Static (<code>hisenseservice</code> / <code>multimqttservice</code>)</td>
+              <td>Instant Setup (No PIN)</td>
+            </tr>
+            <tr>
+              <td><strong>Automatic Fallback Cascade</strong></td>
+              <td><code>auto</code></td>
+              <td>Intelligent UPnP transport detection + 4-tier cascade</td>
+              <td>Automatic</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 class="section-heading">Documentation &amp; Guides</h2>
+      <div class="links-grid">
+        <a href="https://github.com/stevene1919/hisense_vidaa#readme" class="link-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          README &amp; Quick Start
+        </a>
+        <a href="https://github.com/stevene1919/hisense_vidaa/blob/main/docs/network_requirements.md" class="link-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+            <line x1="6" y1="6" x2="6.01" y2="6"/>
+            <line x1="6" y1="18" x2="6.01" y2="18"/>
+          </svg>
+          Network &amp; Firewall Setup
+        </a>
+        <a href="https://github.com/stevene1919/hisense_vidaa/blob/main/docs/certificates.md" class="link-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          SSL/TLS Certificates Guide
+        </a>
+        <a href="https://github.com/stevene1919/hisense_vidaa/blob/main/docs/power_and_standby_settings.md" class="link-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+            <line x1="12" y1="2" x2="12" y2="12"/>
+          </svg>
+          Power &amp; Standby Settings
+        </a>
+        <a href="https://github.com/stevene1919/hisense_vidaa/blob/main/docs/services_and_automations.md" class="link-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
+          </svg>
+          Services &amp; Automations
+        </a>
+        <a href="https://github.com/stevene1919/hisense_vidaa/blob/main/docs/lovelace_cards.md" class="link-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="3" y1="9" x2="21" y2="9"/>
+            <line x1="9" y1="21" x2="9" y2="9"/>
+          </svg>
+          Lovelace Dashboard Cards
+        </a>
+        <a href="https://github.com/stevene1919/hisense_vidaa/blob/main/docs/cli_tools.md" class="link-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"/>
+            <line x1="12" y1="19" x2="20" y2="19"/>
+          </svg>
+          CLI Diagnostic Tools
+        </a>
+        <a href="https://github.com/stevene1919/hisense_vidaa/blob/main/docs/protocol_architecture.md" class="link-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Protocol Architecture
+        </a>
+        <a href="https://github.com/stevene1919/hisense_vidaa" class="link-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+          </svg>
+          GitHub Repository
+        </a>
+      </div>
+
+      <h2 class="section-heading">Frequently Asked Questions</h2>
+      <div class="faq-list">
+        <div class="faq-item">
+          <div class="faq-question">What is the Hisense VIDAA TV integration?</div>
+          <div class="faq-answer">It is a native custom integration for Home Assistant that communicates directly with Hisense smart TVs running VIDAA OS over your local network using MQTT over TLS (port 36669). It requires zero cloud accounts, external bridges, or internet dependencies.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">Which Hisense TV generations and firmware versions are supported?</div>
+          <div class="faq-answer">The integration supports all major generations of Hisense VIDAA smart TVs: Modern VIDAA 2.0 (2024+, U6K/U7K/U8K), Middle VIDAA 1.5, Standard RemoteNOW Dynamic (2018–2023), and Legacy Static models (pre-2022). It includes an automatic 4-tier authentication fallback cascade.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">Does the integration require cloud access or internet connectivity?</div>
+          <div class="faq-answer">No. The integration operates with 100% local push control (<code>iot_class: local_push</code>). You can isolate your TV on a dedicated IoT VLAN with external internet access completely blocked, and Home Assistant will continue to control it seamlessly.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">Can it turn the TV on when it is in standby?</div>
+          <div class="faq-answer">Yes. It supports Wake-on-LAN with dual-MAC fallback (Ethernet and Wi-Fi) as well as standby token refresh for TVs that support Fast Power On / Quick Start.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">Does it support other TV brands running VIDAA OS?</div>
+          <div class="faq-answer">VIDAA OS is developed by the Hisense Group and licensed to partner OEM manufacturers (such as Toshiba, Loewe, and others). The underlying architecture and protocol are designed for the VIDAA platform.</div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p>
+        Maintained by <a href="https://github.com/stevene1919">Steven (stevene1919)</a>. Released under the <a href="https://github.com/stevene1919/hisense_vidaa/blob/main/LICENSE">MIT License</a>.
+      </p>
+      <p>
+        <a href="https://ko-fi.com/stevene_">☕ Support on Ko-fi</a>
+      </p>
+    </footer>
+  </div>
+</body>
+</html>
