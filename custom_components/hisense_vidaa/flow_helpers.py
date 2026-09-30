@@ -149,12 +149,21 @@ async def async_probe_device_capabilities(
 
 
 async def async_disconnect_existing_client(
-    hass: HomeAssistant, ip_address: str | None, mac_address: str | None
+    hass: HomeAssistant,
+    ip_address: str | None,
+    mac_address: str | None,
+    entry_id: str | None = None,
 ) -> None:
-    """Disconnect any running client for this IP/MAC to avoid MQTT session collision during pairing."""
+    """Disconnect any running client for this IP/MAC to avoid MQTT session collision during pairing.
+
+    ``entry_id`` restricts the disconnect to a single entry (the one being
+    re-paired); when omitted, any matching client is disconnected.
+    """
     if not hasattr(hass, "data") or not isinstance(hass.data, dict):
         return
-    for _entry_id, entry_data in list(hass.data.get(DOMAIN, {}).items()):
+    for current_entry_id, entry_data in list(hass.data.get(DOMAIN, {}).items()):
+        if entry_id is not None and current_entry_id != entry_id:
+            continue
         client = entry_data.get("client") if isinstance(entry_data, dict) else entry_data
         if client and (
             getattr(client, "ip", None) == ip_address

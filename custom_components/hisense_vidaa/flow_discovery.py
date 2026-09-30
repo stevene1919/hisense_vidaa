@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant import config_entries
+from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
@@ -73,6 +74,10 @@ class DiscoveryFlowMixin:
             if self._resolve_ssl_certs():
                 try:
                     return await self._async_init_client_and_auth()
+                except AbortFlow:
+                    # HA flow control (e.g. already_configured) must never be
+                    # turned into cannot_connect.
+                    raise
                 except Exception as e:
                     _LOGGER.warning(
                         "[%s] Failed to connect or initiate auth with TV: %s",

@@ -441,6 +441,12 @@ async def test_reconfigure_flow_success(monkeypatch):
         "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
     )
+    # Legacy/reconfigure now probes the static session for a PIN challenge;
+    # return "no challenge" so the flow takes the unchanged no-PIN path.
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.config_flow.async_probe_pairing_challenge",
+        AsyncMock(return_value=False),
+    )
 
     result_reconf = await flow.async_step_reconfigure(
         user_input={

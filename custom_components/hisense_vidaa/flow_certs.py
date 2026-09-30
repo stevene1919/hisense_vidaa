@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.data_entry_flow import AbortFlow
 
 from .const import CONF_CERTFILE, CONF_KEYFILE, CONF_USE_SSL, DEFAULT_USE_SSL
 from .crypto import check_certs_exist, get_profile_default_cert_paths
@@ -61,6 +62,10 @@ class CertsFlowMixin:
             if not errors:
                 try:
                     return await self._async_init_client_and_auth()
+                except AbortFlow:
+                    # HA flow control (e.g. already_configured) must never be
+                    # turned into cannot_connect.
+                    raise
                 except Exception as e:
                     _LOGGER.warning("[%s] Failed to connect or initiate auth: %s", self.ip_address, e)
                     errors["base"] = "cannot_connect"
