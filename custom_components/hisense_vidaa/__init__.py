@@ -6,6 +6,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv, issue_registry as ir
 
 from .client import HisenseTvClient
@@ -191,8 +192,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ):
         platforms_to_setup.append("notify")
 
-    # Start running background thread loop for MQTT client in executor
-    await hass.async_add_executor_job(client.connect_and_run)
+    # Start running background thread loop for MQTT client in executor.
+    # [F10-leg2]: connect_and_run builds the TLS context, so a missing/invalid
+    # certfile or keyfile raises out of paho's tls_set.  Without this guard the
+    # raw traceback escapes setup instead of a clean, retried setup failure.
+    try:
+        await hass.async_add_executor_job(client.connect_and_run)
+    except Exception as err:
+        raise ConfigEntryNotReady(
+            f"Cannot connect to Hisense TV at {client.ip}: {err}"
+        ) from err
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {

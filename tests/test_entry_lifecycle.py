@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from homeassistant.exceptions import ConfigEntryNotReady
 
 from custom_components.hisense_vidaa import (
     DOMAIN,
@@ -83,6 +84,22 @@ async def test_services_are_registered_again_after_last_entry_is_reloaded(
     # 3. ...so the next setup (an options-change reload) must register them again
     await async_setup_entry(hass, mock_entry)
     assert {service for _, service in hass.services.registered} == set(ALL_SERVICES)
+
+
+@pytest.mark.anyio
+async def test_connect_failure_raises_config_entry_not_ready(
+    mock_entry, mock_client, monkeypatch
+):
+    """[F10-leg2] a missing/invalid cert must fail setup cleanly, not leak a FileNotFoundError."""
+    hass = _setup_hass(mock_entry, mock_client, monkeypatch)
+    mock_client.connect_and_run = MagicMock(
+        side_effect=FileNotFoundError(2, "No such file or directory")
+    )
+
+    with pytest.raises(ConfigEntryNotReady):
+        await async_setup_entry(hass, mock_entry)
+
+    assert DOMAIN not in hass.data
 
 
 

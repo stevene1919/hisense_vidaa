@@ -127,6 +127,25 @@ if "homeassistant" not in sys.modules:
     ha.data_entry_flow = data_entry_flow
     sys.modules["homeassistant.data_entry_flow"] = data_entry_flow
 
+    # exceptions
+    exceptions = types.ModuleType("homeassistant.exceptions")
+    class HomeAssistantError(Exception):
+        def __init__(self, message=None, *, translation_domain=None, translation_key=None, translation_placeholders=None):
+            super().__init__(message)
+            self.message = message
+            self.translation_domain = translation_domain
+            self.translation_key = translation_key
+            self.translation_placeholders = translation_placeholders
+    class ConfigEntryNotReady(HomeAssistantError):
+        pass
+    class ServiceValidationError(HomeAssistantError):
+        pass
+    exceptions.HomeAssistantError = HomeAssistantError
+    exceptions.ConfigEntryNotReady = ConfigEntryNotReady
+    exceptions.ServiceValidationError = ServiceValidationError
+    ha.exceptions = exceptions
+    sys.modules["homeassistant.exceptions"] = exceptions
+
     # components
     components = types.ModuleType("homeassistant.components")
 
