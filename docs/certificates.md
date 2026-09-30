@@ -47,6 +47,14 @@ In the official **VIDAA Smart TV** Android APK (`com.universal.remote.multi`), t
 > [!NOTE]
 > **Modern Firmware (2024+ / `p20.09...`):** Newer VIDAA firmware builds enforce client certificate subject identity (`CN=VidaaAppAndroidV01`). Using older 2018 RemoteNOW certificates (`rcm_certchain_pem.cer`) on these firmware builds will result in connection rejection (**`rc: 5` - Not Authorized**). Use the modern VIDAA certificate bundle (`El.p12` / `vidaa_2024_cert.pem`) to resolve this.
 
+> [!TIP]
+> **Manual PKCS#12 Conversion (OpenSSL 3.x / Legacy Ciphers):** If automatic extraction fails (e.g. if the `.p12` was created with legacy RC2/3DES ciphers and the host environment does not enable the OpenSSL legacy provider), convert the archive manually to standard PEM files:
+> ```bash
+> openssl pkcs12 -legacy -in client_mobile_android.p12 -passin pass:186e990688070325a1c4b0ce275d2388 -clcerts -nokeys -out hisense.crt
+> openssl pkcs12 -legacy -in client_mobile_android.p12 -passin pass:186e990688070325a1c4b0ce275d2388 -nocerts -nodes -out hisense.key
+> ```
+
+
 ---
 
 ## 🛡️ Root CA Verification

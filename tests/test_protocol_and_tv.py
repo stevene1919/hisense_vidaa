@@ -199,3 +199,54 @@ def test_dispatch_incoming_mqtt_message() -> None:
     # Test device info dispatch
     dispatch_incoming_mqtt_message(mock_client, "hisense_sub_test/platform_service/data/getdeviceinfo", '{"devicename": "Living Room TV"}')
     mock_client._dispatch_device_info_update.assert_called_with({"devicename": "Living Room TV"})
+
+
+def test_test_tv_ssl_connection_unauthenticated():
+    """Verify test_tv_ssl_connection allows testing TLS handshake without presenting client certificates."""
+    from custom_components.hisense_vidaa.protocol.auth import test_tv_ssl_connection
+
+    mock_sock = MagicMock()
+    mock_ssock = MagicMock()
+    mock_ssock.cipher.return_value = ("TLS_AES_256_GCM_SHA384", "TLSv1.3", 256)
+    mock_ssock.version.return_value = "TLSv1.3"
+    mock_ssock.__enter__.return_value = mock_ssock
+
+    mock_ctx = MagicMock()
+    mock_ctx.wrap_socket.return_value = mock_ssock
+
+    with patch("socket.create_connection", return_value=mock_sock), \
+         patch("ssl.SSLContext", return_value=mock_ctx):
+        res = test_tv_ssl_connection("192.168.50.12")
+        assert res["connected"] is True
+        assert res["tls_version"] == "TLSv1.3"
+        assert res["cipher"] == "TLS_AES_256_GCM_SHA384"
+        assert res["client_cert_presented"] is False
+        assert res["certfile"] is None
+
+
+def test_ping_tv_client_cert_tracking():
+    """Verify ping_tv accurately tracks whether client certificates were presented."""
+    from custom_components.hisense_vidaa.protocol.ping import ping_tv
+
+    mock_sock = MagicMock()
+    with patch("socket.create_connection", return_value=mock_sock), \
+         patch("custom_components.hisense_vidaa.protocol.ping.test_tv_ssl_connection", return_value={
+             "connected": True,
+             "tls_version": "TLSv1.3",
+             "cipher": "TLS_AES_256_GCM_SHA384",
+             "client_cert_presented": False,
+             "certfile": None,
+             "keyfile": None,
+         }), \
+         patch("custom_components.hisense_vidaa.protocol.ping.probe_tv_auth_methods", return_value={
+             "legacy_static": {"rc": None, "supported": False},
+             "standard_dynamic": {"rc": None, "supported": False},
+             "middle_dynamic": {"rc": None, "supported": False},
+             "modern_dynamic": {"rc": None, "supported": False},
+             "client_cert_presented": False,
+         }), \
+         patch("custom_components.hisense_vidaa.protocol.ping.get_device_fingerprint", return_value={}):
+        res = ping_tv("192.168.50.12")
+        assert res["tcp_port_open"] is True
+        assert res["tls_handshake"] is True
+        assert res["client_cert_presented"] is False

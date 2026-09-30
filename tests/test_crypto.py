@@ -260,6 +260,16 @@ def test_resolve_certificates_direct_p12_argument(tmp_path):
     assert "custom_bundle_key.pem" in resolved_key
 
 
+def test_resolve_certificates_failed_p12_returns_none(tmp_path):
+    """Test that a corrupt or unextractable .p12 archive returns (None, None) instead of falling back to raw path."""
+    bad_p12 = tmp_path / "corrupt.p12"
+    bad_p12.write_bytes(b"not a valid pkcs12 bundle")
+
+    resolved_cert, resolved_key = resolve_certificates(certfile=str(bad_p12))
+    assert resolved_cert is None
+    assert resolved_key is None
+
+
 def test_profile_cert_candidates_el_p12_membership():
     """Verify El.p12 and el.p12 exist in candidate lists for appropriate profiles."""
     from custom_components.hisense_vidaa.protocol.certs import PROFILE_CERT_CANDIDATES

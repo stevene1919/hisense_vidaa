@@ -178,18 +178,13 @@ def perform_token_refresh(
 
 def test_tv_ssl_connection(
     ip: str,
-    certfile: str,
-    keyfile: str,
+    certfile: str | None = None,
+    keyfile: str | None = None,
     ca_cert: str | None = None,
     verify_ssl: bool = False,
     timeout: float = 3.0,
 ) -> dict[str, Any]:
     """Tests the TLS handshake against the TV MQTT broker on port 36669."""
-    if not certfile or not os.path.isfile(certfile):
-        raise FileNotFoundError(f"SSL Certificate file not found: '{certfile}'")
-    if not keyfile or not os.path.isfile(keyfile):
-        raise FileNotFoundError(f"SSL Private Key file not found: '{keyfile}'")
-
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.check_hostname = False
     if verify_ssl and ca_cert and os.path.isfile(ca_cert):
@@ -197,20 +192,31 @@ def test_tv_ssl_connection(
         context.load_verify_locations(cafile=ca_cert)
     else:
         context.verify_mode = ssl.CERT_NONE
-    context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+
+    has_client_cert = False
+    if certfile or keyfile:
+        if not certfile or not os.path.isfile(certfile):
+            raise FileNotFoundError(f"SSL Certificate file not found: '{certfile}'")
+        if not keyfile or not os.path.isfile(keyfile):
+            raise FileNotFoundError(f"SSL Private Key file not found: '{keyfile}'")
+        context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+        has_client_cert = True
 
     with (
         socket.create_connection((ip, 36669), timeout=timeout) as sock,
         context.wrap_socket(sock) as ssock,
     ):
-        cipher_name, _proto, bits = ssock.cipher()
+        cipher = ssock.cipher()
+        cipher_name = cipher[0] if cipher else "Unknown"
+        bits = cipher[2] if cipher and len(cipher) > 2 else 0
         return {
             "connected": True,
             "tls_version": ssock.version(),
             "cipher": cipher_name,
             "bits": bits,
-            "certfile": certfile,
-            "keyfile": keyfile,
+            "client_cert_presented": has_client_cert,
+            "certfile": certfile if has_client_cert else None,
+            "keyfile": keyfile if has_client_cert else None,
             "ca_cert": ca_cert if verify_ssl else None,
         }
 
@@ -225,20 +231,24 @@ def probe_tv_auth_methods(
     timeout: float = 2.0,
 ) -> dict[str, Any]:
     """Probes TV MQTT broker with various auth algorithms to diagnose compatibility."""
+    has_cert = bool(certfile and keyfile and os.path.isfile(certfile) and os.path.isfile(keyfile))
     results = {
         "legacy_static": {"rc": None, "supported": False},
         "standard_dynamic": {"rc": None, "supported": False},
         "middle_dynamic": {"rc": None, "supported": False},
         "modern_dynamic": {"rc": None, "supported": False},
+        "client_cert_presented": has_cert,
     }
 
     def _setup_tls(c: mqtt.Client) -> None:
-        if certfile and keyfile and os.path.isfile(certfile) and os.path.isfile(keyfile):
+        if has_cert:
             if verify_ssl and ca_cert and os.path.isfile(ca_cert):
                 c.tls_set(ca_certs=ca_cert, certfile=certfile, keyfile=keyfile, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS)
             else:
                 c.tls_set(ca_certs=None, certfile=certfile, keyfile=keyfile, cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
-            c.tls_insecure_set(True)
+        else:
+            c.tls_set(cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
+        c.tls_insecure_set(True)
 
     # 1. Legacy static ('hisenseservice')
     try:

@@ -75,6 +75,7 @@ def extract_pkcs12_to_pem(
     private_key = None
     certificate = None
 
+    last_error: Exception | None = None
     for pwd in passwords_to_try:
         try:
             key, cert, _ = pkcs12.load_key_and_certificates(p12_data, pwd)
@@ -82,16 +83,33 @@ def extract_pkcs12_to_pem(
                 private_key = key
                 certificate = cert
                 break
-        except Exception:
+        except Exception as ex:
+            last_error = ex
             continue
 
     if not private_key or not certificate:
-        _LOGGER.debug("Could not extract private key and certificate from PKCS#12 file %s", p12_path)
+        _LOGGER.debug(
+            "Could not extract private key and certificate from PKCS#12 file %s (last error: %s)",
+            p12_path,
+            last_error,
+        )
         return None
 
     if dest_dir is None:
         dest_dir = os.path.dirname(os.path.abspath(p12_path))
-    os.makedirs(dest_dir, exist_ok=True)
+
+    # Verify dest_dir is writable or fall back to system temp directory
+    try:
+        os.makedirs(dest_dir, exist_ok=True)
+        test_file = os.path.join(dest_dir, ".test_write")
+        with open(test_file, "wb") as f:
+            f.write(b"")
+        os.remove(test_file)
+    except (OSError, PermissionError):
+        import tempfile
+
+        dest_dir = os.path.join(tempfile.gettempdir(), "hisense_vidaa_certs")
+        os.makedirs(dest_dir, exist_ok=True)
 
     base_name = os.path.splitext(os.path.basename(p12_path))[0]
     out_cert_path = os.path.join(dest_dir, f"{base_name}_cert.pem")
@@ -209,6 +227,16 @@ def resolve_certificates(
         extracted = extract_pkcs12_to_pem(certfile)
         if extracted:
             return extracted
+        _LOGGER.warning(
+            "Failed to extract certificates from PKCS#12 bundle '%s'. "
+            "If the archive uses legacy encryption, convert it to PEM with OpenSSL: "
+            "'openssl pkcs12 -legacy -in %s -passin pass:186e990688070325a1c4b0ce275d2388 -clcerts -nokeys -out hisense.crt' and "
+            "'openssl pkcs12 -legacy -in %s -passin pass:186e990688070325a1c4b0ce275d2388 -nocerts -nodes -out hisense.key'",
+            certfile,
+            os.path.basename(certfile),
+            os.path.basename(certfile),
+        )
+        return None, None
 
     profile_clean = (auth_profile or "auto").lower()
     if profile_clean in ("modern", "vidaa_2024", "vidaa"):

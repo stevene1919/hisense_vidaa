@@ -74,6 +74,9 @@ def do_ping(ip: str, creds: dict, certfile: str | None, keyfile: str | None, pro
         print("\n📡 Connection Probe Results:")
         print(f"  • [1] TCP Port 36669:         {'✅ OPEN' if res['tcp_port_open'] else '❌ CLOSED / UNREACHABLE'}")
         print(f"  • [2] TLS Handshake:          {'✅ SUCCESS' if res['tls_handshake'] else '❌ FAILED'} ({res.get('tls_version') or 'N/A'}, {res.get('cipher') or 'N/A'})")
+        cert_pres = res.get("client_cert_presented")
+        cert_path_str = f" ({res['certfile']})" if res.get("certfile") else ""
+        print(f"  • Client Certificate:         {'✅ PRESENTED' + cert_path_str if cert_pres else '⚠️ NONE PRESENTED (Unauthenticated TLS)'}")
 
         if res.get("mqtt_rc") is not None:
             if res["mqtt_connected"]:
@@ -85,16 +88,33 @@ def do_ping(ip: str, creds: dict, certfile: str | None, keyfile: str | None, pro
 
         print("\n🔐 Initial Pairing Auth Compatibility:")
         std = auth_probe.get("standard_dynamic", {})
+        middle = auth_probe.get("middle_dynamic", {})
         modern = auth_probe.get("modern_dynamic", {})
         legacy = auth_probe.get("legacy_static", {})
 
         std_p_str = "✅ ACCEPTED (rc=0)" if std.get("supported") else f"❌ REJECTED (rc={std.get('rc')})"
+        mid_p_str = "✅ ACCEPTED (rc=0)" if middle.get("supported") else f"❌ REJECTED (rc={middle.get('rc')})"
         mod_p_str = "✅ ACCEPTED (rc=0)" if modern.get("supported") else f"❌ REJECTED (rc={modern.get('rc')})"
         leg_p_str = "✅ ACCEPTED (rc=0)" if legacy.get("supported") else f"❌ REJECTED (rc={legacy.get('rc')})"
 
         print(f"  • Standard Dynamic Auth:      {std_p_str}")
+        print(f"  • Middle Dynamic Auth:        {mid_p_str}")
         print(f"  • Modern XOR Dynamic Auth:    {mod_p_str}")
         print(f"  • Legacy Static Auth:         {leg_p_str}")
+
+        if not legacy.get("supported") and not std.get("supported") and not middle.get("supported") and not modern.get("supported"):
+            if not cert_pres:
+                print("\n⚠️  DIAGNOSTIC WARNING: All auth profiles were rejected with rc=5 and NO client certificate was presented!")
+                print("  • Many VIDAA models (especially UK/European models like 75E8QTUK, or TVs with strict broker configuration)")
+                print("    permit the TLS handshake without a client certificate, but actively reject all MQTT connections with rc=5")
+                print("    and display 'Your TV model is no longer compatible with the current version of our mobile app' on the screen.")
+                print("  • Fix: Provide an official client certificate and private key via --cert and --key (or put hisense.crt/hisense.key in ssl/).")
+                print("  • If you have client_mobile_android.p12 from the official APK, convert it using OpenSSL:")
+                print("    openssl pkcs12 -legacy -in client_mobile_android.p12 -passin pass:186e990688070325a1c4b0ce275d2388 -clcerts -nokeys -out hisense.crt")
+                print("    openssl pkcs12 -legacy -in client_mobile_android.p12 -passin pass:186e990688070325a1c4b0ce275d2388 -nocerts -nodes -out hisense.key")
+            else:
+                print("\n⚠️  DIAGNOSTIC WARNING: All auth profiles were rejected (rc=5) despite presenting a client certificate.")
+                print("  • Verify the certificate matches your TV's required auth profile, or your TV may use an updated credential signature.")
 
         if dev.get("model_code") or dev.get("model_name") or dev.get("friendly_name"):
             mfg = dev.get("manufacturer") or dev.get("brand") or "Hisense"
@@ -241,13 +261,16 @@ def do_test_ssl(ip: str, certfile: str | None, keyfile: str | None, profile: str
     try:
         res = client.test_ssl_connection()
         print("\n✅ TLS Connection Successful!")
-        print(f"  • TV Address:    {ip}:36669")
-        print(f"  • TLS Version:   {res['tls_version']}")
-        print(f"  • Cipher Suite:  {res['cipher']} ({res['bits']} bits)")
-        print(f"  • Certificate:   {res['certfile']}")
-        print(f"  • Private Key:   {res['keyfile']}")
+        print(f"  • TV Address:         {ip}:36669")
+        print(f"  • TLS Version:        {res['tls_version']}")
+        print(f"  • Cipher Suite:       {res['cipher']} ({res['bits']} bits)")
+        cert_pres = res.get("client_cert_presented")
+        print(f"  • Client Certificate: {'✅ PRESENTED' if cert_pres else '⚠️ NONE PRESENTED (Unauthenticated TLS)'}")
+        if cert_pres:
+            print(f"  • Certificate File:   {res['certfile']}")
+            print(f"  • Private Key File:   {res['keyfile']}")
         if res.get("ca_cert"):
-            print(f"  • Root CA:       {res['ca_cert']}")
+            print(f"  • Root CA:            {res['ca_cert']}")
     except FileNotFoundError as e:
         print(f"\n❌ Certificate Error: {e}")
         sys.exit(1)
@@ -323,8 +346,18 @@ async def do_auth(ip: str, mac: str | None, certfile: str | None, keyfile: str |
         if "code 5" in err_str or "not authorized" in err_str:
             print("\n💡 Diagnosis (MQTT RC 5):")
             print("  • The TV broker rejected the initial credentials during pairing.")
-            print("  • If your TV is running a newer firmware build (e.g. VIDAA U7+ / Q0704+),")
-            print("    it may require a newer authentication signature currently under development.")
+            if not client.certfile or not client.keyfile:
+                print("  • ⚠️ NO CLIENT CERTIFICATE WAS PRESENTED!")
+                print("    Many VIDAA models (especially UK/European models like 75E8QTUK, or TVs with strict broker security)")
+                print("    allow TLS negotiation without a client cert, but reject all pairing attempts with rc=5")
+                print("    and display 'Your TV model is no longer compatible with the current version of our mobile app' on the screen.")
+                print("    Provide client certificates via --cert and --key (or put hisense.crt and hisense.key in ssl/).")
+                print("    If using a .p12 archive, convert it using OpenSSL with -legacy:")
+                print("    openssl pkcs12 -legacy -in client_mobile_android.p12 -passin pass:186e990688070325a1c4b0ce275d2388 -clcerts -nokeys -out hisense.crt")
+                print("    openssl pkcs12 -legacy -in client_mobile_android.p12 -passin pass:186e990688070325a1c4b0ce275d2388 -nocerts -nodes -out hisense.key")
+            else:
+                print("  • If your TV is running a newer firmware build (e.g. VIDAA U7+ / Q0704+),")
+                print("    it may require a newer authentication signature currently under development.")
             print("  • Run the diagnostic report to capture TV details:")
             print(f"    python3 test_client.py report --ip {ip} --probe")
         elif "timed out" in err_str:
@@ -499,6 +532,25 @@ def main() -> None:
     logging.basicConfig(level=log_level, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
     cert_path = args.p12 or args.cert
+    key_path = args.key_file
+
+    if cert_path and (cert_path.lower().endswith(".p12") or cert_path.lower().endswith(".pfx")):
+        from custom_components.hisense_vidaa.crypto import extract_pkcs12_to_pem
+
+        extracted = extract_pkcs12_to_pem(cert_path)
+        if extracted:
+            cert_path, key_path = extracted
+            print(f"ℹ️ Automatically extracted PKCS#12 bundle:\n   • Certificate: {cert_path}\n   • Private Key: {key_path}")
+        else:
+            print(f"\n⚠️ Warning: Could not automatically extract certificates from PKCS#12 archive: {cert_path}")
+            print("  If the archive uses legacy PKCS#12 encryption (standard in VIDAA mobile app bundles),")
+            print("  convert it to PEM format using OpenSSL with the -legacy flag:")
+            print(f"    openssl pkcs12 -legacy -in {cert_path} -passin pass:186e990688070325a1c4b0ce275d2388 -clcerts -nokeys -out hisense.crt")
+            print(f"    openssl pkcs12 -legacy -in {cert_path} -passin pass:186e990688070325a1c4b0ce275d2388 -nocerts -nodes -out hisense.key")
+            print("  Then pass: --cert hisense.crt --key hisense.key\n")
+            cert_path = None
+            key_path = None
+
     creds = load_credentials_file(args.config)
 
     if args.action == "ping":
@@ -506,38 +558,38 @@ def main() -> None:
         if not ip:
             print("Error: --ip <IP> is required for 'ping' action (or valid credentials.json).")
             sys.exit(1)
-        do_ping(ip, creds, cert_path, args.key_file, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
+        do_ping(ip, creds, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
 
     elif args.action in ("probe", "probe-features"):
         ip = args.ip or (creds.get("ip_address") if creds else None)
         if not ip:
             print("Error: --ip <IP> is required for 'probe' action (or valid credentials.json).")
             sys.exit(1)
-        do_probe(ip, creds, cert_path, args.key_file, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
+        do_probe(ip, creds, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
 
     elif args.action == "report":
         ip = args.ip or (creds.get("ip_address") if creds else None)
         if not ip:
             print("Error: --ip <IP> is required for 'report' action (or valid credentials.json).")
             sys.exit(1)
-        do_report(ip, args.mac, creds, cert_path, args.key_file, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, probe=args.probe)
+        do_report(ip, args.mac, creds, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, probe=args.probe)
 
     elif args.action == "test-ssl":
         if not args.ip:
             print("Error: --ip <IP> is required for 'test-ssl' action.")
             sys.exit(1)
-        do_test_ssl(args.ip, cert_path, args.key_file, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
+        do_test_ssl(args.ip, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
 
     elif args.action == "auth":
         if not args.ip:
             print("Error: --ip <IP> is required for 'auth' action.")
             sys.exit(1)
-        asyncio.run(do_auth(args.ip, args.mac, cert_path, args.key_file, args.config, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl))
+        asyncio.run(do_auth(args.ip, args.mac, cert_path, key_path, args.config, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl))
 
     elif args.action == "listen":
         ip = args.ip or creds.get("ip_address")
         creds["ip_address"] = ip
-        asyncio.run(do_listen(creds, cert_path, args.key_file, args.config, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl))
+        asyncio.run(do_listen(creds, cert_path, key_path, args.config, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl))
 
     elif args.action == "refresh":
         ip = args.ip or creds.get("ip_address")

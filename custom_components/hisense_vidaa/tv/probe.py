@@ -198,6 +198,9 @@ def generate_markdown_report(
     tls_status = "✅ SUCCESS" if ping_result.get("tls_handshake") else "❌ FAILED"
     lines.append(f"- **Port 36669 (TCP):** {tcp_status}")
     lines.append(f"- **TLS Handshake:** {tls_status} ({ping_result.get('tls_version') or 'N/A'}, {ping_result.get('cipher') or 'N/A'})")
+    cert_presented = ping_result.get("client_cert_presented") or (auth_probe.get("client_cert_presented") if isinstance(auth_probe, dict) else False)
+    cert_desc = f"✅ Presented (`{ping_result.get('certfile')}`)" if cert_presented and ping_result.get("certfile") else ("✅ Presented" if cert_presented else "⚠️ None Presented (Unauthenticated TLS)")
+    lines.append(f"- **Client Certificate:** {cert_desc}")
 
     lines.append("\n### 🔐 MQTT Authentication Capabilities")
     legacy = auth_probe.get("legacy_static", {})
@@ -216,11 +219,30 @@ def generate_markdown_report(
     lines.append(f"- **Modern Dynamic Auth (`his$<timestamp ^ XOR>` / Modern Salt):** {mod_str}")
 
     if not legacy.get("supported") and not std.get("supported") and not middle.get("supported") and not modern.get("supported"):
-        lines.append(
-            "\n> [!WARNING]\n"
-            "> **All standard authentication profiles rejected (rc=5)**: The TV broker accepted the TLS handshake but rejected initial MQTT credentials. "
-            "This typically indicates the TV is running a newer firmware generation (e.g. VIDAA U7+ / build Q0704+ / App v1.09+) with updated credential hashing or pairing handshakes."
-        )
+        if not cert_presented:
+            lines.append(
+                "\n> [!WARNING]\n"
+                "> **All standard authentication profiles rejected (rc=5) — No Client Certificate Presented**:\n"
+                "> The TV broker accepted the initial TLS handshake but rejected all MQTT authentication profiles with `rc=5`.\n"
+                "> Many VIDAA models (especially UK/European models such as the 75E8QTUK, or TVs with strict broker configuration) "
+                "allow TLS negotiation without a client certificate, but will actively reject all MQTT pairing attempts with `rc=5` "
+                "(and display a compatibility warning on the TV screen) until a valid client certificate is presented.\n"
+                ">\n"
+                "> **Next Steps**:\n"
+                "> 1. Provide an official client certificate and private key via `--cert <path>` and `--key <path>` (e.g. `hisense.crt` and `hisense.key`).\n"
+                "> 2. If you extracted `client_mobile_android.p12` from an official APK bundle, convert it to PEM with OpenSSL using the `-legacy` flag:\n"
+                ">    ```bash\n"
+                ">    openssl pkcs12 -legacy -in client_mobile_android.p12 -passin pass:186e990688070325a1c4b0ce275d2388 -clcerts -nokeys -out hisense.crt\n"
+                ">    openssl pkcs12 -legacy -in client_mobile_android.p12 -passin pass:186e990688070325a1c4b0ce275d2388 -nocerts -nodes -out hisense.key\n"
+                ">    ```\n"
+                "> 3. Re-run `test_client.py ping --cert hisense.crt --key hisense.key` to verify if Modern XOR Dynamic Auth is accepted."
+            )
+        else:
+            lines.append(
+                "\n> [!WARNING]\n"
+                "> **All standard authentication profiles rejected (rc=5)**: The TV broker accepted the TLS handshake and client certificate, but rejected initial MQTT credentials. "
+                "This typically indicates the TV is running a newer firmware generation (e.g. VIDAA U7+ / build Q0704+ / App v1.09+) with updated credential hashing or pairing handshakes."
+            )
 
     if ping_result.get("mqtt_rc") is not None:
         stored_str = "✅ ACCEPTED (rc=0)" if ping_result.get("mqtt_connected") else f"❌ REJECTED (rc={ping_result.get('mqtt_rc')})"

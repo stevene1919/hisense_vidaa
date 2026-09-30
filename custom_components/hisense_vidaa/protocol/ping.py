@@ -39,6 +39,9 @@ def ping_tv(
         "tls_handshake": False,
         "tls_version": None,
         "cipher": None,
+        "client_cert_presented": False,
+        "certfile": None,
+        "keyfile": None,
         "mqtt_connected": False,
         "mqtt_rc": None,
         "mqtt_status": None,
@@ -55,18 +58,23 @@ def ping_tv(
         results["error"] = f"TCP connection failed (TV may be in deep sleep / off): {e}"
         return results
 
+    valid_cert = certfile if (certfile and os.path.isfile(certfile)) else None
+    valid_key = keyfile if (keyfile and os.path.isfile(keyfile)) else None
+
     # 2. Test TLS Handshake
-    if certfile and keyfile:
-        try:
-            ssl_info = test_tv_ssl_connection(
-                ip, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl, timeout=timeout
-            )
-            results["tls_handshake"] = ssl_info.get("connected", False)
-            results["tls_version"] = ssl_info.get("tls_version")
-            results["cipher"] = ssl_info.get("cipher")
-        except Exception as e:
-            results["error"] = f"TLS handshake failed: {e}"
-            return results
+    try:
+        ssl_info = test_tv_ssl_connection(
+            ip, certfile=valid_cert, keyfile=valid_key, ca_cert=ca_cert, verify_ssl=verify_ssl, timeout=timeout
+        )
+        results["tls_handshake"] = ssl_info.get("connected", False)
+        results["tls_version"] = ssl_info.get("tls_version")
+        results["cipher"] = ssl_info.get("cipher")
+        results["client_cert_presented"] = ssl_info.get("client_cert_presented", False)
+        results["certfile"] = ssl_info.get("certfile")
+        results["keyfile"] = ssl_info.get("keyfile")
+    except Exception as e:
+        results["error"] = f"TLS handshake failed: {e}"
+        return results
 
     # 3. Test MQTT Broker Response (if credentials available)
     if client_id and username and password:
@@ -123,7 +131,7 @@ def ping_tv(
     # 4. Probe auth methods
     with contextlib.suppress(Exception):
         results["auth_probe"] = probe_tv_auth_methods(
-            ip, certfile=certfile, keyfile=keyfile, mac=mac, timeout=1.5
+            ip, certfile=valid_cert, keyfile=valid_key, mac=mac, timeout=1.5
         )
 
     # 5. Device fingerprint
