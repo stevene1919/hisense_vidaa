@@ -13,7 +13,6 @@ import paho.mqtt.client as mqtt
 from .crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
 from .discovery import (
     get_device_fingerprint as discover_device_fingerprint,
-    get_tv_timestamp,
     ping_tv,
 )
 from .protocol.auth import (
@@ -281,9 +280,11 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         auth_profile: str | None = None,
         timestamp: int | None = None,
     ) -> None:
-        """Generates initial dynamic credentials for challenge-response pairing."""
-        if timestamp is None and self.ip:
-            timestamp = get_tv_timestamp(self.ip, timeout=1.5)
+        """Generates initial dynamic credentials for challenge-response pairing.
+
+        ``timestamp`` must be supplied by callers that fetched the TV clock
+        (off-loop); when omitted the local clock is used.
+        """
         profile = auth_profile or self.auth_profile
         self.client_id, self.username, self.password = generate_initial_credentials(
             mac=self.mac,
