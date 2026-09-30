@@ -123,7 +123,13 @@ if "homeassistant" not in sys.modules:
     # data_entry_flow
     data_entry_flow = types.ModuleType("homeassistant.data_entry_flow")
     FlowResult = dict
+    class AbortFlow(Exception):
+        """HA flow-control exception raised by _abort_if_unique_id_configured etc."""
+        def __init__(self, reason: str) -> None:
+            super().__init__(reason)
+            self.reason = reason
     data_entry_flow.FlowResult = FlowResult
+    data_entry_flow.AbortFlow = AbortFlow
     ha.data_entry_flow = data_entry_flow
     sys.modules["homeassistant.data_entry_flow"] = data_entry_flow
 

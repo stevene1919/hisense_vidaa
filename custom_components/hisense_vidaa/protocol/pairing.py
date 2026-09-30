@@ -13,6 +13,98 @@ from ..tv.fingerprint import get_tv_timestamp
 
 _LOGGER = logging.getLogger(__name__)
 
+# Profiles served by the pre-dynamic, static-credential session. They never
+# issue a token: entering the PIN is the whole pairing and the static
+# credentials (hisenseservice / multimqttservice) stay in use.
+STATIC_AUTH_PROFILES = ("legacy", "static")
+
+
+class PairingStatusError(Exception):
+    """The TV closed the pairing dialog or reported the remote slot busy.
+
+    Raised while waiting for a pairing reply when the TV pushes
+    ``.../ui_service/data/authenticationcodeclose`` (dialog dismissed / code
+    expired) or ``.../ui_service/data/authenticationcodetoast`` (the remote
+    slot is occupied by another client). ``status`` is ``"closed"`` or
+    ``"busy"``.
+    """
+
+    def __init__(self, status: str) -> None:
+        super().__init__(f"TV pairing dialog {status}")
+        self.status = status
+
+
+async def async_probe_pairing_challenge(client: Any, timeout: float = 8.0) -> bool:
+    """Opens the static session and probes whether the TV demands PIN pairing.
+
+    On the static session ``gettvstate`` is answered by an ``authentication``
+    push (empty payload) when the TV does not yet know this client; an
+    already-paired client (or pre-dynamic firmware) answers normally instead,
+    so this is a harmless no-op for them.
+
+    Returns True when the challenge arrived within ``timeout``, False when the
+    TV did not challenge (or could not be reached). Raises
+    :class:`PairingStatusError` when the TV reports the dialog closed or the
+    remote slot busy.
+    """
+    loop = asyncio.get_running_loop()
+    client._loop = loop
+    await loop.run_in_executor(None, client.disconnect)
+    await asyncio.sleep(0.1)
+
+    client._auth_future = loop.create_future()
+    client._pairing_event_future = loop.create_future()
+    try:
+        client.mqtt_client = await loop.run_in_executor(
+            None, client.create_mqtt_client, client.client_id, client.username, client.password
+        )
+        client.mqtt_client.reconnect_delay_set(min_delay=30, max_delay=60)
+        client.mqtt_client.connect_async(client.ip, 36669, 60)
+        client.mqtt_client.loop_start()
+
+        # Wait up to ~10s for the connection (mirrors the dynamic handshake).
+        for _ in range(50):
+            if client.connected or client._auth_future.done():
+                break
+            await asyncio.sleep(0.2)
+
+        if not client.connected:
+            if client._auth_future.done() and not client._auth_future.cancelled():
+                _LOGGER.warning(
+                    "[%s] Static session could not connect for pairing probe: %s",
+                    client.ip, client._auth_future.exception(),
+                )
+            return False
+
+        # Mirror the push topics the pairing handshake subscribes to, plus the
+        # close/toast topics so the TV's dialog events unblock the wait.
+        client.mqtt_client.subscribe([
+            (client.topicMobiBasepath + "#", 0),
+            (client.topicMobiBasepath + "ui_service/data/authentication", 0),
+            (client.topicMobiBasepath + "ui_service/data/authenticationcode", 0),
+            (client.topicMobiBasepath + "ui_service/data/authenticationcodeclose", 0),
+            (client.topicMobiBasepath + "ui_service/data/authenticationcodetoast", 0),
+        ])
+        await asyncio.sleep(0.3)
+
+        deadline = loop.time() + timeout
+        next_trigger = 0.0  # publish the trigger immediately
+        while loop.time() < deadline:
+            if client._auth_future.done() and not client._auth_future.exception():
+                return True
+            if client._pairing_event_future.done():
+                raise PairingStatusError(client._pairing_event_future.result())
+            if loop.time() >= next_trigger:
+                # gettvstate is the documented trigger; a second publish inside
+                # the window re-opens the dialog if the first was missed.
+                client.mqtt_client.publish(client.topicTVUIBasepath + "actions/gettvstate", "")
+                next_trigger = loop.time() + timeout / 2
+            await asyncio.sleep(0.2)
+        return False
+    finally:
+        client._auth_future = None
+        client._pairing_event_future = None
+
 
 async def async_start_pairing_handshake(client: Any) -> None:
     """Initiates pairing handshake cascade across auto/modern/middle/remotenow profiles."""
@@ -85,6 +177,7 @@ async def _async_execute_pairing_attempt(
     client.mqtt_client.reconnect_delay_set(min_delay=30, max_delay=60)
 
     client._auth_future = loop.create_future()
+    client._connect_ack_future = loop.create_future()
     client.mqtt_client.connect_async(client.ip, 36669, 60)
     client.mqtt_client.loop_start()
 
@@ -121,6 +214,14 @@ async def _async_execute_pairing_attempt(
             await asyncio.wait_for(asyncio.shield(client._auth_future), timeout=4.0)
             break
         except TimeoutError:
+            if client._connect_ack_future.done():
+                # The TV accepted the request but never announced a PIN dialog.
+                # Some firmware does this even with a PIN on screen; the ACK is
+                # weaker evidence than the authentication push but is all we get.
+                _LOGGER.info(
+                    "[%s] TV acknowledged vidaa_app_connect but sent no PIN notification", client.ip
+                )
+                break
             if attempt < 2 and not client._auth_future.done():
                 _LOGGER.debug("[%s] No response to vidaa_app_connect on attempt %d, retrying...", client.ip, attempt + 1)
                 await asyncio.sleep(0.5)
@@ -128,6 +229,7 @@ async def _async_execute_pairing_attempt(
                 client.disconnect()
                 raise Exception("TV authentication request timed out (TV did not show PIN)")
     client._auth_future = None
+    client._connect_ack_future = None
 
 
 async def async_submit_pin_code(client: Any, pin_code: str) -> dict[str, Any]:
@@ -135,6 +237,7 @@ async def async_submit_pin_code(client: Any, pin_code: str) -> dict[str, Any]:
     loop = asyncio.get_running_loop()
     client._loop = loop
     client._auth_code_future = loop.create_future()
+    client._pairing_event_future = loop.create_future()
 
     if not client.mqtt_client:
         raise Exception("MQTT client not initialized")
@@ -145,16 +248,32 @@ async def async_submit_pin_code(client: Any, pin_code: str) -> dict[str, Any]:
     )
 
     try:
-        payload_str = await asyncio.wait_for(client._auth_code_future, timeout=15)
+        # Wait for the PIN result, but unblock early if the TV closes the dialog
+        # or reports the remote slot busy instead of answering.
+        done, _pending = await asyncio.wait(
+            {client._auth_code_future, client._pairing_event_future},
+            timeout=15,
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        if client._pairing_event_future in done:
+            raise PairingStatusError(client._pairing_event_future.result())
+        if client._auth_code_future not in done:
+            raise Exception("Timeout waiting for PIN validation")
+        payload_str = client._auth_code_future.result()
         _LOGGER.debug("[%s] Received PIN response payload: %s", client.ip, payload_str)
         payload = json.loads(payload_str)
         if payload.get("result") != 1:
             _LOGGER.warning("[%s] PIN validation rejected with payload: %s", client.ip, payload_str)
             raise Exception(f"Incorrect PIN code (TV response: {payload_str})")
-    except TimeoutError:
-        raise Exception("Timeout waiting for PIN validation")
     finally:
         client._auth_code_future = None
+        client._pairing_event_future = None
+
+    if getattr(client, "auth_profile", "auto") in STATIC_AUTH_PROFILES:
+        # Pre-dynamic (static) firmware puts no token behind the PIN: accepting
+        # the code IS the pairing, and the static credentials stay in use.
+        _LOGGER.info("[%s] PIN accepted on static session; no token exchange needed", client.ip)
+        return {}
 
     client._token_future = loop.create_future()
     client.mqtt_client.publish(client.topicTVPSBasepath + "data/gettoken", '{"refreshtoken": ""}')

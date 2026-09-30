@@ -8,6 +8,7 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import AbortFlow
 
 from .client import HisenseTvClient
 from .const import (
@@ -34,6 +35,7 @@ from .flow_helpers import (
 )
 from .flow_reauth import ReauthFlowMixin
 from .options_flow import HisenseVidaaOptionsFlowHandler
+from .protocol.pairing import PairingStatusError, async_probe_pairing_challenge
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,6 +64,7 @@ class HisenseVidaaConfigFlow(
         self.manufacturer: str | None = None
         self.sw_version: str | None = None
         self._reauth_entry: config_entries.ConfigEntry | None = None
+        self._pairing_error: str | None = None
 
     @staticmethod
     @callback
@@ -88,7 +91,12 @@ class HisenseVidaaConfigFlow(
 
     async def _async_disconnect_existing_client(self) -> None:
         """Disconnect any running client for this IP/MAC to avoid MQTT session collision during pairing."""
-        await async_disconnect_existing_client(self.hass, self.ip_address, self.mac_address)
+        # Only ever disconnect the entry being re-paired: a sibling entry that
+        # happens to share the IP/MAC must keep its client connected.
+        entry_id = self._reauth_entry.entry_id if self._reauth_entry else None
+        await async_disconnect_existing_client(
+            self.hass, self.ip_address, self.mac_address, entry_id=entry_id
+        )
 
     def _get_client_auth_data(self) -> dict[str, Any]:
         """Collect authentication credentials and device attributes dictionary."""
@@ -109,6 +117,15 @@ class HisenseVidaaConfigFlow(
         self, is_reauth: bool = False, reauth_reason: str = "reauth_successful"
     ) -> config_entries.ConfigFlowResult:
         """Helper to initialize client, perform static auth check, and route to PIN or options."""
+        if not self.mac_address:
+            self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
+
+        # Duplicate/unique-id guard MUST run before touching the running client:
+        # its AbortFlow must not leave an existing (working) entry disconnected.
+        if self.mac_address and self._reauth_entry is None:
+            await self.async_set_unique_id(self.mac_address)
+            self._abort_if_unique_id_configured()
+
         await self._async_disconnect_existing_client()
         self.client = HisenseTvClient(
             self.ip_address,
@@ -135,21 +152,39 @@ class HisenseVidaaConfigFlow(
 
         await self.client.async_start_auth()
 
-        if not self.mac_address:
-            self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
-
-        if self.mac_address and self._reauth_entry is None:
-            await self.async_set_unique_id(self.mac_address)
-            self._abort_if_unique_id_configured()
-
-        if self.auth_profile == "legacy":
-            if is_reauth and self._reauth_entry:
-                return await self._async_finish_reauth(reason=reauth_reason)
-            await self._async_discover_device_name()
-            await self._async_probe_device_capabilities()
-            return await self.async_step_options()
+        if self.auth_profile in ("legacy", "static"):
+            return await self._async_static_pairing_step(is_reauth, reauth_reason)
 
         return await self.async_step_auth()
+
+    async def _async_static_pairing_step(
+        self, is_reauth: bool, reauth_reason: str
+    ) -> config_entries.ConfigFlowResult:
+        """Probe a static session for a PIN challenge before continuing as before.
+
+        The TV shows a 4-digit code (and pushes it to .../data/authentication)
+        only when it does not yet know this client. Already-paired TVs and
+        pre-dynamic firmware answer normally, so nothing changes for them - no
+        form is shown and the flow continues exactly as it did before.
+        """
+        try:
+            challenged = await async_probe_pairing_challenge(self.client)
+        except PairingStatusError as e:
+            _LOGGER.warning("[%s] TV pairing dialog %s during challenge probe", self.ip_address, e.status)
+            self._pairing_error = "invalid_auth"
+            return await self.async_step_auth()
+
+        if challenged:
+            return await self.async_step_auth()
+
+        # No challenge: behave exactly as today. Drop the probe connection so
+        # the remaining steps see the same (unconnected) client as before.
+        await self.hass.async_add_executor_job(self.client.disconnect)
+        if is_reauth and self._reauth_entry:
+            return await self._async_finish_reauth(reason=reauth_reason)
+        await self._async_discover_device_name()
+        await self._async_probe_device_capabilities()
+        return await self.async_step_options()
 
     # --------------------------------------------------------------------------
     # Flow Steps
@@ -168,6 +203,10 @@ class HisenseVidaaConfigFlow(
                 if self._resolve_ssl_certs():
                     try:
                         return await self._async_init_client_and_auth()
+                    except AbortFlow:
+                        # HA flow control (e.g. duplicate unique_id) must not be
+                        # reported as cannot_connect.
+                        raise
                     except Exception as e:
                         _LOGGER.warning("[%s] Failed to connect or initiate auth with TV: %s", self.ip_address, e)
                         errors["base"] = "cannot_connect"
@@ -192,6 +231,10 @@ class HisenseVidaaConfigFlow(
     ) -> config_entries.ConfigFlowResult:
         """Handle PIN code entry step."""
         errors: dict[str, str] = {}
+        if self._pairing_error:
+            # Surfaced by the static-session challenge probe (TV busy / dialog closed).
+            errors["base"] = self._pairing_error
+            self._pairing_error = None
 
         if not self.client:
             if not self.ip_address and self._reauth_entry:
@@ -211,18 +254,25 @@ class HisenseVidaaConfigFlow(
 
         if user_input is not None and self.client:
             pin_code = str(user_input["pin_code"]).strip().replace(" ", "").replace("-", "")
+            # F9-leg6: guard ONLY the submit call - a failure afterwards (name
+            # discovery, capability probe) must not be reported as a bad PIN.
             try:
                 await self.client.async_submit_pin(pin_code)
-
+            except PairingStatusError as e:
+                # TV closed the dialog or another remote occupies the slot; the
+                # form is re-shown so the pairing can be retried.
+                _LOGGER.warning("[%s] TV pairing dialog %s while submitting PIN", self.ip_address, e.status)
+                errors["base"] = "invalid_auth"
+            except Exception as e:
+                _LOGGER.warning("[%s] Failed to validate PIN or retrieve tokens from TV: %s", self.ip_address, e)
+                errors["base"] = "invalid_auth"
+            else:
                 if self._reauth_entry:
                     return await self._async_finish_reauth(reason="reauth_successful")
 
                 await self._async_discover_device_name()
                 await self._async_probe_device_capabilities()
                 return await self.async_step_options()
-            except Exception as e:
-                _LOGGER.warning("[%s] Failed to validate PIN or retrieve tokens from TV: %s", self.ip_address, e)
-                errors["base"] = "invalid_auth"
 
         return self.async_show_form(
             step_id="auth",
@@ -263,6 +313,13 @@ class HisenseVidaaConfigFlow(
             client = self.client
             self.client = None
             if hasattr(self, "hass") and self.hass:
-                self.hass.async_add_executor_job(client.disconnect)
+                future = self.hass.async_add_executor_job(client.disconnect)
+                future.add_done_callback(self._async_log_remove_exception)
             else:
                 client.disconnect()
+
+    @callback
+    def _async_log_remove_exception(self, future: Any) -> None:
+        """Log a failed async_remove disconnect (the future is otherwise fire-and-forget)."""
+        if not future.cancelled() and future.exception() is not None:
+            _LOGGER.debug("Error disconnecting flow client during async_remove: %s", future.exception())

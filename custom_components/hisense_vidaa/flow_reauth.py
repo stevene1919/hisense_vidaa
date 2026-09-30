@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.data_entry_flow import AbortFlow
 
 from .const import (
     AUTH_PROFILE_SELECTOR,
@@ -70,10 +71,18 @@ class ReauthFlowMixin:
             try:
                 await self.client.async_start_auth()
 
-                if self.auth_profile == "legacy" and self._reauth_entry:
-                    return await self._async_finish_reauth(reason="reauth_successful")
-
+                if self.auth_profile in ("legacy", "static"):
+                    # The static session uses the fixed client-id
+                    # "hisenseservice": drop this entry's live client first so the
+                    # probe does not kick its running MQTT session (sibling
+                    # entries are left untouched via the entry_id scoping).
+                    await self._async_disconnect_existing_client()
+                    # The TV may demand a one-off PIN pairing.
+                    return await self._async_static_pairing_step(True, "reauth_successful")
                 return await self.async_step_auth()
+            except AbortFlow:
+                # HA flow control must never be reported as cannot_connect.
+                raise
             except Exception as e:
                 _LOGGER.warning("[%s] Failed to connect to TV for reauth: %s", self.ip_address, e)
                 errors["base"] = "cannot_connect"
@@ -113,6 +122,8 @@ class ReauthFlowMixin:
                 return await self._async_init_client_and_auth(
                     is_reauth=True, reauth_reason="reconfigure_successful"
                 )
+            except AbortFlow:
+                raise
             except Exception as e:
                 _LOGGER.warning("[%s] Failed to initiate reconfigure pairing: %s", self.ip_address, e)
                 errors["base"] = "cannot_connect"
