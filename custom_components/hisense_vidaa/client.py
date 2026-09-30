@@ -101,6 +101,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         self._token_manager = TokenLifecycleManager(self)
         self._reconnect_lock = threading.Lock()
         self._last_reconnect_time: float = 0.0
+        self._query_timer: threading.Timer | None = None
 
         # Topic paths
         self.topicBrcsBasepath = TOPIC_BROADCAST_BASEPATH
@@ -337,6 +338,12 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         main_client = self.mqtt_client
         if main_client:
             try:
+                # Unbind callbacks before teardown (as connect_and_run does) so the
+                # disconnect/late-connect events do not flip self.connected while the
+                # refresh client is replacing this one.
+                main_client.on_connect = None
+                main_client.on_disconnect = None
+                main_client.on_message = None
                 main_client.loop_stop()
                 main_client.disconnect()
             except Exception:
