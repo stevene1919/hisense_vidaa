@@ -36,6 +36,10 @@ def query_initial_state(client: HisenseTvClient) -> None:
     if client.connected and client.mqtt_client:
         client.mqtt_client.publish(client.topicTVUIBasepath + "actions/gettvstate", "")
         time.sleep(0.05)
+        # The TV never volunteers its capability set; request it so
+        # `has_notifications` can populate (mirrors the reference connect burst).
+        client.mqtt_client.publish(client.topicTVUIBasepath + "actions/capability", "")
+        time.sleep(0.05)
         client.mqtt_client.publish(client.topicTVPSBasepath + "actions/getvolume", "")
         time.sleep(0.05)
         client.mqtt_client.publish(client.topicTVUIBasepath + "actions/sourcelist", "")
@@ -179,6 +183,11 @@ def change_source(
 
     # Dual publish for newer VIDAA firmware expecting source name
     if sname and sid != sname and str(sid).isdigit():
+        _LOGGER.debug(
+            "[%s] changesource: also attempting name-as-id publish (sourceid=%s) for firmware expecting the display name",
+            getattr(client, "ip", "unknown"),
+            sname,
+        )
         payload_modern = json.dumps({"sourceid": sname, "sourcename": sname})
         client.mqtt_client.publish(client.topicTVUIBasepath + "actions/changesource", payload_modern)
 
