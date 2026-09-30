@@ -214,3 +214,162 @@ async def test_remote_and_media_player_idempotent_power_control(mock_client, moc
     await mp.async_turn_on()
     mock_client.send_key.assert_called_once_with("KEY_POWER")
     assert mp.state == "on"
+
+
+@pytest.mark.anyio
+async def test_remote_send_command_num_repeats_option(mock_client, mock_entry):
+    """[F1-leg4] The key_repeat option applies when HA sends the service default."""
+    mock_entry.options = {"enable_remote": True, "key_repeat": 5}
+    rem = HisenseVidaaRemote(client=mock_client, entry=mock_entry)
+
+    # HA's remote.send_command schema always sends num_repeats (default 1): with the
+    # service default the key_repeat option must be honoured.
+    await rem.async_send_command(["up"], num_repeats=1, delay_secs=0)
+    assert mock_client.send_command.call_count == 5
+
+    # An explicit caller-supplied value still wins.
+    mock_client.send_command.reset_mock()
+    await rem.async_send_command(["up"], num_repeats=3, delay_secs=0)
+    assert mock_client.send_command.call_count == 3
+
+
+@pytest.mark.anyio
+async def test_media_player_mute_is_idempotent(mock_client, mock_entry):
+    """[F7-leg4] KEY_MUTE is only sent when the requested state differs from tracked."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp.hass = hass
+
+    # Already unmuted → requesting unmute must not toggle the TV.
+    mp._muted = False
+    await mp.async_mute_volume(False)
+    mock_client.send_key.assert_not_called()
+
+    # Requesting mute differs → send KEY_MUTE.
+    await mp.async_mute_volume(True)
+    mock_client.send_key.assert_called_once_with("KEY_MUTE")
+
+    # Already muted → requesting mute again must not toggle the TV.
+    mp._muted = True
+    mock_client.send_key.reset_mock()
+    await mp.async_mute_volume(True)
+    mock_client.send_key.assert_not_called()
+
+    # Requesting unmute differs → send KEY_MUTE.
+    await mp.async_mute_volume(False)
+    mock_client.send_key.assert_called_once_with("KEY_MUTE")
+
+
+def test_remote_off_ish_statetypes_stay_off(mock_client, mock_entry):
+    """[F3-leg4 residual] remote statetype handling agrees with tv/state.py."""
+    rem = HisenseVidaaRemote(client=mock_client, entry=mock_entry)
+    rem.entity_id = "remote.living_room_tv"
+    mock_client.connected = True
+
+    # (a) an off-ish statetype after a remote callback must keep is_on False
+    rem._handle_state_update({"statetype": "poweroff"})
+    assert mock_client.is_on is False
+    assert rem.is_on is False
+
+    # (b) fake_sleep_1 means the TV is waking up → ON
+    rem._handle_state_update({"statetype": "fake_sleep_1"})
+    assert mock_client.is_on is True
+    assert rem.is_on is True
+
+    # (c) fake_sleep_0 (exact) → OFF
+    rem._handle_state_update({"statetype": "fake_sleep_0"})
+    assert mock_client.is_on is False
+    assert rem.is_on is False
+
+
+@pytest.mark.anyio
+async def test_media_player_parses_camelcase_source_and_app_payloads(mock_client, mock_entry):
+    """[F5-leg4] camelCase source/app payloads are keyed like the payload parsers."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp.hass = hass
+
+    mp._handle_sourcelist_update(
+        [{"sourceName": "HDMI 1", "sourceid": "HDMI1", "is_active": True}]
+    )
+    assert "HDMI 1" in mp._source_dict
+
+    mp._handle_applist_update([{"appId": "1", "appName": "Netflix", "url": "netflix://"}])
+    assert "Netflix" in mp._app_dict
+
+
+def test_sourcelist_and_applist_parsers_accept_camelcase():
+    """[F5-leg4] The data parsers accept the same spellings as the payload parsers."""
+    from custom_components.hisense_vidaa.tv.media import (
+        parse_applist_data,
+        parse_sourcelist_data,
+    )
+
+    assert parse_sourcelist_data([{"sourceName": "HDMI 1"}]) == {
+        "HDMI 1": {"sourceName": "HDMI 1"}
+    }
+    assert parse_sourcelist_data([{"sourcename": "TV"}]) == {"TV": {"sourcename": "TV"}}
+    assert parse_applist_data([{"appId": "1", "appName": "Netflix"}])[1] == {
+        "Netflix": {"appId": "1", "appName": "Netflix"}
+    }
+    assert parse_applist_data([{"name": "Stan"}])[1] == {"Stan": {"name": "Stan"}}
+
+
+@pytest.mark.anyio
+async def test_media_player_play_media_accepts_alternate_app_keys(mock_client, mock_entry):
+    """[F4-leg4] play_media must not raise KeyError on appId/url spelling variants."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp.hass = hass
+    mp._app_dict = {"Stan": {"app_id": "123", "name": "Stan", "appUrl": "stan://"}}
+
+    await mp.async_play_media("app", "Stan")
+    mock_client.launch_app.assert_called_with("123", "Stan", "stan://")
+
+
+@pytest.mark.anyio
+async def test_media_player_string_volume_broadcast(mock_client, mock_entry):
+    """[F9-leg4] String volume payloads are coerced like apply_volume_update."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp.hass = hass
+
+    mp._handle_volume_update({"volume_type": "1", "volume_value": "35"})
+    assert mp._volume == 35
+    assert mp._volume_type == 1
+    assert mp.volume_level == 0.35
+
+    # Mute broadcast as a string
+    mp._handle_volume_update({"volume_type": "2", "volume_value": "1"})
+    assert mp._muted is True
+
+
+@pytest.mark.anyio
+async def test_remote_platform_purges_registry_when_disabled(
+    mock_client, mock_entry, monkeypatch
+):
+    """[F10-leg4] remote registry entry is purged when the feature is disabled."""
+    from custom_components.hisense_vidaa.const import CONF_ENABLE_REMOTE, DOMAIN
+    from custom_components.hisense_vidaa.remote import async_setup_entry as async_setup_remote
+
+    hass = MagicMock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_entry.entry_id: {"client": mock_client}}}
+    mock_reg = MagicMock()
+    mock_reg.async_get_entity_id.return_value = "remote.living_room_tv"
+    monkeypatch.setattr(
+        "homeassistant.helpers.entity_registry.async_get", lambda h: mock_reg
+    )
+    mock_entry.options = {CONF_ENABLE_REMOTE: False}
+
+    entities = []
+    await async_setup_remote(hass, mock_entry, lambda e: entities.extend(e))
+    mock_reg.async_remove.assert_called_once_with("remote.living_room_tv")
+    assert entities == []

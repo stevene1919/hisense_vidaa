@@ -7,10 +7,11 @@ import logging
 from homeassistant.components.notify import NotifyEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .client import HisenseTvClient
-from .const import DOMAIN
+from .const import CONF_ENABLE_NOTIFY, DEFAULT_ENABLE_NOTIFY, DOMAIN
 from .entity import HisenseVidaaEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,4 +51,13 @@ async def async_setup_entry(
     """Set up the Hisense VIDAA notify platform."""
     data = hass.data[DOMAIN][config_entry.entry_id]
     client: HisenseTvClient = data["client"]
+
+    # Clean up the notify entity from the entity registry if the feature was disabled
+    entity_reg = er.async_get(hass)
+    unique_id = f"{config_entry.entry_id}_notify"
+    if not config_entry.options.get(CONF_ENABLE_NOTIFY, DEFAULT_ENABLE_NOTIFY):
+        if entity_id := entity_reg.async_get_entity_id("notify", DOMAIN, unique_id):
+            entity_reg.async_remove(entity_id)
+        return
+
     async_add_entities([HisenseVidaaNotifyEntity(client=client, entry=config_entry)])

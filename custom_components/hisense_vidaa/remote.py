@@ -6,14 +6,17 @@ from typing import Any
 from homeassistant.components.remote import RemoteEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .client import HisenseTvClient
 from .const import (
+    CONF_ENABLE_REMOTE,
     CONF_ENABLE_WOL,
     CONF_KEY_DELAY,
     CONF_KEY_REPEAT,
     CONF_SECONDARY_MAC_ADDRESS,
+    DEFAULT_ENABLE_REMOTE,
     DEFAULT_ENABLE_WOL,
     DEFAULT_KEY_DELAY,
     DEFAULT_KEY_REPEAT,
@@ -24,6 +27,11 @@ from .entity import HisenseVidaaEntity
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 0
+
+# Home Assistant's remote.send_command schema *always* supplies num_repeats
+# (default 1), so a plain kwargs.get() would permanently shadow the key_repeat
+# option. Treat the service default as "caller left it unset".
+SERVICE_DEFAULT_NUM_REPEATS = 1
 
 
 class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
@@ -106,6 +114,9 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
         default_delay = self._options.get(CONF_KEY_DELAY, DEFAULT_KEY_DELAY)
         default_repeats = self._options.get(CONF_KEY_REPEAT, DEFAULT_KEY_REPEAT)
         num_repeats = kwargs.get("num_repeats", default_repeats)
+        if num_repeats == SERVICE_DEFAULT_NUM_REPEATS:
+            # HA always sends the service default; fall back to the key_repeat option.
+            num_repeats = default_repeats
         delay_secs = kwargs.get("delay_secs", default_delay)
         hold_secs = kwargs.get("hold_secs", 0.0)
 
@@ -139,13 +150,13 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
         self._handle_update()
 
     def _handle_state_update(self, data: dict[str, Any]) -> None:
-        if isinstance(data, dict):
-            statetype = data.get("statetype")
-            if statetype == "fake_sleep_0":
-                if self._client:
-                    self._client.is_on = False
-            elif self._client:
-                self._client.is_on = True
+        # Keep this in lock-step with tv/state.py and tv/media.py: only fake_sleep_0
+        # (exact) or a statetype containing "off" is off; fake_sleep_1 is the TV waking.
+        if isinstance(data, dict) and self._client:
+            statetype_l = str(data.get("statetype") or "").lower()
+            self._client.is_on = not (
+                statetype_l == "fake_sleep_0" or "off" in statetype_l
+            )
         self._handle_update()
 
 
@@ -157,4 +168,13 @@ async def async_setup_entry(
     """Set up the Hisense VIDAA remote entity."""
     data = hass.data[DOMAIN][config_entry.entry_id]
     client: HisenseTvClient = data["client"]
+
+    # Clean up the remote from the entity registry if the feature was disabled
+    entity_reg = er.async_get(hass)
+    unique_id = f"{config_entry.entry_id}_remote"
+    if not config_entry.options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE):
+        if entity_id := entity_reg.async_get_entity_id("remote", DOMAIN, unique_id):
+            entity_reg.async_remove(entity_id)
+        return
+
     async_add_entities([HisenseVidaaRemote(client=client, entry=config_entry)])

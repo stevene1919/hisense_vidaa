@@ -170,3 +170,52 @@ async def test_in_use_binary_sensor_and_live_tv_metadata(mock_client, mock_entry
     assert bin_in_use.extra_state_attributes["channel_name"] == "ABC HD"
     assert bin_in_use.extra_state_attributes["channel_number"] == "20"
     assert bin_in_use.extra_state_attributes["program_title"] == "News 7pm"
+
+
+def test_auth_profile_sensor_prefers_entry_options(mock_client, mock_entry):
+    """[F6-leg4] The auth-profile sensor reads entry.options before entry.data."""
+    from custom_components.hisense_vidaa.const import AUTH_PROFILES
+
+    mock_entry.data = {**mock_entry.data, "auth_profile": "modern"}
+    mock_entry.options = {**mock_entry.options, "auth_profile": "legacy"}
+    sensor = HisenseVidaaAuthProfileSensor(mock_client, mock_entry)
+    assert sensor.native_value == AUTH_PROFILES["legacy"]
+
+    # Falls back to entry.data when options don't override the profile.
+    mock_entry.options = dict(mock_entry.options)
+    mock_entry.options.pop("auth_profile")
+    sensor_fallback = HisenseVidaaAuthProfileSensor(mock_client, mock_entry)
+    assert sensor_fallback.native_value == AUTH_PROFILES["modern"]
+
+
+def test_session_status_latches_reauth_required(mock_client, mock_entry):
+    """[F8-leg4] "Reauth Required" survives a disconnect until a successful connect."""
+    mock_client.connected = True
+    sensor = HisenseVidaaSessionStatusSensor(mock_client, mock_entry)
+    assert sensor.native_value == "Active"
+
+    sensor._handle_auth_failed(mock_client)
+    assert sensor.native_value == "Reauth Required"
+
+    # A subsequent disconnect must NOT overwrite the latch.
+    mock_client.connected = False
+    sensor._handle_disconnected()
+    assert sensor.native_value == "Reauth Required"
+
+    # A successful reconnect clears the latch.
+    mock_client.connected = True
+    sensor._handle_connected()
+    assert sensor.native_value == "Active"
+
+
+def test_audio_output_sensor_string_volume_type(mock_client, mock_entry):
+    """[F9-leg4] The audio-output sensor coerces string volume_type broadcasts."""
+    mock_client.connected = True
+    sensor = HisenseVidaaAudioOutputSensor(mock_client, mock_entry)
+    assert sensor.native_value == "TV Speakers"
+
+    sensor._handle_volume_update({"volume_type": "1"})
+    assert sensor.native_value == "ARC / eARC"
+
+    sensor._handle_volume_update({"volume_type": "0"})
+    assert sensor.native_value == "TV Speakers"

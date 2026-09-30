@@ -252,3 +252,39 @@ async def test_entity_availability_matrix(mock_client, mock_entry):
     assert sw_audio.available is False
     assert sel_pic.available is False
     assert num_backlight.available is False
+
+
+def test_select_audio_output_string_volume_type(mock_client, mock_entry):
+    """[F9-leg4] The audio-output select coerces string volume_type broadcasts."""
+    sel = HisenseVidaaAudioOutputSelect(client=mock_client, entry=mock_entry)
+    assert sel.current_option == "TV Speakers"
+
+    sel._handle_volume_update({"volume_type": "1"})
+    assert sel.current_option == "ARC / eARC"
+
+    # A mute broadcast (type 2) must not change the audio output selection.
+    sel._handle_volume_update({"volume_type": "2", "volume_value": "0"})
+    assert sel.current_option == "ARC / eARC"
+
+
+@pytest.mark.anyio
+async def test_notify_platform_purges_registry_when_disabled(
+    mock_client, mock_entry, monkeypatch
+):
+    """[F10-leg4] notify registry entry is purged when the feature is disabled."""
+    from custom_components.hisense_vidaa.const import CONF_ENABLE_NOTIFY, DOMAIN
+    from custom_components.hisense_vidaa.notify import async_setup_entry as async_setup_notify
+
+    hass = MagicMock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_entry.entry_id: {"client": mock_client}}}
+    mock_reg = MagicMock()
+    mock_reg.async_get_entity_id.return_value = "notify.living_room_tv"
+    monkeypatch.setattr(
+        "homeassistant.helpers.entity_registry.async_get", lambda h: mock_reg
+    )
+    mock_entry.options = {CONF_ENABLE_NOTIFY: False}
+
+    entities = []
+    await async_setup_notify(hass, mock_entry, lambda e: entities.extend(e))
+    mock_reg.async_remove.assert_called_once_with("notify.living_room_tv")
+    assert entities == []
