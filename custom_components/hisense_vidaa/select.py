@@ -85,7 +85,7 @@ class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
 
     def _handle_volume_update(self, data: dict[str, Any]) -> None:
         vol_type = data.get("volume_type")
-        if vol_type in (0, 1):
+        if vol_type in (0, "0", 1, "1"):
             self._volume_type = int(vol_type)
             self.schedule_update_ha_state()
 
