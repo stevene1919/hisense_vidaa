@@ -116,7 +116,7 @@ stateDiagram-v2
 | `/remoteapp/tv/remote_service/{client_id}/actions/sendkey` | `Publish` | Dispatch remote keypress (e.g. `KEY_POWER`, `KEY_HOME`) |
 | `/remoteapp/tv/ui_service/{client_id}/actions/changesource` | `Publish` | Switch input source (`{"sourceid": "HDMI1", "sourcename": "HDMI1"}`) |
 | `/remoteapp/tv/ui_service/{client_id}/actions/launchapp` | `Publish` | Launch installed Smart TV application (`{"appId": "...", "name": "..."}`) |
-| `/remoteapp/tv/ps_service/{client_id}/actions/changevolume` | `Publish` | Set absolute volume level (`0`–`100`) |
+| `/remoteapp/tv/platform_service/{client_id}/actions/changevolume` | `Publish` | Set absolute volume level (`0`–`100`) |
 | `/remoteapp/mobile/{client_id}/ui_service/data/authentication` | `Subscribe` | Receive TV pairing challenge response |
 | `/remoteapp/mobile/{client_id}/platform_service/data/tokenissuance` | `Subscribe` | Receive issued / refreshed authentication tokens |
 | `/remoteapp/mobile/broadcast/ui_service/state` | `Subscribe` | Real-time push notifications for TV power and UI state |
@@ -126,8 +126,8 @@ stateDiagram-v2
 | `/remoteapp/mobile/{client_id}/ui_service/data/applist` | `Subscribe` | Response containing installed Smart TV applications |
 | `/remoteapp/tv/platform_service/{client_id}/actions/picturesetting` | `Publish` | Query picture menu (`get_menu_info`) or update parameter (`notify_value_changed`) |
 | `/remoteapp/tv/platform_service/{client_id}/actions/soundsetting` | `Publish` | Query sound menu (`get_menu_info`) or update EQ preset (`notify_value_changed`) |
-| `/remoteapp/tv/ui_service/{client_id}/actions/txtinputdata` | `Publish` | Inject text into active input field (`{"text": "...", "action": "insert"}`) |
-| `/remoteapp/tv/ui_service/{client_id}/actions/bwsinputdata` | `Publish` | Inject text into web browser address / search bar |
+| `/remoteapp/tv/platform_service/{client_id}/actions/txtinputdata` | `Publish` | Inject text into active input field (`{"text": "...", "action": "insert"}`) |
+| `/remoteapp/tv/platform_service/{client_id}/actions/bwsinputdata` | `Publish` | Inject text into web browser address / search bar |
 | `/remoteapp/mobile/{client_id}/platform_service/data/picturesetting` | `Subscribe` | Response containing picture menu tree & active picture parameters |
 | `/remoteapp/mobile/{client_id}/platform_service/data/soundsetting` | `Subscribe` | Response containing sound menu tree & active equalizer parameters |
 | `/remoteapp/mobile/broadcast/platform_service/data/picturesetting` | `Subscribe` | Broadcast state push when picture mode or brightness changes on TV |

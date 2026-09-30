@@ -23,7 +23,7 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 ## [2.10.0] - 2026-09-29
 
 ### Added
-- **HOME ASSISTANT INTEGRATION QUALITY SCALE GOLD TIER (100% COMPLIANCE)**:
+- **HOME ASSISTANT INTEGRATION QUALITY SCALE IMPROVEMENTS (DECLARED TIER: BRONZE)**:
   - **Structured Service Response Data (`SupportsResponse.OPTIONAL`)**: Registered all custom TV services (`send_key`, `launch_app`, `set_picture_setting`, `set_sound_setting`, `send_text_input`) with `supports_response=SupportsResponse.OPTIONAL`, returning detailed execution metadata and target IP arrays to Home Assistant scripts and automations.
   - **Dynamic Options Lifecycle**: Streamlined config entry update listener with options filtering to prevent unnecessary reloads.
 - **MODULAR ARCHITECTURAL DECOMPOSITION (<300 LINES PER MODULE)**:

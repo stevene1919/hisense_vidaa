@@ -49,7 +49,7 @@ action: hisense_vidaa.set_picture_setting
 target:
   entity_id: media_player.living_room_tv
 data:
-  menu_id: 0
+  menu_id: 91
   menu_value: "Cinema Night"
 ```
 
@@ -61,8 +61,8 @@ action: hisense_vidaa.set_sound_setting
 target:
   entity_id: media_player.living_room_tv
 data:
-  menu_id: 0
-  menu_value: "Theater"
+  menu_id: 1
+  menu_value: "Theatre"
 ```
 
 ---
@@ -88,7 +88,7 @@ action: select.select_option
 target:
   entity_id: select.living_room_tv_picture_mode
 data:
-  option: "Cinema Night" # Options: Standard, Cinema Day, Cinema Night, Dynamic, Sport, Game, Filmmaker Mode, PC
+  option: "Cinema Night" # Options: Standard, Cinema Day, Cinema Night, Dynamic, Sports, Game, Filmmaker Mode
 ```
 
 ### Switch Sound Equalizer Mode
@@ -99,7 +99,7 @@ action: select.select_option
 target:
   entity_id: select.living_room_tv_sound_mode
 data:
-  option: "Theater" # Options: Standard, Theater, Music, Speech, Late Night, Sports
+  option: "Theatre" # Options: Standard, Theatre, Music, Speech, Late Night, Sports
 ```
 
 ---
@@ -111,7 +111,7 @@ Send on-screen alert notifications and toast banners directly onto the TV displa
 ```yaml
 action: notify.send_message
 target:
-  entity_id: notify.living_room_tv
+  entity_id: notify.living_room_tv_notifications
 data:
   message: "Front Doorbell: Motion detected"
   title: "Security Alert"
@@ -128,7 +128,7 @@ action: select.select_option
 target:
   entity_id: select.living_room_tv_audio_output
 data:
-  option: "ARC/eARC" # Options: "TV Speaker", "ARC/eARC", "Headphone", "Bluetooth"
+  option: "ARC / eARC" # Options: "TV Speakers", "ARC / eARC", "Headphone / Bluetooth"
 ```
 
 ---

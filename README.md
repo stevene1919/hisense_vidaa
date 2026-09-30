@@ -44,8 +44,8 @@ The integration automatically detects and supports multiple generations of Hisen
 - **Local Push Updates**: Instant feedback for power state, volume, mute, source input, and active app.
 - **Media Player Platform**: Full power toggle, volume stepping, input source switcher, dynamic app artwork, deep linking, and configurable media transport controls. Exposes `MediaPlayerDeviceClass.TV` for native Apple HomeKit and iOS Control Center virtual remote integration.
 - **Dedicated Remote Platform**: Fast key command dispatching, key aliases (`home`, `menu`, `back`, `ok`, etc.), configurable repeat counts, and inter-key delay options.
-- **Picture & Display Adjustments (`number` & `select`)**: Fine-tune Backlight, Brightness, and Contrast slider entities (0–100) and switch Picture Modes (`Standard`, `Cinema Day`, `Cinema Night`, `Dynamic`, `Sport`, `Game`, `Filmmaker Mode`, `PC`) dynamically.
-- **Sound Mode Selector (`select`)**: Switch real-time TV sound equalizer modes (`Standard`, `Theater`, `Music`, `Speech`, `Late Night`, `Sports`) and audio output routing (`select.{tv}_audio_output`).
+- **Picture & Display Adjustments (`number` & `select`)**: Fine-tune Backlight, Brightness, and Contrast slider entities (0–100) and switch Picture Modes (`Standard`, `Cinema Day`, `Cinema Night`, `Dynamic`, `Sports`, `Game`, `Filmmaker Mode`) dynamically.
+- **Sound Mode Selector (`select`)**: Switch real-time TV sound equalizer modes (`Standard`, `Theatre`, `Music`, `Speech`, `Late Night`, `Sports`) and audio output routing (`select.{tv}_audio_output`).
 - **On-Screen Toast Notifications (`notify`)**: Send customized on-screen toast messages and alert banners directly to the TV screen via `notify.send_message`.
 - **Direct Text Input (`send_text_input` service)**: Inject virtual keyboard text directly into on-screen search bars and input fields across apps.
 - **Rich Diagnostic Sensors**: Active source (with dynamic HDMI-CEC device naming), active Smart TV app, audio output mode, MQTT connection state, and session status.
@@ -123,6 +123,7 @@ The integration includes diagnostic CLI tools ([`test_client.py`](test_client.py
 # Option A: From any PC or server (recommended):
 git clone https://github.com/stevene1919/hisense_vidaa.git
 cd hisense_vidaa
+pip install paho-mqtt defusedxml cryptography pytest
 python3 test_client.py probe --ip <TV_IP>
 
 # Option B: Inside Home Assistant (Terminal / SSH Addon):
