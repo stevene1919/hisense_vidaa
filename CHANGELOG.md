@@ -2,6 +2,13 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **RENEW TOKENS IN STANDBY OPTION (`refresh_in_standby`, Options → General & Power, default off)**:
+  - TVs that keep their MQTT broker up when switched off (fake sleep, e.g. Fast Power On) answer `gettoken` in standby as well; verified on a 55E8GE (V0000.06.29X.P0813). With the option on, the proactive and periodic refresh no longer wait for the TV to be turned on, so the 2-day access token is renewed and the pairing survives Home Assistant restarts even if the TV is not used for days.
+  - In standby the refresh is attempted only while the current access token is still valid: a failed refresh restores the connection with that token, and an expired one could not be re-established, so the open connection is then left alone until the TV wakes.
+
 ## [2.10.0] - 2026-09-29
 
 ### Added

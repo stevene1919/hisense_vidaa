@@ -357,6 +357,53 @@ def test_proactive_token_refresh_deferred_in_standby():
     assert client._refreshing_token is False
 
 
+def _standby_client(access_age_hours: float, refresh_in_standby: bool) -> HisenseTvClient:
+    now = int(time.time())
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        access_token="token",
+        access_token_time=int(now - access_age_hours * 3600),
+        access_token_duration=2,
+        refresh_token="valid_refresh",
+        refresh_token_time=now - (40 * 3600),
+        refresh_token_duration=30,
+        refresh_in_standby=refresh_in_standby,
+    )
+    client.PROACTIVE_REFRESH_SETTLE_SECONDS = 0
+    client.state = "off"  # retained fake_sleep_0 received
+    client.connected = True
+    return client
+
+
+def test_proactive_token_refresh_in_standby_when_enabled():
+    """With refresh_in_standby a near-expiry (still valid) token is renewed although the TV is in standby."""
+    client = _standby_client(access_age_hours=40, refresh_in_standby=True)
+    with patch.object(client, "refresh_tokens") as mock_refresh:
+        client._proactive_token_refresh()
+        mock_refresh.assert_called_once()
+
+
+def test_proactive_token_refresh_in_standby_skipped_once_expired():
+    """In standby an expired token is not refreshed: the open connection could not be re-established."""
+    client = _standby_client(access_age_hours=50, refresh_in_standby=True)
+    with patch.object(client, "refresh_tokens") as mock_refresh:
+        client._proactive_token_refresh()
+        mock_refresh.assert_not_called()
+
+
+def test_token_watch_refreshes_in_standby_when_enabled():
+    """The periodic token watch also renews in standby when the option is on, and not when it is off."""
+    enabled = _standby_client(access_age_hours=40, refresh_in_standby=True)
+    with patch.object(enabled, "refresh_tokens", return_value=True) as mock_refresh:
+        enabled._maybe_refresh_while_awake()
+        mock_refresh.assert_called_once()
+
+    disabled = _standby_client(access_age_hours=40, refresh_in_standby=False)
+    with patch.object(disabled, "refresh_tokens") as mock_refresh:
+        disabled._maybe_refresh_while_awake()
+        mock_refresh.assert_not_called()
+
+
 def test_refresh_tokens_restores_connection_on_failure():
     """A failed refresh (TV in standby) must reconnect with the current access token."""
     client = HisenseTvClient(

@@ -20,6 +20,7 @@ from .const import (
     CONF_KEY_DELAY,
     CONF_KEY_REPEAT,
     CONF_KEYFILE,
+    CONF_REFRESH_IN_STANDBY,
     CONF_SECONDARY_MAC_ADDRESS,
     CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
@@ -34,6 +35,7 @@ from .const import (
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
     DEFAULT_KEY_DELAY,
     DEFAULT_KEY_REPEAT,
+    DEFAULT_REFRESH_IN_STANDBY,
     DEFAULT_USE_SSL,
 )
 from .crypto import check_certs_exist
@@ -87,6 +89,10 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_SECONDARY_MAC_ADDRESS,
                     default=options.get(CONF_SECONDARY_MAC_ADDRESS, ""),
                 ): str,
+                vol.Optional(
+                    CONF_REFRESH_IN_STANDBY,
+                    default=options.get(CONF_REFRESH_IN_STANDBY, DEFAULT_REFRESH_IN_STANDBY),
+                ): bool,
                 vol.Optional(
                     CONF_USE_SSL,
                     default=options.get(
