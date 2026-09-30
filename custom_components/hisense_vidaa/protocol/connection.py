@@ -76,6 +76,10 @@ def subscribe_standard_tv_topics(
         (broadcast_basepath + "ui_service/volume", 0),
         (broadcast_basepath + "platform_service/actions/tvsleep", 0),
         (broadcast_basepath + "ui_service/data/hotelmodechange", 0),
+        # The client's own mobile push tree: mirrors the pairing session so mid-session
+        # pushes (authentication challenges, token issuance, code close/toast) are
+        # received instead of dropped.
+        (mobile_basepath + "#", 0),
         (mobile_basepath + "ui_service/data/sourcelist", 0),
         (mobile_basepath + "ui_service/data/applist", 0),
         (mobile_basepath + "ui_service/data/gettvstate", 0),
@@ -164,7 +168,9 @@ class ConnectionManagerMixin:
             if self.refresh_token and not self._token_manager.refreshing_token:
                 self._token_manager.proactive_token_refresh()
 
-            threading.Timer(0.5, self.query_initial_state).start()
+            self._query_timer = threading.Timer(0.5, self.query_initial_state)
+            self._query_timer.daemon = True
+            self._query_timer.start()
         else:
             self.connected = False
             _LOGGER.warning("[%s] Failed to connect to TV MQTT broker (rc: %d)", self.ip, rc)
@@ -201,25 +207,29 @@ class ConnectionManagerMixin:
             _LOGGER.error("[%s] Cannot connect to TV: missing credentials (client_id, username, or access_token)", self.ip)
             return
 
-        if self.mqtt_client:
-            _LOGGER.debug("[%s] Cleaning up existing MQTT client before reconnecting", self.ip)
-            try:
-                self.mqtt_client.on_connect = None
-                self.mqtt_client.on_disconnect = None
-                self.mqtt_client.on_message = None
-                self.mqtt_client.loop_stop()
-                self.mqtt_client.disconnect()
-            except Exception as e:
-                _LOGGER.debug("[%s] Error disconnecting existing MQTT client: %s", self.ip, e)
-            finally:
-                self.mqtt_client = None
-                self.connected = False
+        # Serialize concurrent callers (ensure_connected / _rejected_retry_fire /
+        # refresh_tokens) so two threads cannot tear down and rebuild the MQTT
+        # client at the same time.
+        with self._reconnect_lock:
+            if self.mqtt_client:
+                _LOGGER.debug("[%s] Cleaning up existing MQTT client before reconnecting", self.ip)
+                try:
+                    self.mqtt_client.on_connect = None
+                    self.mqtt_client.on_disconnect = None
+                    self.mqtt_client.on_message = None
+                    self.mqtt_client.loop_stop()
+                    self.mqtt_client.disconnect()
+                except Exception as e:
+                    _LOGGER.debug("[%s] Error disconnecting existing MQTT client: %s", self.ip, e)
+                finally:
+                    self.mqtt_client = None
+                    self.connected = False
 
-        self.mqtt_client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
-        _LOGGER.debug("[%s] Starting background MQTT connection loop", self.ip)
-        self.mqtt_client.connect_async(self.ip, 36669, 60)
-        self.mqtt_client.loop_start()
-        self._token_manager.start_token_watch()
+            self.mqtt_client = self.create_mqtt_client(self.client_id, self.username, self.access_token)
+            _LOGGER.debug("[%s] Starting background MQTT connection loop", self.ip)
+            self.mqtt_client.connect_async(self.ip, 36669, 60)
+            self.mqtt_client.loop_start()
+            self._token_manager.start_token_watch()
 
     def ensure_connected(self: HisenseTvClient, min_interval: float = 5.0) -> bool:
         """Ensures the MQTT client is connected, rate-limiting reconnect attempts."""
@@ -276,6 +286,10 @@ class ConnectionManagerMixin:
         """Cleanly disconnects the MQTT client and stops the background network thread."""
         self._token_manager.stop_token_watch()
         self._token_manager.cancel_rejected_retry()
+        timer, self._query_timer = self._query_timer, None
+        if timer:
+            with contextlib.suppress(Exception):
+                timer.cancel()
         if self.mqtt_client:
             clean_disconnect_mqtt_client(self.mqtt_client)
             self.mqtt_client = None

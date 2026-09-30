@@ -218,6 +218,7 @@ def parse_media_state_broadcast(
 ) -> dict[str, Any]:
     """Parses raw TV state broadcast message into structured media player state fields."""
     statetype = data.get("statetype")
+    statetype_l = str(statetype or "").lower()
     result: dict[str, Any] = {
         "statetype": statetype,
         "is_on": True,
@@ -228,10 +229,12 @@ def parse_media_state_broadcast(
         "channel_num": None,
     }
 
-    if statetype == "fake_sleep_0":
+    # Keep this in lock-step with tv/state.py: only fake_sleep_0 (exact) or any
+    # statetype containing "off" is off; fake_sleep_1 is the TV waking up.
+    if statetype_l == "fake_sleep_0" or "off" in statetype_l:
         result["is_on"] = False
         result["state"] = "off"
-    elif statetype == "fake_sleep_1":
+    elif statetype_l == "fake_sleep_1":
         result["is_on"] = True
         result["state"] = "on"
     elif statetype == "sourceswitch":

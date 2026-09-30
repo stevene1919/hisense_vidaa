@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from custom_components.hisense_vidaa.tv.probe import (
+    create_client_from_creds,
     generate_markdown_report,
     load_credentials_file,
     probe_tv_features,
@@ -121,3 +122,26 @@ def test_probe_tv_features_and_report(tmp_path) -> None:
     loaded = load_credentials_file(creds_file)
     assert loaded["ip_address"] == "192.168.50.12"
     assert loaded["client_id"] == "test_id"
+
+
+def test_create_client_from_creds_passes_cert_paths_by_keyword(tmp_path) -> None:
+    """create_client_from_creds must forward explicit cert/key paths unswapped (F3-leg1).
+
+    resolve_certificates' signature is (auth_profile, certfile, keyfile); the old caller
+    passed (certfile, keyfile) positionally, so auth_profile became the cert path and the
+    key path landed in certfile.
+    """
+    cert = tmp_path / "client_cert.pem"
+    key = tmp_path / "client_key.pem"
+    cert.write_text("CERT")
+    key.write_text("KEY")
+
+    client = create_client_from_creds(
+        {"ip_address": "192.168.50.12"},
+        certfile=str(cert),
+        keyfile=str(key),
+        auth_profile="modern",
+    )
+
+    assert client.certfile == str(cert)
+    assert client.keyfile == str(key)

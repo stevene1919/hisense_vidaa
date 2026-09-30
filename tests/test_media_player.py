@@ -124,6 +124,12 @@ async def test_media_player_sound_mode_and_waking_state(mock_client, mock_entry)
     assert mp.state == STATE_ON
     assert mock_client.is_on is True
 
+    # (c) a statetype containing "off" must be off — state.py and the media_player agree
+    # (regression for leg4-F3: unknown off-ish statetypes flipping is_on True)
+    mp._handle_state_update({"statetype": "poweroff"})
+    assert mp.state == STATE_OFF
+    assert mock_client.is_on is False
+
     # Sound update callback
     mp._handle_sound_update({"menu_id": "sound_mode", "value": "Speech"})
 

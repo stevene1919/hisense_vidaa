@@ -14,7 +14,9 @@ def apply_state_update(client: Any, data: Any) -> None:
         return
 
     statetype = str(data.get("statetype", "")).lower()
-    if "sleep" in statetype or "off" in statetype or statetype == "fake_sleep_0":
+    # Match fake_sleep_0 exactly: fake_sleep_1 means the TV is waking up (immediately
+    # followed by remote_launcher) and must be reported ON, not off.
+    if "off" in statetype or statetype == "fake_sleep_0":
         client.state = "off"
     elif statetype in ("screen_saver", "screensaver"):
         client.state = "screensaver"

@@ -16,11 +16,16 @@ XOR_TIMESTAMP_MASK = 6239759785777146216
 
 
 def clean_mac(mac: str | None) -> str:
-    """Cleans and standardizes a MAC address string, or generates a random MAC."""
+    """Normalize a MAC address's separators (caller's case preserved), or generate a random MAC.
+
+    The MAC case must be preserved: it feeds the case-sensitive ``race`` hash and the
+    ``<mac>$his$…`` client_id (see the reference implementations, which note the race
+    hash is case-sensitive). Only a synthetic random MAC is uppercased.
+    """
     if mac:
         stripped = mac.replace(":", "").replace("-", "").replace(".", "").strip()
         if len(stripped) == 12:
-            return ":".join(stripped[i:i + 2] for i in range(0, 12, 2)).upper()
+            return ":".join(stripped[i:i + 2] for i in range(0, 12, 2))
     return ":".join(f"{random.randint(0, 255):02x}" for _ in range(6)).upper()
 
 

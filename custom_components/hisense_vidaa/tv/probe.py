@@ -72,7 +72,9 @@ def create_client_from_creds(
     """Create a configured HisenseTvClient from credentials."""
     from ..client import HisenseTvClient
 
-    resolved_cert, resolved_key = resolve_certificates(certfile, keyfile)
+    resolved_cert, resolved_key = resolve_certificates(
+        auth_profile=auth_profile, certfile=certfile, keyfile=keyfile
+    )
     resolved_ca = resolve_ca_certificate(ca_cert)
 
     return HisenseTvClient(

@@ -267,3 +267,33 @@ def test_livetv_state_parsing_and_cycling():
     client.change_source.assert_called_with("TV", "TV")
 
 
+def test_apply_state_update_fake_sleep_vocabulary():
+    """F2-leg3/F3-leg4: fake_sleep_1 means waking (ON); fake_sleep_0 and "off"-ish mean off.
+
+    item 10 acceptance: (a) fake_sleep_1 => ON, (b) fake_sleep_0 => off, and (c) a
+    statetype containing "off" is off (the agreed behaviour across state + entities).
+    """
+    from custom_components.hisense_vidaa.tv.state import apply_state_update
+
+    client = HisenseTvClient(ip="192.168.50.12", client_id="cid")
+
+    # (b) fake_sleep_0 => off
+    apply_state_update(client, {"statetype": "fake_sleep_0"})
+    assert client.state == "off"
+    assert client.is_on is False
+
+    # (a) fake_sleep_1 => ON (TV waking up; not a "sleep depth")
+    apply_state_update(client, {"statetype": "fake_sleep_1"})
+    assert client.state == "on"
+    assert client.is_on is True
+
+    # (c) a statetype containing "off" is off
+    apply_state_update(client, {"statetype": "poweroff"})
+    assert client.state == "off"
+    assert client.is_on is False
+
+    # An ordinary active statetype still reports on
+    apply_state_update(client, {"statetype": "livetv"})
+    assert client.state == "on"
+
+

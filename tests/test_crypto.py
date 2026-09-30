@@ -21,15 +21,38 @@ from custom_components.hisense_vidaa.crypto import (
 
 
 def test_clean_mac():
-    """Test standardizing MAC addresses with different delimiters."""
-    assert clean_mac("e8:51:77:ec:98:1c") == "E8:51:77:EC:98:1C"
-    assert clean_mac("e8-51-77-ec-98-1c") == "E8:51:77:EC:98:1C"
-    assert clean_mac("e85177ec981c") == "E8:51:77:EC:98:1C"
+    """Test normalizing MAC separators (the caller's case is preserved)."""
+    assert clean_mac("e8:51:77:ec:98:1c") == "e8:51:77:ec:98:1c"
+    assert clean_mac("e8-51-77-ec-98-1c") == "e8:51:77:ec:98:1c"
+    assert clean_mac("e85177ec981c") == "e8:51:77:ec:98:1c"
 
     # Random MAC generation on None or invalid
     rnd = clean_mac(None)
     assert len(rnd) == 17
     assert len(rnd.split(":")) == 6
+
+
+def test_clean_mac_preserves_case():
+    """clean_mac must round-trip the caller's MAC case unchanged.
+
+    The MAC case feeds the case-sensitive ``race`` hash and the ``<mac>$his$…``
+    client_id; uppercasing it diverges from the reference implementations.
+    """
+    assert clean_mac("e8:51:77:ec:98:1c") == "e8:51:77:ec:98:1c"
+    assert clean_mac("E8:51:77:EC:98:1C") == "E8:51:77:EC:98:1C"
+    assert clean_mac("e8-51-77-EC-98-1c") == "e8:51:77:EC:98:1c"
+    assert clean_mac("e85177EC981c") == "e8:51:77:EC:98:1c"
+
+
+def test_generate_initial_credentials_preserves_mac_case_in_client_id():
+    """The generated client_id must embed the caller's MAC case (not upper-cased)."""
+    mac = "9f:b3:a4:e0:4a:d7"
+    ts = 1788778246
+    client_id, _username, _password = generate_initial_credentials(
+        mac=mac, timestamp=ts, auth_profile="modern"
+    )
+    expected_md5 = hashlib.md5(f"{CLIENT_ID_PATTERN}${mac}".encode()).hexdigest().upper()
+    assert client_id == f"{mac}$his${expected_md5[:6]}_vidaacommon_001"
 
 
 def test_generate_initial_credentials_standard():
