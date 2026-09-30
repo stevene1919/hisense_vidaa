@@ -2,7 +2,7 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
-## [Unreleased]
+## [2.10.1] - 2026-10-01
 
 ### Added
 - **RENEW TOKENS IN STANDBY OPTION (`refresh_in_standby`, Options → General & Power, default off)**:
