@@ -40,7 +40,11 @@ class TokenLifecycleManager:
     def start_token_watch(self) -> None:
         """Start the periodic token watch timer."""
         with self.refresh_lock:
-            if self.token_watch_closed or self.token_watch is not None:
+            # The latch is only meaningful for the current watch run: clear it so a
+            # stop (Force Reconnect / flow disconnect) does not permanently disable
+            # mid-session token renewal after the next reconnect.
+            self.token_watch_closed = False
+            if self.token_watch is not None:
                 return
             timer = threading.Timer(self.TOKEN_WATCH_INTERVAL, self._token_watch_tick)
             timer.daemon = True
@@ -123,6 +127,7 @@ class TokenLifecycleManager:
     def proactive_token_refresh(self) -> None:
         """Proactively refreshes the token if access token is within 12h of expiration."""
         client = self.client
+        should_refresh = False
         try:
             if client.access_token and is_token_expired(client.access_token_time, client.access_token_duration, margin_seconds=43200):
                 time.sleep(self.PROACTIVE_REFRESH_SETTLE_SECONDS)
@@ -145,7 +150,10 @@ class TokenLifecycleManager:
             _LOGGER.debug("[%s] Proactive token refresh check error: %s", client.ip, e)
         finally:
             with self.refresh_lock:
-                self.refreshing_token = False
+                # Only release the flag if THIS call acquired it; otherwise a no-op
+                # call would clobber another thread's in-flight refresh.
+                if should_refresh:
+                    self.refreshing_token = False
 
     def handle_auth_rejection(self, rc: int) -> None:
         """Handles MQTT auth rejection (rc 4 or 5) on connect."""
