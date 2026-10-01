@@ -2,6 +2,13 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.10.4] - 2026-10-01
+
+### Fixed
+- **HACS RELEASE ASSET PACKAGING (`.github/workflows/release.yml`)**:
+  - Packaged the integration content directly at the root of `hisense_vidaa.zip` rather than nesting the `custom_components/hisense_vidaa/` directory tree (#37).
+  - Resolves Home Assistant reporting `Integration 'hisense_vidaa' not found` after installing or updating through HACS, which unpacks the zip release asset directly into `custom_components/<domain>/`.
+
 ## [2.10.3] - 2026-10-01
 
 ### Fixed
