@@ -43,7 +43,13 @@ jobs:
 
       - name: Package Release Asset
         run: |
-          zip -r hisense_vidaa.zip custom_components/hisense_vidaa -x "*/__pycache__/*" "*.pyc"
+          # HACS extracts the release zip straight into custom_components/<domain>/
+          # (hacs/integration, repositories/base.py: async_download_zip_file), so the
+          # archive must contain the INTEGRATION CONTENT at its root - not the full
+          # custom_components/<domain>/ path, which ends up one level too deep after
+          # extraction and makes HA report "Integration not found".
+          cd custom_components/hisense_vidaa
+          zip -r "$GITHUB_WORKSPACE/hisense_vidaa.zip" . -x "*/__pycache__/*" "*.pyc"
 
       - name: Create or Update GitHub Release
         run: |
