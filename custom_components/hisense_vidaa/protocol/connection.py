@@ -8,6 +8,7 @@ import json
 import logging
 import threading
 import time
+import warnings
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -36,12 +37,18 @@ def build_mqtt_client(
     on_disconnect: Callable | None = None,
 ) -> mqtt.Client:
     """Builds and configures an authenticated Paho MQTT client."""
-    client = mqtt.Client(
-        client_id=client_id,
-        clean_session=True,
-        protocol=mqtt.MQTTv311,
-        transport="tcp",
-    )
+    client_kwargs: dict[str, Any] = {
+        "client_id": client_id,
+        "clean_session": True,
+        "protocol": mqtt.MQTTv311,
+        "transport": "tcp",
+    }
+    if hasattr(mqtt, "CallbackAPIVersion"):
+        client_kwargs["callback_api_version"] = mqtt.CallbackAPIVersion.VERSION1
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        client = mqtt.Client(**client_kwargs)
     client.reconnect_delay_set(min_delay=2, max_delay=30)
 
     apply_mqtt_tls(

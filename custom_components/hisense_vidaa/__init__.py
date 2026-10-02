@@ -1,7 +1,10 @@
 """Hisense VIDAA TV custom component integration."""
 
+from __future__ import annotations
+
 import logging
 import os
+from dataclasses import dataclass
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -56,13 +59,25 @@ PLATFORMS: list[str] = [
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
+@dataclass
+class HisenseVidaaData:
+    """Runtime data for Hisense VIDAA TV integration."""
+
+    client: HisenseTvClient
+    platforms: list[str]
+    options: dict[str, Any]
+
+
+type HisenseVidaaConfigEntry = ConfigEntry[HisenseVidaaData]
+
+
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Set up the Hisense VIDAA TV integration services."""
     await async_setup_services(hass)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry) -> bool:
     """Set up Hisense VIDAA TV from a config entry."""
     # [F2-leg2/F2-leg4/F2-leg6]: services are registered by async_setup, but
     # async_unload_entry removes them once the last entry goes away and
@@ -205,12 +220,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"Cannot connect to Hisense TV at {client.ip}: {err}"
         ) from err
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {
-        "client": client,
-        "platforms": platforms_to_setup,
-        "options": dict(entry.options),
-    }
+    entry.runtime_data = HisenseVidaaData(
+        client=client,
+        platforms=platforms_to_setup,
+        options=dict(entry.options),
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, platforms_to_setup)
     entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -225,31 +239,25 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     ir.async_delete_issue(hass, DOMAIN, f"auth_token_invalidated_{entry.entry_id}")
 
 
-async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def update_listener(hass: HomeAssistant, entry: HisenseVidaaConfigEntry) -> None:
     """Handle options update."""
-    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
-    if isinstance(entry_data, dict) and entry_data.get("options") == dict(entry.options):
+    runtime_data = getattr(entry, "runtime_data", None)
+    if runtime_data and runtime_data.options == dict(entry.options):
         return
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry) -> bool:
     """Unload a config entry."""
-    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
-    if isinstance(entry_data, dict):
-        platforms = entry_data.get("platforms", PLATFORMS)
-        client = entry_data.get("client")
-    else:
-        platforms = PLATFORMS
-        client = entry_data
+    runtime_data = getattr(entry, "runtime_data", None)
+    platforms = runtime_data.platforms if runtime_data else PLATFORMS
+    client = runtime_data.client if runtime_data else None
 
     unload_ok = await hass.config_entries.async_unload_platforms(
         entry, platforms
     )
     if unload_ok:
-        data = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
-        unloaded_client = data.get("client") if isinstance(data, dict) else (client or data)
-        if unloaded_client:
-            await hass.async_add_executor_job(unloaded_client.disconnect)
+        if client:
+            await hass.async_add_executor_job(client.disconnect)
         await async_unload_services(hass)
     return unload_ok

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import TYPE_CHECKING
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
@@ -15,10 +16,12 @@ from .client import HisenseTvClient
 from .const import (
     CONF_ENABLE_PICTURE_CONTROLS,
     CONF_ENABLE_SOUND_CONTROLS,
-    DOMAIN,
 )
 from .discovery import get_tv_timestamp
 from .entity import HisenseVidaaEntity
+
+if TYPE_CHECKING:
+    from . import HisenseVidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,12 +30,11 @@ PARALLEL_UPDATES = 0
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: HisenseVidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Hisense VIDAA buttons based on a config entry."""
-    data = hass.data[DOMAIN][entry.entry_id]
-    client: HisenseTvClient = data["client"]
+    client: HisenseTvClient = entry.runtime_data.client
 
     entities: list[ButtonEntity] = [
         HisenseVidaaForceReconnectButton(client, entry),

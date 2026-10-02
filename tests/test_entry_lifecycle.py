@@ -61,8 +61,21 @@ def _setup_hass(mock_entry, mock_client, monkeypatch):
     mock_client.check_and_refresh_token = MagicMock(return_value=False)
     mock_client.connect_and_run = MagicMock()
     mock_client.disconnect = MagicMock()
-    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
-    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+
+    loaded_entries = set()
+
+    def fake_forward(entry, platforms):
+        loaded_entries.add(entry)
+        return True
+
+    def fake_unload(entry, platforms):
+        loaded_entries.discard(entry)
+        return True
+
+    hass.config_entries.async_forward_entry_setups = AsyncMock(side_effect=fake_forward)
+    hass.config_entries.async_unload_platforms = AsyncMock(side_effect=fake_unload)
+    hass.config_entries.async_loaded_entries = MagicMock(side_effect=lambda domain: list(loaded_entries))
+    hass.config_entries.async_entries = MagicMock(side_effect=lambda domain: list(loaded_entries))
     mock_entry.options = {"enable_remote": True}
     return hass
 
@@ -92,6 +105,7 @@ async def test_connect_failure_raises_config_entry_not_ready(
     mock_entry, mock_client, monkeypatch
 ):
     """[F10-leg2] a missing/invalid cert must fail setup cleanly, not leak a FileNotFoundError."""
+    mock_entry.runtime_data = None
     hass = _setup_hass(mock_entry, mock_client, monkeypatch)
     mock_client.connect_and_run = MagicMock(
         side_effect=FileNotFoundError(2, "No such file or directory")
@@ -100,7 +114,7 @@ async def test_connect_failure_raises_config_entry_not_ready(
     with pytest.raises(ConfigEntryNotReady):
         await async_setup_entry(hass, mock_entry)
 
-    assert DOMAIN not in hass.data
+    assert getattr(mock_entry, "runtime_data", None) is None
 
 
 @pytest.mark.anyio
@@ -126,6 +140,7 @@ async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeyp
     """Test that setting up and unloading an entry only unloads enabled platforms."""
     hass = MagicMock()
     hass.data = {}
+    hass.services = FakeServices()
     hass.config_entries = MagicMock()
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
     hass.loop = MagicMock()
@@ -138,8 +153,20 @@ async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeyp
     mock_client.connect_and_run = MagicMock()
     mock_client.disconnect = MagicMock()
 
-    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
-    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+    loaded_entries = set()
+
+    def fake_forward(entry, platforms):
+        loaded_entries.add(entry)
+        return True
+
+    def fake_unload(entry, platforms):
+        loaded_entries.discard(entry)
+        return True
+
+    hass.config_entries.async_forward_entry_setups = AsyncMock(side_effect=fake_forward)
+    hass.config_entries.async_unload_platforms = AsyncMock(side_effect=fake_unload)
+    hass.config_entries.async_loaded_entries = MagicMock(side_effect=lambda domain: list(loaded_entries))
+    hass.config_entries.async_entries = MagicMock(side_effect=lambda domain: list(loaded_entries))
 
     # 1. Setup entry with notify and picture_controls disabled
     mock_entry.options = {"enable_remote": True, "enable_notify": False}
@@ -149,7 +176,7 @@ async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeyp
     # Forward entry setups should have received 7 platforms (excluding notify and number)
     expected_platforms = ["media_player", "sensor", "binary_sensor", "button", "switch", "select", "remote"]
     hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(mock_entry, expected_platforms)
-    assert hass.data[DOMAIN][mock_entry.entry_id]["platforms"] == expected_platforms
+    assert mock_entry.runtime_data.platforms == expected_platforms
 
     # 2. Unload entry
     unload_result = await async_unload_entry(hass, mock_entry)
@@ -157,7 +184,6 @@ async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeyp
     # Unload platforms must ONLY be called with the 7 loaded platforms, never all PLATFORMS
     hass.config_entries.async_unload_platforms.assert_awaited_once_with(mock_entry, expected_platforms)
     mock_client.disconnect.assert_called_once()
-    assert mock_entry.entry_id not in hass.data.get(DOMAIN, {})
 
 
 @pytest.mark.anyio

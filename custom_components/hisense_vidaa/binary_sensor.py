@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -14,20 +14,21 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .client import HisenseTvClient
-from .const import DOMAIN
 from .entity import HisenseVidaaEntity
+
+if TYPE_CHECKING:
+    from . import HisenseVidaaConfigEntry
 
 PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: HisenseVidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Hisense VIDAA binary sensors."""
-    data = hass.data[DOMAIN][entry.entry_id]
-    client: HisenseTvClient = data["client"]
+    client: HisenseTvClient = entry.runtime_data.client
 
     async_add_entities([
         HisenseVidaaMqttConnectedBinarySensor(client, entry),

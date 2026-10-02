@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from homeassistant.components.notify import NotifyEntity
 from homeassistant.config_entries import ConfigEntry
@@ -13,6 +14,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .client import HisenseTvClient
 from .const import CONF_ENABLE_NOTIFY, DEFAULT_ENABLE_NOTIFY, DOMAIN
 from .entity import HisenseVidaaEntity
+
+if TYPE_CHECKING:
+    from . import HisenseVidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,12 +49,11 @@ class HisenseVidaaNotifyEntity(HisenseVidaaEntity, NotifyEntity):
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: HisenseVidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Hisense VIDAA notify platform."""
-    data = hass.data[DOMAIN][config_entry.entry_id]
-    client: HisenseTvClient = data["client"]
+    client: HisenseTvClient = config_entry.runtime_data.client
 
     # Clean up the notify entity from the entity registry if the feature was disabled
     entity_reg = er.async_get(hass)

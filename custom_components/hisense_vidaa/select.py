@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
@@ -20,6 +20,9 @@ from .const import (
     DOMAIN,
 )
 from .entity import HisenseVidaaEntity
+
+if TYPE_CHECKING:
+    from . import HisenseVidaaConfigEntry
 from .tv.settings import (
     DEFAULT_MENU_ID_PICTURE_MODE,
     DEFAULT_MENU_ID_SOUND_MODE,
@@ -214,12 +217,11 @@ class HisenseVidaaSoundModeSelect(HisenseVidaaEntity, SelectEntity):
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: HisenseVidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Hisense VIDAA select platform."""
-    data = hass.data[DOMAIN][config_entry.entry_id]
-    client: HisenseTvClient = data["client"]
+    client: HisenseTvClient = config_entry.runtime_data.client
 
     enable_picture = config_entry.options.get(
         CONF_ENABLE_PICTURE_CONTROLS, DEFAULT_ENABLE_PICTURE_CONTROLS

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from typing import Any
 
@@ -88,7 +89,24 @@ def _async_target_entry_ids_from_registries(
 def _get_target_clients(hass: HomeAssistant, call: ServiceCall) -> list[Any]:
     """Resolve target clients from service call parameters."""
     clients: list[Any] = []
-    domain_data = hass.data.get(DOMAIN, {})
+    loaded_entries: list[Any] = []
+    if hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_loaded_entries"):
+        with contextlib.suppress(Exception):
+            res = hass.config_entries.async_loaded_entries(DOMAIN)
+            if isinstance(res, list):
+                loaded_entries = res
+
+    if not loaded_entries and hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_entries"):
+        with contextlib.suppress(Exception):
+            res = hass.config_entries.async_entries(DOMAIN)
+            if isinstance(res, list):
+                loaded_entries = [e for e in res if getattr(e, "runtime_data", None) is not None]
+
+    if not loaded_entries and hasattr(hass, "data") and isinstance(hass.data, dict) and DOMAIN in hass.data:
+        from types import SimpleNamespace
+        for eid, edata in hass.data.get(DOMAIN, {}).items():
+            loaded_entries.append(SimpleNamespace(entry_id=eid, runtime_data=edata))
+
     target_ip = call.data.get("ip_address") or call.data.get("ip")
     target_mac = call.data.get("mac_address") or call.data.get("mac")
     target_entry_id = call.data.get("entry_id")
@@ -141,11 +159,17 @@ def _get_target_clients(hass: HomeAssistant, call: ServiceCall) -> list[Any]:
         target_entry_ids or target_ip or target_mac or registry_ids_given
     )
 
-    for entry_id, data in domain_data.items():
-        client = data.get("client") if isinstance(data, dict) else data
+    for entry in loaded_entries:
+        runtime_data = getattr(entry, "runtime_data", None)
+        if isinstance(runtime_data, dict):
+            client = runtime_data.get("client")
+        elif runtime_data is not None:
+            client = getattr(runtime_data, "client", runtime_data)
+        else:
+            client = None
         if not client:
             continue
-        if target_entry_ids and entry_id not in target_entry_ids:
+        if target_entry_ids and entry.entry_id not in target_entry_ids:
             continue
         # A registry-backed target (entity/device/area/floor/label) that resolves
         # to no entry matches nothing - it must not degrade into a broadcast.
@@ -158,8 +182,14 @@ def _get_target_clients(hass: HomeAssistant, call: ServiceCall) -> list[Any]:
         clients.append(client)
 
     if not clients and not selector_given:
-        for entry_id, data in domain_data.items():
-            client = data.get("client") if isinstance(data, dict) else data
+        for entry in loaded_entries:
+            runtime_data = getattr(entry, "runtime_data", None)
+            if isinstance(runtime_data, dict):
+                client = runtime_data.get("client")
+            elif runtime_data is not None:
+                client = getattr(runtime_data, "client", runtime_data)
+            else:
+                client = None
             if client:
                 clients.append(client)
     return clients
@@ -377,8 +407,23 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
 async def async_unload_services(hass: HomeAssistant) -> None:
     """Unregister all custom services if no active entries remain."""
-    domain_data = hass.data.get(DOMAIN, {})
-    if domain_data:
+    loaded_entries: list[Any] = []
+    if hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_loaded_entries"):
+        with contextlib.suppress(Exception):
+            res = hass.config_entries.async_loaded_entries(DOMAIN)
+            if isinstance(res, list):
+                loaded_entries = res
+
+    if not loaded_entries and hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_entries"):
+        with contextlib.suppress(Exception):
+            res = hass.config_entries.async_entries(DOMAIN)
+            if isinstance(res, list):
+                loaded_entries = [e for e in res if getattr(e, "runtime_data", None) is not None]
+
+    if not loaded_entries and hasattr(hass, "data") and isinstance(hass.data, dict) and hass.data.get(DOMAIN):
+        return
+
+    if loaded_entries:
         return
 
     services_to_remove = [

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -19,6 +19,9 @@ from .const import (
     DOMAIN,
 )
 from .entity import HisenseVidaaEntity
+
+if TYPE_CHECKING:
+    from . import HisenseVidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -137,12 +140,11 @@ class HisenseVidaaDebugLoggingSwitch(HisenseVidaaEntity, SwitchEntity):
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: HisenseVidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Hisense VIDAA switch platform."""
-    data = hass.data[DOMAIN][config_entry.entry_id]
-    client = data["client"]
+    client = config_entry.runtime_data.client
 
     enable_audio_only = config_entry.options.get(
         CONF_ENABLE_AUDIO_ONLY, DEFAULT_ENABLE_AUDIO_ONLY

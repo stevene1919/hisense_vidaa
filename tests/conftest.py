@@ -569,7 +569,9 @@ def isolate_host_network_environment(monkeypatch):
 
 
 @pytest.fixture
-def mock_entry():
+def mock_entry(mock_client):
+    from types import SimpleNamespace
+
     from homeassistant.config_entries import ConfigEntry
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry_id"
@@ -583,6 +585,11 @@ def mock_entry():
         "sw_version": "V1.0",
     }
     entry.options = {"enable_remote": True, "enable_wol": True}
+    entry.runtime_data = SimpleNamespace(
+        client=mock_client,
+        platforms=[],
+        options=entry.options,
+    )
     return entry
 
 

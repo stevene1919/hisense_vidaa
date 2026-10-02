@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .client import HisenseTvClient
-from .const import DOMAIN
 from .sensors_diagnostic import (
     HisenseVidaaAudioOutputSensor,
     HisenseVidaaAuthProfileSensor,
@@ -20,6 +19,9 @@ from .sensors_diagnostic import (
 )
 from .tv.media import parse_applist_payload, parse_sourcelist_payload
 from .tv.navigation import get_app_icon, get_source_icon
+
+if TYPE_CHECKING:
+    from . import HisenseVidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,11 +42,11 @@ __all__ = [
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: HisenseVidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Hisense VIDAA sensors based on a config entry."""
-    client: HisenseTvClient = hass.data[DOMAIN][entry.entry_id]["client"]
+    client: HisenseTvClient = entry.runtime_data.client
     async_add_entities([
         HisenseVidaaSessionStatusSensor(client, entry),
         HisenseVidaaAuthProfileSensor(client, entry),

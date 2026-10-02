@@ -146,7 +146,37 @@ python3 test_client.py probe --ip <TV_IP>
 python3 test_client.py ping --ip <TV_IP>
 ```
 
-> See the full **[CLI Testing & Diagnostic Guide](docs/cli_tools.md)** for more commands (`launch-app`, `send-key`, `listen`, `wake`).
+---
+
+## ⚡ Integration Actions & Services
+
+The integration provides custom Home Assistant actions for advanced automation and remote control (see **[Services & Automations Guide](docs/services_and_automations.md)** for full YAML examples):
+
+| Action | Description | Key Parameters |
+| :--- | :--- | :--- |
+| `hisense_vidaa.send_key` | Sends navigation, playback, and numerical remote key commands. | `key`, `repeat`, `delay` |
+| `hisense_vidaa.launch_app` | Launches installed smart TV applications by display name or app ID. | `app` |
+| `hisense_vidaa.set_picture_setting` | Direct hardware adjustment of TV picture mode settings. | `menu_id`, `menu_value` |
+| `hisense_vidaa.set_sound_setting` | Direct hardware adjustment of TV sound and equalizer settings. | `menu_id`, `menu_value` |
+| `hisense_vidaa.send_text_input` | Sends text strings directly to active onscreen search boxes. | `text`, `action` |
+
+---
+
+## 🗑️ Removal & Uninstallation
+
+To cleanly remove the Hisense VIDAA TV integration:
+
+1. **Delete Config Entry**:
+   - Go to **Settings $\rightarrow$ Devices & Services $\rightarrow$ Integrations**.
+   - Find your **Hisense VIDAA TV** card, click the three dots (`⋮`) menu, and select **Delete**.
+   - Persistent repair issues and entities associated with the device will be automatically cleaned up.
+2. **Remove Certificates (Optional)**:
+   - If you manually placed client certificates in `/config/ssl/hisense_vidaa/` (or `/config/ssl/`), remove those files if they are no longer needed by other tools.
+3. **Uninstall Component**:
+   - **HACS**: Go to **HACS $\rightarrow$ Integrations**, locate **Hisense VIDAA TV**, click the three dots (`⋮`) menu, and select **Remove**.
+   - **Manual**: Delete the directory `/config/custom_components/hisense_vidaa/`.
+4. **Restart Home Assistant**:
+   - Restart Home Assistant (`Settings` $\rightarrow$ `System` $\rightarrow$ `Restart`) to release all loaded modules.
 
 ---
 

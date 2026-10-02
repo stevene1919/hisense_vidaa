@@ -1,5 +1,9 @@
+"""Media player platform for Hisense VIDAA TV integration."""
+
+from __future__ import annotations
+
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.media_player import (
     MediaPlayerDeviceClass,
@@ -22,9 +26,11 @@ from .const import (
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
-    DOMAIN,
 )
 from .entity import HisenseVidaaEntity
+
+if TYPE_CHECKING:
+    from . import HisenseVidaaConfigEntry
 from .tv.media import (
     build_media_channel_label,
     build_media_player_current_source,
@@ -394,9 +400,8 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: HisenseVidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    data = hass.data[DOMAIN][config_entry.entry_id]
-    client: HisenseTvClient = data["client"]
+    client: HisenseTvClient = config_entry.runtime_data.client
     async_add_entities([HisenseVidaaMediaPlayer(client=client, entry=config_entry)])

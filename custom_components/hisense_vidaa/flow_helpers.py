@@ -159,12 +159,16 @@ async def async_disconnect_existing_client(
     ``entry_id`` restricts the disconnect to a single entry (the one being
     re-paired); when omitted, any matching client is disconnected.
     """
-    if not hasattr(hass, "data") or not isinstance(hass.data, dict):
-        return
-    for current_entry_id, entry_data in list(hass.data.get(DOMAIN, {}).items()):
-        if entry_id is not None and current_entry_id != entry_id:
+    entries = (
+        hass.config_entries.async_entries(DOMAIN)
+        if hasattr(getattr(hass, "config_entries", None), "async_entries")
+        else []
+    )
+    for entry in entries:
+        if entry_id is not None and entry.entry_id != entry_id:
             continue
-        client = entry_data.get("client") if isinstance(entry_data, dict) else entry_data
+        runtime_data = getattr(entry, "runtime_data", None)
+        client = getattr(runtime_data, "client", runtime_data) if runtime_data else None
         if client and (
             getattr(client, "ip", None) == ip_address
             or (mac_address and getattr(client, "mac", None) == mac_address)
@@ -172,6 +176,19 @@ async def async_disconnect_existing_client(
             _LOGGER.debug("Disconnecting existing running client for %s during pairing flow", ip_address)
             with contextlib.suppress(Exception):
                 await hass.async_add_executor_job(client.disconnect)
+
+    if hasattr(hass, "data") and isinstance(hass.data, dict) and DOMAIN in hass.data:
+        for current_entry_id, entry_data in list(hass.data.get(DOMAIN, {}).items()):
+            if entry_id is not None and current_entry_id != entry_id:
+                continue
+            client = entry_data.get("client") if isinstance(entry_data, dict) else entry_data
+            if client and (
+                getattr(client, "ip", None) == ip_address
+                or (mac_address and getattr(client, "mac", None) == mac_address)
+            ):
+                _LOGGER.debug("Disconnecting existing running client for %s during pairing flow", ip_address)
+                with contextlib.suppress(Exception):
+                    await hass.async_add_executor_job(client.disconnect)
 
 
 async def async_resolve_mac(hass: HomeAssistant, ip_address: str | None) -> str | None:

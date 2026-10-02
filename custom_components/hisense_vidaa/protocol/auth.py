@@ -10,6 +10,7 @@ import socket
 import ssl
 import threading
 import time
+import warnings
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -250,11 +251,23 @@ def probe_tv_auth_methods(
             c.tls_set(cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
         c.tls_insecure_set(True)
 
+    def _create_probe_client(cid: str) -> mqtt.Client:
+        kwargs: dict[str, Any] = {
+            "client_id": cid,
+            "clean_session": True,
+            "protocol": mqtt.MQTTv311,
+        }
+        if hasattr(mqtt, "CallbackAPIVersion"):
+            kwargs["callback_api_version"] = mqtt.CallbackAPIVersion.VERSION1
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            return mqtt.Client(**kwargs)
+
     # 1. Legacy static ('hisenseservice')
     try:
         leg_rc = [None]
         leg_lock = threading.Event()
-        leg_client = mqtt.Client(client_id="hisenseservice", clean_session=True, protocol=mqtt.MQTTv311)
+        leg_client = _create_probe_client("hisenseservice")
         _setup_tls(leg_client)
         leg_client.username_pw_set(username="hisenseservice", password="multimqttservice")
         leg_client.on_connect = lambda c, u, f, rc: (leg_rc.__setitem__(0, rc), leg_lock.set())
@@ -274,7 +287,7 @@ def probe_tv_auth_methods(
         cid, user, pwd = generate_initial_credentials(mac=mac, auth_profile="remotenow")
         std_rc = [None]
         std_lock = threading.Event()
-        std_client = mqtt.Client(client_id=cid, clean_session=True, protocol=mqtt.MQTTv311)
+        std_client = _create_probe_client(cid)
         _setup_tls(std_client)
         std_client.username_pw_set(username=user, password=pwd)
         std_client.on_connect = lambda c, u, f, rc: (std_rc.__setitem__(0, rc), std_lock.set())
@@ -294,7 +307,7 @@ def probe_tv_auth_methods(
         cid, user, pwd = generate_initial_credentials(mac=mac, auth_profile="middle")
         mid_rc = [None]
         mid_lock = threading.Event()
-        mid_client = mqtt.Client(client_id=cid, clean_session=True, protocol=mqtt.MQTTv311)
+        mid_client = _create_probe_client(cid)
         _setup_tls(mid_client)
         mid_client.username_pw_set(username=user, password=pwd)
         mid_client.on_connect = lambda c, u, f, rc: (mid_rc.__setitem__(0, rc), mid_lock.set())
@@ -314,7 +327,7 @@ def probe_tv_auth_methods(
         cid, user, pwd = generate_initial_credentials(mac=mac, auth_profile="modern")
         mod_rc = [None]
         mod_lock = threading.Event()
-        mod_client = mqtt.Client(client_id=cid, clean_session=True, protocol=mqtt.MQTTv311)
+        mod_client = _create_probe_client(cid)
         _setup_tls(mod_client)
         mod_client.username_pw_set(username=user, password=pwd)
         mod_client.on_connect = lambda c, u, f, rc: (mod_rc.__setitem__(0, rc), mod_lock.set())

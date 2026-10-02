@@ -7,6 +7,7 @@ import logging
 import os
 import socket
 import threading
+import warnings
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -86,7 +87,16 @@ def ping_tv(
                 conn_rc[0] = rc
                 conn_event.set()
 
-            c = mqtt.Client(client_id=client_id, clean_session=True, protocol=mqtt.MQTTv311)
+            client_kwargs: dict[str, Any] = {
+                "client_id": client_id,
+                "clean_session": True,
+                "protocol": mqtt.MQTTv311,
+            }
+            if hasattr(mqtt, "CallbackAPIVersion"):
+                client_kwargs["callback_api_version"] = mqtt.CallbackAPIVersion.VERSION1
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                c = mqtt.Client(**client_kwargs)
             if certfile and keyfile and os.path.isfile(certfile) and os.path.isfile(keyfile):
                 if verify_ssl and ca_cert and os.path.isfile(ca_cert):
                     c.tls_set(

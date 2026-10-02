@@ -1,7 +1,11 @@
+"""Remote platform for Hisense VIDAA TV integration."""
+
+from __future__ import annotations
+
 import asyncio
 import logging
 from collections.abc import Iterable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.remote import RemoteEntity
 from homeassistant.config_entries import ConfigEntry
@@ -23,6 +27,9 @@ from .const import (
     DOMAIN,
 )
 from .entity import HisenseVidaaEntity
+
+if TYPE_CHECKING:
+    from . import HisenseVidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -162,12 +169,11 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: HisenseVidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Hisense VIDAA remote entity."""
-    data = hass.data[DOMAIN][config_entry.entry_id]
-    client: HisenseTvClient = data["client"]
+    client: HisenseTvClient = config_entry.runtime_data.client
 
     # Clean up the remote from the entity registry if the feature was disabled
     entity_reg = er.async_get(hass)

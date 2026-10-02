@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import contextlib
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
+
+if TYPE_CHECKING:
+    from . import HisenseVidaaConfigEntry
 
 TO_REDACT = {
     "access_token",
@@ -31,11 +34,18 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    hass: HomeAssistant, entry: HisenseVidaaConfigEntry | ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
-    client = data.get("client")
+    runtime_data = getattr(entry, "runtime_data", None)
+    if runtime_data is None and hasattr(hass, "data") and isinstance(hass.data, dict):
+        runtime_data = hass.data.get(DOMAIN, {}).get(getattr(entry, "entry_id", ""))
+    if isinstance(runtime_data, dict):
+        client = runtime_data.get("client")
+    elif runtime_data is not None:
+        client = getattr(runtime_data, "client", runtime_data)
+    else:
+        client = None
 
     # [F6-leg2/F1-leg6]: bound unconditionally - a not-loaded entry (NOT_LOADED /
     # SETUP_RETRY) previously raised UnboundLocalError (HTTP 500) exactly when a
