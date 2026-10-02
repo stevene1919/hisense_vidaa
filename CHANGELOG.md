@@ -2,6 +2,25 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.10.5] - 2026-10-03
+
+### Added
+- **HOME ASSISTANT BRONZE QUALITY SCALE COMPLIANCE (`quality_scale.yaml`, `manifest.json`)**:
+  - Achieved official Home Assistant Bronze Quality Scale compliance, validated against all tier criteria.
+  - Added `quality_scale: "bronze"` to `manifest.json` and established `quality_scale.yaml` with rule tracking.
+  - Added comprehensive integration removal documentation (`docs/removal.md`).
+
+### Changed
+- **MODERN RUNTIME DATA ARCHITECTURE (`__init__.py`, all platform entities)**:
+  - Migrated integration state and client storage from legacy `hass.data[DOMAIN]` dictionary to modern typed `ConfigEntry.runtime_data` (`HisenseVidaaRuntimeData`).
+  - Refactored `media_player`, `remote`, `sensor`, `binary_sensor`, `switch`, `button`, `number`, `select`, `notify`, `diagnostics`, and `services` platforms to access `entry.runtime_data` directly.
+
+### Fixed
+- **PROTOCOL & CONNECTION RESILIENCE (`protocol/connection.py`, `protocol/ping.py`, `protocol/auth.py`)**:
+  - Fixed `paho-mqtt` Callback API v1 deprecation warning by explicitly configuring compatible callback API protocols.
+  - Hardened dynamic client connection teardown and cleanup during config entry unloads and reloads.
+  - Improved typing consistency and removed deprecated type aliases across all platform modules.
+
 ## [2.10.4] - 2026-10-01
 
 ### Fixed
