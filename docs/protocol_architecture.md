@@ -175,3 +175,65 @@ Different VIDAA models expose varying subsets of the MQTT protocol depending on 
    - Upon next power-up or wake, the broker starts with an unpopulated token table and actively rejects previously valid credentials with `rc: 4` (*Bad username or password*) or MQTT v5 reason code `134` (*Bad authentication data*).
    - The integration specifically tracks broker rejection return codes (`connect_rc in (4, 5, 134, 135)`) versus standard standby timeouts (`connect_rc == 0`), auto-escalating to the Home Assistant Repairs dashboard after 3 consecutive rejections while preserving retry backoff for ordinary standby.
 
+---
+
+## 📡 UPnP / DLNA LAN Control Subsystem
+
+In addition to the primary MQTT broker on port `36669`, VIDAA OS exposes an unauthenticated HTTP UPnP / DLNA service on port **`38400`** (and port **`18400`** on select hardware revisions).
+
+```mermaid
+flowchart TD
+    HA["Home Assistant (Client)"]
+    TV["Hisense VIDAA TV (:38400)"]
+
+    HA -- "SSDP M-SEARCH (UDP 1900)" --> TV
+    TV -- "SSDP Response (MediaRenderer:1)" --> HA
+    HA -- "GET /upnp/description.xml" --> TV
+    TV -- "XML Device & Service Descriptors + Date: Header" --> HA
+    
+    subgraph Services["UPnP Services (Port 38400)"]
+        RC["RenderingControl:1<br/>GetVolume / SetVolume / GetMute"]
+        AVT["AVTransport:1<br/>GetTransportInfo / Play / Pause / Stop"]
+        LCI["LanControlInfo:1<br/>GetLanControlInfo / SetLanControlInfo"]
+    end
+    
+    HA -- "SOAP Action (Instant, Unauthenticated)" --> Services
+```
+
+### 1. UPnP Service Architecture
+- **Device Type:** `urn:schemas-upnp-org:device:MediaRenderer:1`
+- **Device Descriptor:** `http://<tv_ip>:38400/upnp/description.xml` (or `/description.xml`)
+- **Key Services:**
+  1. **`RenderingControl:1`** (`/upnp/control/RenderingControl1`):
+     - **Actions:** `GetVolume`, `SetVolume`, `GetMute`, `SetMute`, `GetVolumeDB`.
+     - **Advantage:** Unauthenticated, zero-handshake control channel. Volume adjustments take effect instantaneously on the hardware amplifier without waiting for MQTT broker connection establishment or TLS certificate negotiation.
+  2. **`AVTransport:1`** (`/upnp/control/AVTransport1`):
+     - **Actions:** `GetTransportInfo`, `Play`, `Pause`, `Stop`, `Seek`, `GetMediaInfo`.
+     - **Transport States:** Reports live media playback states (`PLAYING`, `PAUSED_PLAYBACK`, `STOPPED`).
+  3. **`LanControlInfo:1`** (`urn:schemas-upnp-org:service:LanControlInfo:1` via `/upnp/control/LanControlInfo`):
+     - Proprietary Hisense LAN control interface discovered during mobile companion app reverse engineering (`assets/MediaServer/hisense_lan_control.xml`).
+     - Exposes direct payload exchange (`GetLanControlInfo`, `SetLanControlInfo`) for local companion control commands.
+
+### 2. Zero-Cost Clock Drift Synchronization
+Dynamic MQTT username hashes require synchronized Unix timestamps:
+$$\text{Username} = \text{brand} + (\text{timestamp} \oplus \text{0x5698\_1477\_2b03\_a968})$$
+
+If the Home Assistant host and the TV clock drift by more than **120 seconds**, the TV broker rejects connection with `rc: 4`. 
+- Every HTTP response from the TV's UPnP port (`38400`) includes the TV's real-time hardware clock in the standard HTTP `Date:` header (RFC 7231, e.g. `Date: Wed, 15 Oct 2026 00:00:00 GMT`).
+- The integration inspects this header during discovery and background probes to calculate clock drift ($\Delta t = t_{\text{TV}} - t_{\text{HA}}$) with **zero NTP overhead**, automatically applying the offset during credential hashing.
+
+---
+
+## 🏷️ Multi-Brand VIDAA OS Ecosystem & OEM Licensing
+
+VIDAA OS is not exclusive to Hisense televisions; it is licensed globally to multiple OEM television manufacturers. The underlying MQTT protocol and UPnP descriptors are identical across all licensed brands, differing primarily in brand identifier prefixes:
+
+| OEM Brand | Common Models | Default Brand Code | Client ID Template |
+| :--- | :--- | :--- | :--- |
+| **Hisense** | U6, U7, U8, UX, A6, A7 | `his` | `{mac}$his${hash}_vidaacommon_{suffix}` |
+| **Toshiba** | C350, M550, Z670 (VIDAA editions) | `tos` / `his` | `{mac}$tos${hash}_vidaacommon_{suffix}` |
+| **Loewe** | We. SEE, stellar (VIDAA OS) | `loe` / `his` | `{mac}$loe${hash}_vidaacommon_{suffix}` |
+| **Schneider / Akai / Bush / Beko / Telefunken** | Regional smart TVs | `his` | Parameterized from discovery XML |
+
+During SSDP / UPnP discovery, the integration extracts manufacturer metadata from `rendererdevicedesc.xml` (`<manufacturer>` and `<modelName>`), automatically applying appropriate brand identifiers across client ID generation, username masks, and topic trees.
+

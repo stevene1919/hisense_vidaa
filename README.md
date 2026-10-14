@@ -27,15 +27,17 @@ Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using 
 
 ## 🧭 Supported Generations & Models
 
-The integration automatically detects and supports multiple generations of Hisense smart TVs:
+The integration automatically detects and supports multiple generations of Hisense and licensed OEM smart TVs:
 
-| TV Generation / Firmware | Profile | Auth Model | Pairing Method |
+| TV Generation / Firmware | Profile | Pairing Method | Description |
 | :--- | :--- | :--- | :--- |
-| **Modern VIDAA OS (2024+ / U6+, U7 / protocol $\ge 3290$)** | `modern` | **Modern VIDAA 2.0** (64-bit XOR mask + modern salt) | 4-Digit Screen PIN |
-| **Middle VIDAA OS (VIDAA 1.5 / protocol $3000 \le v < 3290$)** | `middle` | **Middle VIDAA** (64-bit XOR mask + standard salt) | 4-Digit Screen PIN |
-| **Standard VIDAA OS (2018–2023 / U4, U5, early U6 / protocol $< 3000$)** | `remotenow` | **RemoteNOW Dynamic** (`his$<timestamp>` + standard salt) | 4-Digit Screen PIN |
-| **Legacy Hisense / Older Models (Pre-2022 / U2, U3)** | `legacy` | **Legacy Static** (`hisenseservice` / `multimqttservice`) | Instant Setup (No PIN) |
-| **Auto Detection (All Generations)** | `auto` | **Intelligent UPnP transport detection + multi-tier fallback cascade** | Automatic |
+| **Modern VIDAA OS (2024+ / U6+, U7, U8, UX)** | `modern` | 4-Digit Screen PIN | Modern VIDAA 2.0 with dynamic challenge handshake |
+| **Middle VIDAA OS (VIDAA 1.5 / U5, early U6)** | `middle` | 4-Digit Screen PIN | Middle VIDAA transition firmware with dynamic pairing |
+| **Standard VIDAA OS (2018–2023 / U4, U5)** | `remotenow` | 4-Digit Screen PIN | RemoteNOW dynamic PIN protocol |
+| **Legacy Models (Pre-2022 / U2, U3)** | `legacy` | Instant Setup (No PIN) | Static service credential mode |
+| **Auto Detection (All Generations & OEMs)** | `auto` | Automatic | UPnP transport probe with automatic multi-tier fallback |
+
+> For complete cryptographic formulas, XOR masks, and OEM brand identifiers (Toshiba, Loewe, etc.), see [Protocol & Cryptographic Architecture](docs/protocol_architecture.md).
 
 ---
 
@@ -99,58 +101,42 @@ Copy your client certificate / key (or `.p12` bundle) to `/config/ssl/` (or `/ss
 
 ## 📚 Detailed Documentation & Guides
 
-For deep technical details, guides, and dashboard templates, refer to the dedicated documentation:
+For deep technical details, configuration parameters, and dashboard templates, refer to the dedicated documentation library:
 
-| Document | Description |
-| :--- | :--- |
-| ⚡ **[TV Power, Standby & Network Settings](docs/power_and_standby_settings.md)** | Optimal TV settings across VIDAA versions (U4–U8, 2024+), two-tier standby architecture, and preventing token loss. |
-| 📱 **[Lovelace Remote Cards & Dashboards](docs/lovelace_cards.md)** | Pixel-accurate Australian EN2G30H 12-app remote, Classic FTA, Button Card, and Android TV Card templates. |
-| 🖼️ **[Screenshots & UI Gallery](docs/screenshots.md)** | Full visual tour of device controls, media player dialogs, source dropdowns, and option flows. |
-| 🔒 **[SSL Certificate Setup](docs/certificates.md)** | Certificate filename matrix, PKCS#12 extraction, and root CA verification. |
-| 🌐 **[Network & Wake-on-LAN Requirements](docs/network_requirements.md)** | 100% local LAN architecture, static DHCP setup, IoT VLAN configuration, and reliable wired WoL guidelines. |
-| 🛠️ **[Services & Automation Examples](docs/services_and_automations.md)** | Full YAML automation examples, picture/sound adjustments, `hisense_vidaa.send_text_input`, and button cards. |
-| 🧪 **[CLI Testing & Diagnostic Tools](docs/cli_tools.md)** | Standalone [`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py) command-line utility reference. |
-| 🔬 **[Protocol & Cryptographic Architecture](docs/protocol_architecture.md)** | Deep-dive reverse engineering: XOR masks, dynamic hashes, token lifecycles, and MQTT topic dictionary. |
+| Document | Topic | Description |
+| :--- | :--- | :--- |
+| ⚙️ **[Configuration & Options Parameters](docs/parameters.md)** | **Parameters** | Complete reference for all initial setup fields and Options Flow parameters across all tabs. |
+| ⚡ **[TV Power, Standby & Network Settings](docs/power_and_standby_settings.md)** | **Power & Standby** | Model settings (VIDAA U4–U8, 2024+), two-tier standby architecture, and preventing token loss. |
+| 📱 **[Lovelace Remote Cards & Dashboards](docs/lovelace_cards.md)** | **UI Cards** | Australian EN2G30H 12-app remote, Classic FTA, Button Card, and Android TV Card templates. |
+| 🛠️ **[Services & Automation Examples](docs/services_and_automations.md)** | **Automations** | Ready-to-use YAML automations for movie modes, picture/sound toggling, and keyboard input. |
+| 🔒 **[SSL Certificate Setup](docs/certificates.md)** | **Certificates** | Mutual TLS file placement (`/config/ssl/`), filename matrix, and automatic PKCS#12 extraction. |
+| 🌐 **[Network & Wake-on-LAN Requirements](docs/network_requirements.md)** | **Networking** | 100% local LAN architecture, UPnP LAN control, IoT VLAN rules, and reliable wired WoL setup. |
+| 🧪 **[CLI Testing & Diagnostic Tools](docs/cli_tools.md)** | **CLI Utilities** | Standalone [`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py) command-line tool reference. |
+| 🔬 **[Protocol & Cryptographic Architecture](docs/protocol_architecture.md)** | **Architecture** | Reverse-engineered UPnP LAN control, XOR bitmasks, token lifecycles, and multi-brand ecosystem. |
+| 🗑️ **[Removal & Uninstallation Guide](docs/removal.md)** | **Uninstallation** | Step-by-step device deletion, certificate cleanup, and HACS component uninstallation. |
+| 🖼️ **[Screenshots & UI Gallery](docs/screenshots.md)** | **Showcase** | Full visual tour of device controls, media player dialogs, source dropdowns, and option menus. |
 
 ---
 
 ## 🛠️ Diagnostics & Troubleshooting
 
-The integration includes diagnostic CLI tools ([`test_client.py`](test_client.py) & [`debug_tv.py`](debug_tv.py)) to test network connectivity, probe TV capabilities, and generate pre-formatted report blocks for GitHub issues.
-
-### Running the Diagnostic Tool
+The integration includes standalone CLI diagnostic utilities ([`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py)) to test network connectivity, probe dynamic TV capabilities, verify TLS certificates, and generate pre-formatted report blocks for GitHub issues without running Home Assistant.
 
 ```bash
-# Option A: From any PC or server (recommended):
-git clone https://github.com/stevene1919/hisense_vidaa.git
-cd hisense_vidaa
-pip install paho-mqtt defusedxml cryptography pytest
+# Quick feature and capability probe:
 python3 test_client.py probe --ip <TV_IP>
 
-# Option B: Inside Home Assistant (Terminal / SSH Addon):
-cd /config
-curl -sSL https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/test_client.py -o test_client.py
-python3 test_client.py probe --ip <TV_IP>
-```
-
-### Common Commands
-
-```bash
-# Generate a complete diagnostics report with feature probing for GitHub issues:
+# Generate a complete sanitized report for GitHub issues:
 python3 test_client.py report --ip <TV_IP> --probe
-
-# Probe picture, sound, installed apps, and input sources:
-python3 test_client.py probe --ip <TV_IP>
-
-# Quick 3-tier connectivity & firmware detection probe:
-python3 test_client.py ping --ip <TV_IP>
 ```
+
+> For one-line curl runners, live MQTT event streaming, and full command arguments, see the **[CLI Testing & Diagnostic Tools Guide](docs/cli_tools.md)**.
 
 ---
 
 ## ⚡ Integration Actions & Services
 
-The integration provides custom Home Assistant actions for advanced automation and remote control (see **[Services & Automations Guide](docs/services_and_automations.md)** for full YAML examples):
+The integration provides custom Home Assistant actions for advanced automation and remote control:
 
 | Action | Description | Key Parameters |
 | :--- | :--- | :--- |
@@ -160,23 +146,17 @@ The integration provides custom Home Assistant actions for advanced automation a
 | `hisense_vidaa.set_sound_setting` | Direct hardware adjustment of TV sound and equalizer settings. | `menu_id`, `menu_value` |
 | `hisense_vidaa.send_text_input` | Sends text strings directly to active onscreen search boxes. | `text`, `action` |
 
+> For complete YAML examples, input validation, and service schema details, see the **[Services & Automations Guide](docs/services_and_automations.md)**.
+
 ---
 
 ## 🗑️ Removal & Uninstallation
 
 To cleanly remove the Hisense VIDAA TV integration:
+1. In Home Assistant, navigate to **Settings $\rightarrow$ Devices & Services**, locate **Hisense VIDAA TV**, click the three vertical dots (`⋮`), and select **Delete**.
+2. Remove the component from **HACS $\rightarrow$ Integrations** (or delete `/config/custom_components/hisense_vidaa/`), then restart Home Assistant (`Settings` $\rightarrow$ `System` $\rightarrow$ `Restart`).
 
-1. **Delete Config Entry**:
-   - Go to **Settings $\rightarrow$ Devices & Services $\rightarrow$ Integrations**.
-   - Find your **Hisense VIDAA TV** card, click the three dots (`⋮`) menu, and select **Delete**.
-   - Persistent repair issues and entities associated with the device will be automatically cleaned up.
-2. **Remove Certificates (Optional)**:
-   - If you manually placed client certificates in `/config/ssl/hisense_vidaa/` (or `/config/ssl/`), remove those files if they are no longer needed by other tools.
-3. **Uninstall Component**:
-   - **HACS**: Go to **HACS $\rightarrow$ Integrations**, locate **Hisense VIDAA TV**, click the three dots (`⋮`) menu, and select **Remove**.
-   - **Manual**: Delete the directory `/config/custom_components/hisense_vidaa/`.
-4. **Restart Home Assistant**:
-   - Restart Home Assistant (`Settings` $\rightarrow$ `System` $\rightarrow$ `Restart`) to release all loaded modules.
+> For detailed certificate cleanup and multi-device removal steps, see the dedicated **[Removal & Uninstallation Guide](docs/removal.md)**.
 
 ---
 

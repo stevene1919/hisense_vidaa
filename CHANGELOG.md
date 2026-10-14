@@ -2,6 +2,34 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.11.0] - 2026-10-15
+
+### Added
+- **UPNP / DLNA LAN CONTROL SUBSYSTEM (`protocol/upnp.py`, `client.py`)**:
+  - Implemented an asynchronous UPnP LAN Control and DLNA client (`HisenseUpnpClient`) supporting port `38400` (and `18400` fallback).
+  - Integrated `RenderingControl:1` SOAP actions for instantaneous, unauthenticated volume and mute control (`GetVolume`, `SetVolume`, `GetMute`, `SetMute`) directly on the hardware amplifier without MQTT/TLS overhead.
+  - Integrated `AVTransport:1` SOAP actions for real-time media playback state tracking (`GetTransportInfo`, `Play`, `Pause`, `Stop`).
+  - Integrated proprietary `LanControlInfo:1` service (`GetLanControlInfo`, `SetLanControlInfo`) reverse-engineered from companion mobile applications.
+  - Added non-blocking async feature probing (`async_probe()`) to detect UPnP service capabilities without stalling Home Assistant's event loop.
+  - Added standalone UPnP testing script (`scripts/test_upnp.py`) and dedicated unit test suite (`tests/test_upnp.py`).
+- **ZERO-COST CLOCK DRIFT & TIMESTAMP SYNCHRONIZATION (`protocol/upnp.py`)**:
+  - Added real-time clock drift detection by parsing RFC 7231 `Date:` HTTP headers returned in UPnP responses.
+  - Automatically calculates host-to-TV clock offset without issuing external NTP queries, ensuring reliable dynamic MQTT username hashing across networks.
+- **SILVER TIER ACTION EXCEPTION WRAPPING (`services.py`)**:
+  - Wrapped all custom Home Assistant service action handlers (`send_key`, `launch_app`, `set_picture_setting`, `set_sound_setting`, `send_text_input`) in `HomeAssistantError` with descriptive contextual error messages instead of raw socket or connection errors.
+- **COMPREHENSIVE CONFIGURATION & INSTALLATION PARAMETERS REFERENCE (`docs/parameters.md`)**:
+  - Created a dedicated reference document detailing all Options Flow settings (heartbeat/polling intervals, volume stepping, WoL packets and bursts, SSL verify, cert paths) and initial Config Flow setup fields.
+- **EXPANDED TEST SUITE (199 TESTS)**:
+  - Expanded unit test coverage with dedicated UPnP protocol tests, reaching 199 passing tests and establishing a solid 77% test coverage baseline.
+
+### Changed
+- **DOCUMENTATION REORGANIZATION & STREAMLINING (`README.md`, `docs/*`)**:
+  - Streamlined root `README.md` to eliminate duplicated CLI diagnostic commands and uninstallation blocks, redirecting users to dedicated guides in `docs/`.
+  - Simplified the Supported TV Generations table to user-friendly model families while preserving cryptographic architecture details in `docs/protocol_architecture.md`.
+  - Added UPnP LAN Control architecture, SOAP endpoints, and multi-brand OEM ecosystem details (Toshiba, Loewe, Schneider, Akai, Beko, etc.) to `docs/protocol_architecture.md`.
+  - Updated port matrix in `docs/network_requirements.md` to document UPnP port `38400` / `18400` LAN controls.
+  - Updated documentation directory index in `docs/README.md`.
+
 ## [2.10.6] - 2026-10-11
 
 ### Added

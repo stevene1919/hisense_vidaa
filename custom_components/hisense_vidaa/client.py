@@ -29,6 +29,7 @@ from .protocol.pairing import (
     async_submit_pin_code,
 )
 from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
+from .protocol.upnp import HisenseUpnpClient
 from .protocol.wol import send_wake_on_lan
 from .tv.actions import TvActionsMixin
 from .tv.callbacks import CallbackRegistryMixin
@@ -112,6 +113,9 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         self.topicMobiBasepath = ""
         self.topicRemoBasepath = ""
         self.define_topic_paths()
+
+        # UPnP Client for zero-cert fast reachability, volume, and playback state
+        self.upnp = HisenseUpnpClient(self.ip)
 
     # --------------------------------------------------------------------------
     # Backward compatibility properties for TokenLifecycleManager
@@ -399,3 +403,30 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
     ) -> bool:
         """Sends standard Wake-on-LAN magic packet UDP broadcasts for one or multiple MACs."""
         return send_wake_on_lan(mac=mac, broadcast_ip=broadcast_ip, port=port, ip=ip)
+
+    # --------------------------------------------------------------------------
+    # UPnP / DLNA LAN Control Integration
+    # --------------------------------------------------------------------------
+    async def async_upnp_get_volume(self) -> int | None:
+        """Retrieves master volume level (0-100) via UPnP RenderingControl."""
+        return await self.upnp.async_get_volume()
+
+    async def async_upnp_set_volume(self, volume: int) -> bool:
+        """Sets master volume level (0-100) via UPnP RenderingControl."""
+        return await self.upnp.async_set_volume(volume)
+
+    async def async_upnp_get_mute(self) -> bool | None:
+        """Retrieves master mute status via UPnP RenderingControl."""
+        return await self.upnp.async_get_mute()
+
+    async def async_upnp_set_mute(self, mute: bool) -> bool:
+        """Sets master mute status (True/False) via UPnP RenderingControl."""
+        return await self.upnp.async_set_mute(mute)
+
+    async def async_upnp_get_transport_info(self) -> dict[str, str] | None:
+        """Retrieves playback transport info (PLAYING, STOPPED, etc.) via UPnP AVTransport."""
+        return await self.upnp.async_get_transport_info()
+
+    async def async_upnp_probe(self) -> dict[str, Any] | None:
+        """Probes UPnP endpoint for fast sub-second reachability and status."""
+        return await self.upnp.async_probe()

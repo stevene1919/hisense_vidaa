@@ -26,11 +26,13 @@ from .dispatcher import dispatch_incoming_mqtt_message
 from .pairing import async_start_pairing_handshake, async_submit_pin_code
 from .ping import ping_tv
 from .topics import TOPIC_BROADCAST_BASEPATH, TopicPaths, build_topic_paths
+from .upnp import HisenseUpnpClient
 from .wol import send_wake_on_lan
 
 __all__ = [
     "TOPIC_BROADCAST_BASEPATH",
     "ConnectionManagerMixin",
+    "HisenseUpnpClient",
     "TopicPaths",
     "apply_mqtt_tls",
     "async_start_pairing_handshake",

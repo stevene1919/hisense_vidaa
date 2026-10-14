@@ -9,7 +9,7 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from .const import (
     ATTR_ACTION,
@@ -258,7 +258,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             for i in range(repeat):
                 if i > 0 and delay > 0:
                     await asyncio.sleep(delay)
-                await hass.async_add_executor_job(client.send_command, key)
+                try:
+                    await hass.async_add_executor_job(client.send_command, key)
+                except Exception as err:
+                    raise HomeAssistantError(f"Failed to send key command '{key}': {err}") from err
 
         return {
             "key": key,
@@ -298,12 +301,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             app_name = str(call.data.get(ATTR_APP_NAME, app_name))
             app_url = str(call.data.get(ATTR_URL, app_url))
 
-            await hass.async_add_executor_job(
-                client.launch_app,
-                app_id,
-                app_name,
-                app_url,
-            )
+            try:
+                await hass.async_add_executor_job(
+                    client.launch_app,
+                    app_id,
+                    app_name,
+                    app_url,
+                )
+            except Exception as err:
+                raise HomeAssistantError(f"Failed to launch app '{app_name}': {err}") from err
+
             launched.append({
                 "ip": getattr(client, "ip", "unknown"),
                 "app_name": app_name,
@@ -323,7 +330,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         menu_val = call.data.get(ATTR_MENU_VALUE)
         target_clients = _resolve_service_targets(hass, call)
         for client in target_clients:
-            await hass.async_add_executor_job(client.set_picture_setting, menu_id, menu_val)
+            try:
+                await hass.async_add_executor_job(client.set_picture_setting, menu_id, menu_val)
+            except Exception as err:
+                raise HomeAssistantError(f"Failed to set picture setting (menu_id={menu_id}): {err}") from err
         return {
             "menu_id": menu_id,
             "menu_value": menu_val,
@@ -337,7 +347,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         menu_val = call.data.get(ATTR_MENU_VALUE)
         target_clients = _resolve_service_targets(hass, call)
         for client in target_clients:
-            await hass.async_add_executor_job(client.set_sound_setting, menu_id, menu_val)
+            try:
+                await hass.async_add_executor_job(client.set_sound_setting, menu_id, menu_val)
+            except Exception as err:
+                raise HomeAssistantError(f"Failed to set sound setting (menu_id={menu_id}): {err}") from err
         return {
             "menu_id": menu_id,
             "menu_value": menu_val,
@@ -351,7 +364,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         action = call.data.get(ATTR_ACTION, "insert")
         target_clients = _resolve_service_targets(hass, call)
         for client in target_clients:
-            await hass.async_add_executor_job(client.send_text_input, text, action)
+            try:
+                await hass.async_add_executor_job(client.send_text_input, text, action)
+            except Exception as err:
+                raise HomeAssistantError(f"Failed to send text input: {err}") from err
         return {
             "text": text,
             "action": action,

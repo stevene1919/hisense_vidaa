@@ -92,8 +92,8 @@ If your Hisense TV is placed on an isolated **IoT VLAN** separate from your Home
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`36669`** | TCP | Unicast (TLS) | HA $\rightarrow$ TV | **Core TV MQTT Control Channel** (Pairing, commands, state updates, source switching, volume) | **Mandatory** |
 | **`56669`** | TCP | Unicast (Plain) | HA $\rightarrow$ TV | **Legacy Plaintext MQTT Channel** (Pre-2018 / legacy models operating without SSL) | *Optional (Legacy only)* |
-| **`38400`** | TCP | Unicast (HTTP) | HA $\rightarrow$ TV | **UPnP Device Description (`rendererdevicedesc.xml`) & Clock Header Sync** (Modern VIDAA) | **Recommended** |
-| **`18400`** | TCP | Unicast (HTTP) | HA $\rightarrow$ TV | **UPnP Device Description (`rendererdevicedesc.xml`) & Clock Header Sync** (Alternate VIDAA port) | **Recommended** |
+| **`38400`** | TCP | Unicast (HTTP) | HA $\rightarrow$ TV | **UPnP / DLNA LAN Control (`RenderingControl:1`, `AVTransport:1`, `LanControlInfo`, Clock Sync)** (Modern VIDAA) | **Recommended** |
+| **`18400`** | TCP | Unicast (HTTP) | HA $\rightarrow$ TV | **UPnP / DLNA LAN Control (`RenderingControl:1`, `AVTransport:1`, `LanControlInfo`, Clock Sync)** (Alternate VIDAA port) | **Recommended** |
 | **`9` / `7`** | UDP | Directed Broadcast / Unicast | HA $\rightarrow$ TV | **Wake-on-LAN (WoL)** (Power-on magic packet to wake TV from deep standby) | **Recommended** |
 | **`1900`** | UDP | Multicast (`239.255.255.250`) | Both / Multicast | **SSDP / UPnP Auto-Discovery** (Automatic discovery of TV IP and device metadata) | *Optional (Discovery)* |
 | **`5353`** | UDP | Multicast (`224.0.0.251`) | Both / Multicast | **mDNS / Zeroconf Network Discovery** | *Optional (Discovery)* |

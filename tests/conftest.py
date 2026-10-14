@@ -54,6 +54,31 @@ except ImportError:
     vol.Coerce = Coerce
     sys.modules["voluptuous"] = vol
 
+# Mock aiohttp if not installed
+try:
+    import aiohttp
+except ImportError:
+    aiohttp = types.ModuleType("aiohttp")
+
+    class ClientError(Exception):
+        pass
+
+    class ClientSession:
+        def __init__(self, *args, **kwargs):
+            self.closed = False
+
+        async def close(self):
+            self.closed = True
+
+    class ClientTimeout:
+        def __init__(self, total=None):
+            self.total = total
+
+    aiohttp.ClientError = ClientError
+    aiohttp.ClientSession = ClientSession
+    aiohttp.ClientTimeout = ClientTimeout
+    sys.modules["aiohttp"] = aiohttp
+
 # If homeassistant is not installed, install lightweight mock stubs in sys.modules
 if "homeassistant" not in sys.modules:
     ha = types.ModuleType("homeassistant")
