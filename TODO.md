@@ -78,7 +78,7 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - Maintain 100% key parity with master `strings.json` across config flows, options flows, entity states, repairs, and exception descriptions.
   - Evaluate setting up a free open-source Crowdin project for ongoing community localization.
 
-### 11. Support for Non-Hisense VIDAA OEM Brands
+### 11. Rebranding as Universal VIDAA Integration & Multi-Brand Architecture
 
 - [ ] **Multi-Brand VIDAA OS Pairing & Authentication (`crypto.py`, `client.py`, `flow_discovery.py`)**:
   - Parameterize the brand identifier across the pairing handshake instead of hardcoding `"his"`:
@@ -88,6 +88,23 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - Propagate `brand` into `HisenseTvClient` and store `self.brand` (defaulting to `"his"`).
   - Extract and persist `brand` in `flow_discovery.py` from SSDP/UPnP discovery XML metadata (`device_info.get("brand")`), falling back to `"his"` for manual entry.
   - Enable seamless pairing for OEM television brands running licensed VIDAA OS (e.g. Toshiba, Loewe, Schneider, Akai, Beko, Telefunken, Bush).
+
+- [ ] **Integration Rebranding Strategy (`hisense_vidaa` → `vidaa`)**:
+  - **Objective**: Transition branding from Hisense-specific to the universal OS name (**VIDAA Smart TV**) to natively welcome all licensed television manufacturers under one integration.
+  - **Namespace & Ecosystem Conflict Analysis**:
+    - Investigate potential domain conflicts with existing community custom integrations (e.g., `warrenrees/ha_vidaatv` which targets the `vidaa` / `vidaatv` namespace, or `vidaa4ha`).
+    - Verify Home Assistant Core and HACS default repository registry to ensure domain uniqueness and prevent duplicate loader collisions.
+    - Evaluate options:
+      1. **Full Domain Rename (`vidaa`)**: Cleanest long-term architecture, but requires config entry migration and HACS repository re-registration.
+      2. **Friendly Rebrand with Preserved Domain (`hisense_vidaa`)**: Update integration name to *"VIDAA Smart TV (Hisense, Toshiba, Loewe)"*, keeping internal domain `hisense_vidaa` to prevent breaking existing automations, entity IDs, and HACS tracking.
+      3. **Dual-Domain / Deprecation Shim**: New `vidaa` integration with a thin migration wrapper in `hisense_vidaa` that alerts users to migrate seamlessly.
+  - **Backwards Compatibility & Migration Path**:
+    - If migrating domain: implement `async_migrate_entry` to preserve entity unique IDs, area assignments, and custom entity customizations.
+    - Alias legacy action services (e.g., forward `hisense_vidaa.send_key` calls to `vidaa.send_key` with a deprecation warning) to avoid breaking user automations.
+    - Dynamically set `DeviceInfo(manufacturer=...)` from discovery XML (`"Hisense"`, `"Toshiba"`, `"Loewe"`, etc.) instead of hardcoded `"Hisense"`.
+  - **Brand Assets & Translation Refresh**:
+    - Update `brand/` icons and logos to feature the official VIDAA OS branding alongside OEM sub-logos.
+    - Update documentation, repository metadata, and HACS category descriptions.
 
 ---
 
