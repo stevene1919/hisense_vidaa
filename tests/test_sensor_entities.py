@@ -98,12 +98,37 @@ async def test_sensor_entities(mock_client, mock_entry):
     assert s_drift.extra_state_attributes["synchronized"] is True
     assert s_drift.extra_state_attributes["drift_human"] == "0s"
 
+    # Negative drift (e.g. TV clock behind host by ~6 days)
     mock_client.clock_offset = -516360
     s_drift._update_state()
     assert s_drift.native_value == -516360
     assert s_drift._attr_icon == "mdi:clock-alert-outline"
     assert s_drift.extra_state_attributes["synchronized"] is False
     assert "-5d" in s_drift.extra_state_attributes["drift_human"]
+
+    # Positive drift (e.g. TV clock ahead of host by > 1 hour)
+    mock_client.clock_offset = 3665
+    s_drift._update_state()
+    assert s_drift.native_value == 3665
+    assert s_drift._attr_icon == "mdi:clock-alert-outline"
+    assert s_drift.extra_state_attributes["synchronized"] is False
+    assert "+1h" in s_drift.extra_state_attributes["drift_human"]
+
+    # Small drift within tolerance (+45 seconds)
+    mock_client.clock_offset = 45
+    s_drift._update_state()
+    assert s_drift.native_value == 45
+    assert s_drift._attr_icon == "mdi:clock-check-outline"
+    assert s_drift.extra_state_attributes["synchronized"] is True
+    assert "+45s" in s_drift.extra_state_attributes["drift_human"]
+
+    # None / unknown clock offset
+    mock_client.clock_offset = None
+    s_drift._update_state()
+    assert s_drift.native_value is None
+    assert s_drift._attr_icon == "mdi:clock-outline"
+    assert s_drift.extra_state_attributes["synchronized"] is False
+    assert s_drift.extra_state_attributes["drift_human"] == "Unknown"
 
 
 def test_binary_sensor_entities(mock_client, mock_entry):

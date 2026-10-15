@@ -10,9 +10,11 @@ from urllib.parse import urlparse
 from .protocol.ping import ping_tv
 from .tv.fingerprint import (
     UPNP_PORTS,
+    format_drift_human,
     get_arp_mac,
     get_device_fingerprint,
     get_tv_timestamp,
+    probe_upnp_services,
     query_mdns_fingerprint,
     query_upnp_descriptor,
 )
@@ -22,12 +24,14 @@ _LOGGER = logging.getLogger(__name__)
 __all__ = [
     "UPNP_PORTS",
     "DiscoveredTvInfo",
+    "format_drift_human",
     "get_arp_mac",
     "get_device_fingerprint",
     "get_tv_timestamp",
     "parse_ssdp_discovery",
     "parse_zeroconf_discovery",
     "ping_tv",
+    "probe_upnp_services",
     "query_mdns_fingerprint",
     "query_upnp_descriptor",
 ]

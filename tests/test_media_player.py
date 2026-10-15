@@ -405,3 +405,47 @@ async def test_media_player_playback_state_debounce(mock_client, mock_entry):
     assert mp._debounce_handle is None
     assert mp.state == STATE_OFF
 
+
+@pytest.mark.anyio
+async def test_media_player_disconnected_and_cold_boot_recovery(mock_client, mock_entry):
+    """Test powered-off / disconnected states and cold-boot recovery via sourcelist."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp.hass = hass
+
+    # Initially connected and on
+    mock_client.connected = True
+    mock_client.is_on = True
+    assert mp.state == STATE_ON
+
+    # 1. When client is not connected: state must be STATE_OFF
+    mock_client.connected = False
+    assert mp.state == STATE_OFF
+
+    # Disconnect handler resets is_on and marks state OFF
+    mock_client.connected = True
+    mock_client.is_on = True
+    mp._handle_disconnected()
+    assert mock_client.is_on is False
+    assert mp.state == STATE_OFF
+
+    # 2. Cold-boot recovery: TV boots cold with is_on=False and sends sourcelist with active signal
+    mock_client.connected = True
+    mock_client.is_on = False
+    mock_client.current_source = None
+    mp._source = None
+
+    sourcelist_data = [
+        {"sourceid": "0", "sourcename": "TV", "is_signal": 0, "is_active": False},
+        {"sourceid": "1", "sourcename": "HDMI 1", "is_signal": 1, "is_active": True},
+    ]
+    mp._handle_sourcelist_update(sourcelist_data)
+
+    assert mock_client.is_on is True
+    assert mock_client.current_source == "HDMI 1"
+    assert mp.source == "HDMI 1"
+    assert mp.state == STATE_ON
+
+

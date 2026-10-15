@@ -14,6 +14,7 @@ import logging
 import os
 import sys
 import time
+from datetime import UTC, datetime
 
 # Ensure script directory or HA config is in Python path for package resolution
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -43,7 +44,12 @@ if "homeassistant" not in sys.modules:
             raise SystemExit(2) from exc
 
 from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.discovery import get_arp_mac
+from custom_components.hisense_vidaa.discovery import (
+    format_drift_human,
+    get_arp_mac,
+    get_tv_timestamp,
+    probe_upnp_services,
+)
 from custom_components.hisense_vidaa.tv.probe import (
     create_client_from_creds,
     generate_markdown_report,
@@ -144,6 +150,16 @@ def do_ping(ip: str, creds: dict, certfile: str | None, keyfile: str | None, pro
             print(f"  • Wi-Fi MAC (UPnP):           {dev['mac_wifi']}")
         if dev.get("mac_ethernet"):
             print(f"  • Ethernet MAC (UPnP):        {dev['mac_ethernet']}")
+
+        tv_ts = get_tv_timestamp(ip, timeout=2.0)
+        now_ts = int(time.time())
+        if tv_ts:
+            drift = tv_ts - now_ts
+            tv_dt = datetime.fromtimestamp(tv_ts, tz=UTC)
+            drift_str = format_drift_human(drift)
+            print(f"  • TV Hardware Clock:          {tv_dt.strftime('%Y-%m-%d %H:%M:%S UTC')} (drift: {drift:+}s, {drift_str})")
+        else:
+            print("  • TV Hardware Clock:          Unavailable (Port 38400 unreachable or Date header missing)")
 
         if res.get("auth_recommendation"):
             print("\n💡 Firmware Compatibility & Integration Recommendation:")
@@ -484,6 +500,12 @@ def do_wake(ip: str, mac: str) -> None:
         print(f"❌ Failed to send Wake-on-LAN packet for MAC {mac}.")
 
 
+def do_upnp(ip: str) -> None:
+    """Probe UPnP MediaRenderer services and actions on the TV."""
+    print(f"\n[UPnP] Probing UPnP MediaRenderer services on {ip}:38400...")
+    probe_upnp_services(ip, verbose=True)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Hisense VIDAA Integration CLI Test Tool",
@@ -497,6 +519,9 @@ def main() -> None:
 
   # Quick 3-tier connectivity & MQTT broker listening probe:
   python3 test_client.py ping --ip 192.168.50.12
+
+  # Probe UPnP MediaRenderer services and actions:
+  python3 test_client.py upnp --ip 192.168.50.12
 
   # Test raw SSL/TLS certificate connection to TV:
   python3 test_client.py test-ssl --ip 192.168.50.12
@@ -520,7 +545,7 @@ def main() -> None:
 
     parser.add_argument(
         "action",
-        choices=["ping", "report", "probe", "probe-features", "test-ssl", "auth", "listen", "refresh", "send-key", "launch-app", "wake"],
+        choices=["ping", "report", "probe", "probe-features", "test-ssl", "auth", "listen", "refresh", "send-key", "launch-app", "wake", "upnp"],
         help="Action to perform",
     )
     parser.add_argument("key", nargs="?", help="Key name (for send-key) or App name (for launch-app)")
@@ -634,6 +659,13 @@ def main() -> None:
             print("Error: --mac <MAC> (or valid IP with ARP cache entry) is required for 'wake' action.")
             sys.exit(1)
         do_wake(ip, mac)
+
+    elif args.action == "upnp":
+        ip = args.ip or (creds.get("ip_address") if creds else None)
+        if not ip:
+            print("Error: --ip <IP> is required for 'upnp' action (or valid credentials.json).")
+            sys.exit(1)
+        do_upnp(ip)
 
 
 if __name__ == "__main__":

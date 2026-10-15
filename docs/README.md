@@ -8,7 +8,7 @@ This directory contains in-depth documentation covering installation, networking
 
 ## 📖 Documentation Directory
 
-| [**`parameters.md`**](parameters.md) | **Configuration & Options** | Complete reference for all Config Flow and Options Flow parameters (network timings, WoL bursts, certificate provisioning, SSL verification). |
+| [**`parameters.md`**](parameters.md) | **Configuration, Diagnostics & Debugging** | Complete reference for all Config Flow and Options Flow parameters, built-in diagnostic entities, and Home Assistant debug logging/diagnostics procedures. |
 | [**`power_and_standby_settings.md`**](power_and_standby_settings.md) | **TV Power & Standby** | Optimal TV settings across VIDAA versions (U4–U8, 2024+), two-tier standby architecture, and preventing volatile token wipes with HDMI sources. |
 | [**`protocol_architecture.md`**](protocol_architecture.md) | **Protocol & Cryptography** | Complete technical breakdown of the VIDAA MQTT protocol, UPnP/DLNA LAN control, 64-bit XOR masks, challenge-response pairing, and multi-brand OEM ecosystem. |
 | [**`certificates.md`**](certificates.md) | **SSL & Certificates** | Guide for configuring mutual TLS (mTLS), recommended file locations (`/config/ssl/`), file naming conventions, and PKCS#12 (`.p12`/`.pfx`) automatic extraction. |
@@ -34,5 +34,6 @@ This directory contains in-depth documentation covering installation, networking
 3. [**`lovelace_cards.md`**](lovelace_cards.md) — Copy pre-built TV remote and media dashboard cards into your Lovelace views.
 
 ### 🔬 Troubleshooting & Protocol Internals
-1. [**`cli_tools.md`**](cli_tools.md) — Use `test_client.py ping` and `test-ssl` to diagnose connection, network, or authentication issues directly from terminal.
-2. [**`protocol_architecture.md`**](protocol_architecture.md) — Understand how the multi-tier auth cascade, UPnP LAN control, token persistence, and MQTT topic routing operate under the hood.
+1. [**`parameters.md#4-home-assistant-debugging--diagnostics-guide`**](parameters.md#4-home-assistant-debugging--diagnostics-guide) — Enable real-time debug logging via `switch.<tv>_debug_logging` or `logger`, download sanitized HA diagnostics, and trigger repairs.
+2. [**`cli_tools.md`**](cli_tools.md) — Use `test_client.py ping`, `upnp`, and `test-ssl` to diagnose connection, network, clock drift, or authentication issues directly from terminal.
+3. [**`protocol_architecture.md`**](protocol_architecture.md) — Understand how the multi-tier auth cascade, UPnP LAN control, token persistence, and MQTT topic routing operate under the hood.

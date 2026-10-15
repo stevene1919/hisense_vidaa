@@ -8,6 +8,10 @@ This document tracks active pending tasks, investigations, and planned enhanceme
 
 ### 1. Firmware `Q0704`+ Live Verification & Telemetry ([Issue #6](https://github.com/stevene1919/hisense_vidaa/issues/6))
 
+- [x] **Connection & Re-Auth Conflict Resolution**:
+  - Automatically disconnect running background MQTT client before initiating interactive PIN pairing flow to eliminate socket collisions during reauth.
+  - Explicitly recognize MQTT v5 Connack reason codes `134` (Bad user name or password) and `135` (Not authorized) to immediately trigger repair issue / reauth rather than spinning in exponential reconnect loops.
+  - Eliminated erroneous boot-up pairing prompts by removing premature `gettvstate` queries during early setup and debouncing startup status queries.
 - [ ] **Community Verification with 4-Tier Auth Cascade**:
   - Test pairing on TV firmware builds with `transport_protocol` in the Middle tier (3000–3285) and Modern tier ($\ge 3290$) using the automated fallback cascade.
   - Verify whether TVs with full internal paired device storage benefit from clearing paired mobile devices in TV Settings (*Settings → System → Advanced Settings → Mobile App Connection / Paired Devices*).
@@ -45,6 +49,9 @@ This document tracks active pending tasks, investigations, and planned enhanceme
 
 ### 7. Cold Power Cut & AC Restoration Empirical Testing
 
+- [x] **Cold-Boot Active Signal Recovery (`media_player.py`, `tv/media.py`)**:
+  - Implemented `is_signal == 1` evaluation in incoming sourcelist telemetry to promptly transition media player state to `ON` when the TV boots from cold standby onto an active HDMI input or TV tuner before full UI state telemetry is broadcast.
+  - Added unit test coverage for cold-boot signal recovery across disconnected and standby states.
 - [ ] **Empirical Testing of Cold AC Power Interruption**:
   - Test physical behavior of TV and SoC when mains AC power is abruptly disconnected and restored (simulated blackout / wall switch cut).
   - Observe and document whether the TV restores to Cold Standby (screen off, network stack/broker uninitialized) or returns to active power state.
@@ -91,15 +98,13 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - Extract and persist `brand` in `flow_discovery.py` from SSDP/UPnP discovery XML metadata (`device_info.get("brand")`), falling back to `"his"` for manual entry.
   - Enable seamless pairing for OEM television brands running licensed VIDAA OS (e.g. Toshiba, Loewe, Schneider, Akai, Beko, Telefunken, Bush).
 
-- [ ] **Integration Rebranding Strategy (`hisense_vidaa` → `vidaa`)**:
+- [x] **Namespace & Ecosystem Conflict Analysis**:
+  - Investigated potential domain conflicts with existing community custom integrations (`warrenrees/ha_vidaatv` which targets `vidaa` / `vidaatv`, and `vidaa4ha`).
+  - Evaluated HACS default registry and domain uniqueness: decided on preserving `hisense_vidaa` internal domain with friendly rebrand to avoid breaking existing entity IDs, HACS tracking, and automations.
+- [x] **Multi-Brand Architecture Documentation (`docs/protocol_architecture.md`)**:
+  - Reverse-engineered and documented OEM VIDAA implementations across brands (Toshiba, Loewe, Schneider, Akai, Beko, Telefunken, Bush).
+- [ ] **Integration Rebranding Strategy Implementation (`hisense_vidaa` → `vidaa`)**:
   - **Objective**: Transition branding from Hisense-specific to the universal OS name (**VIDAA Smart TV**) to natively welcome all licensed television manufacturers under one integration.
-  - **Namespace & Ecosystem Conflict Analysis**:
-    - Investigate potential domain conflicts with existing community custom integrations (e.g., `warrenrees/ha_vidaatv` which targets the `vidaa` / `vidaatv` namespace, or `vidaa4ha`).
-    - Verify Home Assistant Core and HACS default repository registry to ensure domain uniqueness and prevent duplicate loader collisions.
-    - Evaluate options:
-      1. **Full Domain Rename (`vidaa`)**: Cleanest long-term architecture, but requires config entry migration and HACS repository re-registration.
-      2. **Friendly Rebrand with Preserved Domain (`hisense_vidaa`)**: Update integration name to *"VIDAA Smart TV (Hisense, Toshiba, Loewe)"*, keeping internal domain `hisense_vidaa` to prevent breaking existing automations, entity IDs, and HACS tracking.
-      3. **Dual-Domain / Deprecation Shim**: New `vidaa` integration with a thin migration wrapper in `hisense_vidaa` that alerts users to migrate seamlessly.
   - **Backwards Compatibility & Migration Path**:
     - If migrating domain: implement `async_migrate_entry` to preserve entity unique IDs, area assignments, and custom entity customizations.
     - Alias legacy action services (e.g., forward `hisense_vidaa.send_key` calls to `vidaa.send_key` with a deprecation warning) to avoid breaking user automations.
@@ -107,6 +112,42 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - **Brand Assets & Translation Refresh**:
     - Update `brand/` icons and logos to feature the official VIDAA OS branding alongside OEM sub-logos.
     - Update documentation, repository metadata, and HACS category descriptions.
+
+### 12. UPnP / DLNA LAN Control Subsystem
+
+- [x] **Asynchronous UPnP Client (`protocol/upnp.py`)**:
+  - Implemented `HisenseUpnpClient` supporting default port `38400` with fallback to `18400`.
+  - Added `RenderingControl:1` SOAP actions for instantaneous, unauthenticated volume and mute control (`GetVolume`, `SetVolume`, `GetMute`, `SetMute`) directly on the hardware amplifier without MQTT/TLS overhead.
+  - Added `AVTransport:1` SOAP actions for media transport status and playback tracking (`GetTransportInfo`, `Play`, `Pause`, `Stop`).
+  - Added reverse-engineered proprietary `LanControlInfo:1` service (`GetLanControlInfo`, `SetLanControlInfo`).
+  - Implemented non-blocking async capability probing (`async_probe()`) to detect active services without blocking the event loop.
+
+### 13. Zero-Cost Clock Drift Detection & Hardware RTC Mitigation
+
+- [x] **HTTP `Date` Header Clock Synchronization**:
+  - Extracted TV system time from standard RFC 7231 `Date:` HTTP headers in UPnP responses.
+  - Automatically calculates host-to-TV clock offset without generating external NTP traffic, securing dynamic MQTT username hashing across networks.
+- [x] **Diagnostic Sensor Hardening (`sensors_diagnostic.py`)**:
+  - Guarded `HisenseVidaaClockDriftSensor` against `None` offsets (`if offset is None: return None`) to avoid `TypeError` on early boot.
+  - Added human-readable drift attributes and dynamic icons (`mdi:clock-check-outline` vs `mdi:clock-alert-outline`).
+- [x] **Network NTP DNAT Port Redirection Documentation (`docs/network_requirements.md`)**:
+  - Documented router-level NTP redirection rules (`UDP 123` via OpenWrt UCI, nftables, iptables, OPNsense) to prevent clock drift on televisions lacking hardware RTC batteries when placed on isolated IoT VLANs without internet access.
+
+### 14. CLI Diagnostics & Shared Probing Parity
+
+- [x] **Consolidated UPnP Diagnostics in Core CLI Tools**:
+  - Re-exported shared `probe_upnp_services(ip, verbose)` from `tv/fingerprint.py` and `discovery.py`.
+  - Added `test_client.py upnp` action and integrated hardware clock & drift reporting in `test_client.py ping`.
+  - Added `--probe-upnp` flag and clock synchronization reporting to `debug_tv.py`.
+  - Removed redundant standalone `scripts/test_upnp.py` and pruned from `.gitignore`.
+
+### 15. Home Assistant Debugging & Diagnostics Guide
+
+- [x] **Comprehensive HA Debug Documentation (`docs/parameters.md`, `docs/README.md`)**:
+  - Documented all diagnostic entities: `button.sync_clock`, `button.force_reconnect`, `button.trigger_re_pairing`, `sensor.clock_drift`, `sensor.session_status`, `switch.debug_logging`.
+  - Added step-by-step instructions for 4 debugging methods: on-the-fly via entity switch, UI integration menu, `configuration.yaml` `logger:`, and `logger.set_level` action.
+  - Documented official sanitized diagnostics bundle download, privacy masks, and repairs flow.
+
 
 ---
 
@@ -162,7 +203,7 @@ Tracking adherence to the official [HA Integration Quality Scale rules](https://
 | [`log-when-unavailable`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/log-when-unavailable)                   | ✅ Done | Exponential backoff reconnect logs; logs once on disconnect, once on restore.                                                             |
 | [`parallel-updates`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/parallel-updates)                           | ✅ Done | `PARALLEL_UPDATES = 0` declared in all platform modules.                                                                                  |
 | [`reauthentication-flow`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reauthentication-flow)                 | ✅ Done | Interactive re-pairing flow + Repairs issue integration.                                                                                  |
-| [`test-coverage`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-coverage)                                 | ✅ Done | Comprehensive test suite of 199 unit tests passing (77% overall code coverage across all modules).                                        |
+| [`test-coverage`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-coverage)                                 | ✅ Done | Comprehensive test suite of 206 unit tests passing (77% overall code coverage across all modules).                                        |
 
 **Silver Tier Summary:** All action-exceptions, configuration/installation documentation, and test verifications completed.
 
@@ -229,3 +270,11 @@ The IQS requires integrations tracking their tier to include a `quality_scale.ya
 - [x] **Config Flow Modular Decomposition (`flow_certs.py`, `flow_discovery.py`, `flow_reauth.py`, `flow_helpers.py`)**: Decomposed monolithic `config_flow.py` (580 lines -> 268 lines) into single-purpose mixins and helper functions for discovery, reauth, certificate handling, and schema generation.
 - [x] **CLI Diagnostic & Debug Script Parity (`test_client.py`, `debug_tv.py`)**: Updated CLI tools to support standalone execution outside Home Assistant container with automated fallback mocks.
 - [x] **Media Player Broadcast State Parsing (`tv/media.py` / `media_player.py`)**: Extracted incoming broadcast telemetry, state, volume, and input handlers from `media_player.py` into modular parser functions (`parse_media_state_broadcast`, `parse_volume_broadcast`, `parse_sourcelist_data`, `parse_applist_data`).
+- [x] **UPnP LAN Control & DLNA Subsystem (`protocol/upnp.py`, `client.py`)**: Implemented non-blocking UPnP client supporting port `38400` / `18400` with `RenderingControl:1`, `AVTransport:1`, and proprietary `LanControlInfo:1` actions for instantaneous volume/mute and media transport tracking.
+- [x] **Zero-Cost Clock Drift Detection & Diagnostic Probes (`protocol/upnp.py`, `sensors_diagnostic.py`, `tv/fingerprint.py`)**: Integrated HTTP `Date` header clock offset calculation without NTP traffic, hardened `HisenseVidaaClockDriftSensor` against `None` offsets, added CLI probe integration (`test_client.py upnp`, `debug_tv.py --probe-upnp`), and documented router NTP DNAT port redirect rules.
+- [x] **MQTT Disconnect & Re-Auth Collision Elimination (`client.py`, `flow_reauth.py`)**: Gracefully disconnected running background MQTT loops before initiating interactive reauth PIN pairing, preventing socket contention.
+- [x] **MQTT v5 Connack Reason Codes (`protocol/connection.py`, `client.py`)**: Added explicit handling for codes `134` (Bad username/password) and `135` (Not authorized) to promptly trigger re-authentication.
+- [x] **Startup Query Debounce & False PIN Prevention (`media_player.py`, `coordinator.py`)**: Eliminated unsolicited PIN prompts on TV screen during container startup by debouncing initial status queries until connections stabilize.
+- [x] **Shared Diagnostics Probing & Script Consolidation (`tv/fingerprint.py`, `discovery.py`)**: Consolidated duplicate UPnP probing and XML parsing logic into shared `probe_upnp_services`, eliminating redundant test scripts.
+
+

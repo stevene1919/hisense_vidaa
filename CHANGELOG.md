@@ -23,16 +23,21 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
   - Integrated `AVTransport:1` SOAP actions for real-time media playback state tracking (`GetTransportInfo`, `Play`, `Pause`, `Stop`).
   - Integrated proprietary `LanControlInfo:1` service (`GetLanControlInfo`, `SetLanControlInfo`) reverse-engineered from companion mobile applications.
   - Added non-blocking async feature probing (`async_probe()`) to detect UPnP service capabilities without stalling Home Assistant's event loop.
-  - Added standalone UPnP testing script (`scripts/test_upnp.py`) and dedicated unit test suite (`tests/test_upnp.py`).
-- **ZERO-COST CLOCK DRIFT & TIMESTAMP SYNCHRONIZATION (`protocol/upnp.py`)**:
+  - Integrated UPnP service probing and hardware clock drift analysis directly into core CLI diagnostic tools (`test_client.py upnp` and `debug_tv.py --probe-upnp`) and added dedicated unit test suite (`tests/test_upnp.py`).
+- **ZERO-COST CLOCK DRIFT & TIMESTAMP SYNCHRONIZATION (`protocol/upnp.py`, `sensors_diagnostic.py`)**:
   - Added real-time clock drift detection by parsing RFC 7231 `Date:` HTTP headers returned in UPnP responses.
   - Automatically calculates host-to-TV clock offset without issuing external NTP queries, ensuring reliable dynamic MQTT username hashing across networks.
+  - Hardened `HisenseVidaaClockDriftSensor` against `None` initial clock offset states to prevent `TypeError` exceptions during early initialization.
+  - Added comprehensive isolated IoT VLAN NTP DNAT redirect rules (OpenWrt UCI, nftables, iptables, OPNsense) in `docs/network_requirements.md` to mitigate clock drift on televisions without battery-backed hardware RTCs.
+- **HOME ASSISTANT DEBUGGING & DIAGNOSTIC ENTITIES REFERENCE (`docs/parameters.md`)**:
+  - Documented all built-in diagnostic and maintenance entities (`button.sync_clock`, `button.force_reconnect`, `button.trigger_re_pairing`, `sensor.clock_drift`, `sensor.session_status`, `switch.debug_logging`).
+  - Added step-by-step Home Assistant troubleshooting instructions covering on-the-fly debug toggling, official sanitized diagnostics downloads, repair flows, and core log inspection.
 - **SILVER TIER ACTION EXCEPTION WRAPPING (`services.py`)**:
   - Wrapped all custom Home Assistant service action handlers (`send_key`, `launch_app`, `set_picture_setting`, `set_sound_setting`, `send_text_input`) in `HomeAssistantError` with descriptive contextual error messages instead of raw socket or connection errors.
 - **COMPREHENSIVE CONFIGURATION & INSTALLATION PARAMETERS REFERENCE (`docs/parameters.md`)**:
   - Created a dedicated reference document detailing all Options Flow settings (heartbeat/polling intervals, volume stepping, WoL packets and bursts, SSL verify, cert paths) and initial Config Flow setup fields.
-- **EXPANDED TEST SUITE (199 TESTS)**:
-  - Expanded unit test coverage with dedicated UPnP protocol tests, reaching 199 passing tests and establishing a solid 77% test coverage baseline.
+- **EXPANDED TEST SUITE (206 TESTS)**:
+  - Expanded unit test coverage with dedicated UPnP protocol tests, clock drift sensor edge cases, cold-boot signal recovery (`is_signal == 1`), and disconnected media player state handlers, reaching 206 passing tests and establishing a solid 77% test coverage baseline.
 
 ### Changed
 - **DOCUMENTATION REORGANIZATION & STREAMLINING (`README.md`, `docs/*`)**:

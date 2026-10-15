@@ -12,6 +12,7 @@ from homeassistant.const import EntityCategory, UnitOfTime
 
 from .const import AUTH_PROFILES, CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE
 from .entity import HisenseVidaaEntity
+from .tv.fingerprint import format_drift_human
 
 if TYPE_CHECKING:
     from .client import HisenseTvClient
@@ -265,6 +266,10 @@ class HisenseVidaaClockDriftSensor(HisenseVidaaBaseSensor):
 
     def _update_state(self) -> None:
         offset = getattr(self._client, "clock_offset", 0)
+        if offset is None:
+            self._attr_native_value = None
+            self._attr_icon = "mdi:clock-outline"
+            return
         self._attr_native_value = offset
         if abs(offset) < 60:
             self._attr_icon = "mdi:clock-check-outline"
@@ -275,6 +280,13 @@ class HisenseVidaaClockDriftSensor(HisenseVidaaBaseSensor):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return diagnostic clock details."""
         offset = getattr(self._client, "clock_offset", 0)
+        if offset is None:
+            return {
+                "drift_seconds": None,
+                "synchronized": False,
+                "drift_human": "Unknown",
+                "host_time": datetime.now(UTC).isoformat(),
+            }
         now_ts = int(datetime.now(UTC).timestamp())
         tv_ts = getattr(self._client, "tv_timestamp", None)
         if tv_ts is None and offset != 0:
@@ -285,22 +297,7 @@ class HisenseVidaaClockDriftSensor(HisenseVidaaBaseSensor):
             "synchronized": abs(offset) < 60,
         }
 
-        # Human-readable drift calculation
-        abs_off = abs(offset)
-        days, rem = divmod(abs_off, 86400)
-        hours, rem = divmod(rem, 3600)
-        mins, secs = divmod(rem, 60)
-        parts = []
-        if days:
-            parts.append(f"{days}d")
-        if hours:
-            parts.append(f"{hours}h")
-        if mins:
-            parts.append(f"{mins}m")
-        if secs or not parts:
-            parts.append(f"{secs}s")
-        drift_str = ("-" if offset < 0 else "+") + " ".join(parts) if offset != 0 else "0s"
-        attrs["drift_human"] = drift_str
+        attrs["drift_human"] = format_drift_human(offset)
 
         if tv_ts:
             attrs["tv_time"] = datetime.fromtimestamp(tv_ts, tz=UTC).isoformat()

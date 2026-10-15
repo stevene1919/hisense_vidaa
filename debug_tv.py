@@ -41,7 +41,12 @@ if "homeassistant" not in sys.modules:
             raise SystemExit(2) from exc
 
 from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.discovery import get_device_fingerprint, get_tv_timestamp
+from custom_components.hisense_vidaa.discovery import (
+    format_drift_human,
+    get_device_fingerprint,
+    get_tv_timestamp,
+    probe_upnp_services,
+)
 from custom_components.hisense_vidaa.tv.probe import (
     create_client_from_creds,
     load_credentials_file,
@@ -75,6 +80,7 @@ def main() -> None:
     parser.add_argument("--launch-app", type=str, default=None, help="Launch an app by name or App ID (e.g. Netflix, YouTube)")
     parser.add_argument("--change-source", type=str, default=None, help="Change active input source (e.g. HDMI1, HDMI2, TV)")
     parser.add_argument("--sync-clock", action="store_true", help="Inspect UPnP Date header and calculate TV clock drift")
+    parser.add_argument("--probe-upnp", action="store_true", help="Probe UPnP MediaRenderer services (volume, mute, transport info, lan control)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging")
 
     args = parser.parse_args()
@@ -111,11 +117,21 @@ def main() -> None:
     if tv_ts:
         drift = tv_ts - now_ts
         tv_dt = datetime.fromtimestamp(tv_ts, tz=UTC)
+        drift_str = format_drift_human(drift)
         print(f"  - TV Timestamp:      {tv_ts} ({tv_dt.strftime('%Y-%m-%d %H:%M:%S UTC')})")
         print(f"  - System Timestamp:  {now_ts} ({datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')})")
-        print(f"  - Clock Drift:       {drift:+} seconds ({'Synchronized' if abs(drift) < 60 else 'WARNING: Out of sync!'})")
+        print(f"  - Clock Drift:       {drift:+} seconds ({drift_str}) ({'Synchronized' if abs(drift) < 60 else 'WARNING: Out of sync!'})")
     else:
         print("  [!] TV Clock query returned no timestamp (Port 38400 unreachable or Date header missing)")
+
+    if args.probe_upnp:
+        probe_upnp_services(tv_ip)
+
+    if (args.probe_upnp or args.sync_clock) and not (
+        args.monitor or args.send_key or args.launch_app or args.change_source or args.dump_state or args.probe
+    ):
+        print("\nDiagnostic probe complete.")
+        return
 
     # 4. Initialize Client & Connect
     print_section("2. MQTT Broker & Real-Time Protocol Diagnostics")
@@ -176,6 +192,14 @@ def main() -> None:
     print("\nQuerying initial TV state, sources, volume, and apps...")
     client.query_initial_state()
     time.sleep(2.0)
+
+    if args.sync_clock:
+        print("\nSynchronizing TV clock via UPnP...")
+        synced_offset = client.sync_clock()
+        if synced_offset is not None:
+            print(f"  [+] Synchronized clock offset: {synced_offset:+} seconds ({format_drift_human(synced_offset)})")
+        else:
+            print("  [-] Could not synchronize clock via UPnP.")
 
     if args.probe:
         print("\nProbing picture & sound menu trees...")

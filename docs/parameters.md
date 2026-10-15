@@ -63,3 +63,117 @@ To customize integration behavior for an existing TV, navigate to **Settings $\r
 | **`certfile`** | `string` (file path) | Auto-resolved | Custom client certificate path (`.crt`, `.pem`, `.p12`). |
 | **`keyfile`** | `string` (file path) | Auto-resolved | Custom client private key path (`.key`, `.pem`). |
 
+---
+
+## 🩺 3. Diagnostic, Telemetry & Debugging Entities
+
+To facilitate real-time monitoring and troubleshooting directly from the Home Assistant UI, the integration provides several built-in diagnostic and maintenance entities under the **Diagnostic** category:
+
+### 3.1 Maintenance Buttons (`button`)
+
+| Entity ID | Entity Name | Description |
+| :--- | :--- | :--- |
+| **`button.<tv>_sync_clock`** | **Sync TV Clock** | Queries the TV's UPnP `Date:` HTTP header on port `38400` / `18400`, recalculates the host-to-TV clock drift in seconds, and updates the clock drift diagnostic sensor. |
+| **`button.<tv>_force_reconnect`** | **Force Reconnect** | Tears down the existing MQTT broker connection loop, resets socket state, and re-establishes a fresh connection to the TV. Useful when recovering from router reboots or network glitches. |
+| **`button.<tv>_trigger_re_pairing`** | **Trigger Re-pairing** | Manually initiates Home Assistant's native re-authentication and PIN pairing flow on the device without waiting for an automated token error or repairs issue. |
+
+### 3.2 Diagnostic Sensors (`sensor` & `binary_sensor`)
+
+| Entity ID | Entity Name | Description & Attributes |
+| :--- | :--- | :--- |
+| **`sensor.<tv>_clock_drift`** | **Clock Drift** | Reports TV hardware clock drift in seconds relative to the Home Assistant host. Changes icon between `mdi:clock-check-outline` (synced, $< 60\text{s}$) and `mdi:clock-alert-outline` ($> 60\text{s}$). Attributes: `synchronized` (bool), `drift_human` (e.g. `+15s`, `-5d 14h`), `tv_time`, `host_time`, `last_synced`. |
+| **`sensor.<tv>_session_status`** | **Session Status** | Indicates active session state (`Active`, `Standby`, `Reauth Required`). Attributes: `encryption` (TLS version/port), `local_only` (bool), `paired_at`, `access_token_expires_at`, `refresh_token_expires_at`. |
+| **`sensor.<tv>_auth_profile`** | **Auth Profile** | Displays the active authentication tier negotiated with the TV (e.g. `VIDAA 2.0 (Newer Firmware / 2024+)`). |
+| **`sensor.<tv>_audio_output`** | **Audio Output** | Displays whether sound is currently output through `TV Speakers` or `ARC / eARC`. |
+| **`sensor.<tv>_active_source`** | **Active Source** | Current input source name with `connected_device` HDMI-CEC display names. |
+| **`sensor.<tv>_active_app`** | **Active App** | Currently running Smart TV application name. |
+| **`binary_sensor.<tv>_mqtt_connected`** | **MQTT Connected** | Live binary indicator of whether the persistent TLS MQTT socket to port `36669` is established. |
+| **`binary_sensor.<tv>_in_use`** | **In Use** | Indicates whether the TV display is powered on and actively drawing playback/content. |
+
+### 3.3 Debugging Switches (`switch`)
+
+| Entity ID | Entity Name | Description |
+| :--- | :--- | :--- |
+| **`switch.<tv>_debug_logging`** | **Debug Logging** | Dynamically enables or disables verbose `DEBUG` level logging for the `custom_components.hisense_vidaa` module in real-time without requiring a Home Assistant restart. |
+| **`switch.<tv>_audio_only`** | **Audio Only** | Turns off the physical screen panel backlight while keeping audio playback streaming through TV speakers or ARC soundbar. |
+
+---
+
+## 🛠️ 4. Home Assistant Debugging & Diagnostics Guide
+
+When troubleshooting communication, pairing, or state synchronization issues between Home Assistant and the TV, several debugging facilities are available:
+
+### 4.1 Enabling Debug Logging
+
+There are four convenient methods to enable verbose debug logging for the integration:
+
+#### Method 1: On-the-Fly via Diagnostic Switch (Recommended)
+Toggle the built-in diagnostic switch entity:
+- **Entity ID**: `switch.<tv>_debug_logging`
+- **Behavior**: Instantly sets the Python logger level for `custom_components.hisense_vidaa` to `DEBUG` without restarting Home Assistant or modifying any configuration files. Toggle off to return to `INFO` level.
+
+#### Method 2: Via Home Assistant UI
+1. Navigate to **Settings** → **Devices & Services**.
+2. Locate the **Hisense VIDAA TV** integration card.
+3. Click the three-dot menu (**⋮**) and select **Enable debug logging**.
+4. Reproduce the issue, then return to the menu and click **Disable debug logging** to download the generated debug log bundle.
+
+#### Method 3: Via `configuration.yaml`
+Add or update the `logger` integration in your Home Assistant configuration:
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.hisense_vidaa: debug
+```
+Apply by restarting Home Assistant or calling the `logger.reload` action.
+
+#### Method 4: Via Developer Tools Action (`logger.set_level`)
+Without restarting, navigate to **Developer Tools** → **Actions** and execute:
+```yaml
+action: logger.set_level
+data:
+  custom_components.hisense_vidaa: debug
+```
+
+---
+
+### 4.2 Downloading Home Assistant Diagnostics
+
+Home Assistant provides official sanitized diagnostic bundles for bug reports:
+1. Navigate to **Settings** → **Devices & Services** → **Hisense VIDAA TV**.
+2. Click on the device or the integration three-dot menu (**⋮**) and choose **Download diagnostics**.
+3. **Privacy & Redaction**: The integration automatically sanitizes sensitive fields before generating the JSON file. Masked keys include:
+   - Certificate file paths (`ssl_cert`, `ssl_key`, `p12_path`, `client_cert_path`, `client_key_path`)
+   - Certificate passwords (`p12_password`)
+   - Session tokens (`access_token`, `refresh_token`, auth passwords)
+   - Network MAC addresses and unique hardware identifiers
+4. **Diagnostic Contents**:
+   - Integration entry options and network parameters
+   - Live client connection state and negotiated TLS cipher/version
+   - TV hardware fingerprint (model, chipset, software build, firmware version)
+   - UPnP capability probe results and hardware clock drift offset
+   - Broadcast telemetry and registered HDMI/source lists
+
+---
+
+### 4.3 Native Repairs & PIN Re-Pairing Flow
+
+- **Automated Repairs**: If the TV purges its internal mobile authentication token table or if credentials become invalid, the integration automatically registers a Home Assistant **Repair Issue** alerting you that re-authentication is required.
+- **Manual Trigger**: To proactively renew pairing or re-pair after TV firmware updates, press the **`button.<tv>_trigger_re_pairing`** entity on the TV device page in Home Assistant. This immediately initiates the PIN entry dialog on your television screen and in the Home Assistant UI.
+
+---
+
+### 4.4 Inspecting Logs
+
+To view live integration logs:
+1. Go to **Settings** → **System** → **Logs**.
+2. Filter the search box by `custom_components.hisense_vidaa`.
+3. Key log entries to monitor:
+   - `[hisense_vidaa] Connected to MQTT broker at <ip>:36669 (TLS 1.2)`
+   - `[hisense_vidaa] Clock drift detected: <offset>s (TV: <date>, Host: <date>)`
+   - `[hisense_vidaa] Connection dropped, reconnecting in <backoff>s...`
+   - `[hisense_vidaa] UPnP probed on port <port>: RenderingControl=True, AVTransport=True`
+
+
+

@@ -116,3 +116,82 @@ If your Hisense TV is placed on an isolated **IoT VLAN** separate from your Home
 4. **Cross-Subnet Wake-on-LAN (WoL)**:
    - Standard WoL packets broadcast to `255.255.255.255`. For cross-VLAN wake-on-LAN, configure your gateway to permit **Subnet Directed Broadcast** (e.g. `192.168.50.255:9`) or use a UDP broadcast relay daemon.
 
+---
+
+## ⏰ 6. TV Hardware Clock, NTP Sync & Isolated IoT LANs (WAN-Blocked)
+
+### ⚠️ The Isolated IoT VLAN Clock Drift Problem
+
+Smart TVs running VIDAA OS lack battery-backed hardware Real-Time Clocks (RTC). When completely powered off (e.g. smart plug cutoff, wall switch, or mains power loss) or cold-booted, the internal hardware clock resets to a baseline firmware build epoch.
+
+Under standard consumer setups, VIDAA synchronizes its internal clock through two mechanisms:
+1. **DVB / ATSC Broadcast Signal**: Time metadata received via RF digital TV antenna coaxial input.
+2. **Public Internet NTP Servers**: Hardcoded NTP pool queries (`UDP 123` to `time.google.com`, `pool.ntp.org`, `time.windows.com`).
+
+When a TV is deployed in a hardened smart home environment:
+- **No RF Antenna Connected**: Streaming and smart apps only (HDMI / OTT).
+- **Isolated IoT VLAN with WAN Blocked**: All outbound internet access is firewalled to protect privacy and prevent manufacturer telemetry.
+
+In this topology, the TV has **no way to reach public NTP servers**. As a result, its hardware clock can drift significantly (often falling behind by hours, days, or even weeks). While the `hisense_vidaa` integration automatically detects clock drift via UPnP `Date:` headers and compensates for timestamp skew during dynamic MQTT challenge generation, extreme drift can affect TLS certificate validation and token expiry calculation.
+
+### 🛠️ Solution: Gateway NTP DNAT Port Redirection (UDP 123)
+
+To ensure the TV maintains accurate system time without granting it external internet access, configure a **Destination NAT (DNAT) port redirection** rule on your router/gateway. This captures all outbound NTP queries from the TV on `UDP 123` and redirects them to the router's local NTP server (e.g. AdGuard Home, Chrony, ntpd, or Unbound).
+
+#### 1. OpenWrt (Flint 2 / Flint / Archer / etc.)
+
+Add a firewall redirect rule via UCI or `/etc/config/firewall`:
+
+```bash
+# Add NTP redirect rule via UCI CLI:
+uci add firewall redirect
+uci set firewall.@redirect[-1].name='Redirect-IoT-NTP-to-Gateway'
+uci set firewall.@redirect[-1].src='iot'
+uci set firewall.@redirect[-1].src_dport='123'
+uci set firewall.@redirect[-1].proto='udp'
+uci set firewall.@redirect[-1].dest_port='123'
+uci set firewall.@redirect[-1].target='DNAT'
+uci commit firewall
+/etc/init.d/firewall reload
+```
+
+Or add directly to `/etc/config/firewall`:
+```uci
+config redirect
+	option name 'Redirect-IoT-NTP-to-Gateway'
+	option src 'iot'
+	option proto 'udp'
+	option src_dport '123'
+	option dest_port '123'
+	option target 'DNAT'
+```
+
+#### 2. Linux `nftables`
+
+```nft
+table inet fw4 {
+    chain prerouting {
+        type nat hook prerouting priority dstnat; policy accept;
+        iifname "iot0" udp dport 123 counter redirect to :123
+    }
+}
+```
+
+#### 3. Linux `iptables`
+
+```bash
+iptables -t nat -A PREROUTING -i iot0 -p udp --dport 123 -j REDIRECT --to-ports 123
+```
+
+#### 4. OPNsense / pfSense Port Forward
+
+- **Interface**: `IoT`
+- **Address Family**: `IPv4`
+- **Protocol**: `UDP`
+- **Destination**: Invert Destination (`[X] Invert match`) $\rightarrow$ `IoT Address`
+- **Destination Port Range**: `123 (NTP)` to `123 (NTP)`
+- **Redirect Target IP**: `127.0.0.1` (or local IoT Gateway IP)
+- **Redirect Target Port**: `123 (NTP)`
+- **Description**: `Redirect IoT NTP to Local Gateway`
+
+

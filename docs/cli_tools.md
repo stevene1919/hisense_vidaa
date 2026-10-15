@@ -118,6 +118,12 @@ Broadcasts a subnet-directed magic packet:
 python3 test_client.py wake --mac E8:51:77:EC:98:1C
 ```
 
+### 10. Probe UPnP MediaRenderer Services (`upnp`)
+Probes UPnP MediaRenderer SOAP services (`RenderingControl:1`, `AVTransport:1`, and `LanControlInfo:1`) on port `38400` / `18400`:
+```bash
+python3 test_client.py upnp --ip <TV_IP>
+```
+
 ---
 
 ## 🛠️ `debug_tv.py` — Live Runtime Debugger
@@ -143,6 +149,9 @@ python3 debug_tv.py --launch-app "Disney+"
 python3 debug_tv.py --change-source HDMI1
 python3 debug_tv.py --change-source TV
 
+# Probe UPnP MediaRenderer services and actions (volume, mute, transport info):
+python3 debug_tv.py --probe-upnp
+
 # Inspect UPnP Date header and calculate TV clock drift:
 python3 debug_tv.py --sync-clock
 
@@ -155,3 +164,4 @@ python3 debug_tv.py --dump-state -v
 
 > [!TIP]
 > Running `python3 debug_tv.py` with no arguments produces a complete state dump (`--dump-state`).
+

@@ -7,6 +7,7 @@ import logging
 import os
 import socket
 import time
+import urllib.error
 import urllib.request
 from typing import Any
 
@@ -21,12 +22,202 @@ UPNP_PORTS = (38400, 18400)
 
 __all__ = [
     "UPNP_PORTS",
+    "format_drift_human",
     "get_arp_mac",
     "get_device_fingerprint",
     "get_tv_timestamp",
+    "probe_upnp_services",
     "query_mdns_fingerprint",
     "query_upnp_descriptor",
 ]
+
+
+def probe_upnp_services(ip: str, verbose: bool = True) -> dict[str, Any]:
+    """Probes UPnP services (RenderingControl, AVTransport, LanControl) on the target TV."""
+    if verbose:
+        print(f"\n=======================================================\n  UPnP / DLNA Diagnostic Probe ({ip})\n=======================================================")
+
+    results: dict[str, Any] = {
+        "active_port": None,
+        "friendly_name": None,
+        "volume": None,
+        "muted": None,
+        "transport_state": None,
+        "transport_status": None,
+        "lan_control_status": None,
+        "lan_control_response": None,
+    }
+
+    soap_envelope = (
+        '<?xml version="1.0" encoding="utf-8"?>'
+        '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" '
+        's:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">'
+        "<s:Body>"
+        '<u:{action} xmlns:u="{service}">'
+        "{args}"
+        "</u:{action}>"
+        "</s:Body>"
+        "</s:Envelope>"
+    )
+
+    def send_soap(port: int, control_path: str, service: str, action: str, args: str = "") -> tuple[int, str]:
+        url = f"http://{ip}:{port}{control_path}"
+        headers = {
+            "Content-Type": 'text/xml; charset="utf-8"',
+            "SOAPAction": f'"{service}#{action}"',
+            "User-Agent": "HisenseVIDAALanControlClient/1.0",
+        }
+        body = soap_envelope.format(action=action, service=service, args=args).encode("utf-8")
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                return resp.status, resp.read().decode("utf-8", errors="ignore")
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="ignore") if e.fp else ""
+            return e.code, err_body
+        except Exception as e:
+            return 0, str(e)
+
+    active_port = None
+    for port in UPNP_PORTS:
+        url = f"http://{ip}:{port}/MediaServer/rendererdevicedesc.xml"
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "HisenseVIDAATestClient"})
+            with urllib.request.urlopen(req, timeout=1.5) as resp:
+                if resp.status == 200:
+                    text = resp.read().decode("utf-8", errors="ignore")
+                    root = ET.fromstring(text)
+                    ns = {"d": "urn:schemas-upnp-org:device-1-0"}
+                    fn = root.find(".//d:friendlyName", ns)
+                    friendly = fn.text if fn is not None else "Unknown"
+                    if verbose:
+                        print(f"✅ Found UPnP MediaRenderer on port {port} (Name: {friendly})")
+                    active_port = port
+                    results["active_port"] = port
+                    results["friendly_name"] = friendly
+                    break
+        except Exception:
+            continue
+
+    if not active_port:
+        if verbose:
+            print(f"❌ No responding UPnP MediaRenderer port found on {ip} (tried {UPNP_PORTS})")
+        return results
+
+    # 1. Test RenderingControl GetVolume
+    if verbose:
+        print("\n--- 1. Testing RenderingControl (Volume & Mute) ---")
+    status, resp_xml = send_soap(
+        active_port,
+        "/upnp/control/mingusrcr",
+        "urn:schemas-upnp-org:service:RenderingControl:1",
+        "GetVolume",
+        "<InstanceID>0</InstanceID><Channel>Master</Channel>",
+    )
+    if status == 200:
+        try:
+            root = ET.fromstring(resp_xml)
+            vol = root.find(".//CurrentVolume")
+            vol_val = int(vol.text) if vol is not None and vol.text else None
+            results["volume"] = vol_val
+            if verbose:
+                print(f"  [GetVolume] Status: 200 OK -> Current Volume: {vol_val}")
+        except Exception as e:
+            if verbose:
+                print(f"  [GetVolume] Status: 200 OK (XML parse error: {e})")
+    elif verbose:
+        print(f"  [GetVolume] Failed with status {status}: {resp_xml[:100]}")
+
+    # 2. Test RenderingControl GetMute
+    status, resp_xml = send_soap(
+        active_port,
+        "/upnp/control/mingusrcr",
+        "urn:schemas-upnp-org:service:RenderingControl:1",
+        "GetMute",
+        "<InstanceID>0</InstanceID><Channel>Master</Channel>",
+    )
+    if status == 200:
+        try:
+            root = ET.fromstring(resp_xml)
+            mute = root.find(".//CurrentMute")
+            is_muted = mute.text == "1" if mute is not None else False
+            results["muted"] = is_muted
+            if verbose:
+                print(f"  [GetMute]   Status: 200 OK -> Muted: {is_muted}")
+        except Exception as e:
+            if verbose:
+                print(f"  [GetMute]   Status: 200 OK (XML parse error: {e})")
+    elif verbose:
+        print(f"  [GetMute]   Failed with status {status}: {resp_xml[:100]}")
+
+    # 3. Test AVTransport GetTransportInfo
+    if verbose:
+        print("\n--- 2. Testing AVTransport (Playback State) ---")
+    status, resp_xml = send_soap(
+        active_port,
+        "/upnp/control/mingusavtr",
+        "urn:schemas-upnp-org:service:AVTransport:1",
+        "GetTransportInfo",
+        "<InstanceID>0</InstanceID>",
+    )
+    if status == 200:
+        try:
+            root = ET.fromstring(resp_xml)
+            state = root.find(".//CurrentTransportState")
+            st = root.find(".//CurrentTransportStatus")
+            state_str = state.text if state is not None else "Unknown"
+            st_str = st.text if st is not None else "Unknown"
+            results["transport_state"] = state_str
+            results["transport_status"] = st_str
+            if verbose:
+                print(f"  [GetTransportInfo] Status: 200 OK -> State: {state_str}, Status: {st_str}")
+        except Exception as e:
+            if verbose:
+                print(f"  [GetTransportInfo] Status: 200 OK (XML parse error: {e})")
+    elif verbose:
+        print(f"  [GetTransportInfo] Failed with status {status}: {resp_xml[:100]}")
+
+    # 4. Test HisenseLanControl
+    if verbose:
+        print("\n--- 3. Testing HisenseLanControl Service ---")
+    status, resp_xml = send_soap(
+        active_port,
+        "/upnp/control/hisense_lan_control",
+        "urn:schemas-upnp-org:service:HisenseLanControl:1",
+        "LanControlInfo",
+        "<OpClass>System</OpClass><OpType>GetStatus</OpType><OpPara></OpPara>",
+    )
+    results["lan_control_status"] = status
+    results["lan_control_response"] = resp_xml
+    if verbose:
+        if status == 200:
+            print(f"  [LanControlInfo] Status: 200 OK -> Response: {resp_xml[:200]}")
+        elif status == 404:
+            print("  [LanControlInfo] Status: 404 Not Found (Standard behavior on transport_protocol=3160; U6+ specific)")
+        else:
+            print(f"  [LanControlInfo] Status: {status} -> {resp_xml[:120]}")
+
+    return results
+
+
+def format_drift_human(offset: int) -> str:
+    """Formats a clock drift offset in seconds into a human-readable duration."""
+    if offset == 0:
+        return "0s"
+    abs_off = abs(offset)
+    days, rem = divmod(abs_off, 86400)
+    hours, rem = divmod(rem, 3600)
+    mins, secs = divmod(rem, 60)
+    parts = []
+    if days:
+        parts.append(f"{days}d")
+    if hours:
+        parts.append(f"{hours}h")
+    if mins:
+        parts.append(f"{mins}m")
+    if secs or not parts:
+        parts.append(f"{secs}s")
+    return ("-" if offset < 0 else "+") + " ".join(parts)
 
 
 def get_tv_timestamp(ip: str, timeout: float = 2.0) -> int | None:

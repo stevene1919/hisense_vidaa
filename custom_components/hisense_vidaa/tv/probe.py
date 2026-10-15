@@ -8,11 +8,12 @@ import os
 import sys
 import time
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 from ..protocol.auth import probe_tv_auth_methods
 from ..protocol.certs import resolve_ca_certificate, resolve_certificates
-from .fingerprint import get_arp_mac
+from .fingerprint import format_drift_human, get_arp_mac, get_tv_timestamp
 from .settings import SettingMenuItem
 
 _LOGGER = logging.getLogger(__name__)
@@ -194,6 +195,14 @@ def generate_markdown_report(
         lines.append(f"- **Wi-Fi MAC (UPnP):** `{dev['mac_wifi']}`")
     if dev.get("mac_ethernet"):
         lines.append(f"- **Ethernet MAC (UPnP):** `{dev['mac_ethernet']}`")
+
+    tv_ts = dev.get("tv_timestamp") or get_tv_timestamp(ip)
+    if tv_ts:
+        drift = tv_ts - int(time.time())
+        drift_str = format_drift_human(drift)
+        tv_dt = datetime.fromtimestamp(tv_ts, tz=UTC)
+        sync_status = "✅ Synchronized" if abs(drift) < 60 else f"⚠️ Out of sync ({drift_str})"
+        lines.append(f"- **Hardware Clock:** `{tv_dt.strftime('%Y-%m-%d %H:%M:%S UTC')}` ({sync_status})")
 
     lines.append("\n### 📡 Connectivity & TLS Status")
     tcp_status = "✅ OPEN" if ping_result.get("tcp_port_open") else "❌ CLOSED"
