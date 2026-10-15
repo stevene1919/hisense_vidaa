@@ -13,6 +13,7 @@ import paho.mqtt.client as mqtt
 from .crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
 from .discovery import (
     get_device_fingerprint as discover_device_fingerprint,
+    get_tv_timestamp,
     ping_tv,
 )
 from .protocol.auth import (
@@ -326,20 +327,56 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         """Submits the PIN code entered by the user and retrieves token pair."""
         return await async_submit_pin_code(self, pin_code)
 
-    def check_and_refresh_token(self, force: bool = False, margin_seconds: int = 0) -> bool:
+    def sync_clock(self, timeout: float = 2.0) -> int | None:
+        """Queries TV UPnP Date header, updates clock_offset, and triggers callbacks."""
+        tv_ts = get_tv_timestamp(self.ip, timeout=timeout)
+        if tv_ts:
+            self.tv_timestamp = tv_ts
+            self.clock_offset = tv_ts - int(time.time())
+            self.last_clock_sync = time.time()
+            _LOGGER.debug(
+                "[%s] Synchronized TV clock: %d (offset: %d s)",
+                self.ip,
+                tv_ts,
+                self.clock_offset,
+            )
+            self._dispatch_clock_drift_update(self.clock_offset)
+            return self.clock_offset
+        return None
+
+    def check_and_refresh_token(
+        self,
+        force: bool = False,
+        margin_seconds: int = 0,
+        clock_offset: int | None = None,
+    ) -> bool:
         """Checks access token expiration and triggers refresh via refresh token if necessary."""
         if not self.refresh_token:
             return False
 
+        effective_offset = self.clock_offset if clock_offset is None else clock_offset
+
         if not force and self.access_token:
-            if not is_token_expired(self.access_token_time, self.access_token_duration, margin_seconds=margin_seconds):
+            if not is_token_expired(
+                self.access_token_time,
+                self.access_token_duration,
+                margin_seconds=margin_seconds,
+                clock_offset=effective_offset,
+            ):
                 return False
-            _LOGGER.debug("[%s] Access token expired or within margin, initiating refresh", self.ip)
+            _LOGGER.debug(
+                "[%s] Access token expired or within margin (clock_offset=%d), initiating refresh",
+                self.ip,
+                effective_offset,
+            )
 
         return self.refresh_tokens()
 
     def refresh_tokens(self) -> bool:
         """Connects with the refresh token to obtain a fresh access token."""
+        # Query TV UPnP clock before refreshing to ensure credentials and expiration match TV epoch
+        self.sync_clock(timeout=2.0)
+
         was_connected = self.connected
         main_client = self.mqtt_client
         if main_client:
@@ -373,10 +410,14 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
 
         if updated_data:
             self.access_token = updated_data["accesstoken"]
-            self.access_token_time = int(updated_data.get("accesstoken_time", int(time.time())))
+            self.access_token_time = int(
+                updated_data.get("accesstoken_time", int(time.time()) + self.clock_offset)
+            )
             self.access_token_duration = int(updated_data.get("accesstoken_duration_day", 2))
             self.refresh_token = updated_data.get("refreshtoken", self.refresh_token)
-            self.refresh_token_time = int(updated_data.get("refreshtoken_time", int(time.time())))
+            self.refresh_token_time = int(
+                updated_data.get("refreshtoken_time", int(time.time()) + self.clock_offset)
+            )
             self.refresh_token_duration = int(
                 updated_data.get("refreshtoken_duration_day")
                 or updated_data.get("refresh_token_duration_day", 30)

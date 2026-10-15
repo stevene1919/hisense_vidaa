@@ -297,6 +297,8 @@ async def test_media_player_parses_camelcase_source_and_app_payloads(mock_client
         [{"sourceName": "HDMI 1", "sourceid": "HDMI1", "is_active": True}]
     )
     assert "HDMI 1" in mp._source_dict
+    assert mp.state == "on"
+    assert mp.source == "HDMI 1"
 
     mp._handle_applist_update([{"appId": "1", "appName": "Netflix", "url": "netflix://"}])
     assert "Netflix" in mp._app_dict

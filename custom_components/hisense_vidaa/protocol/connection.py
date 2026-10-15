@@ -167,6 +167,8 @@ class ConnectionManagerMixin:
             self.connected = True
             _LOGGER.info("[%s] Connected to TV MQTT broker", self.ip)
             self._dispatch_connected()
+            with contextlib.suppress(Exception):
+                threading.Thread(target=self.sync_clock, kwargs={"timeout": 2.0}, daemon=True).start()
             subscribe_standard_tv_topics(
                 client=client,
                 broadcast_basepath=self.topicBrcsBasepath,

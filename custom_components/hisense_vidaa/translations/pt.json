@@ -152,6 +152,9 @@
       },
       "reported_name": {
         "name": "Nome reportado"
+      },
+      "clock_drift": {
+        "name": "Desvio do relógio"
       }
     },
     "binary_sensor": {

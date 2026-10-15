@@ -152,6 +152,9 @@
       },
       "reported_name": {
         "name": "Gemeldeter Name"
+      },
+      "clock_drift": {
+        "name": "Uhrenabweichung"
       }
     },
     "binary_sensor": {

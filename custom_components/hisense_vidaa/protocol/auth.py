@@ -57,11 +57,12 @@ def is_token_expired(
     access_token_time: int | None,
     access_token_duration_day: int | None,
     margin_seconds: int = 0,
+    clock_offset: int = 0,
 ) -> bool:
     """Checks if access token is expired or within margin of expiration."""
     if not access_token_time or not access_token_duration_day:
         return False
-    now = int(time.time())
+    now = int(time.time()) + clock_offset
     token_expiration = access_token_time + (access_token_duration_day * 86400)
     return (token_expiration - now) <= margin_seconds
 

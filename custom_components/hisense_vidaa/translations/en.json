@@ -152,6 +152,9 @@
       },
       "reported_name": {
         "name": "Reported Name"
+      },
+      "clock_drift": {
+        "name": "Clock Drift"
       }
     },
     "binary_sensor": {

@@ -123,6 +123,12 @@ if "homeassistant" not in sys.modules:
         DIAGNOSTIC = "diagnostic"
         CONFIG = "config"
     const.EntityCategory = EntityCategory
+    class UnitOfTime:
+        SECONDS = "s"
+        MINUTES = "min"
+        HOURS = "h"
+        DAYS = "d"
+    const.UnitOfTime = UnitOfTime
     ha.const = const
     sys.modules["homeassistant.const"] = const
 
@@ -257,6 +263,7 @@ if "homeassistant" not in sys.modules:
     class SensorDeviceClass:
         TIMESTAMP = "timestamp"
         ENUM = "enum"
+        DURATION = "duration"
     sensor.SensorEntity = SensorEntity
     sensor.SensorDeviceClass = SensorDeviceClass
     components.sensor = sensor
@@ -626,6 +633,10 @@ def mock_client():
     client.model_name = None
     client.manufacturer = None
     client.firmware_version = None
+    client.clock_offset = 0
+    client.last_clock_sync = 0.0
+    client.tv_timestamp = None
+    client.sync_clock = MagicMock(return_value=0)
     client.turn_on.side_effect = lambda mac_targets=None: turn_on_tv(client, mac_targets)
     client.turn_off.side_effect = lambda: turn_off_tv(client)
     return client

@@ -194,6 +194,9 @@ class TvStateMixin:
         self.model_name: str | None = None
         self.manufacturer: str | None = None
         self.firmware_version: str | None = None
+        self.clock_offset: int = 0
+        self.last_clock_sync: float = 0.0
+        self.tv_timestamp: int | None = None
 
     @property
     def is_on(self) -> bool:

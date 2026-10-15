@@ -706,3 +706,66 @@ def test_refresh_tokens_unbinds_callbacks_before_teardown():
     assert main.on_message is None
     client.disconnect()
 
+
+def test_is_token_expired_with_clock_offset():
+    """Test is_token_expired correctly respects positive and negative clock offsets."""
+    from custom_components.hisense_vidaa.protocol.auth import is_token_expired
+
+    host_now = int(time.time())
+    # Token issued 1 hour ago on TV clock, where TV clock is 6 days (518400s) behind host clock
+    tv_offset = -518400
+    tv_now = host_now + tv_offset
+    token_time = tv_now - 3600  # 1 hour old in TV epoch
+
+    # Without offset (host time vs TV token): host is 6 days ahead, so 2-day token appears expired
+    assert is_token_expired(token_time, 2, clock_offset=0) is True
+
+    # With TV clock offset: token is only 1 hour old in TV epoch, so it is NOT expired
+    assert is_token_expired(token_time, 2, clock_offset=tv_offset) is False
+
+
+def test_sync_clock_and_clock_drift_callback():
+    """Test HisenseTvClient.sync_clock updates offset and dispatches callback."""
+    client = HisenseTvClient(ip="192.168.50.12")
+    host_now = int(time.time())
+    mock_tv_ts = host_now - 500000
+
+    drift_records = []
+    client.register_clock_drift_callback(lambda offset: drift_records.append(offset))
+
+    with patch("custom_components.hisense_vidaa.client.get_tv_timestamp", return_value=mock_tv_ts):
+        offset = client.sync_clock()
+
+    assert offset == mock_tv_ts - host_now
+    assert client.clock_offset == offset
+    assert client.tv_timestamp == mock_tv_ts
+    assert len(drift_records) == 1
+    assert drift_records[0] == offset
+
+
+def test_check_and_refresh_token_respects_clock_offset():
+    """Test check_and_refresh_token does not falsely refresh when clock offset is applied."""
+    host_now = int(time.time())
+    tv_offset = -500000
+    tv_now = host_now + tv_offset
+    token_time = tv_now - 3600
+
+    client = HisenseTvClient(
+        ip="192.168.50.12",
+        client_id="test_client",
+        access_token="valid_token",
+        access_token_time=token_time,
+        access_token_duration=2,
+        refresh_token="valid_refresh",
+        refresh_token_time=token_time,
+        refresh_token_duration=30,
+    )
+    client.clock_offset = tv_offset
+
+    with patch.object(client, "refresh_tokens") as mock_refresh:
+        # Should NOT trigger refresh because token is valid under TV epoch
+        res = client.check_and_refresh_token(force=False)
+        assert res is False
+        mock_refresh.assert_not_called()
+
+

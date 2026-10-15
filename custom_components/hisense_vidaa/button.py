@@ -17,7 +17,6 @@ from .const import (
     CONF_ENABLE_PICTURE_CONTROLS,
     CONF_ENABLE_SOUND_CONTROLS,
 )
-from .discovery import get_tv_timestamp
 from .entity import HisenseVidaaEntity
 
 if TYPE_CHECKING:
@@ -81,9 +80,13 @@ class HisenseVidaaSyncClockButton(HisenseVidaaBaseButton):
 
     async def async_press(self) -> None:
         """Handle button press."""
-        tv_ts = await self.hass.async_add_executor_job(get_tv_timestamp, self._client.ip, 2.0)
-        if tv_ts:
-            _LOGGER.info("Successfully fetched live TV timestamp: %s (Epoch: %d)", self._client.ip, tv_ts)
+        offset = await self.hass.async_add_executor_job(self._client.sync_clock, 2.0)
+        if offset is not None:
+            _LOGGER.info(
+                "[%s] Successfully synchronized TV clock (offset: %d s)",
+                self._client.ip,
+                offset,
+            )
         else:
             _LOGGER.warning("Could not fetch UPnP timestamp from TV at %s", self._client.ip)
 

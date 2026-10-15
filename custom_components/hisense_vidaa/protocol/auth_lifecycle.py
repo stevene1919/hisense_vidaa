@@ -79,7 +79,9 @@ class TokenLifecycleManager:
         """
         client = self.client
         return bool(getattr(client, "refresh_in_standby", False)) and not is_token_expired(
-            client.access_token_time, client.access_token_duration
+            client.access_token_time,
+            client.access_token_duration,
+            clock_offset=client.clock_offset,
         )
 
     def maybe_refresh_while_awake(self) -> None:
@@ -89,7 +91,12 @@ class TokenLifecycleManager:
             return
         if not client.is_on and not self.can_refresh_in_standby():
             return
-        if not is_token_expired(client.access_token_time, client.access_token_duration, margin_seconds=43200):
+        if not is_token_expired(
+            client.access_token_time,
+            client.access_token_duration,
+            margin_seconds=43200,
+            clock_offset=client.clock_offset,
+        ):
             return
         backoff = min(600 * (2 ** self.awake_refresh_failures), 6 * 3600)
         now = time.time()
@@ -129,7 +136,12 @@ class TokenLifecycleManager:
         client = self.client
         should_refresh = False
         try:
-            if client.access_token and is_token_expired(client.access_token_time, client.access_token_duration, margin_seconds=43200):
+            if client.access_token and is_token_expired(
+                client.access_token_time,
+                client.access_token_duration,
+                margin_seconds=43200,
+                clock_offset=client.clock_offset,
+            ):
                 time.sleep(self.PROACTIVE_REFRESH_SETTLE_SECONDS)
                 if not client.is_on and not self.can_refresh_in_standby():
                     _LOGGER.info(
@@ -158,7 +170,15 @@ class TokenLifecycleManager:
     def handle_auth_rejection(self, rc: int) -> None:
         """Handles MQTT auth rejection (rc 4 or 5) on connect."""
         client = self.client
-        if client.refresh_token and not is_token_expired(client.refresh_token_time, client.refresh_token_duration):
+        # Query TV UPnP clock to check for clock jump or rollback before deciding token validity
+        with contextlib.suppress(Exception):
+            client.sync_clock(timeout=2.0)
+
+        if client.refresh_token and not is_token_expired(
+            client.refresh_token_time,
+            client.refresh_token_duration,
+            clock_offset=client.clock_offset,
+        ):
             current_time = time.time()
             with self.refresh_lock:
                 retry_after = min(60 * (2 ** self.rejected_refresh_failures), 1800)

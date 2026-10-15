@@ -6,9 +6,9 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
+from homeassistant.const import EntityCategory, UnitOfTime
 
 from .const import AUTH_PROFILES, CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE
 from .entity import HisenseVidaaEntity
@@ -233,3 +233,81 @@ class HisenseVidaaAudioOutputSensor(HisenseVidaaEntity, SensorEntity):
         if isinstance(state, dict) and (state.get("statetype") == "fake_sleep_0" or not self._client.connected):
             self._attr_native_value = "Off"
             self._schedule_state_update()
+
+
+class HisenseVidaaClockDriftSensor(HisenseVidaaBaseSensor):
+    """Sensor displaying TV internal clock drift relative to host time."""
+
+    _attr_translation_key = "clock_drift"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_native_unit_of_measurement = UnitOfTime.SECONDS
+    _attr_device_class = SensorDeviceClass.DURATION
+
+    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+        super().__init__(client, entry)
+        self._attr_unique_id = f"{self._entry_id}_clock_drift"
+        self._update_state()
+
+    async def async_added_to_hass(self) -> None:
+        self._client.register_connected_callback(self._handle_update)
+        self._client.register_clock_drift_callback(self._handle_update)
+        self._client.register_disconnected_callback(self._handle_update)
+        self._update_state()
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_connected_callback(self._handle_update)
+        self._client.unregister_clock_drift_callback(self._handle_update)
+        self._client.unregister_disconnected_callback(self._handle_update)
+
+    def _handle_update(self, *args: Any) -> None:
+        self._update_state()
+        self._schedule_state_update()
+
+    def _update_state(self) -> None:
+        offset = getattr(self._client, "clock_offset", 0)
+        self._attr_native_value = offset
+        if abs(offset) < 60:
+            self._attr_icon = "mdi:clock-check-outline"
+        else:
+            self._attr_icon = "mdi:clock-alert-outline"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return diagnostic clock details."""
+        offset = getattr(self._client, "clock_offset", 0)
+        now_ts = int(datetime.now(UTC).timestamp())
+        tv_ts = getattr(self._client, "tv_timestamp", None)
+        if tv_ts is None and offset != 0:
+            tv_ts = now_ts + offset
+
+        attrs: dict[str, Any] = {
+            "drift_seconds": offset,
+            "synchronized": abs(offset) < 60,
+        }
+
+        # Human-readable drift calculation
+        abs_off = abs(offset)
+        days, rem = divmod(abs_off, 86400)
+        hours, rem = divmod(rem, 3600)
+        mins, secs = divmod(rem, 60)
+        parts = []
+        if days:
+            parts.append(f"{days}d")
+        if hours:
+            parts.append(f"{hours}h")
+        if mins:
+            parts.append(f"{mins}m")
+        if secs or not parts:
+            parts.append(f"{secs}s")
+        drift_str = ("-" if offset < 0 else "+") + " ".join(parts) if offset != 0 else "0s"
+        attrs["drift_human"] = drift_str
+
+        if tv_ts:
+            attrs["tv_time"] = datetime.fromtimestamp(tv_ts, tz=UTC).isoformat()
+        attrs["host_time"] = datetime.now(UTC).isoformat()
+
+        last_sync = getattr(self._client, "last_clock_sync", 0.0)
+        if last_sync:
+            attrs["last_synced"] = datetime.fromtimestamp(last_sync, tz=UTC).isoformat()
+
+        return attrs

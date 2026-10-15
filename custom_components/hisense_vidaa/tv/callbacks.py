@@ -114,6 +114,15 @@ class CallbackRegistryMixin:
     def unregister_device_info_callback(self, cb: Callable) -> None:
         self._unregister_callback("device_info", cb)
 
+    def register_clock_drift_callback(self, cb: Callable) -> None:
+        self._register_callback("clock_drift", cb)
+
+    def unregister_clock_drift_callback(self, cb: Callable) -> None:
+        self._unregister_callback("clock_drift", cb)
+
+    def _dispatch_clock_drift_update(self, offset: int) -> None:
+        self._dispatch("clock_drift", offset)
+
     def _dispatch_auth_failed(self) -> None:
         self._dispatch("auth_failed", self)
 
@@ -140,6 +149,20 @@ class CallbackRegistryMixin:
             self.sources = data
         elif isinstance(data, dict) and "sourcelist" in data:
             self.sources = data["sourcelist"]
+        if isinstance(self.sources, list):
+            for s in self.sources:
+                if isinstance(s, dict) and (
+                    s.get("is_signal") in ("1", 1, True)
+                    or s.get("is_active")
+                    or s.get("isactive")
+                    or s.get("active")
+                ):
+                    src_name = s.get("sourcename") or s.get("sourceName") or s.get("displayname") or s.get("name")
+                    if src_name:
+                        self.is_on = True
+                        if not self.current_source:
+                            self.current_source = src_name
+                    break
         self._dispatch("sourcelist", self.sources)
 
     def _dispatch_applist_update(self, data: Any) -> None:

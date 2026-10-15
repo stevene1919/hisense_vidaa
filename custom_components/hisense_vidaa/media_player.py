@@ -43,6 +43,7 @@ from .tv.media import (
     parse_applist_data,
     parse_media_state_broadcast,
     parse_sourcelist_data,
+    parse_sourcelist_payload,
     parse_volume_broadcast,
 )
 from .tv.settings import (
@@ -405,6 +406,14 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         if not data:
             return
         self._source_dict = parse_sourcelist_data(data)
+        _, _, _, active_source = parse_sourcelist_payload(data)
+        if active_source and self._client and self._client.connected:
+            self._client.is_on = True
+            if not self._client.current_source:
+                self._client.current_source = active_source
+            if not self._source:
+                self._source = active_source
+            self._state = STATE_ON
         self.schedule_update_ha_state()
 
     def _handle_applist_update(self, data: list[dict[str, Any]]) -> None:

@@ -76,6 +76,9 @@
       },
       "audio_output": {
         "default": "mdi:volume-source"
+      },
+      "clock_drift": {
+        "default": "mdi:clock-check-outline"
       }
     },
     "switch": {

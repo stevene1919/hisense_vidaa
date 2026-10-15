@@ -22,6 +22,7 @@ from custom_components.hisense_vidaa.sensor import (
 from custom_components.hisense_vidaa.sensors_diagnostic import (
     HisenseVidaaAudioOutputSensor,
     HisenseVidaaAuthProfileSensor,
+    HisenseVidaaClockDriftSensor,
     HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
 )
@@ -90,6 +91,20 @@ async def test_sensor_entities(mock_client, mock_entry):
     assert s_name.extra_state_attributes["ip_address"] == "192.168.50.12"
     assert s_name.extra_state_attributes["mac_address"] == "e8:51:77:ec:98:1c"
 
+    # Test Clock Drift Sensor
+    s_drift = HisenseVidaaClockDriftSensor(mock_client, mock_entry)
+    assert s_drift.native_value == 0
+    assert s_drift._attr_icon == "mdi:clock-check-outline"
+    assert s_drift.extra_state_attributes["synchronized"] is True
+    assert s_drift.extra_state_attributes["drift_human"] == "0s"
+
+    mock_client.clock_offset = -516360
+    s_drift._update_state()
+    assert s_drift.native_value == -516360
+    assert s_drift._attr_icon == "mdi:clock-alert-outline"
+    assert s_drift.extra_state_attributes["synchronized"] is False
+    assert "-5d" in s_drift.extra_state_attributes["drift_human"]
+
 
 def test_binary_sensor_entities(mock_client, mock_entry):
     """Test MQTT connected binary sensor entity."""
@@ -114,13 +129,10 @@ async def test_button_entities(mock_client, mock_entry, monkeypatch):
     mock_client.disconnect.assert_called_once()
     mock_client.connect_and_run.assert_called_once()
 
-    monkeypatch.setattr(
-        "custom_components.hisense_vidaa.button.get_tv_timestamp",
-        lambda ip, timeout: 1700000000,
-    )
     b_sync = HisenseVidaaSyncClockButton(mock_client, mock_entry)
     b_sync.hass = hass
     await b_sync.async_press()
+    mock_client.sync_clock.assert_called_once()
 
     b_reauth = HisenseVidaaTriggerReauthButton(mock_client, mock_entry)
     b_reauth.hass = hass
