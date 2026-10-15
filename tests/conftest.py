@@ -529,31 +529,6 @@ if "homeassistant" not in sys.modules:
     service_info.zeroconf = zeroconf_info
     sys.modules["homeassistant.helpers.service_info.zeroconf"] = zeroconf_info
 
-    # helpers.selector
-    selector_mod = types.ModuleType("homeassistant.helpers.selector")
-    class SelectSelector:
-        def __init__(self, config=None):
-            self.config = config
-        def __call__(self, val):
-            return val
-    class SelectSelectorConfig:
-        def __init__(self, options=None, mode=None, translation_key=None):
-            self.options = options
-            self.mode = mode
-            self.translation_key = translation_key
-    class SelectSelectorMode:
-        DROPDOWN = "dropdown"
-        LIST = "list"
-    class SelectOptionDict(dict):
-        def __init__(self, value, label):
-            super().__init__(value=value, label=label)
-    selector_mod.SelectSelector = SelectSelector
-    selector_mod.SelectSelectorConfig = SelectSelectorConfig
-    selector_mod.SelectSelectorMode = SelectSelectorMode
-    selector_mod.SelectOptionDict = SelectOptionDict
-    helpers.selector = selector_mod
-    sys.modules["homeassistant.helpers.selector"] = selector_mod
-
     helpers.service_info = service_info
     sys.modules["homeassistant.helpers.service_info"] = service_info
 

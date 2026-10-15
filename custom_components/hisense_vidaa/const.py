@@ -61,8 +61,13 @@ DEFAULT_KEY_REPEAT = 1
 DEFAULT_AUTH_PROFILE = "auto"
 DEFAULT_USE_SSL = True
 
+CONF_PLAYBACK_DEBOUNCE = "playback_debounce"
+DEFAULT_PLAYBACK_DEBOUNCE = 0.5
+
 # Service Names & Attributes
 SERVICE_SEND_KEY = "send_key"
+SERVICE_SEND_KEY_SEQUENCE = "send_key_sequence"
+SERVICE_CHANGE_CHANNEL = "change_channel"
 SERVICE_LAUNCH_APP = "launch_app"
 SERVICE_SET_PICTURE_SETTING = "set_picture_setting"
 SERVICE_SET_SOUND_SETTING = "set_sound_setting"
@@ -71,6 +76,9 @@ SERVICE_SEND_TEXT_INPUT = "send_text_input"
 ATTR_KEY = "key"
 ATTR_REPEAT = "repeat"
 ATTR_DELAY = "delay"
+ATTR_SEQUENCE = "sequence"
+ATTR_CHANNEL = "channel"
+ATTR_CONFIRM = "confirm"
 ATTR_APP = "app"
 ATTR_APP_ID = "app_id"
 ATTR_APP_NAME = "app_name"

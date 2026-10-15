@@ -65,6 +65,8 @@ CLAUDE.md
 
 # Local deployment & developer scripts
 scripts/sync_vodka.sh
+scripts/test_upnp.py
+scripts/verify.sh
 scripts/*.local.*
 *.local.*
 scratch/

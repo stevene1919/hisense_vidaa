@@ -74,59 +74,56 @@
         "title": "Hisense VIDAA TV Optionen",
         "description": "Wähle eine Optionen-Kategorie zum Konfigurieren:",
         "menu_options": {
-          "general": "⚡ Allgemeine & Energie-Optionen",
-          "sources": "📺 Quellen & Mediensteuerungen",
-          "picture_sound": "🎨 Bild- & Tonsteuerungen",
-          "remote_keys": "🎮 Fernbedienungs-Tastenverzögerungen & Wiederholungen",
-          "certs": "🔒 SSL-Zertifikate & Sicherheit"
+          "power_network": "⚡ Energie & Netzwerk",
+          "playback_sources": "📺 Wiedergabe & Quellen",
+          "features_remote": "🎛️ Entitäten & Fernbedienung",
+          "security": "🔒 Verbindung & Sicherheit"
         }
       },
-      "general": {
-        "title": "Allgemeine & Energie-Optionen",
-        "description": "Konfiguriere Einschalten, WoL und grundlegende Geräteoptionen.",
+      "power_network": {
+        "title": "Energie- & Netzwerkoptionen",
+        "description": "Konfiguriere Wake-on-LAN, sekundäre Netzwerkschnittstellen und Standby-Token-Erneuerung.",
         "data": {
-          "enable_remote": "Dedizierte Fernbedienungs-Entität aktivieren",
-          "enable_notify": "Toast-Benachrichtigungen auf dem Bildschirm aktivieren (nur unterstützte Modelle)",
           "enable_wol": "Einschalten über Wake-on-LAN aktivieren",
           "secondary_mac_address": "Sekundäre MAC-Adresse (WLAN oder Ethernet)",
-          "use_ssl": "Verschlüsselte SSL/TLS-Verbindung verwenden",
           "refresh_in_standby": "Zugriffstoken erneuern, während der Fernseher im Standby ist"
         },
         "data_description": {
           "refresh_in_standby": "Aktivieren, wenn der Fernseher im ausgeschalteten Zustand seine Netzwerkverbindung behält (z. B. Schnellstart / Fast Power On). Das 2-Tage-Zugriffstoken wird dann auch erneuert, wenn der Fernseher nicht eingeschaltet wird, sodass die Kopplung Home Assistant-Neustarts übersteht. Deaktiviert lassen bei Fernsehern, die im Standby vollständig herunterfahren."
         }
       },
-      "sources": {
-        "title": "Quellen & Mediensteuerungen",
+      "playback_sources": {
+        "title": "Wiedergabe & Quellen",
         "description": "Konfiguriere Eingangsquellen, App-Liste und Medienwiedergabesteuerungen.",
         "data": {
           "include_apps_in_sources": "Smart-TV-Apps in die Quellenliste des Medienplayers aufnehmen",
           "enable_media_controls": "Mediensteuerungen aktivieren (Wiedergabe/Pause, Stopp, Überspringen)",
-          "enable_cec_names": "Namen angeschlossener HDMI-CEC-Geräte in Quellen anzeigen (z. B. 'HDMI 2 (PlayStation 5)')"
+          "enable_cec_names": "Namen angeschlossener HDMI-CEC-Geräte in Quellen anzeigen (z. B. 'HDMI 2 (PlayStation 5)')",
+          "playback_debounce": "Wiedergabestatus-Einschwingfenster / Entprellung (Sekunden)"
+        },
+        "data_description": {
+          "playback_debounce": "Dauer in Sekunden, um flüchtige Statuswechsel beim Starten oder Puffern von Streaming-Apps herauszufiltern."
         }
       },
-      "picture_sound": {
-        "title": "Bild- & Tonsteuerungen",
-        "description": "Konfiguriere Bildkalibrierungs-Schieberegler, Tonmodus-Auswahl und Nur-Audio-Modus.",
+      "features_remote": {
+        "title": "Entitäten & Fernbedienung",
+        "description": "Konfiguriere Entitätsschalter, Bildkalibrierung, Ton-Presets und Tastenverzögerungen.",
         "data": {
+          "enable_remote": "Dedizierte Fernbedienungs-Entität aktivieren",
+          "enable_notify": "Toast-Benachrichtigungen auf dem Bildschirm aktivieren (nur unterstützte Modelle)",
           "enable_picture_controls": "Bildmodus-Auswahl und Kalibrierungs-Schieberegler aktivieren (Hintergrundbeleuchtung, Helligkeit, Kontrast)",
           "enable_sound_controls": "Tonmodus-Equalizer-Preset-Auswahl aktivieren",
-          "enable_audio_only": "Nur-Audio-Schalter (Bildschirm aus) aktivieren"
-        }
-      },
-      "remote_keys": {
-        "title": "Fernbedienungs-Tastenverzögerungen & Wiederholungen",
-        "description": "Konfiguriere Standard-Befehlsverzögerungen und Tastendruck-Wiederholungen für die Fernbedienung.",
-        "data": {
+          "enable_audio_only": "Nur-Audio-Schalter (Bildschirm aus) aktivieren",
           "key_delay": "Standard-Tastenverzögerung (Sekunden)",
           "key_repeat": "Standard-Tastenwiederholungsanzahl"
         }
       },
-      "certs": {
-        "title": "SSL-Zertifikate & Sicherheit",
-        "description": "Wähle das Authentifizierungsprofil und optionale benutzerdefinierte SSL/TLS-Client-Zertifikatspfade.",
+      "security": {
+        "title": "Verbindung & Sicherheit",
+        "description": "Wähle Authentifizierungsprofil, Verschlüsselung und optionale Client-Zertifikate.",
         "data": {
           "auth_profile": "Authentifizierungs- / Zertifikatsprofil",
+          "use_ssl": "Verschlüsselte SSL/TLS-Verbindung verwenden",
           "certfile": "Zertifikatsdateipfad (.crt / .pem / .p12)",
           "keyfile": "Privater Schlüsseldateipfad (.key / .pem)"
         }
@@ -300,6 +297,38 @@
         "action": {
           "name": "Aktion",
           "description": "Eingabeaktionstyp (insert, replace, clear)."
+        }
+      }
+    },
+    "send_key_sequence": {
+      "name": "Tastenfolge senden",
+      "description": "Sendet eine Folge von Fernbedienungs-Tastenbefehlen mit konfigurierbarer Verzögerung zwischen den Tasten.",
+      "fields": {
+        "sequence": {
+          "name": "Tastenfolge",
+          "description": "Liste von Tastencodes oder kommagetrennte Tasten, die nacheinander gesendet werden sollen (z. B. [\"home\", \"down\", \"ok\"])."
+        },
+        "delay": {
+          "name": "Verzögerung",
+          "description": "Verzögerung in Sekunden zwischen jedem einzelnen Tastendruck."
+        }
+      }
+    },
+    "change_channel": {
+      "name": "Kanal wechseln",
+      "description": "Schaltet direkt auf einen numerischen TV-Kanal um, indem aufeinanderfolgende Zifferntasten gesendet werden.",
+      "fields": {
+        "channel": {
+          "name": "Kanalnummer",
+          "description": "Die Kanalnummer, auf die umgeschaltet werden soll (z. B. 701, 10, 7)."
+        },
+        "confirm": {
+          "name": "Bestätigen",
+          "description": "Sendet OK/Enter unmittelbar nach den Ziffern, um ohne Warten auf die TV-Zeitüberschreitung umzuschalten."
+        },
+        "delay": {
+          "name": "Verzögerung",
+          "description": "Verzögerung in Sekunden zwischen den Ziffern."
         }
       }
     }

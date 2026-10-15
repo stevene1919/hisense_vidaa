@@ -373,3 +373,33 @@ async def test_remote_platform_purges_registry_when_disabled(
     await async_setup_remote(hass, mock_entry, lambda e: entities.extend(e))
     mock_reg.async_remove.assert_called_once_with("remote.living_room_tv")
     assert entities == []
+
+
+@pytest.mark.anyio
+async def test_media_player_playback_state_debounce(mock_client, mock_entry):
+    """Test transient state debounce delays state apply until timer expires."""
+    import asyncio
+    hass = MagicMock(spec=HomeAssistant)
+    loop = asyncio.get_running_loop()
+    hass.loop = loop
+    hass.async_add_executor_job = MagicMock(side_effect=lambda func, *args: func(*args))
+
+    mock_entry.options = {"playback_debounce": 0.05}
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp.hass = hass
+
+    # Transient app state update
+    mp._handle_state_update({"statetype": "app", "name": "YouTube", "is_on": True})
+    assert mp._debounce_handle is not None
+    assert mp._source != "YouTube"
+
+    # Wait for debounce duration
+    await asyncio.sleep(0.08)
+    assert mp._source == "YouTube"
+    assert mp.state == STATE_ON
+
+    # Power off: applies immediately without debounce
+    mp._handle_state_update({"statetype": "fake_sleep_0", "is_on": False})
+    assert mp._debounce_handle is None
+    assert mp.state == STATE_OFF
+

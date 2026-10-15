@@ -12,15 +12,20 @@ from custom_components.hisense_vidaa import async_setup
 from custom_components.hisense_vidaa.const import (
     ATTR_ACTION,
     ATTR_APP,
+    ATTR_CHANNEL,
+    ATTR_CONFIRM,
     ATTR_DELAY,
     ATTR_KEY,
     ATTR_MENU_ID,
     ATTR_MENU_VALUE,
     ATTR_REPEAT,
+    ATTR_SEQUENCE,
     ATTR_TEXT,
     DOMAIN,
+    SERVICE_CHANGE_CHANNEL,
     SERVICE_LAUNCH_APP,
     SERVICE_SEND_KEY,
+    SERVICE_SEND_KEY_SEQUENCE,
     SERVICE_SEND_TEXT_INPUT,
     SERVICE_SET_PICTURE_SETTING,
     SERVICE_SET_SOUND_SETTING,
@@ -295,6 +300,8 @@ ALL_SERVICE_NAMES = [
     SERVICE_SET_PICTURE_SETTING,
     SERVICE_SET_SOUND_SETTING,
     SERVICE_SEND_TEXT_INPUT,
+    SERVICE_SEND_KEY_SEQUENCE,
+    SERVICE_CHANGE_CHANNEL,
 ]
 
 
@@ -507,4 +514,115 @@ async def test_call_against_disconnected_tvs_raises_not_connected():
     assert err.value.translation_key == "not_connected"
     client_living.send_command.assert_not_called()
     client_kitchen.send_command.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_send_key_sequence_service():
+    """Test send_key_sequence service with list and comma-separated string."""
+    hass, client_living, _client_kitchen = _two_tv_hass()
+    client_living.ip = "10.0.0.1"
+    handlers = await _register_handlers(hass)
+    client_living.connected = True
+
+    # Test list sequence
+    call = ServiceCall(
+        domain=DOMAIN,
+        service=SERVICE_SEND_KEY_SEQUENCE,
+        data={
+            ATTR_SEQUENCE: ["home", "down", "ok"],
+            ATTR_DELAY: 0.01,
+            "ip_address": "10.0.0.1",
+        },
+    )
+    result = await handlers[SERVICE_SEND_KEY_SEQUENCE](call)
+    assert result["sequence"] == ["home", "down", "ok"]
+    assert client_living.send_command.call_count == 3
+    client_living.send_command.assert_any_call("home")
+    client_living.send_command.assert_any_call("down")
+    client_living.send_command.assert_any_call("ok")
+
+    # Test comma-separated string
+    client_living.send_command.reset_mock()
+    call_str = ServiceCall(
+        domain=DOMAIN,
+        service=SERVICE_SEND_KEY_SEQUENCE,
+        data={
+            ATTR_SEQUENCE: "back, menu",
+            ATTR_DELAY: 0.01,
+            "ip_address": "10.0.0.1",
+        },
+    )
+    result_str = await handlers[SERVICE_SEND_KEY_SEQUENCE](call_str)
+    assert result_str["sequence"] == ["back", "menu"]
+    assert client_living.send_command.call_count == 2
+
+    # Test empty sequence validation
+    call_empty = ServiceCall(
+        domain=DOMAIN,
+        service=SERVICE_SEND_KEY_SEQUENCE,
+        data={
+            ATTR_SEQUENCE: [],
+            "ip_address": "10.0.0.1",
+        },
+    )
+    with pytest.raises(ServiceValidationError):
+        await handlers[SERVICE_SEND_KEY_SEQUENCE](call_empty)
+
+
+@pytest.mark.anyio
+async def test_change_channel_service():
+    """Test change_channel service dispatches digits and confirmation key."""
+    hass, client_living, _client_kitchen = _two_tv_hass()
+    client_living.ip = "10.0.0.1"
+    handlers = await _register_handlers(hass)
+    client_living.connected = True
+
+    # Tune to channel 701 with confirmation
+    call = ServiceCall(
+        domain=DOMAIN,
+        service=SERVICE_CHANGE_CHANNEL,
+        data={
+            ATTR_CHANNEL: 701,
+            ATTR_CONFIRM: True,
+            ATTR_DELAY: 0.01,
+            "ip_address": "10.0.0.1",
+        },
+    )
+    result = await handlers[SERVICE_CHANGE_CHANNEL](call)
+    assert result["digits"] == ["7", "0", "1"]
+    assert result["confirmed"] is True
+    # Digits KEY_7, KEY_0, KEY_1 and confirmation KEY_OK
+    assert client_living.send_command.call_count == 4
+    calls = [c[0][0] for c in client_living.send_command.call_args_list]
+    assert calls == ["KEY_7", "KEY_0", "KEY_1", "KEY_OK"]
+
+    # Tune without confirmation
+    client_living.send_command.reset_mock()
+    call_no_confirm = ServiceCall(
+        domain=DOMAIN,
+        service=SERVICE_CHANGE_CHANNEL,
+        data={
+            ATTR_CHANNEL: "12",
+            ATTR_CONFIRM: False,
+            ATTR_DELAY: 0.01,
+            "ip_address": "10.0.0.1",
+        },
+    )
+    result_no_confirm = await handlers[SERVICE_CHANGE_CHANNEL](call_no_confirm)
+    assert result_no_confirm["confirmed"] is False
+    assert client_living.send_command.call_count == 2
+    calls_no_confirm = [c[0][0] for c in client_living.send_command.call_args_list]
+    assert calls_no_confirm == ["KEY_1", "KEY_2"]
+
+    # Invalid channel with no digits
+    call_invalid = ServiceCall(
+        domain=DOMAIN,
+        service=SERVICE_CHANGE_CHANNEL,
+        data={
+            ATTR_CHANNEL: "invalid",
+            "ip_address": "10.0.0.1",
+        },
+    )
+    with pytest.raises(ServiceValidationError):
+        await handlers[SERVICE_CHANGE_CHANNEL](call_invalid)
 

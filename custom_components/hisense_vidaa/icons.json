@@ -91,6 +91,12 @@
     "send_key": {
       "service": "mdi:remote"
     },
+    "send_key_sequence": {
+      "service": "mdi:playlist-play"
+    },
+    "change_channel": {
+      "service": "mdi:numeric"
+    },
     "launch_app": {
       "service": "mdi:play-box-multiple"
     },

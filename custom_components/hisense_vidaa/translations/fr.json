@@ -74,59 +74,56 @@
         "title": "Options Hisense VIDAA TV",
         "description": "Sélectionnez une catégorie d'options à configurer :",
         "menu_options": {
-          "general": "⚡ Options générales et d'alimentation",
-          "sources": "📺 Sources et commandes multimédias",
-          "picture_sound": "🎨 Commandes d'image et de son",
-          "remote_keys": "🎮 Temporisations et répétitions de la télécommande",
-          "certs": "🔒 Certificats SSL et sécurité"
+          "power_network": "⚡ Alimentation et réseau",
+          "playback_sources": "📺 Lecture et sources",
+          "features_remote": "🎛️ Entités et télécommande",
+          "security": "🔒 Connexion et sécurité"
         }
       },
-      "general": {
-        "title": "Options générales et d'alimentation",
-        "description": "Configurez l'allumage, le WoL et les options de base de l'appareil.",
+      "power_network": {
+        "title": "Options d'alimentation et réseau",
+        "description": "Configurez le Wake-on-LAN, les interfaces réseau secondaires et le renouvellement de jeton en veille.",
         "data": {
-          "enable_remote": "Activer l'entité Télécommande dédiée",
-          "enable_notify": "Activer les notifications toast à l'écran (modèles compatibles uniquement)",
           "enable_wol": "Activer l'allumage par Wake-on-LAN",
           "secondary_mac_address": "Adresse MAC secondaire (Wi-Fi ou Ethernet)",
-          "use_ssl": "Utiliser une connexion chiffrée SSL/TLS",
           "refresh_in_standby": "Renouveler les jetons d'accès pendant que le téléviseur est en veille"
         },
         "data_description": {
           "refresh_in_standby": "Activez cette option si le téléviseur conserve sa connexion réseau lorsqu'il est éteint (ex. Démarrage rapide / Fast Power On). Le jeton d'accès valable 2 jours est ainsi renouvelé même si le téléviseur n'est pas allumé, ce qui permet à l'appairage de survivre aux redémarrages de Home Assistant. Laissez désactivé pour les téléviseurs qui s'éteignent complètement en veille."
         }
       },
-      "sources": {
-        "title": "Sources et commandes multimédias",
+      "playback_sources": {
+        "title": "Lecture et sources",
         "description": "Configurez les sources d'entrée, la liste des applications et les commandes de lecture multimédia.",
         "data": {
           "include_apps_in_sources": "Inclure les applications Smart TV dans la liste des sources du lecteur multimédia",
           "enable_media_controls": "Activer les commandes de lecture multimédia (lecture/pause, arrêt, piste suivante/précédente)",
-          "enable_cec_names": "Afficher les noms des appareils HDMI-CEC connectés dans les sources (ex. 'HDMI 2 (PlayStation 5)')"
+          "enable_cec_names": "Afficher les noms des appareils HDMI-CEC connectés dans les sources (ex. 'HDMI 2 (PlayStation 5)')",
+          "playback_debounce": "Délai de stabilisation / antirebond de lecture (secondes)"
+        },
+        "data_description": {
+          "playback_debounce": "Durée en secondes pour filtrer les changements d'état transitoires rapides lors du lancement ou de la mise en mémoire tampon des applications de streaming."
         }
       },
-      "picture_sound": {
-        "title": "Commandes d'image et de son",
-        "description": "Configurez les curseurs de calibrage d'image, le choix du mode sonore et le mode audio uniquement.",
+      "features_remote": {
+        "title": "Entités et télécommande",
+        "description": "Configurez les entités, le calibrage d'image, les présets audio et les délais de télécommande.",
         "data": {
+          "enable_remote": "Activer l'entité Télécommande dédiée",
+          "enable_notify": "Activer les notifications toast à l'écran (modèles compatibles uniquement)",
           "enable_picture_controls": "Activer le sélecteur de mode d'image et les curseurs de calibrage (Rétroéclairage, Luminosité, Contraste)",
           "enable_sound_controls": "Activer le sélecteur de préréglages d'égaliseur de mode sonore",
-          "enable_audio_only": "Activer l'interrupteur Audio uniquement (Écran éteint)"
-        }
-      },
-      "remote_keys": {
-        "title": "Temporisations et répétitions de la télécommande",
-        "description": "Configurez les délais de commande par défaut et les répétitions de touches pour la télécommande.",
-        "data": {
+          "enable_audio_only": "Activer l'interrupteur Audio uniquement (Écran éteint)",
           "key_delay": "Délai de touche par défaut (secondes)",
           "key_repeat": "Nombre de répétitions de touche par défaut"
         }
       },
-      "certs": {
-        "title": "Certificats SSL et sécurité",
-        "description": "Sélectionnez le profil d'authentification et les chemins facultatifs vers les certificats clients SSL/TLS personnalisés.",
+      "security": {
+        "title": "Connexion et sécurité",
+        "description": "Sélectionnez le profil d'authentification, le chiffrement et les certificats clients facultatifs.",
         "data": {
           "auth_profile": "Profil d'authentification / certificat",
+          "use_ssl": "Utiliser une connexion chiffrée SSL/TLS",
           "certfile": "Chemin du fichier de certificat (.crt / .pem / .p12)",
           "keyfile": "Chemin du fichier de clé privée (.key / .pem)"
         }
@@ -300,6 +297,38 @@
         "action": {
           "name": "Action",
           "description": "Type d'action de saisie (insert, replace, clear)."
+        }
+      }
+    },
+    "send_key_sequence": {
+      "name": "Envoyer une séquence de touches",
+      "description": "Envoie une séquence de commandes de télécommande avec un délai configurable entre chaque touche.",
+      "fields": {
+        "sequence": {
+          "name": "Séquence de touches",
+          "description": "Liste de codes de touches ou touches séparées par des virgules à envoyer séquentiellement (ex. [\"home\", \"down\", \"ok\"])."
+        },
+        "delay": {
+          "name": "Délai",
+          "description": "Délai en secondes entre chaque appui sur une touche."
+        }
+      }
+    },
+    "change_channel": {
+      "name": "Changer de chaîne",
+      "description": "Sélectionne directement une chaîne TV numérique en envoyant les touches numériques consécutives.",
+      "fields": {
+        "channel": {
+          "name": "Numéro de chaîne",
+          "description": "Le numéro de la chaîne à syntoniser (ex. 701, 10, 7)."
+        },
+        "confirm": {
+          "name": "Confirmer",
+          "description": "Envoie OK/Entrée immédiatement après les chiffres pour changer de chaîne sans attendre le délai du téléviseur."
+        },
+        "delay": {
+          "name": "Délai",
+          "description": "Délai en secondes entre chaque chiffre."
         }
       }
     }

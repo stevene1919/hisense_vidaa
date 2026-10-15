@@ -74,59 +74,56 @@
         "title": "Opções da Hisense VIDAA TV",
         "description": "Selecione uma categoria de opções a configurar:",
         "menu_options": {
-          "general": "⚡ Opções gerais e de energia",
-          "sources": "📺 Fontes e controlos multimédia",
-          "picture_sound": "🎨 Controlos de imagem e som",
-          "remote_keys": "🎮 Temporizações e repetições do controlo remoto",
-          "certs": "🔒 Certificados SSL e segurança"
+          "power_network": "⚡ Energia e rede",
+          "playback_sources": "📺 Reprodução e fontes",
+          "features_remote": "🎛️ Entidades e controlo remoto",
+          "security": "🔒 Ligação e segurança"
         }
       },
-      "general": {
-        "title": "Opções gerais e de energia",
-        "description": "Configure arranque, WoL e opções básicas do dispositivo.",
+      "power_network": {
+        "title": "Opções de energia e rede",
+        "description": "Configure Wake-on-LAN, interfaces de rede secundárias e renovação de tokens em espera.",
         "data": {
-          "enable_remote": "Ativar entidade de controlo remoto dedicada",
-          "enable_notify": "Ativar notificações de ecrã tipo toast (apenas modelos suportados)",
           "enable_wol": "Ativar arranque através de Wake-on-LAN",
           "secondary_mac_address": "Endereço MAC secundário (Wi-Fi ou Ethernet)",
-          "use_ssl": "Utilizar ligação encriptada SSL/TLS",
           "refresh_in_standby": "Renovar tokens de acesso enquanto a TV está em espera"
         },
         "data_description": {
           "refresh_in_standby": "Ative se a TV mantiver a ligação de rede quando desligada (ex. Arranque rápido / Fast Power On). O token de acesso de 2 dias é renovado mesmo que a TV não seja ligada, sobrevivendo aos reinícios do Home Assistant. Deixe desativado para televisões que desligam completamente em espera."
         }
       },
-      "sources": {
-        "title": "Fontes e controlos multimédia",
+      "playback_sources": {
+        "title": "Reprodução e fontes",
         "description": "Configure as fontes de entrada, a lista de aplicações e os controlos de reprodução multimédia.",
         "data": {
           "include_apps_in_sources": "Incluir aplicações Smart TV na lista de fontes do reprodutor multimédia",
           "enable_media_controls": "Ativar controlos de reprodução multimédia (reproduzir/pausar, parar, avançar)",
-          "enable_cec_names": "Mostrar nomes dos dispositivos HDMI-CEC ligados nas fontes (ex. 'HDMI 2 (PlayStation 5)')"
+          "enable_cec_names": "Mostrar nomes dos dispositivos HDMI-CEC ligados nas fontes (ex. 'HDMI 2 (PlayStation 5)')",
+          "playback_debounce": "Janela de estabilização / amortecimento de reprodução (segundos)"
+        },
+        "data_description": {
+          "playback_debounce": "Duração em segundos para filtrar mudanças de estado transitórias rápidas ao iniciar ou carregar aplicações de streaming."
         }
       },
-      "picture_sound": {
-        "title": "Controlos de imagem e som",
-        "description": "Configure barras de calibração de imagem, seleção de modo de som e modo apenas áudio.",
+      "features_remote": {
+        "title": "Entidades e controlo remoto",
+        "description": "Configure seletores de entidades, calibração de imagem, predefinições de som e temporizações.",
         "data": {
+          "enable_remote": "Ativar entidade de controlo remoto dedicada",
+          "enable_notify": "Ativar notificações de ecrã tipo toast (apenas modelos suportados)",
           "enable_picture_controls": "Ativar seletor de modo de imagem e barras de calibração (Retroiluminação, Brilho, Contraste)",
           "enable_sound_controls": "Ativar seletor de predefinições de equalizador de modo de som",
-          "enable_audio_only": "Ativar interruptor Apenas Áudio (Ecrã desligado)"
-        }
-      },
-      "remote_keys": {
-        "title": "Temporizações e repetições do controlo remoto",
-        "description": "Configure os atrasos de comando padrão e as repetições de teclas para o controlo remoto.",
-        "data": {
+          "enable_audio_only": "Ativar interruptor Apenas Áudio (Ecrã desligado)",
           "key_delay": "Atraso de tecla padrão (segundos)",
           "key_repeat": "Contagem de repetições de tecla padrão"
         }
       },
-      "certs": {
-        "title": "Certificados SSL e segurança",
-        "description": "Selecione o perfil de autenticação e os caminhos opcionais para certificados de cliente SSL/TLS personalizados.",
+      "security": {
+        "title": "Ligação e segurança",
+        "description": "Selecione perfil de autenticação, encriptação e certificados de cliente opcionais.",
         "data": {
           "auth_profile": "Perfil de autenticação / certificado",
+          "use_ssl": "Utilizar ligação encriptada SSL/TLS",
           "certfile": "Caminho do ficheiro de certificado (.crt / .pem / .p12)",
           "keyfile": "Caminho do ficheiro de chave privada (.key / .pem)"
         }
@@ -300,6 +297,38 @@
         "action": {
           "name": "Ação",
           "description": "Tipo de ação de introdução (insert, replace, clear)."
+        }
+      }
+    },
+    "send_key_sequence": {
+      "name": "Enviar sequência de teclas",
+      "description": "Envia uma sequência de comandos do controlo remoto com atraso configurável entre teclas.",
+      "fields": {
+        "sequence": {
+          "name": "Sequência de teclas",
+          "description": "Lista de códigos de teclas ou teclas separadas por vírgulas para enviar sequencialmente (ex. [\"home\", \"down\", \"ok\"])."
+        },
+        "delay": {
+          "name": "Atraso",
+          "description": "Atraso em segundos entre cada pressão de tecla sequencial."
+        }
+      }
+    },
+    "change_channel": {
+      "name": "Mudar de canal",
+      "description": "Sintoniza diretamente um canal de TV numérico enviando teclas numéricas sequenciais.",
+      "fields": {
+        "channel": {
+          "name": "Número do canal",
+          "description": "O número do canal a sintonizar (ex. 701, 10, 7)."
+        },
+        "confirm": {
+          "name": "Confirmar",
+          "description": "Envia OK/Enter imediatamente após os dígitos para sintonizar sem esperar pelo tempo limite da TV."
+        },
+        "delay": {
+          "name": "Atraso",
+          "description": "Atraso em segundos entre os dígitos."
         }
       }
     }

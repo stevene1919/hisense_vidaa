@@ -30,6 +30,13 @@ TO_REDACT = {
     "topic_tv_ui",
     "topic_tv_ps",
     "topic_mobile",
+    "certfile",
+    "keyfile",
+    "certificate_path",
+    "key_path",
+    "p12_password",
+    "ssl_cert",
+    "ssl_key",
 }
 
 

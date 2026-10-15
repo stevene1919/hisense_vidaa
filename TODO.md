@@ -14,22 +14,23 @@ This document tracks active pending tasks, investigations, and planned enhanceme
 
 ### 2. Playback State Debounce & Settle Window
 
-- [ ] **Transient Playback State Filtering**:
+- [x] **Transient Playback State Filtering**:
   - Filter out sub-second state flickers (e.g. rapid cycling between buffering, idle, paused, and playing when launching streaming apps or transitioning between titles/ads).
   - Provide a smooth, stable media player state in Home Assistant to prevent lighting and media automations from falsely re-triggering during video buffering.
-  - Make the debounce duration configurable in integration options.
+  - Make the debounce duration configurable in integration options (`playback_debounce` with default 0.5s).
 
 ### 3. Remote Key Command Sequences & Macros
 
-- [ ] **Multi-Key Sequence Service**:
+- [x] **Multi-Key Sequence Service (`hisense_vidaa.send_key_sequence`)**:
   - Allow sending a list of remote key commands with configurable delays between each step in a single action.
   - Enable custom shortcuts and automations for navigating nested TV menus, launching picture adjustments, or accessing specific TV features with one click.
+  - Supports sequence lists or comma-delimited strings with schema validation and error wrapping.
 
 ### 4. Direct Numerical Channel Tuning
 
-- [ ] **Direct TV Channel Selector**:
+- [x] **Direct TV Channel Selector (`hisense_vidaa.change_channel`)**:
   - Add support for direct live TV channel tuning by channel number (e.g. entering channel 7, 70, or 701 directly).
-  - Automatically dispatch the corresponding sequence of numeric keypresses to change channels seamlessly.
+  - Automatically dispatch the corresponding sequence of numeric keypresses to change channels seamlessly with optional `confirm: true` (`KEY_OK`).
 
 ### 5. Dynamic App & Source Icon Branding
 
@@ -38,7 +39,7 @@ This document tracks active pending tasks, investigations, and planned enhanceme
 
 ### 6. Robust Wake-on-LAN Bursting & Power Recovery
 
-- [ ] **Multi-Burst Wake-on-LAN Power On**:
+- [x] **Multi-Burst Wake-on-LAN Power On**:
   - Configurable UDP packet burst sequences for waking TVs over Wi-Fi when low-power sleep modes drop initial packets.
   - Automatic fast-polling connection recovery after power-on triggers.
 
@@ -62,8 +63,9 @@ This document tracks active pending tasks, investigations, and planned enhanceme
 
 ### 9. Diagnostics Redaction & Sensitive Data Audit
 
-- [ ] **Diagnostics Payload Sanitization Verification (`diagnostics.py`)**:
+- [x] **Diagnostics Payload Sanitization Verification (`diagnostics.py`)**:
   - Audit exported diagnostic payload to verify that client certificates, private key paths, refresh tokens, access tokens, and MAC addresses are 100% masked before export.
+  - Expanded `TO_REDACT` set with `ssl_cert`, `ssl_key`, `p12_path`, `p12_password`, `client_cert_path`, `client_key_path`.
   - Ensure compatibility with official Home Assistant diagnostics download format and sanitization standards.
 
 ### 10. Multi-Language Localization & Translation Support

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -21,11 +22,13 @@ from .const import (
     CONF_ENABLE_MEDIA_CONTROLS,
     CONF_ENABLE_WOL,
     CONF_INCLUDE_APPS_IN_SOURCES,
+    CONF_PLAYBACK_DEBOUNCE,
     CONF_SECONDARY_MAC_ADDRESS,
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
+    DEFAULT_PLAYBACK_DEBOUNCE,
 )
 from .entity import HisenseVidaaEntity
 
@@ -76,6 +79,7 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         self._channel_num = None
         self._volume_type = 0
         self._state = STATE_ON if getattr(client, "connected", False) else STATE_OFF
+        self._debounce_handle: asyncio.TimerHandle | None = None
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks and query initial state when entity is added."""
@@ -96,6 +100,9 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Unregister callbacks when entity is removed."""
+        if self._debounce_handle:
+            self._debounce_handle.cancel()
+            self._debounce_handle = None
         self._client.unregister_connected_callback(self._handle_connected)
         self._client.unregister_state_callback(self._handle_state_update)
         self._client.unregister_volume_callback(self._handle_volume_update)
@@ -330,16 +337,9 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         """Handle sound setting updates from TV."""
         self.schedule_update_ha_state()
 
-    def _handle_state_update(self, data: dict[str, Any]) -> None:
-        if not isinstance(data, dict):
-            return
-
-        parsed = parse_media_state_broadcast(data)
+    def _apply_state_payload(self, parsed: dict[str, Any]) -> None:
+        """Applies parsed state broadcast payload."""
         statetype = parsed["statetype"]
-
-        if self._client:
-            self._client.is_on = parsed["is_on"]
-
         was_off = (self._state == STATE_OFF)
         self._state = STATE_ON if parsed["is_on"] else STATE_OFF
 
@@ -366,6 +366,32 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
             )
 
         self.schedule_update_ha_state()
+
+    def _handle_state_update(self, data: dict[str, Any]) -> None:
+        if not isinstance(data, dict):
+            return
+
+        parsed = parse_media_state_broadcast(data)
+        if self._client:
+            self._client.is_on = parsed["is_on"]
+
+        # Cancel any pending debounce timer
+        if self._debounce_handle:
+            self._debounce_handle.cancel()
+            self._debounce_handle = None
+
+        # Power off or waking from sleep transitions apply immediately
+        debounce = float(self._options.get(CONF_PLAYBACK_DEBOUNCE, DEFAULT_PLAYBACK_DEBOUNCE))
+        loop = getattr(self.hass, "loop", None)
+        if not parsed["is_on"] or debounce <= 0 or not self.hass or not loop:
+            self._apply_state_payload(parsed)
+            return
+
+        def _timed_apply() -> None:
+            self._debounce_handle = None
+            self._apply_state_payload(parsed)
+
+        self._debounce_handle = loop.call_later(debounce, _timed_apply)
 
     def _handle_volume_update(self, data: dict[str, Any]) -> None:
         if not isinstance(data, dict):

@@ -16,16 +16,21 @@ from .const import (
     ATTR_APP,
     ATTR_APP_ID,
     ATTR_APP_NAME,
+    ATTR_CHANNEL,
+    ATTR_CONFIRM,
     ATTR_DELAY,
     ATTR_KEY,
     ATTR_MENU_ID,
     ATTR_MENU_VALUE,
     ATTR_REPEAT,
+    ATTR_SEQUENCE,
     ATTR_TEXT,
     ATTR_URL,
     DOMAIN,
+    SERVICE_CHANGE_CHANNEL,
     SERVICE_LAUNCH_APP,
     SERVICE_SEND_KEY,
+    SERVICE_SEND_KEY_SEQUENCE,
     SERVICE_SEND_TEXT_INPUT,
     SERVICE_SET_PICTURE_SETTING,
     SERVICE_SET_SOUND_SETTING,
@@ -270,6 +275,83 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             "count": len(target_clients),
         }
 
+    async def handle_send_key_sequence(call: ServiceCall) -> dict[str, Any]:
+        """Handle send_key_sequence service call."""
+        raw_sequence = call.data.get(ATTR_SEQUENCE)
+        delay = float(call.data.get(ATTR_DELAY, 0.3))
+        target_clients = _resolve_service_targets(hass, call)
+
+        if isinstance(raw_sequence, str):
+            sequence = [k.strip() for k in raw_sequence.split(",") if k.strip()]
+        elif isinstance(raw_sequence, (list, tuple)):
+            sequence = [str(k).strip() for k in raw_sequence if str(k).strip()]
+        else:
+            sequence = []
+
+        if not sequence:
+            raise ServiceValidationError("No valid keys provided in sequence.")
+
+        for client in target_clients:
+            for i, key in enumerate(sequence):
+                if i > 0 and delay > 0:
+                    await asyncio.sleep(delay)
+                try:
+                    await hass.async_add_executor_job(client.send_command, key)
+                except Exception as err:
+                    raise HomeAssistantError(
+                        f"Failed to execute key sequence at step '{key}': {err}"
+                    ) from err
+
+        return {
+            "sequence": sequence,
+            "delay": delay,
+            "targets": [getattr(c, "ip", "unknown") for c in target_clients],
+            "count": len(target_clients),
+        }
+
+    async def handle_change_channel(call: ServiceCall) -> dict[str, Any]:
+        """Handle change_channel service call by dispatching numeric digits."""
+        raw_channel = str(call.data.get(ATTR_CHANNEL, "")).strip()
+        confirm = bool(call.data.get(ATTR_CONFIRM, True))
+        delay = float(call.data.get(ATTR_DELAY, 0.25))
+        target_clients = _resolve_service_targets(hass, call)
+
+        digits = [ch for ch in raw_channel if ch.isdigit()]
+        if not digits:
+            raise ServiceValidationError(
+                f"Invalid channel '{raw_channel}': must contain at least one numeric digit."
+            )
+
+        for client in target_clients:
+            for i, digit in enumerate(digits):
+                if i > 0 and delay > 0:
+                    await asyncio.sleep(delay)
+                key = f"KEY_{digit}"
+                try:
+                    await hass.async_add_executor_job(client.send_command, key)
+                except Exception as err:
+                    raise HomeAssistantError(
+                        f"Failed to send channel digit '{digit}': {err}"
+                    ) from err
+
+            if confirm:
+                if delay > 0:
+                    await asyncio.sleep(delay)
+                try:
+                    await hass.async_add_executor_job(client.send_command, "KEY_OK")
+                except Exception as err:
+                    raise HomeAssistantError(
+                        f"Failed to send channel confirm command: {err}"
+                    ) from err
+
+        return {
+            "channel": raw_channel,
+            "digits": digits,
+            "confirmed": confirm,
+            "targets": [getattr(c, "ip", "unknown") for c in target_clients],
+            "count": len(target_clients),
+        }
+
     async def handle_launch_app(call: ServiceCall) -> dict[str, Any]:
         """Handle launch_app service call."""
         app = str(call.data.get(ATTR_APP) or "")
@@ -389,6 +471,25 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             }),
         ),
         (
+            SERVICE_SEND_KEY_SEQUENCE,
+            handle_send_key_sequence,
+            vol.Schema({
+                **_target_selector_fields(),
+                vol.Required(ATTR_SEQUENCE): vol.Any([str], str),
+                vol.Optional(ATTR_DELAY, default=0.3): vol.Coerce(float),
+            }),
+        ),
+        (
+            SERVICE_CHANGE_CHANNEL,
+            handle_change_channel,
+            vol.Schema({
+                **_target_selector_fields(),
+                vol.Required(ATTR_CHANNEL): vol.Any(int, str),
+                vol.Optional(ATTR_CONFIRM, default=True): vol.Coerce(bool),
+                vol.Optional(ATTR_DELAY, default=0.25): vol.Coerce(float),
+            }),
+        ),
+        (
             SERVICE_LAUNCH_APP,
             handle_launch_app,
             vol.Schema(
@@ -467,6 +568,8 @@ async def async_unload_services(hass: HomeAssistant) -> None:
 
     services_to_remove = [
         SERVICE_SEND_KEY,
+        SERVICE_SEND_KEY_SEQUENCE,
+        SERVICE_CHANGE_CHANNEL,
         SERVICE_LAUNCH_APP,
         SERVICE_SET_PICTURE_SETTING,
         SERVICE_SET_SOUND_SETTING,

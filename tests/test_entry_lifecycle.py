@@ -13,8 +13,10 @@ from custom_components.hisense_vidaa import (
     update_listener,
 )
 from custom_components.hisense_vidaa.const import (
+    SERVICE_CHANGE_CHANNEL,
     SERVICE_LAUNCH_APP,
     SERVICE_SEND_KEY,
+    SERVICE_SEND_KEY_SEQUENCE,
     SERVICE_SEND_TEXT_INPUT,
     SERVICE_SET_PICTURE_SETTING,
     SERVICE_SET_SOUND_SETTING,
@@ -26,6 +28,8 @@ ALL_SERVICES = [
     SERVICE_SET_PICTURE_SETTING,
     SERVICE_SET_SOUND_SETTING,
     SERVICE_SEND_TEXT_INPUT,
+    SERVICE_SEND_KEY_SEQUENCE,
+    SERVICE_CHANGE_CHANNEL,
 ]
 
 

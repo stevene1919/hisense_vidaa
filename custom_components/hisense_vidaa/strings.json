@@ -74,59 +74,56 @@
         "title": "Hisense VIDAA TV Options",
         "description": "Select an options category to configure:",
         "menu_options": {
-          "general": "⚡ General & Power Options",
-          "sources": "📺 Sources & Media Controls",
-          "picture_sound": "🎨 Picture & Sound Controls",
-          "remote_keys": "🎮 Remote Key Timings & Repeats",
-          "certs": "🔒 SSL Certificates & Security"
+          "power_network": "⚡ Power & Network",
+          "playback_sources": "📺 Playback & Sources",
+          "features_remote": "🎛️ Entities & Remote Controls",
+          "security": "🔒 Connection & Security"
         }
       },
-      "general": {
-        "title": "General & Power Options",
-        "description": "Configure power on, WoL, and core device options.",
+      "power_network": {
+        "title": "Power & Network Options",
+        "description": "Configure Wake-on-LAN, secondary network interfaces, and standby token renewal.",
         "data": {
-          "enable_remote": "Enable dedicated Remote entity",
-          "enable_notify": "Enable on-screen toast notifications (supported models only)",
           "enable_wol": "Enable Wake-on-LAN power on",
           "secondary_mac_address": "Secondary MAC Address (Wi-Fi or Ethernet)",
-          "use_ssl": "Use Encrypted SSL/TLS Connection",
           "refresh_in_standby": "Renew access tokens while the TV is in standby"
         },
         "data_description": {
           "refresh_in_standby": "Enable if the TV keeps its network connection when switched off (e.g. Fast Power On / Quick Start). The 2-day access token is then renewed even if the TV is not turned on, so the pairing survives Home Assistant restarts. Leave off for TVs that fully power down in standby."
         }
       },
-      "sources": {
-        "title": "Sources & Media Controls",
+      "playback_sources": {
+        "title": "Playback & Sources",
         "description": "Configure input sources, app list, and media playback controls.",
         "data": {
           "include_apps_in_sources": "Include Smart TV Apps in Media Player source list",
           "enable_media_controls": "Enable media transport controls (play/pause, stop, skip)",
-          "enable_cec_names": "Show connected HDMI-CEC device names in sources (e.g. 'HDMI 2 (PlayStation 5)')"
+          "enable_cec_names": "Show connected HDMI-CEC device names in sources (e.g. 'HDMI 2 (PlayStation 5)')",
+          "playback_debounce": "Playback state settle window / debounce (seconds)"
+        },
+        "data_description": {
+          "playback_debounce": "Duration in seconds to filter out rapid transient state flickers when streaming apps launch or buffer."
         }
       },
-      "picture_sound": {
-        "title": "Picture & Sound Controls",
-        "description": "Configure picture calibration sliders, sound mode select, and audio-only mode.",
+      "features_remote": {
+        "title": "Entities & Remote Controls",
+        "description": "Configure entity toggles, picture calibration, sound presets, and remote key timings.",
         "data": {
+          "enable_remote": "Enable dedicated Remote entity",
+          "enable_notify": "Enable on-screen toast notifications (supported models only)",
           "enable_picture_controls": "Enable Picture Mode select and calibration sliders (Backlight, Brightness, Contrast)",
           "enable_sound_controls": "Enable Sound Mode equalizer preset selector",
-          "enable_audio_only": "Enable Audio-Only (Screen Off) display toggle switch"
-        }
-      },
-      "remote_keys": {
-        "title": "Remote Key Timings & Repeats",
-        "description": "Configure default command delays and burst repetitions for the remote control.",
-        "data": {
+          "enable_audio_only": "Enable Audio-Only (Screen Off) display toggle switch",
           "key_delay": "Default Key Delay (seconds)",
           "key_repeat": "Default Key Repeat Count"
         }
       },
-      "certs": {
-        "title": "SSL Certificates & Security",
-        "description": "Select authentication profile and optional custom SSL/TLS client certificate paths.",
+      "security": {
+        "title": "Connection & Security",
+        "description": "Select authentication profile, encryption, and optional client certificates.",
         "data": {
           "auth_profile": "Authentication / Certificate Profile",
+          "use_ssl": "Use Encrypted SSL/TLS Connection",
           "certfile": "Certificate File Path (.crt / .pem / .p12)",
           "keyfile": "Private Key File Path (.key / .pem)"
         }
@@ -236,6 +233,38 @@
         "delay": {
           "name": "Delay",
           "description": "Delay in seconds between repeated key presses."
+        }
+      }
+    },
+    "send_key_sequence": {
+      "name": "Send Key Sequence",
+      "description": "Send a sequence of remote key commands with configurable delay between keys.",
+      "fields": {
+        "sequence": {
+          "name": "Key Sequence",
+          "description": "List of key codes or comma-separated keys to send sequentially (e.g. [\"home\", \"down\", \"ok\"])."
+        },
+        "delay": {
+          "name": "Delay",
+          "description": "Delay in seconds between each sequential key press."
+        }
+      }
+    },
+    "change_channel": {
+      "name": "Change Channel",
+      "description": "Directly tune to a numeric TV channel by dispatching sequential number keys.",
+      "fields": {
+        "channel": {
+          "name": "Channel Number",
+          "description": "The channel number to tune to (e.g. 701, 10, 7)."
+        },
+        "confirm": {
+          "name": "Confirm",
+          "description": "Send OK/Enter immediately after digits to tune without waiting for TV timeout."
+        },
+        "delay": {
+          "name": "Delay",
+          "description": "Delay in seconds between digits."
         }
       }
     },
