@@ -87,6 +87,45 @@ data:
   menu_value: "Theatre"
 ```
 
+### 6. `hisense_vidaa.send_key_sequence`
+Send a sequence of remote key commands with configurable delays between keys. Supports passing a list of key names or a comma-separated string.
+
+```yaml
+action: hisense_vidaa.send_key_sequence
+target:
+  entity_id: media_player.living_room_tv
+data:
+  sequence:
+    - home
+    - right
+    - ok
+  delay: 0.3
+```
+
+Or using comma-separated notation:
+
+```yaml
+action: hisense_vidaa.send_key_sequence
+target:
+  entity_id: media_player.living_room_tv
+data:
+  sequence: "home, right, ok"
+  delay: 0.3
+```
+
+### 7. `hisense_vidaa.change_channel`
+Directly tune to a numeric TV channel by sequentially dispatching number keys with an optional confirmation (`KEY_OK`) key.
+
+```yaml
+action: hisense_vidaa.change_channel
+target:
+  entity_id: media_player.living_room_tv
+data:
+  channel: 701
+  confirm: true
+  delay: 0.2
+```
+
 ---
 
 ## 🎛️ Picture & Sound Controls (`number` and `select` entities)

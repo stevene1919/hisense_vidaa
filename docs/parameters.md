@@ -23,46 +23,43 @@ When adding a new Hisense VIDAA TV (**Settings $\rightarrow$ Devices & Services 
 
 ## 🎛️ 2. Options Flow Parameters
 
-To customize integration behavior for an existing TV, navigate to **Settings $\rightarrow$ Devices & Services $\rightarrow$ Hisense VIDAA TV $\rightarrow$ Configure**. Options are organized into 5 categorized tabs:
+To customize integration behavior for an existing TV, navigate to **Settings $\rightarrow$ Devices & Services $\rightarrow$ Hisense VIDAA TV $\rightarrow$ Configure**. Options are organized into 4 categorized tabs:
 
-### 2.1 General Settings (`general`)
+### 2.1 Power & Network (`power_network`)
+
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`enable_wol`** | `boolean` | `true` | Automatically sends Wake-on-LAN (WoL) magic packets to wake the TV when powering on from cold standby. |
+| **`secondary_mac_address`** | `string` | `None` | Secondary MAC address (e.g., Ethernet MAC if paired over Wi-Fi, or vice-versa). WoL packets will be broadcast to both MACs simultaneously. |
+| **`refresh_in_standby`** | `boolean` | `false` | When enabled, proactively refreshes MQTT access tokens even while the TV is in standby (recommended for TVs that maintain an active network stack in standby). |
+
+### 2.2 Playback & Sources (`playback_sources`)
+
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`include_apps_in_sources`** | `boolean` | `true` | Merges installed Smart TV apps (Netflix, YouTube, Prime Video, etc.) directly into the `media_player` source selector dropdown. |
+| **`enable_cec_names`** | `boolean` | `true` | Automatically replaces generic input names (`HDMI1`, `HDMI2`) with discovered HDMI-CEC device names (e.g. `Apple TV`, `PlayStation 5`, `Chromecast`). |
+| **`enable_media_controls`** | `boolean` | `true` | Enables Play, Pause, Stop, Next, and Previous track controls on the media player entity. |
+| **`playback_debounce`** | `float` (slider, seconds) | `0.5` | Settle window duration to filter out transient rapid state flickers (e.g., buffering transitions) from re-triggering automations. |
+
+### 2.3 Entities & Remote Controls (`features_remote`)
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | **`enable_remote`** | `boolean` | `true` | When enabled, registers a `remote.<tv>` entity for sending discrete remote keys and sequences. |
 | **`enable_notify`** | `boolean` | `true` | When enabled, registers a `notify.<tv>` entity for displaying on-screen toast popup notifications. |
-| **`enable_wol`** | `boolean` | `true` | Automatically sends Wake-on-LAN (WoL) magic packets to wake the TV when powering on from cold standby. |
-| **`secondary_mac_address`** | `string` | `None` | Secondary MAC address (e.g., Ethernet MAC if paired over Wi-Fi, or vice-versa). WoL packets will be broadcast to both MACs simultaneously. |
-| **`refresh_in_standby`** | `boolean` | `false` | When enabled, proactively refreshes MQTT access tokens even while the TV is in standby (recommended for TVs that maintain an active network stack in standby). |
-
-### 2.2 Input Sources & Apps (`sources`)
-
-| Parameter | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| **`enable_cec_names`** | `boolean` | `true` | Automatically replaces generic input names (`HDMI1`, `HDMI2`) with discovered HDMI-CEC device names (e.g. `Apple TV`, `PlayStation 5`, `Chromecast`). |
-| **`include_apps_in_sources`** | `boolean` | `true` | Merges installed Smart TV apps (Netflix, YouTube, Prime Video, etc.) directly into the `media_player` source selector dropdown. |
-
-### 2.3 Picture & Sound Controls (`picture_sound`)
-
-| Parameter | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
 | **`enable_picture_controls`** | `boolean` | `true` | Exposes `select.<tv>_picture_mode` and calibration number entities (Backlight, Brightness, Contrast). |
 | **`enable_sound_controls`** | `boolean` | `true` | Exposes `select.<tv>_sound_mode` for switching audio modes (Standard, Theater, Music, Speech, Late Night). |
 | **`enable_audio_only`** | `boolean` | `true` | Exposes `switch.<tv>_audio_only` to turn off the TV display backlight while keeping audio playing. |
-| **`enable_media_controls`** | `boolean` | `true` | Enables Play, Pause, Stop, Next, and Previous track controls on the media player entity. |
+| **`key_delay`** | `float` (slider, seconds) | `0.2` | Delay in seconds between consecutive key commands when sending sequences or repeated keystrokes. |
+| **`key_repeat`** | `integer` (box) | `1` | Default number of times each keypress command is repeated. |
 
-### 2.4 Remote Keys & Macros (`remote_keys`)
-
-| Parameter | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| **`key_delay`** | `float` (seconds) | `0.2` | Delay in seconds between consecutive key commands when sending sequences or repeated keystrokes. |
-| **`key_repeat`** | `integer` | `1` | Default number of times each keypress command is repeated. |
-
-### 2.5 Security & Certificates (`certs`)
+### 2.4 Connection & Security (`security`)
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| **`auth_profile`** | `select` | `auto` | Allows updating the authentication protocol tier without re-pairing. |
-| **`use_ssl`** | `boolean` | `true` | Enforces TLS encrypted communication to the TV's broker on port 36669. |
-| **`certfile`** | `string` | Auto-resolved | Path to updated client certificate file. |
-| **`keyfile`** | `string` | Auto-resolved | Path to updated client private key file. |
+| **`auth_profile`** | `select` | `auto` | Authentication handshake profile (`auto`, `modern`, `middle`, `remotenow`, `legacy`). |
+| **`use_ssl`** | `boolean` | `true` | Toggle SSL/TLS socket encryption for broker communications. |
+| **`certfile`** | `string` (file path) | Auto-resolved | Custom client certificate path (`.crt`, `.pem`, `.p12`). |
+| **`keyfile`** | `string` (file path) | Auto-resolved | Custom client private key path (`.key`, `.pem`). |
+

@@ -4,7 +4,19 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 
 ## [2.11.0] - 2026-10-15
 
-### Added
+- **MULTI-KEY SEQUENCE / MACRO SERVICE (`services.py`, `services.yaml`)**:
+  - Added `hisense_vidaa.send_key_sequence` allowing multi-step key navigation sequences (e.g. `["home", "down", "ok"]` or `"home, down, ok"`) with customizable inter-key delays and schema validation.
+- **DIRECT NUMERICAL CHANNEL TUNING SERVICE (`services.py`, `services.yaml`)**:
+  - Added `hisense_vidaa.change_channel` to tune directly to numeric Live TV channels (e.g. `701`, `10`) by sequentially dispatching digit keys (`KEY_7`, `KEY_0`, `KEY_1`) with optional confirmation keypress (`KEY_OK`).
+- **TRANSIENT PLAYBACK STATE DEBOUNCE (`media_player.py`, `options_flow.py`)**:
+  - Added configurable settle window (`playback_debounce`, default 0.5s) to filter out transient sub-second state flickers (e.g. app launch, buffering) from firing false automations.
+- **REORGANIZED CATEGORIZED OPTIONS FLOW (`options_flow.py`)**:
+  - Restructured Options Flow into 4 intuitive categories: *Power & Network*, *Playback & Sources*, *Entities & Remote Controls*, and *Connection & Security*.
+  - Added slider number selector for playback debounce and backward-compatible aliases for all prior menu steps.
+- **100% LOCALIZATION PARITY ACROSS ALL SUPPORTED LANGUAGES (`translations/*`)**:
+  - Added complete service and options translations across all 7 supported languages: English (`en`), German (`de`), Spanish (`es`), French (`fr`), Italian (`it`), Portuguese (`pt`), and Brazilian Portuguese (`pt-BR`).
+- **DIAGNOSTICS REDACTION EXPANSION (`diagnostics.py`)**:
+  - Expanded sensitive data masking in `diagnostics.py` to audit and sanitize all certificate paths, key paths, P12 passwords, and tokens.
 - **UPNP / DLNA LAN CONTROL SUBSYSTEM (`protocol/upnp.py`, `client.py`)**:
   - Implemented an asynchronous UPnP LAN Control and DLNA client (`HisenseUpnpClient`) supporting port `38400` (and `18400` fallback).
   - Integrated `RenderingControl:1` SOAP actions for instantaneous, unauthenticated volume and mute control (`GetVolume`, `SetVolume`, `GetMute`, `SetMute`) directly on the hardware amplifier without MQTT/TLS overhead.
