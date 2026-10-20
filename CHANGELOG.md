@@ -2,9 +2,8 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
-## [Unreleased]
+## [2.11.0] - 2026-10-20
 
-### Changed
 - **CODEBASE MODERNIZATION & CLEAN CODE IDENTIFIER REFACTORING**:
   - Standardized variable, function, and parameter names across the entire integration to adhere to clean code standards. Replaced abbreviated or implementation-leaking identifiers with clear, intent-revealing names (`callback` instead of `cb`, `current_timestamp` instead of `ts`, `mac_address` instead of `mac`, `picture_supported` instead of `pic_supported`, `client_instance` instead of `c`).
   - Preserved backward-compatible keyword argument signatures where necessary to ensure uninterrupted compatibility with external call sites and existing tests.
@@ -24,9 +23,6 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
   - Introduced dedicated, isolated parsers for UPnP MediaRenderer descriptors (`parse_upnp_renderer_descriptor`), friendly names, model descriptions, and SOAP responses (`parse_soap_volume_response`, `parse_soap_mute_response`, `parse_soap_transport_info_response`), enabling zero-mock unit testing of XML payloads.
 - **CLI DIAGNOSTIC & DEBUG TOOLING ALIGNMENT**:
   - Validated and updated standalone CLI test scripts (`test_client.py`, `debug_tv.py`) to ensure seamless alignment with updated package imports and clean type hints.
-
-## [2.11.0] - 2026-10-15
-
 - **MULTI-KEY SEQUENCE / MACRO SERVICE (`services.py`, `services.yaml`)**:
   - Added `hisense_vidaa.send_key_sequence` allowing multi-step key navigation sequences (e.g. `["home", "down", "ok"]` or `"home, down, ok"`) with customizable inter-key delays and schema validation.
 - **DIRECT NUMERICAL CHANNEL TUNING SERVICE (`services.py`, `services.yaml`)**:
