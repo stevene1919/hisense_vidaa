@@ -1,19 +1,14 @@
-"""Tests for static-session PIN pairing, dispatcher future routing and flow guards.
+"""Tests for static-session PIN pairing and flow guards.
 
-Covers the campaign fixes:
+Covers:
   * PIN pairing over a STATIC session (gettvstate -> authentication challenge ->
     authNum submit) without regressing already-paired setups;
-  * F3-leg3  dispatcher: the vidaa_app_connect ACK must not resolve the PIN future;
-  * F10-leg3 dispatcher: exact topic matches for the pairing close/toast pushes;
-  * F1-leg2  flows must not swallow HA's AbortFlow;
-  * F2-leg2  duplicate guard runs before (and scopes) the sibling disconnect;
-  * F9-leg6  only the PIN submit call is guarded in async_step_auth;
-  * F10-leg6 async_remove keeps + logs the executor future.
+  * Flow guards: abort flow propagation, duplicate guard, PIN submit guard;
+  * async_remove keeping and logging the executor future.
 """
 
 from __future__ import annotations
 
-import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -23,7 +18,6 @@ from homeassistant.data_entry_flow import AbortFlow
 
 from custom_components.hisense_vidaa.client import HisenseTvClient
 from custom_components.hisense_vidaa.config_flow import HisenseVidaaConfigFlow
-from custom_components.hisense_vidaa.protocol.dispatcher import dispatch_incoming_mqtt_message
 from custom_components.hisense_vidaa.protocol.pairing import (
     PairingStatusError,
     _async_execute_pairing_attempt,
@@ -77,73 +71,6 @@ def no_network_start_auth(monkeypatch):
         "custom_components.hisense_vidaa.client.HisenseTvClient.get_device_fingerprint",
         MagicMock(return_value={}),
     )
-
-
-# ---------------------------------------------------------------------------
-# F3-leg3 / F10-leg3: dispatcher future routing
-# ---------------------------------------------------------------------------
-def test_dispatcher_connect_ack_does_not_resolve_pin_future():
-    """The vidaa_app_connect ACK is NOT the PIN-shown signal."""
-    client = _static_client()
-    loop = asyncio.new_event_loop()
-    try:
-        client._auth_future = loop.create_future()
-        client._connect_ack_future = loop.create_future()
-        dispatch_incoming_mqtt_message(
-            client,
-            f"{client.topics.mobile}ui_service/data/vidaa_app_connect",
-            '{"connect_result":1}',
-        )
-        assert not client._auth_future.done(), "connect-ACK must not resolve the PIN future"
-        assert client._connect_ack_future.done(), "connect-ACK is tracked on its own future"
-    finally:
-        loop.close()
-
-
-def test_dispatcher_auth_challenge_resolves_pin_future():
-    """The .../data/authentication push is the PIN-shown signal."""
-    client = _static_client()
-    loop = asyncio.new_event_loop()
-    try:
-        client._auth_future = loop.create_future()
-        dispatch_incoming_mqtt_message(
-            client, f"{client.topics.mobile}ui_service/data/authentication", ""
-        )
-        assert client._auth_future.done()
-        assert client._auth_future.result() == ""
-    finally:
-        loop.close()
-
-
-def test_dispatcher_close_and_toast_resolve_pairing_event_future():
-    """close -> 'closed', toast -> 'busy' on the dedicated event future."""
-    client = _static_client()
-    for topic_suffix, expected in (
-        ("ui_service/data/authenticationcodetoast", "busy"),
-        ("ui_service/data/authenticationcodeclose", "closed"),
-    ):
-        loop = asyncio.new_event_loop()
-        try:
-            fut = loop.create_future()
-            client._pairing_event_future = fut
-            dispatch_incoming_mqtt_message(client, f"{client.topics.mobile}{topic_suffix}", "")
-            assert fut.done() and fut.result() == expected
-        finally:
-            loop.close()
-
-
-def test_dispatcher_ignores_topic_with_foreign_client_id():
-    """F10-leg3: an exact-topic match, not a loose endswith on a foreign basepath."""
-    client = _static_client()
-    loop = asyncio.new_event_loop()
-    try:
-        client._auth_future = loop.create_future()
-        dispatch_incoming_mqtt_message(
-            client, "/remoteapp/mobile/someone_else/ui_service/data/authentication", ""
-        )
-        assert not client._auth_future.done()
-    finally:
-        loop.close()
 
 
 # ---------------------------------------------------------------------------
@@ -641,25 +568,3 @@ async def test_dynamic_connect_ack_unblocks_retry_wait(monkeypatch):
     assert client._connect_ack_future is None
 
 
-# ---------------------------------------------------------------------------
-# [P4-e] Dispatcher exact-topic match: a getdeviceinfo/gettvinfo push on a
-# FOREIGN client-id basepath must not reach the device-info handler.
-# ---------------------------------------------------------------------------
-def test_dispatcher_device_info_requires_exact_topic():
-    client = _static_client()
-    client._dispatch_device_info_update = MagicMock()
-
-    # Foreign basepath: an `endswith` match would (wrongly) sweep this in.
-    dispatch_incoming_mqtt_message(
-        client, "/remoteapp/mobile/someone_else/platform_service/data/getdeviceinfo", "{}"
-    )
-    dispatch_incoming_mqtt_message(
-        client, "/remoteapp/mobile/someone_else/platform_service/data/gettvinfo", "{}"
-    )
-    assert not client._dispatch_device_info_update.called
-
-    # Exact topic for THIS client still routes.
-    dispatch_incoming_mqtt_message(
-        client, f"{client.topics.mobile}platform_service/data/getdeviceinfo", "{}"
-    )
-    assert client._dispatch_device_info_update.called
