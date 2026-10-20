@@ -110,28 +110,43 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
     certfile = entry.options.get(CONF_CERTFILE, data.get(CONF_CERTFILE))
     keyfile = entry.options.get(CONF_KEYFILE, data.get(CONF_KEYFILE))
 
-    client = HisenseTvClient(
-        ip=data[CONF_IP_ADDRESS],
-        mac=mac,
-        client_id=data.get(CONF_CLIENT_ID),
-        username=data.get(CONF_USERNAME),
-        password=data.get(CONF_PASSWORD),
-        access_token=data.get(CONF_ACCESS_TOKEN),
-        access_token_time=data.get(CONF_ACCESS_TOKEN_TIME),
-        access_token_duration=data.get(CONF_ACCESS_TOKEN_DURATION),
-        refresh_token=data.get(CONF_REFRESH_TOKEN),
-        refresh_token_time=data.get(CONF_REFRESH_TOKEN_TIME),
-        refresh_token_duration=data.get(CONF_REFRESH_TOKEN_DURATION),
-        auth_profile=entry.options.get(CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, "auto")),
-        refresh_in_standby=entry.options.get(CONF_REFRESH_IN_STANDBY, DEFAULT_REFRESH_IN_STANDBY),
-        certfile=certfile,
-        keyfile=keyfile,
-        use_ssl=use_ssl,
+    client = await hass.async_add_executor_job(
+        lambda: HisenseTvClient(
+            ip=data[CONF_IP_ADDRESS],
+            mac=mac,
+            client_id=data.get(CONF_CLIENT_ID),
+            username=data.get(CONF_USERNAME),
+            password=data.get(CONF_PASSWORD),
+            access_token=data.get(CONF_ACCESS_TOKEN),
+            access_token_time=data.get(CONF_ACCESS_TOKEN_TIME),
+            access_token_duration=data.get(CONF_ACCESS_TOKEN_DURATION),
+            refresh_token=data.get(CONF_REFRESH_TOKEN),
+            refresh_token_time=data.get(CONF_REFRESH_TOKEN_TIME),
+            refresh_token_duration=data.get(CONF_REFRESH_TOKEN_DURATION),
+            auth_profile=entry.options.get(CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, "auto")),
+            refresh_in_standby=entry.options.get(CONF_REFRESH_IN_STANDBY, DEFAULT_REFRESH_IN_STANDBY),
+            certfile=certfile,
+            keyfile=keyfile,
+            use_ssl=use_ssl,
+        )
     )
     client._loop = hass.loop
 
-    # Check for missing certificates and manage Repairs issue
-    if use_ssl and (not client.certfile or not client.keyfile or not os.path.isfile(client.certfile) or not os.path.isfile(client.keyfile)):
+    # Check for missing certificates off the event loop and manage Repairs issue
+    certs_valid = (
+        await hass.async_add_executor_job(
+            lambda: bool(
+                client.certfile
+                and client.keyfile
+                and os.path.isfile(client.certfile)
+                and os.path.isfile(client.keyfile)
+            )
+        )
+        if use_ssl
+        else True
+    )
+
+    if use_ssl and not certs_valid:
         ir.async_create_issue(
             hass,
             DOMAIN,

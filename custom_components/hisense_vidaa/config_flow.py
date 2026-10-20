@@ -127,13 +127,15 @@ class HisenseVidaaConfigFlow(
             self._abort_if_unique_id_configured()
 
         await self._async_disconnect_existing_client()
-        self.client = HisenseTvClient(
-            self.ip_address,
-            self.mac_address,
-            auth_profile=self.auth_profile,
-            certfile=self.certfile if self.use_ssl else None,
-            keyfile=self.keyfile if self.use_ssl else None,
-            use_ssl=self.use_ssl,
+        self.client = await self.hass.async_add_executor_job(
+            lambda: HisenseTvClient(
+                self.ip_address,
+                self.mac_address,
+                auth_profile=self.auth_profile,
+                certfile=self.certfile if self.use_ssl else None,
+                keyfile=self.keyfile if self.use_ssl else None,
+                use_ssl=self.use_ssl,
+            )
         )
         self.client._loop = self.hass.loop
 
@@ -200,7 +202,7 @@ class HisenseVidaaConfigFlow(
             self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
 
             if self.auth_profile in ("auto", "legacy"):
-                if self._resolve_ssl_certs():
+                if await self._async_resolve_ssl_certs():
                     try:
                         return await self._async_init_client_and_auth()
                     except AbortFlow:
@@ -243,9 +245,12 @@ class HisenseVidaaConfigFlow(
                 self.auth_profile = self._reauth_entry.data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
 
             if self.ip_address:
-                self.client = HisenseTvClient(
-                    self.ip_address, self.mac_address, auth_profile=self.auth_profile
+                self.client = await self.hass.async_add_executor_job(
+                    lambda: HisenseTvClient(
+                        self.ip_address, self.mac_address, auth_profile=self.auth_profile
+                    )
                 )
+                self.client._loop = self.hass.loop
                 try:
                     await self.client.async_start_auth()
                 except Exception as e:

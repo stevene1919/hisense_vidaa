@@ -180,7 +180,4 @@ If this integration makes your smart home better or saved you hours of troublesh
 
 ## 🤝 Credits & Acknowledgments
 
-This integration builds upon foundational reverse-engineering research by the open-source smart home community:
-
-* **Nika Gerson Lohman ([@nikagl](https://github.com/nikagl))**: Pioneer of the dynamic RemoteNOW PIN challenge flow and `hisense.py`.
-* **[@Krazy998](https://github.com/Krazy998) & Contributors**: MQTT protocol research on `mqtt-hisensetv`.
+This integration is an independent implementation built upon foundational protocol reverse-engineering research and documentation by the open-source smart home community (including `mqtt-hisensetv` and community research into the Hisense RemoteNOW and VIDAA MQTT protocol).

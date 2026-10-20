@@ -35,50 +35,43 @@ def generate_initial_credentials(
     auth_profile: str = "auto",
     use_new_auth: bool | None = None,
 ) -> tuple[str, str, str]:
-    """Generates the client_id, username, and password for VIDAA initial pairing handshake.
+    """Derive MQTT authentication parameters (client_id, username, password) for VIDAA pairing.
 
     Returns:
         tuple[client_id, username, password]
     """
-    if timestamp is None:
-        timestamp = int(time.time())
+    ts = int(time.time()) if timestamp is None else timestamp
+    normalized_mac = clean_mac(mac)
 
-    cleaned_mac = clean_mac(mac)
-    second_hash = hashlib.md5(f"{CLIENT_ID_PATTERN}${cleaned_mac}".encode()).hexdigest().upper()
-    suffix = "001"
-    client_id = f"{cleaned_mac}$his${second_hash[:6]}_vidaacommon_{suffix}"
+    mac_digest = hashlib.md5(f"{CLIENT_ID_PATTERN}${normalized_mac}".encode()).hexdigest().upper()
+    client_id = f"{normalized_mac}$his${mac_digest[:6]}_vidaacommon_001"
 
-    profile_clean = (auth_profile or "auto").lower()
-
-    # Pre-dynamic legacy static authentication
-    if profile_clean in ("legacy", "static"):
+    profile = (auth_profile or "auto").lower()
+    if profile in ("legacy", "static"):
         return client_id, "hisenseservice", "multimqttservice"
 
-    last_digit_of_cross_sum = sum(int(digit) for digit in str(timestamp)) % 10
+    is_modern = (
+        use_new_auth is True
+        or (use_new_auth is None and profile in ("auto", "modern", "vidaa_2024", "vidaa"))
+    )
+    is_middle = profile in ("middle", "vidaa_15", "vidaa_middle")
 
-    if use_new_auth is True:
+    if is_modern:
         salt = MODERN_SALT
-        username = f"his${timestamp ^ XOR_TIMESTAMP_MASK}"
-    elif use_new_auth is False:
+        username = f"his${ts ^ XOR_TIMESTAMP_MASK}"
+    elif is_middle:
         salt = STANDARD_SALT
-        username = f"his${timestamp}"
-    elif profile_clean in ("modern", "vidaa_2024", "vidaa"):
-        salt = MODERN_SALT
-        username = f"his${timestamp ^ XOR_TIMESTAMP_MASK}"
-    elif profile_clean in ("middle", "vidaa_15", "vidaa_middle"):
+        username = f"his${ts ^ XOR_TIMESTAMP_MASK}"
+    else:
+        # Standard / RemoteNow dynamic
         salt = STANDARD_SALT
-        username = f"his${timestamp ^ XOR_TIMESTAMP_MASK}"
-    elif profile_clean in ("remotenow", "remotenow_2018", "standard"):
-        salt = STANDARD_SALT
-        username = f"his${timestamp}"
-    else:  # auto
-        salt = MODERN_SALT
-        username = f"his${timestamp ^ XOR_TIMESTAMP_MASK}"
+        username = f"his${ts}"
 
-    third_hash = hashlib.md5(f"his{last_digit_of_cross_sum}{salt}".encode()).hexdigest().upper()
-    fourth_hash = hashlib.md5(f"{timestamp}${third_hash[:6]}".encode()).hexdigest().upper()
+    digit_sum = sum(int(ch) for ch in str(ts) if ch.isdigit()) % 10
+    salt_hash = hashlib.md5(f"his{digit_sum}{salt}".encode()).hexdigest().upper()
+    password = hashlib.md5(f"{ts}${salt_hash[:6]}".encode()).hexdigest().upper()
 
-    return client_id, username, fourth_hash
+    return client_id, username, password
 
 
 from .protocol.certs import (

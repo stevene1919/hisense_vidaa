@@ -113,7 +113,7 @@ async def async_start_pairing_handshake(client: Any) -> None:
         client.username = "hisenseservice"
         client.password = "multimqttservice"
         client.access_token = "multimqttservice"
-        client.define_topic_paths()
+        client.update_topic_paths()
         return
 
     profile = getattr(client, "auth_profile", "auto")
@@ -171,7 +171,7 @@ async def _async_execute_pairing_attempt(
 ) -> None:
     loop = asyncio.get_running_loop()
     client._loop = loop
-    client.disconnect()
+    await loop.run_in_executor(None, client.disconnect)
     await asyncio.sleep(0.2)
     tv_ts = await loop.run_in_executor(None, get_tv_timestamp, client.ip, 1.5)
     client.generate_initial_creds(
@@ -192,12 +192,12 @@ async def _async_execute_pairing_attempt(
         if client.connected:
             break
         if client._auth_future.done() and client._auth_future.exception():
-            client.disconnect()
+            await loop.run_in_executor(None, client.disconnect)
             raise client._auth_future.exception()
         await asyncio.sleep(0.2)
 
     if not client.connected:
-        client.disconnect()
+        await loop.run_in_executor(None, client.disconnect)
         raise Exception("Cannot connect to TV MQTT Broker (connection timeout)")
 
     client.mqtt_client.subscribe([
@@ -232,7 +232,7 @@ async def _async_execute_pairing_attempt(
                 _LOGGER.debug("[%s] No response to vidaa_app_connect on attempt %d, retrying...", client.ip, attempt + 1)
                 await asyncio.sleep(0.5)
             else:
-                client.disconnect()
+                await loop.run_in_executor(None, client.disconnect)
                 raise Exception("TV authentication request timed out (TV did not show PIN)")
     client._auth_future = None
     client._connect_ack_future = None

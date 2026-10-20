@@ -29,7 +29,7 @@ from .protocol.pairing import (
     async_start_pairing_handshake,
     async_submit_pin_code,
 )
-from .protocol.topics import TOPIC_BROADCAST_BASEPATH, build_topic_paths
+from .protocol.topics import build_topic_paths
 from .protocol.upnp import HisenseUpnpClient
 from .protocol.wol import send_wake_on_lan
 from .tv.actions import TvActionsMixin
@@ -108,12 +108,12 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         self._last_initial_query_time: float = 0.0
 
         # Topic paths
-        self.topicBrcsBasepath = TOPIC_BROADCAST_BASEPATH
-        self.topicTVUIBasepath = ""
-        self.topicTVPSBasepath = ""
-        self.topicMobiBasepath = ""
-        self.topicRemoBasepath = ""
-        self.define_topic_paths()
+        self.topics = build_topic_paths(self.client_id)
+        self.topicBrcsBasepath = self.topics.broadcast
+        self.topicTVUIBasepath = self.topics.ui
+        self.topicTVPSBasepath = self.topics.platform
+        self.topicMobiBasepath = self.topics.mobile
+        self.topicRemoBasepath = self.topics.remote
 
         # UPnP Client for zero-cert fast reachability, volume, and playback state
         self.upnp = HisenseUpnpClient(self.ip)
@@ -273,14 +273,18 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
     # --------------------------------------------------------------------------
     # Topic Configuration & Credentials Generation
     # --------------------------------------------------------------------------
-    def define_topic_paths(self) -> None:
+    def update_topic_paths(self) -> None:
         """Sets up topic paths for the specific client ID."""
-        paths = build_topic_paths(self.client_id)
-        self.topicTVUIBasepath = paths.ui
-        self.topicTVPSBasepath = paths.platform
-        self.topicMobiBasepath = paths.mobile
-        self.topicRemoBasepath = paths.remote
-        self.topicBrcsBasepath = paths.broadcast
+        self.topics = build_topic_paths(self.client_id)
+        self.topicTVUIBasepath = self.topics.ui
+        self.topicTVPSBasepath = self.topics.platform
+        self.topicMobiBasepath = self.topics.mobile
+        self.topicRemoBasepath = self.topics.remote
+        self.topicBrcsBasepath = self.topics.broadcast
+
+    def define_topic_paths(self) -> None:
+        """Deprecated alias for update_topic_paths."""
+        self.update_topic_paths()
 
     def generate_initial_creds(
         self,
@@ -300,7 +304,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
             auth_profile=profile,
             use_new_auth=use_new_auth,
         )
-        self.define_topic_paths()
+        self.update_topic_paths()
         _LOGGER.debug(
             "Generated initial creds (profile=%s, use_new_auth=%s, ts=%s) - Client ID: %s, Username: %s",
             profile,

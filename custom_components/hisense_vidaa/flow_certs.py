@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -22,8 +23,26 @@ _LOGGER = logging.getLogger(__name__)
 class CertsFlowMixin:
     """Mixin for SSL certificate selection and validation in config flows."""
 
+    async def _async_resolve_ssl_certs(self: HisenseVidaaConfigFlow) -> bool:
+        """Attempts to resolve certificates from disk or profile off the event loop."""
+        if hasattr(self, "hass") and self.hass:
+            success, cert, key, use_ssl = await self.hass.async_add_executor_job(
+                resolve_ssl_certs, self.auth_profile
+            )
+        else:
+            loop = asyncio.get_running_loop()
+            success, cert, key, use_ssl = await loop.run_in_executor(
+                None, resolve_ssl_certs, self.auth_profile
+            )
+        if success:
+            self.certfile = cert
+            self.keyfile = key
+            self.use_ssl = use_ssl
+            return True
+        return False
+
     def _resolve_ssl_certs(self: HisenseVidaaConfigFlow) -> bool:
-        """Attempts to resolve certificates from disk or profile."""
+        """Synchronous fallback to resolve certificates from disk or profile."""
         success, cert, key, use_ssl = resolve_ssl_certs(self.auth_profile)
         if success:
             self.certfile = cert
@@ -38,26 +57,50 @@ class CertsFlowMixin:
         """Handle certificate file configuration step."""
         errors: dict[str, str] = {}
         config_dir = self.hass.config.config_dir if hasattr(self.hass, "config") else "/config"
-        (
-            default_cert_path,
-            default_key_path,
-            default_cert_dir,
-            default_cert_name,
-            default_key_name,
-        ) = get_profile_default_cert_paths(self.auth_profile, config_dir=config_dir)
+        if hasattr(self, "hass") and self.hass:
+            (
+                default_cert_path,
+                default_key_path,
+                default_cert_dir,
+                default_cert_name,
+                default_key_name,
+            ) = await self.hass.async_add_executor_job(
+                get_profile_default_cert_paths, self.auth_profile, config_dir
+            )
+        else:
+            loop = asyncio.get_running_loop()
+            (
+                default_cert_path,
+                default_key_path,
+                default_cert_dir,
+                default_cert_name,
+                default_key_name,
+            ) = await loop.run_in_executor(
+                None, get_profile_default_cert_paths, self.auth_profile, config_dir
+            )
 
         if user_input is not None:
             self.use_ssl = user_input.get(CONF_USE_SSL, DEFAULT_USE_SSL)
             self.certfile = user_input.get(CONF_CERTFILE) or default_cert_path
             self.keyfile = user_input.get(CONF_KEYFILE) or default_key_path
 
-            if self.use_ssl and not check_certs_exist(self.certfile, self.keyfile):
-                if not check_certs_exist(self.certfile, self.certfile):
-                    errors[CONF_CERTFILE] = "certs_not_found"
-                elif not check_certs_exist(self.keyfile, self.keyfile):
-                    errors[CONF_KEYFILE] = "certs_not_found"
-                else:
-                    errors["base"] = "certs_not_found"
+            if self.use_ssl:
+                async def _check_exist(c: str | None, k: str | None) -> bool:
+                    if hasattr(self, "hass") and self.hass:
+                        return await self.hass.async_add_executor_job(check_certs_exist, c, k)
+                    loop = asyncio.get_running_loop()
+                    return await loop.run_in_executor(None, check_certs_exist, c, k)
+
+                certs_exist = await _check_exist(self.certfile, self.keyfile)
+                if not certs_exist:
+                    cert_exists = await _check_exist(self.certfile, self.certfile)
+                    key_exists = await _check_exist(self.keyfile, self.keyfile)
+                    if not cert_exists:
+                        errors[CONF_CERTFILE] = "certs_not_found"
+                    elif not key_exists:
+                        errors[CONF_KEYFILE] = "certs_not_found"
+                    else:
+                        errors["base"] = "certs_not_found"
 
             if not errors:
                 try:

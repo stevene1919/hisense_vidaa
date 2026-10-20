@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 import voluptuous as vol
@@ -229,13 +230,24 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
             new_cert = (user_input.get(CONF_CERTFILE) or "").strip()
             new_key = (user_input.get(CONF_KEYFILE) or "").strip()
 
-            if (new_cert or new_key) and not check_certs_exist(new_cert, new_key):
-                if new_cert and not check_certs_exist(new_cert, new_cert):
-                    errors[CONF_CERTFILE] = "certs_not_found"
-                elif new_key and not check_certs_exist(new_key, new_key):
-                    errors[CONF_KEYFILE] = "certs_not_found"
-                else:
-                    errors["base"] = "certs_not_found"
+            if new_cert or new_key:
+                async def _check_exist(c: str | None, k: str | None) -> bool:
+                    if hasattr(self, "hass") and self.hass:
+                        return await self.hass.async_add_executor_job(check_certs_exist, c, k)
+                    loop = asyncio.get_running_loop()
+                    return await loop.run_in_executor(None, check_certs_exist, c, k)
+
+                certs_exist = await _check_exist(new_cert, new_key)
+                if not certs_exist:
+                    cert_exists = await _check_exist(new_cert, new_cert) if new_cert else False
+                    key_exists = await _check_exist(new_key, new_key) if new_key else False
+
+                    if new_cert and not cert_exists:
+                        errors[CONF_CERTFILE] = "certs_not_found"
+                    elif new_key and not key_exists:
+                        errors[CONF_KEYFILE] = "certs_not_found"
+                    else:
+                        errors["base"] = "certs_not_found"
 
             if not errors:
                 updated_options = {**self.config_entry.options, **user_input}

@@ -106,14 +106,17 @@ class ReauthFlowMixin:
             # duplicate MQTT Client ID collisions during the reauth flow.
             await self._async_disconnect_existing_client()
 
-            self.client = HisenseTvClient(
-                self.ip_address,
-                self.mac_address,
-                auth_profile=self.auth_profile,
-                certfile=self.certfile if self.use_ssl else None,
-                keyfile=self.keyfile if self.use_ssl else None,
-                use_ssl=self.use_ssl,
+            self.client = await self.hass.async_add_executor_job(
+                lambda: HisenseTvClient(
+                    self.ip_address,
+                    self.mac_address,
+                    auth_profile=self.auth_profile,
+                    certfile=self.certfile if self.use_ssl else None,
+                    keyfile=self.keyfile if self.use_ssl else None,
+                    use_ssl=self.use_ssl,
+                )
             )
+            self.client._loop = self.hass.loop
             try:
                 await self.client.async_start_auth()
 
@@ -160,7 +163,7 @@ class ReauthFlowMixin:
                 return self.async_abort(reason="already_configured")
 
             if self.auth_profile in ("auto", "legacy"):
-                if not self._resolve_ssl_certs():
+                if not await self._async_resolve_ssl_certs():
                     return await self.async_step_certs()
             else:
                 return await self.async_step_certs()

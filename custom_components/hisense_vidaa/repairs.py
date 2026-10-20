@@ -28,8 +28,11 @@ class CertificateMissingRepairFlow(RepairsFlow):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                cert, key = await self.hass.async_add_executor_job(resolve_certificates)
-                if cert and key and check_certs_exist(cert, key):
+                def _verify_resolved_certs() -> bool:
+                    cert, key = resolve_certificates()
+                    return bool(cert and key and check_certs_exist(cert, key))
+
+                if await self.hass.async_add_executor_job(_verify_resolved_certs):
                     return self.async_create_entry(data={})
             except Exception:
                 pass

@@ -536,7 +536,7 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 ## [1.0.0] - 2026-07-19
 
 ### Added
-- **Initial Release**: Full conversion of the standalone `hisense.py` Python control script into a native Home Assistant custom integration.
+- **Initial Release**: Native Home Assistant custom integration for Hisense VIDAA smart TVs using local secure MQTT and UPnP protocols.
 - **Direct Secure Connection**: Native connection directly to the TV's secure TLS MQTT broker on port `36669` using certificates packaged with the component. No Mosquitto configuration or systems-level bridges are required.
 - **User-Friendly Setup**: Integrated Config Flow for simple step-by-step setup in the Home Assistant UI (IP, optional MAC, and automatic display-and-entry challenge PIN).
 - **Core Controls**: Complete media player capabilities (Power toggle, volume adjustment, volume steps, mute/unmute).

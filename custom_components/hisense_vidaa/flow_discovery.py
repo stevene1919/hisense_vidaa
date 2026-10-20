@@ -71,7 +71,7 @@ class DiscoveryFlowMixin:
         """Confirm discovery setup with user."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            if self._resolve_ssl_certs():
+            if await self._async_resolve_ssl_certs():
                 try:
                     return await self._async_init_client_and_auth()
                 except AbortFlow:

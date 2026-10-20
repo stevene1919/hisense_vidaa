@@ -304,3 +304,8 @@ class ConnectionManagerMixin:
             clean_disconnect_mqtt_client(self.mqtt_client)
             self.mqtt_client = None
             self.connected = False
+
+    async def async_disconnect(self: HisenseTvClient) -> None:
+        """Cleanly disconnects the MQTT client off the event loop."""
+        loop = self._loop or asyncio.get_running_loop()
+        await loop.run_in_executor(None, self.disconnect)
