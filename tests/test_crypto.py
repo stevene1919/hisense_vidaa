@@ -15,6 +15,7 @@ from custom_components.hisense_vidaa.crypto import (
     clean_mac,
     extract_pkcs12_to_pem,
     generate_initial_credentials,
+    normalize_mac_address,
     resolve_ca_certificate,
     resolve_certificates,
 )
@@ -25,11 +26,15 @@ def test_clean_mac():
     assert clean_mac("e8:51:77:ec:98:1c") == "e8:51:77:ec:98:1c"
     assert clean_mac("e8-51-77-ec-98-1c") == "e8:51:77:ec:98:1c"
     assert clean_mac("e85177ec981c") == "e8:51:77:ec:98:1c"
+    assert normalize_mac_address("e8:51:77:ec:98:1c") == "e8:51:77:ec:98:1c"
 
     # Random MAC generation on None or invalid
     rnd = clean_mac(None)
     assert len(rnd) == 17
     assert len(rnd.split(":")) == 6
+    rnd_norm = normalize_mac_address(None)
+    assert len(rnd_norm) == 17
+    assert len(rnd_norm.split(":")) == 6
 
 
 def test_clean_mac_preserves_case():

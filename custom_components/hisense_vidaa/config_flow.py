@@ -291,8 +291,16 @@ class HisenseVidaaConfigFlow(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Allow configuring initial options during setup."""
-        pic_supported = bool(getattr(self.client, "picture_settings", None)) if self.client else DEFAULT_ENABLE_PICTURE_CONTROLS
-        sound_supported = bool(getattr(self.client, "sound_settings", None)) if self.client else DEFAULT_ENABLE_SOUND_CONTROLS
+        picture_supported = (
+            bool(getattr(self.client, "picture_settings", None))
+            if self.client
+            else DEFAULT_ENABLE_PICTURE_CONTROLS
+        )
+        sound_supported = (
+            bool(getattr(self.client, "sound_settings", None))
+            if self.client
+            else DEFAULT_ENABLE_SOUND_CONTROLS
+        )
 
         if user_input is not None and self.client:
             entry_data = self._get_client_auth_data()
@@ -303,12 +311,12 @@ class HisenseVidaaConfigFlow(
             return self.async_create_entry(
                 title=self.discovered_title or f"Hisense TV ({self.ip_address})",
                 data=entry_data,
-                options=build_entry_options(user_input, pic_supported, sound_supported),
+                options=build_entry_options(user_input, picture_supported, sound_supported),
             )
 
         return self.async_show_form(
             step_id="options",
-            data_schema=build_options_schema(pic_supported, sound_supported),
+            data_schema=build_options_schema(picture_supported, sound_supported),
         )
 
     @callback

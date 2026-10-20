@@ -96,14 +96,14 @@ def send_command(client: HisenseTvClient, command: str) -> bool:
     """Sends a key command to the TV, automatically resolving known key aliases."""
     if not command:
         return False
-    cmd_clean = command.strip().lower()
-    if cmd_clean.startswith("app:"):
+    normalized_command = command.strip().lower()
+    if normalized_command.startswith("app:"):
         app_target = command.split(":", 1)[1].strip()
         return client._launch_app_by_name(app_target)
-    if cmd_clean.startswith("source:"):
-        src_target = command.split(":", 1)[1].strip()
-        return client._change_source_by_name_or_id(src_target)
-    if cmd_clean in (
+    if normalized_command.startswith("source:"):
+        source_target = command.split(":", 1)[1].strip()
+        return client._change_source_by_name_or_id(source_target)
+    if normalized_command in (
         "input",
         "source",
         "cycle_source",
@@ -113,7 +113,7 @@ def send_command(client: HisenseTvClient, command: str) -> bool:
         "key_source",
     ):
         return client.cycle_source()
-    if cmd_clean in ("input_menu", "source_menu", "key_input_menu", "key_source_menu"):
+    if normalized_command in ("input_menu", "source_menu", "key_input_menu", "key_source_menu"):
         client.send_key("KEY_MENU")
         return True
 
@@ -129,8 +129,8 @@ def cycle_source(client: HisenseTvClient) -> bool:
         client.send_key("KEY_MENU")
         return True
 
-    sid, sname = next_source
-    client.change_source(sid, sname)
+    next_source_id, next_source_name = next_source
+    client.change_source(next_source_id, next_source_name)
     return True
 
 
@@ -157,8 +157,8 @@ def launch_app_by_name(client: HisenseTvClient, name_or_id: str) -> bool:
 
 def change_source_by_name_or_id(client: HisenseTvClient, target: str) -> bool:
     """Switches to source by name (e.g. HDMI1, TV) or numeric sourceid."""
-    sid, sname = resolve_source(client.sources, target)
-    client.change_source(sid or target.strip(), sname)
+    resolved_source_id, resolved_source_name = resolve_source(client.sources, target)
+    client.change_source(resolved_source_id or target.strip(), resolved_source_name)
     return True
 
 
@@ -175,21 +175,21 @@ def change_source(
     if not client.connected or not client.mqtt_client:
         return
 
-    sid = str(source_id).strip()
-    sname = source_name.strip() if source_name else None
+    clean_source_id = str(source_id).strip()
+    clean_source_name = source_name.strip() if source_name else None
 
-    if not sname:
-        resolved_id, resolved_name = resolve_source(getattr(client, "sources", []), sid)
+    if not clean_source_name:
+        resolved_id, resolved_name = resolve_source(getattr(client, "sources", []), clean_source_id)
         if resolved_name:
-            sname = resolved_name
+            clean_source_name = resolved_name
         if resolved_id:
-            sid = resolved_id
+            clean_source_id = resolved_id
 
     payload_dict: dict[str, Any] = {}
-    if sid:
-        payload_dict["sourceid"] = sid
-    if sname:
-        payload_dict["sourcename"] = sname
+    if clean_source_id:
+        payload_dict["sourceid"] = clean_source_id
+    if clean_source_name:
+        payload_dict["sourcename"] = clean_source_name
     if not payload_dict:
         payload_dict = {"sourceid": source_id}
 
@@ -197,16 +197,20 @@ def change_source(
     client.mqtt_client.publish(f"{client.topics.ui}actions/changesource", payload)
 
     # Dual publish for newer VIDAA firmware expecting source name
-    if sname and sid != sname and str(sid).isdigit():
+    if clean_source_name and clean_source_id != clean_source_name and str(clean_source_id).isdigit():
         _LOGGER.debug(
             "[%s] changesource: also attempting name-as-id publish (sourceid=%s) for firmware expecting the display name",
             getattr(client, "ip", "unknown"),
-            sname,
+            clean_source_name,
         )
-        payload_modern = json.dumps({"sourceid": sname, "sourcename": sname})
+        payload_modern = json.dumps({"sourceid": clean_source_name, "sourcename": clean_source_name})
         client.mqtt_client.publish(f"{client.topics.ui}actions/changesource", payload_modern)
 
-    if str(sid).upper() == "TV" or (sname and str(sname).upper() == "TV") or str(source_id).lower() == "tv":
+    if (
+        str(clean_source_id).upper() == "TV"
+        or (clean_source_name and str(clean_source_name).upper() == "TV")
+        or str(source_id).lower() == "tv"
+    ):
         client.send_key("KEY_LIVETV")
 
 

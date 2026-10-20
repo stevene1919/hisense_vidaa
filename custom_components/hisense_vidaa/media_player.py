@@ -130,26 +130,26 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return device-specific and Live TV metadata attributes."""
-        attrs: dict[str, Any] = {
+        attributes: dict[str, Any] = {
             "mqtt_connected": self._client.connected,
             "auth_profile": self._client.auth_profile,
         }
         if self._mac:
-            attrs["mac_address"] = self._mac
+            attributes["mac_address"] = self._mac
         if self._connected_device:
-            attrs["connected_device"] = self._connected_device
-        ch_name = self._channel_name or (self._client.current_channel if self._client else None)
-        if ch_name:
-            attrs["channel_name"] = ch_name
-        ch_num = self._channel_num or (self._client.channel_number if self._client else None)
-        if ch_num:
-            attrs["channel_num"] = ch_num
-            attrs["channel_number"] = ch_num
+            attributes["connected_device"] = self._connected_device
+        channel_name = self._channel_name or (self._client.current_channel if self._client else None)
+        if channel_name:
+            attributes["channel_name"] = channel_name
+        channel_number = self._channel_num or (self._client.channel_number if self._client else None)
+        if channel_number:
+            attributes["channel_num"] = channel_number
+            attributes["channel_number"] = channel_number
         if self._client and self._client.current_program:
-                attrs["program_title"] = self._client.current_program
+            attributes["program_title"] = self._client.current_program
         if self._volume_type is not None:
-            attrs["audio_output"] = "ARC / eARC" if self._volume_type == 1 else "TV Speakers"
-        return attrs
+            attributes["audio_output"] = "ARC / eARC" if self._volume_type == 1 else "TV Speakers"
+        return attributes
 
     @property
     def media_channel(self) -> str | None:

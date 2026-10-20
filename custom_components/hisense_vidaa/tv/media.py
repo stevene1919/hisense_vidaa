@@ -36,19 +36,19 @@ def parse_applist_payload(
     if not apps:
         return app_dict, app_icons, favorite_apps
 
-    for a in apps:
-        if isinstance(a, dict) and (a.get("appId") or a.get("app_id")):
-            a_id = str(a.get("appId") or a.get("app_id", ""))
-            name = a.get("appName") or a.get("name", "")
+    for app in apps:
+        if isinstance(app, dict) and (app.get("appId") or app.get("app_id")):
+            app_id = str(app.get("appId") or app.get("app_id", ""))
+            name = app.get("appName") or app.get("name", "")
             if name:
-                app_dict[a_id] = name
-                if a.get("isFav") in (True, "true", 1, "1"):
+                app_dict[app_id] = name
+                if app.get("isFav") in (True, "true", 1, "1"):
                     favorite_apps.append(name)
-                icon_raw = a.get("httpIcon")
-                if icon_raw and "http" in icon_raw:
-                    clean_url = "http" + icon_raw.split("http", 1)[1]
+                raw_icon_url = app.get("httpIcon")
+                if raw_icon_url and "http" in raw_icon_url:
+                    clean_url = "http" + raw_icon_url.split("http", 1)[1]
                     app_icons[name] = clean_url
-                    app_icons[a_id] = clean_url
+                    app_icons[app_id] = clean_url
 
     return app_dict, app_icons, favorite_apps
 
@@ -68,24 +68,29 @@ def parse_sourcelist_payload(
     if not sources:
         return available_sources, connected_inputs, custom_labels, active_source
 
-    for s in sources:
-        if isinstance(s, dict):
-            src_name = s.get("sourcename") or s.get("sourceName") or s.get("displayname") or s.get("name")
-            if src_name:
-                available_sources.append(src_name)
-                if s.get("has_signal") in ("1", 1, True):
-                    connected_inputs.append(src_name)
-                custom_label = s.get("displayname2")
+    for source in sources:
+        if isinstance(source, dict):
+            source_name = (
+                source.get("sourcename")
+                or source.get("sourceName")
+                or source.get("displayname")
+                or source.get("name")
+            )
+            if source_name:
+                available_sources.append(source_name)
+                if source.get("has_signal") in ("1", 1, True):
+                    connected_inputs.append(source_name)
+                custom_label = source.get("displayname2")
                 if custom_label and str(custom_label).strip():
-                    custom_labels[src_name] = str(custom_label).strip()
+                    custom_labels[source_name] = str(custom_label).strip()
 
             if (
-                s.get("is_signal") in ("1", 1, True)
-                or s.get("is_active")
-                or s.get("isactive")
-                or s.get("active")
+                source.get("is_signal") in ("1", 1, True)
+                or source.get("is_active")
+                or source.get("isactive")
+                or source.get("active")
             ):
-                active_source = src_name
+                active_source = source_name
 
     return available_sources, connected_inputs, custom_labels, active_source
 
@@ -123,12 +128,12 @@ def build_media_player_source_list(
 ) -> list[str]:
     """Builds the full sorted list of selectable inputs and smart TV apps."""
     sources: list[str] = []
-    for s in source_dict.keys():
-        if "hdmi" in s.lower() or s.lower() in ("tv", "av"):
-            if enable_cec and s == current_source and connected_device and "hdmi" in s.lower():
-                sources.append(f"{s} ({connected_device})")
+    for source_name in source_dict.keys():
+        if "hdmi" in source_name.lower() or source_name.lower() in ("tv", "av"):
+            if enable_cec and source_name == current_source and connected_device and "hdmi" in source_name.lower():
+                sources.append(f"{source_name} ({connected_device})")
             else:
-                sources.append(s)
+                sources.append(source_name)
 
     if include_apps and app_dict:
         app_names = sorted(app_dict.keys())
@@ -155,14 +160,14 @@ def execute_play_media(
                 str(app.get("url") or app.get("appUrl") or ""),
             )
             return
-        for a_name, a_info in app_dict.items():
-            if a_name.lower() == media_id.lower() or (
-                str(a_info.get("url") or "").lower() == media_id.lower()
+        for app_name, app_info in app_dict.items():
+            if app_name.lower() == media_id.lower() or (
+                str(app_info.get("url") or "").lower() == media_id.lower()
             ):
                 client.launch_app(
-                    str(a_info.get("appId") or a_info.get("app_id") or ""),
-                    str(a_info.get("name") or a_name),
-                    str(a_info.get("url") or a_info.get("appUrl") or ""),
+                    str(app_info.get("appId") or app_info.get("app_id") or ""),
+                    str(app_info.get("name") or app_name),
+                    str(app_info.get("url") or app_info.get("appUrl") or ""),
                 )
                 return
 
@@ -193,35 +198,35 @@ def execute_select_source(
     """Resolves and selects a source input or smart TV application."""
     if not source:
         return
-    clean_src = clean_source_label(source)
+    cleaned_source = clean_source_label(source)
     source_lower = source.strip().lower()
-    clean_lower = clean_src.strip().lower()
+    cleaned_lower = cleaned_source.strip().lower()
 
     # 1. Check app dictionary (exact and case-insensitive)
-    app = app_dict.get(source) or app_dict.get(clean_src)
+    app = app_dict.get(source) or app_dict.get(cleaned_source)
     if not app:
-        for name, a in app_dict.items():
-            if isinstance(a, dict) and name.lower() in (source_lower, clean_lower):
-                app = a
+        for app_name, app_data in app_dict.items():
+            if isinstance(app_data, dict) and app_name.lower() in (source_lower, cleaned_lower):
+                app = app_data
                 break
     if app:
         client.launch_app(str(app.get("appId", "")), str(app.get("name", "")), str(app.get("url", "")))
         return
 
     # 2. Input source match (exact and case-insensitive)
-    src = source_dict.get(source) or source_dict.get(clean_src)
-    if not src:
-        for name, s in source_dict.items():
-            if isinstance(s, dict) and name.lower() in (source_lower, clean_lower):
-                src = s
+    matched_source = source_dict.get(source) or source_dict.get(cleaned_source)
+    if not matched_source:
+        for source_name, source_data in source_dict.items():
+            if isinstance(source_data, dict) and source_name.lower() in (source_lower, cleaned_lower):
+                matched_source = source_data
                 break
-    if src:
-        sid = str(src.get("sourceid") or src.get("sourcename") or "")
-        sname = str(src.get("sourcename") or clean_src)
-        client.change_source(sid, sname)
+    if matched_source:
+        resolved_source_id = str(matched_source.get("sourceid") or matched_source.get("sourcename") or "")
+        resolved_source_name = str(matched_source.get("sourcename") or cleaned_source)
+        client.change_source(resolved_source_id, resolved_source_name)
         return
 
-    client.change_source(clean_src)
+    client.change_source(cleaned_source)
 
 
 def parse_media_state_broadcast(

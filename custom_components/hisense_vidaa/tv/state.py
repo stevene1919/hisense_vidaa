@@ -26,18 +26,22 @@ def apply_state_update(client: Any, data: Any) -> None:
     if "sourcename" in data:
         client.current_source = data["sourcename"]
     elif "sourceid" in data:
-        sid_str = str(data["sourceid"])
-        if sid_str.upper() == "TV" or statetype == "livetv":
+        source_id_str = str(data["sourceid"])
+        if source_id_str.upper() == "TV" or statetype == "livetv":
             client.current_source = "TV"
         else:
             sources = getattr(client, "sources", [])
             matched_name = None
             if sources:
-                for s in sources:
-                    if isinstance(s, dict) and str(s.get("sourceid", "")).strip().lower() == sid_str.strip().lower():
-                        matched_name = s.get("sourcename") or s.get("displayname")
+                for source in sources:
+                    if (
+                        isinstance(source, dict)
+                        and str(source.get("sourceid", "")).strip().lower()
+                        == source_id_str.strip().lower()
+                    ):
+                        matched_name = source.get("sourcename") or source.get("displayname")
                         break
-            client.current_source = matched_name or sid_str
+            client.current_source = matched_name or source_id_str
     elif statetype == "livetv":
         client.current_source = "TV"
 
@@ -94,13 +98,13 @@ def apply_device_info_update(client: Any, data: Any) -> None:
     if model and str(model).strip():
         client.model_name = str(model).strip()
 
-    mfg = data.get("manufacturer") or data.get("brand")
-    if mfg and str(mfg).strip():
-        client.manufacturer = str(mfg).strip()
+    manufacturer_name = data.get("manufacturer") or data.get("brand")
+    if manufacturer_name and str(manufacturer_name).strip():
+        client.manufacturer = str(manufacturer_name).strip()
 
-    fw = data.get("firmware_version") or data.get("sw_version") or data.get("version")
-    if fw and str(fw).strip():
-        client.firmware_version = str(fw).strip()
+    firmware_version = data.get("firmware_version") or data.get("sw_version") or data.get("version")
+    if firmware_version and str(firmware_version).strip():
+        client.firmware_version = str(firmware_version).strip()
 
 
 def apply_volume_update(client: Any, data: Any) -> None:
@@ -108,9 +112,9 @@ def apply_volume_update(client: Any, data: Any) -> None:
     if not isinstance(data, dict):
         return
 
-    vol_type = data.get("volume_type")
+    volume_type = data.get("volume_type")
     # Volume level updates on master (0), ARC/eARC (1), or unspecifed volume broadcasts
-    if vol_type in (0, "0", 1, "1", None):
+    if volume_type in (0, "0", 1, "1", None):
         if "volume_value" in data:
             with contextlib.suppress(ValueError, TypeError):
                 client.volume = int(data["volume_value"])
@@ -119,7 +123,7 @@ def apply_volume_update(client: Any, data: Any) -> None:
                 client.volume = int(data["volume"])
 
     # Mute status updates on mute broadcast (2) or explicit is_mute/muted fields
-    if vol_type in (2, "2"):
+    if volume_type in (2, "2"):
         if "volume_value" in data:
             client.muted = bool(data["volume_value"] in (1, "1", True))
         elif "is_mute" in data:

@@ -54,21 +54,21 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-def build_options_schema(pic_supported: bool, sound_supported: bool) -> vol.Schema:
+def build_options_schema(picture_supported: bool, sound_supported: bool) -> vol.Schema:
     """Build the configuration options schema for initial setup and options flow."""
     return vol.Schema({
         vol.Optional(CONF_ENABLE_REMOTE, default=DEFAULT_ENABLE_REMOTE): bool,
         vol.Optional(CONF_ENABLE_WOL, default=DEFAULT_ENABLE_WOL): bool,
         vol.Optional(CONF_INCLUDE_APPS_IN_SOURCES, default=DEFAULT_INCLUDE_APPS_IN_SOURCES): bool,
         vol.Optional(CONF_ENABLE_MEDIA_CONTROLS, default=DEFAULT_ENABLE_MEDIA_CONTROLS): bool,
-        vol.Optional(CONF_ENABLE_PICTURE_CONTROLS, default=pic_supported): bool,
+        vol.Optional(CONF_ENABLE_PICTURE_CONTROLS, default=picture_supported): bool,
         vol.Optional(CONF_ENABLE_SOUND_CONTROLS, default=sound_supported): bool,
         vol.Optional(CONF_ENABLE_AUDIO_ONLY, default=DEFAULT_ENABLE_AUDIO_ONLY): bool,
     })
 
 
 def build_entry_options(
-    user_input: dict[str, Any], pic_supported: bool, sound_supported: bool
+    user_input: dict[str, Any], picture_supported: bool, sound_supported: bool
 ) -> dict[str, Any]:
     """Map user input to config entry options dictionary."""
     return {
@@ -76,7 +76,7 @@ def build_entry_options(
         CONF_ENABLE_WOL: user_input.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL),
         CONF_INCLUDE_APPS_IN_SOURCES: user_input.get(CONF_INCLUDE_APPS_IN_SOURCES, DEFAULT_INCLUDE_APPS_IN_SOURCES),
         CONF_ENABLE_MEDIA_CONTROLS: user_input.get(CONF_ENABLE_MEDIA_CONTROLS, DEFAULT_ENABLE_MEDIA_CONTROLS),
-        CONF_ENABLE_PICTURE_CONTROLS: user_input.get(CONF_ENABLE_PICTURE_CONTROLS, pic_supported),
+        CONF_ENABLE_PICTURE_CONTROLS: user_input.get(CONF_ENABLE_PICTURE_CONTROLS, picture_supported),
         CONF_ENABLE_SOUND_CONTROLS: user_input.get(CONF_ENABLE_SOUND_CONTROLS, sound_supported),
         CONF_ENABLE_AUDIO_ONLY: user_input.get(CONF_ENABLE_AUDIO_ONLY, DEFAULT_ENABLE_AUDIO_ONLY),
     }

@@ -125,64 +125,64 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         return self._token_manager.refreshing_token
 
     @_refreshing_token.setter
-    def _refreshing_token(self, val: bool) -> None:
-        self._token_manager.refreshing_token = val
+    def _refreshing_token(self, value: bool) -> None:
+        self._token_manager.refreshing_token = value
 
     @property
     def _last_refresh_attempt(self) -> float:
         return self._token_manager.last_refresh_attempt
 
     @_last_refresh_attempt.setter
-    def _last_refresh_attempt(self, val: float) -> None:
-        self._token_manager.last_refresh_attempt = val
+    def _last_refresh_attempt(self, value: float) -> None:
+        self._token_manager.last_refresh_attempt = value
 
     @property
     def _last_awake_refresh_attempt(self) -> float:
         return self._token_manager.last_awake_refresh_attempt
 
     @_last_awake_refresh_attempt.setter
-    def _last_awake_refresh_attempt(self, val: float) -> None:
-        self._token_manager.last_awake_refresh_attempt = val
+    def _last_awake_refresh_attempt(self, value: float) -> None:
+        self._token_manager.last_awake_refresh_attempt = value
 
     @property
     def _rejected_refresh_failures(self) -> int:
         return self._token_manager.rejected_refresh_failures
 
     @_rejected_refresh_failures.setter
-    def _rejected_refresh_failures(self, val: int) -> None:
-        self._token_manager.rejected_refresh_failures = val
+    def _rejected_refresh_failures(self, value: int) -> None:
+        self._token_manager.rejected_refresh_failures = value
 
     @property
     def _broker_rejection_failures(self) -> int:
         return self._token_manager.broker_rejection_failures
 
     @_broker_rejection_failures.setter
-    def _broker_rejection_failures(self, val: int) -> None:
-        self._token_manager.broker_rejection_failures = val
+    def _broker_rejection_failures(self, value: int) -> None:
+        self._token_manager.broker_rejection_failures = value
 
     @property
     def _last_refresh_connect_rc(self) -> int | None:
         return self._token_manager.last_refresh_connect_rc
 
     @_last_refresh_connect_rc.setter
-    def _last_refresh_connect_rc(self, val: int | None) -> None:
-        self._token_manager.last_refresh_connect_rc = val
+    def _last_refresh_connect_rc(self, value: int | None) -> None:
+        self._token_manager.last_refresh_connect_rc = value
 
     @property
     def _token_watch(self) -> threading.Timer | None:
         return self._token_manager.token_watch
 
     @_token_watch.setter
-    def _token_watch(self, val: threading.Timer | None) -> None:
-        self._token_manager.token_watch = val
+    def _token_watch(self, value: threading.Timer | None) -> None:
+        self._token_manager.token_watch = value
 
     @property
     def _token_watch_closed(self) -> bool:
         return self._token_manager.token_watch_closed
 
     @_token_watch_closed.setter
-    def _token_watch_closed(self, val: bool) -> None:
-        self._token_manager.token_watch_closed = val
+    def _token_watch_closed(self, value: bool) -> None:
+        self._token_manager.token_watch_closed = value
 
     def _start_token_watch(self) -> None:
         self._token_manager.start_token_watch()
@@ -319,15 +319,15 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
 
     def sync_clock(self, timeout: float = 2.0) -> int | None:
         """Queries TV UPnP Date header, updates clock_offset, and triggers callbacks."""
-        tv_ts = get_tv_timestamp(self.ip, timeout=timeout)
-        if tv_ts:
-            self.tv_timestamp = tv_ts
-            self.clock_offset = tv_ts - int(time.time())
+        tv_timestamp = get_tv_timestamp(self.ip, timeout=timeout)
+        if tv_timestamp:
+            self.tv_timestamp = tv_timestamp
+            self.clock_offset = tv_timestamp - int(time.time())
             self.last_clock_sync = time.time()
             _LOGGER.debug(
                 "[%s] Synchronized TV clock: %d (offset: %d s)",
                 self.ip,
-                tv_ts,
+                tv_timestamp,
                 self.clock_offset,
             )
             self._dispatch_clock_drift_update(self.clock_offset)

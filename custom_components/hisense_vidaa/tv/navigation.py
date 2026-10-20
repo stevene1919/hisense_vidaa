@@ -89,9 +89,9 @@ def match_app(
     # 1. Exact match on name or ID
     for app in apps:
         if isinstance(app, dict):
-            aname = str(app.get("name") or app.get("appName") or "").strip().lower()
-            aid = str(app.get("appId") or app.get("id") or "").strip().lower()
-            if clean_target in (aname, aid):
+            app_name = str(app.get("name") or app.get("appName") or "").strip().lower()
+            app_id = str(app.get("appId") or app.get("id") or "").strip().lower()
+            if clean_target in (app_name, app_id):
                 return {
                     "appId": str(app.get("appId") or app.get("id") or ""),
                     "name": str(app.get("name") or app.get("appName") or target),
@@ -101,20 +101,23 @@ def match_app(
     # 2. Normalized alphanumeric match
     for app in apps:
         if isinstance(app, dict):
-            aname = str(app.get("name") or app.get("appName") or "")
-            aid = str(app.get("appId") or app.get("id") or "")
-            if norm_target and (norm_target == normalize_string(aname) or norm_target == normalize_string(aid)):
+            app_name = str(app.get("name") or app.get("appName") or "")
+            app_id = str(app.get("appId") or app.get("id") or "")
+            if norm_target and (
+                norm_target == normalize_string(app_name)
+                or norm_target == normalize_string(app_id)
+            ):
                 return {
                     "appId": str(app.get("appId") or app.get("id") or ""),
-                    "name": aname or target,
+                    "name": app_name or target,
                     "url": str(app.get("url") or app.get("appUrl") or ""),
                 }
 
     # 3. Substring match
     for app in apps:
         if isinstance(app, dict):
-            aname = str(app.get("name") or app.get("appName") or "").lower()
-            if clean_target in aname or (norm_target and norm_target in normalize_string(aname)):
+            app_name = str(app.get("name") or app.get("appName") or "").lower()
+            if clean_target in app_name or (norm_target and norm_target in normalize_string(app_name)):
                 return {
                     "appId": str(app.get("appId") or app.get("id") or ""),
                     "name": str(app.get("name") or app.get("appName") or target),
@@ -135,36 +138,39 @@ def resolve_source(
     if not target:
         return "", None
 
-    clean = target.strip().lower()
+    clean_target = target.strip().lower()
     if sources:
-        for src in sources:
-            if isinstance(src, dict):
-                sname = str(src.get("sourcename") or "").strip()
-                dname = str(src.get("displayname") or "").strip()
-                sid = str(src.get("sourceid") or "").strip()
-                if clean in (sname.lower(), dname.lower(), sid.lower()):
-                    return sid or sname, sname or dname or sid
-                if clean in ("tv", "live tv", "livetv", "dtv", "antenna") and (
-                    sname.lower() in ("tv", "live tv", "livetv", "dtv", "antenna")
-                    or sid.lower() in ("tv", "live tv", "livetv", "dtv", "antenna")
+        for source_entry in sources:
+            if isinstance(source_entry, dict):
+                source_name = str(source_entry.get("sourcename") or "").strip()
+                display_name = str(source_entry.get("displayname") or "").strip()
+                source_id = str(source_entry.get("sourceid") or "").strip()
+                if clean_target in (source_name.lower(), display_name.lower(), source_id.lower()):
+                    return source_id or source_name, source_name or display_name or source_id
+                if clean_target in ("tv", "live tv", "livetv", "dtv", "antenna") and (
+                    source_name.lower() in ("tv", "live tv", "livetv", "dtv", "antenna")
+                    or source_id.lower() in ("tv", "live tv", "livetv", "dtv", "antenna")
                 ):
-                    return sid or sname, sname or dname or sid
+                    return source_id or source_name, source_name or display_name or source_id
 
-    if clean in ("tv", "live tv", "livetv", "dtv", "antenna"):
+    if clean_target in ("tv", "live tv", "livetv", "dtv", "antenna"):
         return "TV", "TV"
 
     return target.strip(), None
 
 
-def _is_hardware_source(src: dict[str, Any]) -> bool:
+def _is_hardware_source(source_entry: dict[str, Any]) -> bool:
     """Checks if a source entry represents a physical TV hardware input."""
-    sname = str(src.get("sourcename") or "").strip().lower()
-    sid = str(src.get("sourceid") or "").strip().lower()
-    dname = str(src.get("displayname") or "").strip().lower()
-    for val in (sname, sid, dname):
-        if any(val.startswith(p) for p in ("hdmi", "av", "tv", "dtv", "atv", "antenna", "comp", "vga")):
+    source_name = str(source_entry.get("sourcename") or "").strip().lower()
+    source_id = str(source_entry.get("sourceid") or "").strip().lower()
+    display_name = str(source_entry.get("displayname") or "").strip().lower()
+    for identifier in (source_name, source_id, display_name):
+        if any(
+            identifier.startswith(prefix)
+            for prefix in ("hdmi", "av", "tv", "dtv", "atv", "antenna", "comp", "vga")
+        ):
             return True
-        if val in ("tv", "live tv", "livetv", "av", "avs"):
+        if identifier in ("tv", "live tv", "livetv", "av", "avs"):
             return True
     return False
 
@@ -181,39 +187,39 @@ def get_next_cycled_source(
         return None
 
     valid_sources = [
-        s
-        for s in sources
-        if isinstance(s, dict)
-        and (s.get("sourceid") is not None or s.get("sourcename") is not None)
+        source
+        for source in sources
+        if isinstance(source, dict)
+        and (source.get("sourceid") is not None or source.get("sourcename") is not None)
     ]
     if not valid_sources:
         return None
 
     # Filter for hardware/physical input sources first to prevent cycling into apps (e.g. VIDAA tv ID 284)
-    hardware_sources = [s for s in valid_sources if _is_hardware_source(s)]
+    hardware_sources = [source for source in valid_sources if _is_hardware_source(source)]
     candidate_sources = hardware_sources if hardware_sources else valid_sources
 
-    curr_clean = str(current_source or "").strip().lower()
-    curr_idx = -1
-    for idx, src in enumerate(candidate_sources):
-        sname = str(src.get("sourcename") or "").strip().lower()
-        dname = str(src.get("displayname") or "").strip().lower()
-        sid = str(src.get("sourceid") or "").strip().lower()
-        if curr_clean and (curr_clean in (sname, dname, sid)):
-            curr_idx = idx
+    current_clean = str(current_source or "").strip().lower()
+    current_index = -1
+    for index, source in enumerate(candidate_sources):
+        source_name = str(source.get("sourcename") or "").strip().lower()
+        display_name = str(source.get("displayname") or "").strip().lower()
+        source_id = str(source.get("sourceid") or "").strip().lower()
+        if current_clean and (current_clean in (source_name, display_name, source_id)):
+            current_index = index
             break
-        if curr_clean in ("tv", "live tv", "livetv", "dtv", "antenna") and (
-            sname in ("tv", "live tv", "livetv", "dtv", "antenna")
-            or sid in ("tv", "live tv", "livetv", "dtv", "antenna")
+        if current_clean in ("tv", "live tv", "livetv", "dtv", "antenna") and (
+            source_name in ("tv", "live tv", "livetv", "dtv", "antenna")
+            or source_id in ("tv", "live tv", "livetv", "dtv", "antenna")
         ):
-            curr_idx = idx
+            current_index = index
             break
 
-    next_idx = (curr_idx + 1) % len(candidate_sources)
-    next_source = candidate_sources[next_idx]
-    sid = str(next_source.get("sourceid") or next_source.get("sourcename") or "")
-    sname = str(next_source.get("sourcename") or next_source.get("displayname") or sid)
-    return sid, sname
+    next_index = (current_index + 1) % len(candidate_sources)
+    next_source = candidate_sources[next_index]
+    source_id = str(next_source.get("sourceid") or next_source.get("sourcename") or "")
+    source_name = str(next_source.get("sourcename") or next_source.get("displayname") or source_id)
+    return source_id, source_name
 
 
 def resolve_command_key(command: str) -> str:

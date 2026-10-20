@@ -112,8 +112,8 @@ def clean_disconnect_mqtt_client(client: mqtt.Client | None) -> None:
         client.on_message = None
         client.loop_stop()
         client.disconnect()
-    except Exception as e:
-        _LOGGER.debug("Error during MQTT client disconnect: %s", e)
+    except Exception as error:
+        _LOGGER.debug("Error during MQTT client disconnect: %s", error)
     with contextlib.suppress(Exception):
         client.loop_stop()
 
@@ -155,15 +155,18 @@ class ConnectionManagerMixin:
             else:
                 future.set_result(result)
 
-    def _safe_set_future_exception(self: HisenseTvClient, future: asyncio.Future | None, exc: Exception) -> None:
+    def _safe_set_future_exception(self: HisenseTvClient, future: asyncio.Future | None, exception: Exception) -> None:
         if future and not future.done():
             if self._loop and self._loop.is_running():
-                self._loop.call_soon_threadsafe(future.set_exception, exc)
+                self._loop.call_soon_threadsafe(future.set_exception, exception)
             else:
-                future.set_exception(exc)
+                future.set_exception(exception)
 
-    def _on_connect(self: HisenseTvClient, client: mqtt.Client, userdata: Any, flags: Any, rc: int) -> None:
-        if rc == 0:
+    def _on_connect(
+        self: HisenseTvClient, client: mqtt.Client, userdata: Any, flags: Any, rc: int = 0
+    ) -> None:
+        return_code = rc
+        if return_code == 0:
             self.connected = True
             _LOGGER.info("[%s] Connected to TV MQTT broker", self.ip)
             self._dispatch_connected()
@@ -182,34 +185,34 @@ class ConnectionManagerMixin:
             self._query_timer.start()
         else:
             self.connected = False
-            _LOGGER.warning("[%s] Failed to connect to TV MQTT broker (rc: %d)", self.ip, rc)
+            _LOGGER.warning("[%s] Failed to connect to TV MQTT broker (return code: %d)", self.ip, return_code)
 
-            if rc in (4, 5, 134, 135):
+            if return_code in (4, 5, 134, 135):
                 with contextlib.suppress(Exception):
                     client.loop_stop()
 
             if self._auth_future and not self._auth_future.done():
                 self._safe_set_future_exception(
                     self._auth_future,
-                    Exception(f"MQTT connection rejected with code {rc} (Not authorized / invalid credentials)"),
+                    Exception(f"MQTT connection rejected with code {return_code} (Not authorized / invalid credentials)"),
                 )
                 return
 
-            if rc in (4, 5, 134, 135):
-                self._token_manager.handle_auth_rejection(rc)
+            if return_code in (4, 5, 134, 135):
+                self._token_manager.handle_auth_rejection(return_code)
 
-    def _on_disconnect(self: HisenseTvClient, client: mqtt.Client, userdata: Any, rc: int) -> None:
+    def _on_disconnect(self: HisenseTvClient, client: mqtt.Client, userdata: Any, return_code: int) -> None:
         self.connected = False
         self._last_initial_query_time = 0.0
-        _LOGGER.debug("[%s] Disconnected from TV MQTT broker (rc: %d)", self.ip, rc)
+        _LOGGER.debug("[%s] Disconnected from TV MQTT broker (return code: %d)", self.ip, return_code)
         if (self._auth_future and not self._auth_future.done()) or (self._auth_code_future and not self._auth_code_future.done()):
             with contextlib.suppress(Exception):
                 client.loop_stop()
         self._dispatch_disconnected()
 
-    def _on_message(self: HisenseTvClient, client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
-        payload = msg.payload.decode("utf-8", errors="ignore")
-        dispatch_incoming_mqtt_message(self, topic=msg.topic, payload=payload)
+    def _on_message(self: HisenseTvClient, client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage) -> None:
+        payload = message.payload.decode("utf-8", errors="ignore")
+        dispatch_incoming_mqtt_message(self, topic=message.topic, payload=payload)
 
     def connect_and_run(self: HisenseTvClient) -> None:
         """Main client connection loop using the access token as password."""
@@ -267,7 +270,9 @@ class ConnectionManagerMixin:
             _LOGGER.error("[%s] Error during ensure_connected: %s", self.ip, e)
             return False
 
-    async def async_query(self: HisenseTvClient, pub_topic: str, sub_topic: str, payload: str | None = None) -> Any:
+    async def async_query(
+        self: HisenseTvClient, publish_topic: str, subscribe_topic: str, payload: str | None = None
+    ) -> Any:
         """Publishes a query to the TV and asynchronously awaits the response topic."""
         if not self.mqtt_client:
             raise Exception("MQTT client not initialized")
@@ -275,22 +280,22 @@ class ConnectionManagerMixin:
         loop = asyncio.get_running_loop()
         future = loop.create_future()
 
-        def on_msg(client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
-            loop.call_soon_threadsafe(future.set_result, msg.payload.decode("utf-8"))
+        def handle_query_response(client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage) -> None:
+            loop.call_soon_threadsafe(future.set_result, message.payload.decode("utf-8"))
 
-        self.mqtt_client.message_callback_add(sub_topic, on_msg)
-        self.mqtt_client.subscribe(sub_topic)
-        self.mqtt_client.publish(pub_topic, payload)
+        self.mqtt_client.message_callback_add(subscribe_topic, handle_query_response)
+        self.mqtt_client.subscribe(subscribe_topic)
+        self.mqtt_client.publish(publish_topic, payload)
 
         try:
             result = await asyncio.wait_for(future, timeout=10)
             return json.loads(result)
-        except Exception as e:
-            _LOGGER.error("Error querying %s: %s", pub_topic, e)
-            raise e
+        except Exception as error:
+            _LOGGER.error("Error querying %s: %s", publish_topic, error)
+            raise error
         finally:
-            self.mqtt_client.unsubscribe(sub_topic)
-            self.mqtt_client.message_callback_remove(sub_topic)
+            self.mqtt_client.unsubscribe(subscribe_topic)
+            self.mqtt_client.message_callback_remove(subscribe_topic)
 
     def disconnect(self: HisenseTvClient) -> None:
         """Cleanly disconnects the MQTT client and stops the background network thread."""

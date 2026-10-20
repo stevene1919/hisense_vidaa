@@ -15,18 +15,21 @@ CLIENT_ID_PATTERN = "38D65DC30F45109A369A86FCE866A85B"
 XOR_TIMESTAMP_MASK = 6239759785777146216
 
 
-def clean_mac(mac: str | None) -> str:
+def normalize_mac_address(mac_address: str | None) -> str:
     """Normalize a MAC address's separators (caller's case preserved), or generate a random MAC.
 
     The MAC case must be preserved: it feeds the case-sensitive ``race`` hash and the
     ``<mac>$his$…`` client_id (see the reference implementations, which note the race
     hash is case-sensitive). Only a synthetic random MAC is uppercased.
     """
-    if mac:
-        stripped = mac.replace(":", "").replace("-", "").replace(".", "").strip()
+    if mac_address:
+        stripped = mac_address.replace(":", "").replace("-", "").replace(".", "").strip()
         if len(stripped) == 12:
             return ":".join(stripped[i:i + 2] for i in range(0, 12, 2))
     return ":".join(f"{random.randint(0, 255):02x}" for _ in range(6)).upper()
+
+
+clean_mac = normalize_mac_address
 
 
 def generate_initial_credentials(
@@ -34,14 +37,15 @@ def generate_initial_credentials(
     timestamp: int | None = None,
     auth_profile: str = "auto",
     use_new_auth: bool | None = None,
+    mac_address: str | None = None,
 ) -> tuple[str, str, str]:
     """Derive MQTT authentication parameters (client_id, username, password) for VIDAA pairing.
 
     Returns:
         tuple[client_id, username, password]
     """
-    ts = int(time.time()) if timestamp is None else timestamp
-    normalized_mac = clean_mac(mac)
+    current_timestamp = int(time.time()) if timestamp is None else timestamp
+    normalized_mac = normalize_mac_address(mac_address if mac_address is not None else mac)
 
     mac_digest = hashlib.md5(f"{CLIENT_ID_PATTERN}${normalized_mac}".encode()).hexdigest().upper()
     client_id = f"{normalized_mac}$his${mac_digest[:6]}_vidaacommon_001"
@@ -58,18 +62,18 @@ def generate_initial_credentials(
 
     if is_modern:
         salt = MODERN_SALT
-        username = f"his${ts ^ XOR_TIMESTAMP_MASK}"
+        username = f"his${current_timestamp ^ XOR_TIMESTAMP_MASK}"
     elif is_middle:
         salt = STANDARD_SALT
-        username = f"his${ts ^ XOR_TIMESTAMP_MASK}"
+        username = f"his${current_timestamp ^ XOR_TIMESTAMP_MASK}"
     else:
         # Standard / RemoteNow dynamic
         salt = STANDARD_SALT
-        username = f"his${ts}"
+        username = f"his${current_timestamp}"
 
-    digit_sum = sum(int(ch) for ch in str(ts) if ch.isdigit()) % 10
+    digit_sum = sum(int(char) for char in str(current_timestamp) if char.isdigit()) % 10
     salt_hash = hashlib.md5(f"his{digit_sum}{salt}".encode()).hexdigest().upper()
-    password = hashlib.md5(f"{ts}${salt_hash[:6]}".encode()).hexdigest().upper()
+    password = hashlib.md5(f"{current_timestamp}${salt_hash[:6]}".encode()).hexdigest().upper()
 
     return client_id, username, password
 
@@ -96,6 +100,7 @@ __all__ = [
     "extract_pkcs12_to_pem",
     "generate_initial_credentials",
     "get_profile_default_cert_paths",
+    "normalize_mac_address",
     "resolve_ca_certificate",
     "resolve_certificates",
 ]

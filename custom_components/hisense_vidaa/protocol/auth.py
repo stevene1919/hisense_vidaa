@@ -108,72 +108,78 @@ def perform_token_refresh(
     )
     client.username_pw_set(username=username, password=refresh_token)
 
-    lock = threading.Event()
+    refresh_completion_event = threading.Event()
     updated_data: dict[str, Any] = {}
-    connect_rc = [None]
+    connect_return_code = [None]
 
-    def on_refresh_connect(cl: mqtt.Client, userdata: Any, flags: Any, rc: Any, *args: Any) -> None:
-        code = getattr(rc, "value", rc)
+    def on_refresh_connect(
+        client_instance: mqtt.Client, userdata: Any, flags: Any, reason_code: Any, *args: Any
+    ) -> None:
+        code = getattr(reason_code, "value", reason_code)
         try:
             code = int(code)
         except (ValueError, TypeError):
             code = -1
-        connect_rc[0] = code
+        connect_return_code[0] = code
         if code == 0:
             _LOGGER.debug("[%s] Refresh client connected successfully. Subscribing to token topics...", ip)
             # Some VIDAA firmwares deny wildcard subscriptions (SUBACK 128): subscribe to exact topics
-            cl.subscribe([
+            client_instance.subscribe([
                 (paths.mobile + "platform_service/data/tokenissuance", 0),
                 (paths.mobile + "platform_service/data/gettoken", 0),
             ])
             payload = json.dumps({"refreshtoken": refresh_token or ""})
-            cl.publish(paths.platform + "data/gettoken", payload)
+            client_instance.publish(paths.platform + "data/gettoken", payload)
         else:
             _LOGGER.warning("[%s] Refresh client connection rejected (rc: %d)", ip, code)
-            lock.set()
+            refresh_completion_event.set()
 
-    def on_refresh_subscribe(cl: mqtt.Client, userdata: Any, mid: int, *args: Any) -> None:
+    def on_refresh_subscribe(
+        client_instance: mqtt.Client, userdata: Any, message_id: int, *args: Any
+    ) -> None:
         payload = json.dumps({"refreshtoken": refresh_token or ""})
-        cl.publish(paths.platform + "data/gettoken", payload)
+        client_instance.publish(paths.platform + "data/gettoken", payload)
 
-    def on_token_msg(cl: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage) -> None:
+    def on_token_message(client_instance: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage) -> None:
         nonlocal updated_data
         try:
-            payload_str = msg.payload.decode("utf-8", errors="ignore")
-            _LOGGER.debug("[%s] Refresh client received message on %s: %s", ip, msg.topic, payload_str)
+            payload_str = message.payload.decode("utf-8", errors="ignore")
+            _LOGGER.debug("[%s] Refresh client received message on %s: %s", ip, message.topic, payload_str)
             data = json.loads(payload_str)
             if isinstance(data, dict) and "accesstoken" in data:
                 updated_data = data
-                lock.set()
-        except Exception as e:
-            _LOGGER.debug("[%s] Error parsing refreshed token: %s", ip, e)
+                refresh_completion_event.set()
+        except Exception as error:
+            _LOGGER.debug("[%s] Error parsing refreshed token: %s", ip, error)
 
     client.on_connect = on_refresh_connect
     client.on_subscribe = on_refresh_subscribe
-    client.on_message = on_token_msg
-    client.on_disconnect = lambda cl, userdata, *args: _LOGGER.debug("[%s] Refresh client disconnected: %s", ip, args)
+    client.on_message = on_token_message
+    client.on_disconnect = lambda client_instance, userdata, *args: _LOGGER.debug(
+        "[%s] Refresh client disconnected: %s", ip, args
+    )
 
     try:
         client.connect(ip, port, 60)
         client.loop_start()
-        lock.wait(timeout=timeout)
-    except (OSError, TimeoutError) as e:
-        _LOGGER.debug("[%s] TV is offline or unreachable during token refresh: %s", ip, e)
-    except Exception as e:
-        _LOGGER.warning("[%s] Unexpected error during refresh client connection: %s", ip, e)
+        refresh_completion_event.wait(timeout=timeout)
+    except (OSError, TimeoutError) as error:
+        _LOGGER.debug("[%s] TV is offline or unreachable during token refresh: %s", ip, error)
+    except Exception as error:
+        _LOGGER.warning("[%s] Unexpected error during refresh client connection: %s", ip, error)
     finally:
         with contextlib.suppress(Exception):
             client.loop_stop()
             client.disconnect()
 
     if out_status is not None:
-        out_status["connect_rc"] = connect_rc[0]
+        out_status["connect_rc"] = connect_return_code[0]
 
     if updated_data:
         return updated_data
 
-    if connect_rc[0] is not None:
-        _LOGGER.warning("[%s] Failed to refresh token (Connect RC: %d)", ip, connect_rc[0])
+    if connect_return_code[0] is not None:
+        _LOGGER.warning("[%s] Failed to refresh token (Connect RC: %d)", ip, connect_return_code[0])
 
     return None
 
@@ -252,9 +258,9 @@ def probe_tv_auth_methods(
             c.tls_set(cert_reqs=ssl.CERT_NONE, tls_version=ssl.PROTOCOL_TLS)
         c.tls_insecure_set(True)
 
-    def _create_probe_client(cid: str) -> mqtt.Client:
+    def _create_probe_client(client_id: str) -> mqtt.Client:
         kwargs: dict[str, Any] = {
-            "client_id": cid,
+            "client_id": client_id,
             "clean_session": True,
             "protocol": mqtt.MQTTv311,
         }
@@ -266,81 +272,93 @@ def probe_tv_auth_methods(
 
     # 1. Legacy static ('hisenseservice')
     try:
-        leg_rc = [None]
-        leg_lock = threading.Event()
-        leg_client = _create_probe_client("hisenseservice")
-        _setup_tls(leg_client)
-        leg_client.username_pw_set(username="hisenseservice", password="multimqttservice")
-        leg_client.on_connect = lambda c, u, f, rc: (leg_rc.__setitem__(0, rc), leg_lock.set())
-        leg_client.on_disconnect = lambda c, u, rc: leg_lock.set()
-        leg_client.connect_async(ip, 36669, 5)
-        leg_client.loop_start()
-        leg_lock.wait(timeout=timeout)
-        leg_client.loop_stop()
-        leg_client.disconnect()
-        results["legacy_static"]["rc"] = leg_rc[0]
-        results["legacy_static"]["supported"] = (leg_rc[0] == 0)
-    except Exception as e:
-        _LOGGER.debug("[%s] Legacy static probe error: %s", ip, e)
+        legacy_return_code = [None]
+        legacy_completion_event = threading.Event()
+        legacy_client = _create_probe_client("hisenseservice")
+        _setup_tls(legacy_client)
+        legacy_client.username_pw_set(username="hisenseservice", password="multimqttservice")
+        legacy_client.on_connect = lambda client_obj, userdata, flags, rc: (
+            legacy_return_code.__setitem__(0, rc),
+            legacy_completion_event.set(),
+        )
+        legacy_client.on_disconnect = lambda client_obj, userdata, rc: legacy_completion_event.set()
+        legacy_client.connect_async(ip, 36669, 5)
+        legacy_client.loop_start()
+        legacy_completion_event.wait(timeout=timeout)
+        legacy_client.loop_stop()
+        legacy_client.disconnect()
+        results["legacy_static"]["rc"] = legacy_return_code[0]
+        results["legacy_static"]["supported"] = (legacy_return_code[0] == 0)
+    except Exception as error:
+        _LOGGER.debug("[%s] Legacy static probe error: %s", ip, error)
 
     # 2. Standard dynamic pairing (his$<timestamp> / standard salt)
     try:
-        cid, user, pwd = generate_initial_credentials(mac=mac, auth_profile="remotenow")
-        std_rc = [None]
-        std_lock = threading.Event()
-        std_client = _create_probe_client(cid)
-        _setup_tls(std_client)
-        std_client.username_pw_set(username=user, password=pwd)
-        std_client.on_connect = lambda c, u, f, rc: (std_rc.__setitem__(0, rc), std_lock.set())
-        std_client.on_disconnect = lambda c, u, rc: std_lock.set()
-        std_client.connect_async(ip, 36669, 5)
-        std_client.loop_start()
-        std_lock.wait(timeout=timeout)
-        std_client.loop_stop()
-        std_client.disconnect()
-        results["standard_dynamic"]["rc"] = std_rc[0]
-        results["standard_dynamic"]["supported"] = (std_rc[0] == 0)
-    except Exception as e:
-        _LOGGER.debug("[%s] Standard dynamic probe error: %s", ip, e)
+        client_id, username, password = generate_initial_credentials(mac_address=mac, auth_profile="remotenow")
+        standard_return_code = [None]
+        standard_completion_event = threading.Event()
+        standard_client = _create_probe_client(client_id)
+        _setup_tls(standard_client)
+        standard_client.username_pw_set(username=username, password=password)
+        standard_client.on_connect = lambda client_obj, userdata, flags, rc: (
+            standard_return_code.__setitem__(0, rc),
+            standard_completion_event.set(),
+        )
+        standard_client.on_disconnect = lambda client_obj, userdata, rc: standard_completion_event.set()
+        standard_client.connect_async(ip, 36669, 5)
+        standard_client.loop_start()
+        standard_completion_event.wait(timeout=timeout)
+        standard_client.loop_stop()
+        standard_client.disconnect()
+        results["standard_dynamic"]["rc"] = standard_return_code[0]
+        results["standard_dynamic"]["supported"] = (standard_return_code[0] == 0)
+    except Exception as error:
+        _LOGGER.debug("[%s] Standard dynamic probe error: %s", ip, error)
 
     # 3. Middle XOR dynamic pairing (his$<timestamp ^ XOR> / standard salt)
     try:
-        cid, user, pwd = generate_initial_credentials(mac=mac, auth_profile="middle")
-        mid_rc = [None]
-        mid_lock = threading.Event()
-        mid_client = _create_probe_client(cid)
-        _setup_tls(mid_client)
-        mid_client.username_pw_set(username=user, password=pwd)
-        mid_client.on_connect = lambda c, u, f, rc: (mid_rc.__setitem__(0, rc), mid_lock.set())
-        mid_client.on_disconnect = lambda c, u, rc: mid_lock.set()
-        mid_client.connect_async(ip, 36669, 5)
-        mid_client.loop_start()
-        mid_lock.wait(timeout=timeout)
-        mid_client.loop_stop()
-        mid_client.disconnect()
-        results["middle_dynamic"]["rc"] = mid_rc[0]
-        results["middle_dynamic"]["supported"] = (mid_rc[0] == 0)
-    except Exception as e:
-        _LOGGER.debug("[%s] Middle dynamic probe error: %s", ip, e)
+        client_id, username, password = generate_initial_credentials(mac_address=mac, auth_profile="middle")
+        middle_return_code = [None]
+        middle_completion_event = threading.Event()
+        middle_client = _create_probe_client(client_id)
+        _setup_tls(middle_client)
+        middle_client.username_pw_set(username=username, password=password)
+        middle_client.on_connect = lambda client_obj, userdata, flags, rc: (
+            middle_return_code.__setitem__(0, rc),
+            middle_completion_event.set(),
+        )
+        middle_client.on_disconnect = lambda client_obj, userdata, rc: middle_completion_event.set()
+        middle_client.connect_async(ip, 36669, 5)
+        middle_client.loop_start()
+        middle_completion_event.wait(timeout=timeout)
+        middle_client.loop_stop()
+        middle_client.disconnect()
+        results["middle_dynamic"]["rc"] = middle_return_code[0]
+        results["middle_dynamic"]["supported"] = (middle_return_code[0] == 0)
+    except Exception as error:
+        _LOGGER.debug("[%s] Middle dynamic probe error: %s", ip, error)
 
     # 4. Modern XOR dynamic pairing (his$<timestamp ^ XOR> / modern salt)
     try:
-        cid, user, pwd = generate_initial_credentials(mac=mac, auth_profile="modern")
-        mod_rc = [None]
-        mod_lock = threading.Event()
-        mod_client = _create_probe_client(cid)
-        _setup_tls(mod_client)
-        mod_client.username_pw_set(username=user, password=pwd)
-        mod_client.on_connect = lambda c, u, f, rc: (mod_rc.__setitem__(0, rc), mod_lock.set())
-        mod_client.on_disconnect = lambda c, u, rc: mod_lock.set()
-        mod_client.connect_async(ip, 36669, 5)
-        mod_client.loop_start()
-        mod_lock.wait(timeout=timeout)
-        mod_client.loop_stop()
-        mod_client.disconnect()
-        results["modern_dynamic"]["rc"] = mod_rc[0]
-        results["modern_dynamic"]["supported"] = (mod_rc[0] == 0)
-    except Exception as e:
-        _LOGGER.debug("[%s] Modern dynamic probe error: %s", ip, e)
+        client_id, username, password = generate_initial_credentials(mac_address=mac, auth_profile="modern")
+        modern_return_code = [None]
+        modern_completion_event = threading.Event()
+        modern_client = _create_probe_client(client_id)
+        _setup_tls(modern_client)
+        modern_client.username_pw_set(username=username, password=password)
+        modern_client.on_connect = lambda client_obj, userdata, flags, rc: (
+            modern_return_code.__setitem__(0, rc),
+            modern_completion_event.set(),
+        )
+        modern_client.on_disconnect = lambda client_obj, userdata, rc: modern_completion_event.set()
+        modern_client.connect_async(ip, 36669, 5)
+        modern_client.loop_start()
+        modern_completion_event.wait(timeout=timeout)
+        modern_client.loop_stop()
+        modern_client.disconnect()
+        results["modern_dynamic"]["rc"] = modern_return_code[0]
+        results["modern_dynamic"]["supported"] = (modern_return_code[0] == 0)
+    except Exception as error:
+        _LOGGER.debug("[%s] Modern dynamic probe error: %s", ip, error)
 
     return results

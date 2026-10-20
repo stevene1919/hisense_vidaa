@@ -128,42 +128,47 @@ async def async_start_pairing_handshake(client: Any) -> None:
         if getattr(client, "ip", None):
             try:
                 loop = asyncio.get_running_loop()
-                fp = await loop.run_in_executor(None, client.get_device_fingerprint, 1.0)
-                tp = fp.get("transport_protocol")
-                if tp:
+                fingerprint = await loop.run_in_executor(None, client.get_device_fingerprint, 1.0)
+                transport_protocol = fingerprint.get("transport_protocol")
+                if transport_protocol:
                     with contextlib.suppress(ValueError, TypeError):
-                        tp_int = int(tp)
-                        if tp_int >= 3290:
+                        protocol_version = int(transport_protocol)
+                        if protocol_version >= 3290:
                             profiles_to_try = ["modern", "middle", "remotenow"]
-                        elif 3000 <= tp_int < 3290:
+                        elif 3000 <= protocol_version < 3290:
                             profiles_to_try = ["middle", "modern", "remotenow"]
                         else:
                             profiles_to_try = ["remotenow", "middle", "modern"]
-            except Exception as e:
-                _LOGGER.debug("[%s] Could not determine transport_protocol before auth: %s", client.ip, e)
+            except Exception as error:
+                _LOGGER.debug("[%s] Could not determine transport_protocol before auth: %s", client.ip, error)
 
-        last_err = None
-        for p in profiles_to_try:
+        last_error = None
+        for candidate_profile in profiles_to_try:
             try:
-                _LOGGER.debug("[%s] Attempting pairing auth with profile: %s", client.ip, p)
-                await client._async_start_auth_internal(profile=p)
-                client.auth_profile = p
+                _LOGGER.debug("[%s] Attempting pairing auth with profile: %s", client.ip, candidate_profile)
+                await client._async_start_auth_internal(profile=candidate_profile)
+                client.auth_profile = candidate_profile
                 return
-            except Exception as e:
-                last_err = e
-                err_msg = str(e)
+            except Exception as error:
+                last_error = error
+                error_message = str(error)
                 if (
-                    "code 5" in err_msg
-                    or "code 4" in err_msg
-                    or "code 134" in err_msg
-                    or "code 135" in err_msg
-                    or "Not authorized" in err_msg
+                    "code 5" in error_message
+                    or "code 4" in error_message
+                    or "code 134" in error_message
+                    or "code 135" in error_message
+                    or "Not authorized" in error_message
                 ):
-                    _LOGGER.info("[%s] Auth profile %s rejected by TV (%s), falling back...", client.ip, p, err_msg)
+                    _LOGGER.info(
+                        "[%s] Auth profile %s rejected by TV (%s), falling back...",
+                        client.ip,
+                        candidate_profile,
+                        error_message,
+                    )
                     continue
                 raise
-        if last_err:
-            raise last_err
+        if last_error:
+            raise last_error
 
 
 async def _async_execute_pairing_attempt(
@@ -173,9 +178,9 @@ async def _async_execute_pairing_attempt(
     client._loop = loop
     await loop.run_in_executor(None, client.disconnect)
     await asyncio.sleep(0.2)
-    tv_ts = await loop.run_in_executor(None, get_tv_timestamp, client.ip, 1.5)
+    tv_timestamp = await loop.run_in_executor(None, get_tv_timestamp, client.ip, 1.5)
     client.derive_pairing_credentials(
-        use_new_auth=use_new_auth, auth_profile=profile, timestamp=tv_ts
+        use_new_auth=use_new_auth, auth_profile=profile, timestamp=tv_timestamp
     )
     client.mqtt_client = await loop.run_in_executor(
         None, client.create_mqtt_client, client.client_id, client.username, client.password

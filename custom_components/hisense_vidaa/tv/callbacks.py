@@ -29,96 +29,96 @@ class CallbackRegistryMixin:
         """Initializes callback storage dictionary."""
         self._callbacks = defaultdict(list)
 
-    def _register_callback(self, event: str, cb: Callable) -> None:
+    def _register_callback(self, event: str, callback: Callable) -> None:
         if not hasattr(self, "_callbacks"):
             self._init_callbacks()
-        if cb not in self._callbacks[event]:
-            self._callbacks[event].append(cb)
+        if callback not in self._callbacks[event]:
+            self._callbacks[event].append(callback)
 
-    def _unregister_callback(self, event: str, cb: Callable) -> None:
-        if hasattr(self, "_callbacks") and cb in self._callbacks[event]:
-            self._callbacks[event].remove(cb)
+    def _unregister_callback(self, event: str, callback: Callable) -> None:
+        if hasattr(self, "_callbacks") and callback in self._callbacks[event]:
+            self._callbacks[event].remove(callback)
 
     def _dispatch(self, event: str, *args: Any) -> None:
         if not hasattr(self, "_callbacks"):
             return
-        for cb in list(self._callbacks[event]):
+        for callback in list(self._callbacks[event]):
             try:
-                cb(*args)
-            except Exception as e:
-                _LOGGER.error("Error in callback for %s: %s", event, e)
+                callback(*args)
+            except Exception as error:
+                _LOGGER.error("Error in callback for %s: %s", event, error)
 
-    def register_state_callback(self, cb: Callable) -> None:
-        self._register_callback("state", cb)
+    def register_state_callback(self, callback: Callable) -> None:
+        self._register_callback("state", callback)
 
-    def unregister_state_callback(self, cb: Callable) -> None:
-        self._unregister_callback("state", cb)
+    def unregister_state_callback(self, callback: Callable) -> None:
+        self._unregister_callback("state", callback)
 
-    def register_volume_callback(self, cb: Callable) -> None:
-        self._register_callback("volume", cb)
+    def register_volume_callback(self, callback: Callable) -> None:
+        self._register_callback("volume", callback)
 
-    def unregister_volume_callback(self, cb: Callable) -> None:
-        self._unregister_callback("volume", cb)
+    def unregister_volume_callback(self, callback: Callable) -> None:
+        self._unregister_callback("volume", callback)
 
-    def register_sourcelist_callback(self, cb: Callable) -> None:
-        self._register_callback("sourcelist", cb)
+    def register_sourcelist_callback(self, callback: Callable) -> None:
+        self._register_callback("sourcelist", callback)
 
-    def unregister_sourcelist_callback(self, cb: Callable) -> None:
-        self._unregister_callback("sourcelist", cb)
+    def unregister_sourcelist_callback(self, callback: Callable) -> None:
+        self._unregister_callback("sourcelist", callback)
 
-    def register_applist_callback(self, cb: Callable) -> None:
-        self._register_callback("applist", cb)
+    def register_applist_callback(self, callback: Callable) -> None:
+        self._register_callback("applist", callback)
 
-    def unregister_applist_callback(self, cb: Callable) -> None:
-        self._unregister_callback("applist", cb)
+    def unregister_applist_callback(self, callback: Callable) -> None:
+        self._unregister_callback("applist", callback)
 
-    def register_connected_callback(self, cb: Callable) -> None:
-        self._register_callback("connected", cb)
+    def register_connected_callback(self, callback: Callable) -> None:
+        self._register_callback("connected", callback)
 
-    def unregister_connected_callback(self, cb: Callable) -> None:
-        self._unregister_callback("connected", cb)
+    def unregister_connected_callback(self, callback: Callable) -> None:
+        self._unregister_callback("connected", callback)
 
-    def register_disconnected_callback(self, cb: Callable) -> None:
-        self._register_callback("disconnected", cb)
+    def register_disconnected_callback(self, callback: Callable) -> None:
+        self._register_callback("disconnected", callback)
 
-    def unregister_disconnected_callback(self, cb: Callable) -> None:
-        self._unregister_callback("disconnected", cb)
+    def unregister_disconnected_callback(self, callback: Callable) -> None:
+        self._unregister_callback("disconnected", callback)
 
-    def register_token_refreshed_callback(self, cb: Callable) -> None:
-        self._register_callback("token_refreshed", cb)
+    def register_token_refreshed_callback(self, callback: Callable) -> None:
+        self._register_callback("token_refreshed", callback)
 
-    def unregister_token_refreshed_callback(self, cb: Callable) -> None:
-        self._unregister_callback("token_refreshed", cb)
+    def unregister_token_refreshed_callback(self, callback: Callable) -> None:
+        self._unregister_callback("token_refreshed", callback)
 
-    def register_auth_failed_callback(self, cb: Callable) -> None:
-        self._register_callback("auth_failed", cb)
+    def register_auth_failed_callback(self, callback: Callable) -> None:
+        self._register_callback("auth_failed", callback)
 
-    def unregister_auth_failed_callback(self, cb: Callable) -> None:
-        self._unregister_callback("auth_failed", cb)
+    def unregister_auth_failed_callback(self, callback: Callable) -> None:
+        self._unregister_callback("auth_failed", callback)
 
-    def register_picture_callback(self, cb: Callable) -> None:
-        self._register_callback("picture", cb)
+    def register_picture_callback(self, callback: Callable) -> None:
+        self._register_callback("picture", callback)
 
-    def unregister_picture_callback(self, cb: Callable) -> None:
-        self._unregister_callback("picture", cb)
+    def unregister_picture_callback(self, callback: Callable) -> None:
+        self._unregister_callback("picture", callback)
 
-    def register_sound_callback(self, cb: Callable) -> None:
-        self._register_callback("sound", cb)
+    def register_sound_callback(self, callback: Callable) -> None:
+        self._register_callback("sound", callback)
 
-    def unregister_sound_callback(self, cb: Callable) -> None:
-        self._unregister_callback("sound", cb)
+    def unregister_sound_callback(self, callback: Callable) -> None:
+        self._unregister_callback("sound", callback)
 
-    def register_device_info_callback(self, cb: Callable) -> None:
-        self._register_callback("device_info", cb)
+    def register_device_info_callback(self, callback: Callable) -> None:
+        self._register_callback("device_info", callback)
 
-    def unregister_device_info_callback(self, cb: Callable) -> None:
-        self._unregister_callback("device_info", cb)
+    def unregister_device_info_callback(self, callback: Callable) -> None:
+        self._unregister_callback("device_info", callback)
 
-    def register_clock_drift_callback(self, cb: Callable) -> None:
-        self._register_callback("clock_drift", cb)
+    def register_clock_drift_callback(self, callback: Callable) -> None:
+        self._register_callback("clock_drift", callback)
 
-    def unregister_clock_drift_callback(self, cb: Callable) -> None:
-        self._unregister_callback("clock_drift", cb)
+    def unregister_clock_drift_callback(self, callback: Callable) -> None:
+        self._unregister_callback("clock_drift", callback)
 
     def _dispatch_clock_drift_update(self, offset: int) -> None:
         self._dispatch("clock_drift", offset)
@@ -150,14 +150,19 @@ class CallbackRegistryMixin:
         elif isinstance(data, dict) and "sourcelist" in data:
             self.sources = data["sourcelist"]
         if isinstance(self.sources, list):
-            for s in self.sources:
-                if isinstance(s, dict) and (
-                    s.get("is_signal") in ("1", 1, True)
-                    or s.get("is_active")
-                    or s.get("isactive")
-                    or s.get("active")
+            for source in self.sources:
+                if isinstance(source, dict) and (
+                    source.get("is_signal") in ("1", 1, True)
+                    or source.get("is_active")
+                    or source.get("isactive")
+                    or source.get("active")
                 ):
-                    src_name = s.get("sourcename") or s.get("sourceName") or s.get("displayname") or s.get("name")
+                    src_name = (
+                        source.get("sourcename")
+                        or source.get("sourceName")
+                        or source.get("displayname")
+                        or source.get("name")
+                    )
                     if src_name:
                         self.is_on = True
                         if not self.current_source:

@@ -121,26 +121,26 @@ class SettingMenuItem:
         options_raw = data.get("menu_opts") or data.get("options") or data.get("opts") or []
         options: list[str] = []
         if isinstance(options_raw, list):
-            for opt in options_raw:
-                if isinstance(opt, str):
-                    options.append(opt.strip())
-                elif isinstance(opt, dict) and "name" in opt:
-                    options.append(str(opt["name"]).strip())
-                elif isinstance(opt, dict) and "value" in opt:
-                    options.append(str(opt["value"]).strip())
+            for option in options_raw:
+                if isinstance(option, str):
+                    options.append(option.strip())
+                elif isinstance(option, dict) and "name" in option:
+                    options.append(str(option["name"]).strip())
+                elif isinstance(option, dict) and "value" in option:
+                    options.append(str(option["value"]).strip())
 
-        min_val = data.get("min_value", data.get("min"))
-        max_val = data.get("max_value", data.get("max"))
-        step_val = data.get("step")
+        minimum_value = data.get("min_value", data.get("min"))
+        maximum_value = data.get("max_value", data.get("max"))
+        step_value = data.get("step")
 
         return cls(
             menu_id=menu_id,
             name=name,
             value=value,
             options=options,
-            min_value=min_val,
-            max_value=max_val,
-            step=step_val,
+            min_value=minimum_value,
+            max_value=maximum_value,
+            step=step_value,
             raw_data=data,
         )
 
@@ -178,18 +178,20 @@ def find_menu_item_by_name(
     if not items:
         return None
 
-    clean_target = re.sub(r"[^a-z0-9]", "", str(target_name).lower())
+    normalized_target = re.sub(r"[^a-z0-9]", "", str(target_name).lower())
 
     # 1. Normalized exact match on name
     for item in items:
-        norm_name = re.sub(r"[^a-z0-9]", "", str(item.name).lower())
-        if clean_target and norm_name == clean_target:
+        normalized_name = re.sub(r"[^a-z0-9]", "", str(item.name).lower())
+        if normalized_target and normalized_name == normalized_target:
             return item
 
     # 2. Substring match
     for item in items:
-        norm_name = re.sub(r"[^a-z0-9]", "", str(item.name).lower())
-        if clean_target and (clean_target in norm_name or norm_name in clean_target):
+        normalized_name = re.sub(r"[^a-z0-9]", "", str(item.name).lower())
+        if normalized_target and (
+            normalized_target in normalized_name or normalized_name in normalized_target
+        ):
             return item
 
     # 3. Fallback by menu ID

@@ -20,11 +20,11 @@ class TopicPaths:
 
 def build_topic_paths(client_id: str) -> TopicPaths:
     """Builds standard VIDAA MQTT topic paths for a client session."""
-    cid = client_id or "hisense_service"
+    resolved_client_id = client_id or "hisense_service"
     return TopicPaths(
-        ui=f"/remoteapp/tv/ui_service/{cid}/",
-        platform=f"/remoteapp/tv/platform_service/{cid}/",
-        mobile=f"/remoteapp/mobile/{cid}/",
+        ui=f"/remoteapp/tv/ui_service/{resolved_client_id}/",
+        platform=f"/remoteapp/tv/platform_service/{resolved_client_id}/",
+        mobile=f"/remoteapp/mobile/{resolved_client_id}/",
         broadcast=TOPIC_BROADCAST_BASEPATH,
-        remote=f"/remoteapp/tv/remote_service/{cid}/",
+        remote=f"/remoteapp/tv/remote_service/{resolved_client_id}/",
     )
