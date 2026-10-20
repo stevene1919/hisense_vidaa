@@ -5,12 +5,14 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv, issue_registry as ir
+from homeassistant.helpers.event import async_track_time_interval
 
 from .client import HisenseTvClient
 from .const import (
@@ -57,6 +59,7 @@ PLATFORMS: list[str] = [
 ]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+DEFAULT_CLOCK_SYNC_INTERVAL = timedelta(hours=2)
 
 
 @dataclass
@@ -243,6 +246,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
 
     await hass.config_entries.async_forward_entry_setups(entry, platforms_to_setup)
     entry.async_on_unload(entry.add_update_listener(update_listener))
+
+    # Periodic background TV clock synchronization
+    async def _async_sync_tv_clock(_now: Any = None) -> None:
+        """Periodically syncs the TV UPnP hardware clock."""
+        if not client.connected or not client.is_on:
+            return
+        try:
+            await hass.async_add_executor_job(client.sync_clock, 2.0)
+        except Exception as err:
+            _LOGGER.debug("[%s] Periodic clock sync failed: %s", client.ip, err)
+
+    entry.async_on_unload(
+        async_track_time_interval(hass, _async_sync_tv_clock, DEFAULT_CLOCK_SYNC_INTERVAL)
+    )
+
+    # Wake transition clock synchronization
+    last_power_state = [client.is_on]
+
+    def _on_state_change(_state: dict[str, Any]) -> None:
+        was_on = last_power_state[0]
+        now_on = client.is_on
+        last_power_state[0] = now_on
+        if not was_on and now_on:
+            hass.loop.call_soon_threadsafe(
+                lambda: hass.async_create_background_task(
+                    _async_sync_tv_clock(),
+                    f"hisense_vidaa_wake_clock_sync_{entry.entry_id}",
+                )
+            )
+
+    client.register_state_callback(_on_state_change)
+    entry.async_on_unload(lambda: client.unregister_state_callback(_on_state_change))
+
     return True
 
 

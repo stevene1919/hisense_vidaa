@@ -268,3 +268,73 @@ async def test_update_listener_options_filtering(mock_entry, mock_client, monkey
     mock_entry.options = {"enable_remote": False}
     await update_listener(hass, mock_entry)
     hass.config_entries.async_reload.assert_awaited_once_with(mock_entry.entry_id)
+
+
+@pytest.mark.anyio
+async def test_periodic_and_wake_clock_sync(mock_entry, mock_client, monkeypatch):
+    """Test periodic clock sync and wake transition sync registered during entry setup."""
+    hass = MagicMock()
+    hass.data = {}
+    hass.config_entries = MagicMock()
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    hass.loop = MagicMock()
+    hass.loop.call_soon_threadsafe = MagicMock(side_effect=lambda func, *args: func(*args))
+    def mock_create_bg_task(coro, name):
+        coro.close()
+        return None
+
+    hass.async_create_background_task = MagicMock(side_effect=mock_create_bg_task)
+
+    scheduled_intervals = []
+
+    def mock_track_time(hass_obj, action, interval):
+        scheduled_intervals.append((action, interval))
+        return MagicMock()
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.async_track_time_interval",
+        mock_track_time,
+    )
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.HisenseTvClient",
+        lambda *args, **kwargs: mock_client,
+    )
+    mock_client.has_notifications = False
+    mock_client.check_and_refresh_token = MagicMock(return_value=False)
+    mock_client.connect_and_run = MagicMock()
+    mock_client.sync_clock = MagicMock(return_value=0)
+    mock_client.connected = True
+    mock_client.is_on = False
+
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+
+    await async_setup_entry(hass, mock_entry)
+
+    # Verify periodic interval was registered (2 hours)
+    assert len(scheduled_intervals) == 1
+    action, interval = scheduled_intervals[0]
+    assert interval.total_seconds() == 7200
+
+    # Trigger periodic callback while TV is off -> sync_clock should not be called
+    await action()
+    mock_client.sync_clock.assert_not_called()
+
+    # Trigger periodic callback while TV is on -> sync_clock called
+    mock_client.is_on = True
+    await action()
+    mock_client.sync_clock.assert_called_once_with(2.0)
+
+    # Verify wake transition hook
+    mock_client.register_state_callback.assert_called_once()
+    state_cb = mock_client.register_state_callback.call_args[0][0]
+
+    # Transition from on to off -> no wake sync
+    mock_client.is_on = False
+    state_cb({"statetype": "fake_sleep_0"})
+    hass.async_create_background_task.assert_not_called()
+
+    # Transition from off to on -> wake sync triggered
+    mock_client.is_on = True
+    state_cb({"statetype": "app"})
+    hass.async_create_background_task.assert_called_once()
+

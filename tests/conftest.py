@@ -539,6 +539,14 @@ if "homeassistant" not in sys.modules:
     helpers.service_info = service_info
     sys.modules["homeassistant.helpers.service_info"] = service_info
 
+    # helpers.event
+    event = types.ModuleType("homeassistant.helpers.event")
+    def async_track_time_interval(hass, action, interval):
+        return lambda: None
+    event.async_track_time_interval = async_track_time_interval
+    helpers.event = event
+    sys.modules["homeassistant.helpers.event"] = event
+
     ha.helpers = helpers
     sys.modules["homeassistant.helpers"] = helpers
     sys.modules["homeassistant"] = ha
