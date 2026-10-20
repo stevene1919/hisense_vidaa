@@ -11,7 +11,7 @@ from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import CONF_IP_ADDRESS
-from .discovery import parse_ssdp_discovery, parse_zeroconf_discovery
+from .discovery import DiscoveredTvInfo, parse_ssdp_discovery, parse_zeroconf_discovery
 from .flow_helpers import async_resolve_mac
 
 if TYPE_CHECKING:
@@ -24,7 +24,7 @@ class DiscoveryFlowMixin:
     """Mixin for SSDP and Zeroconf device discovery steps."""
 
     async def _async_handle_discovery(
-        self: HisenseVidaaConfigFlow, parsed: Any
+        self: HisenseVidaaConfigFlow, parsed: DiscoveredTvInfo | None
     ) -> config_entries.ConfigFlowResult:
         """Handle common SSDP and Zeroconf device resolution and flow routing."""
         if not parsed or not parsed.host:

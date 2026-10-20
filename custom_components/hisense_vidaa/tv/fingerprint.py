@@ -9,7 +9,10 @@ import socket
 import time
 import urllib.error
 import urllib.request
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from zeroconf import Zeroconf
 
 try:
     import defusedxml.ElementTree as ET
@@ -335,7 +338,7 @@ def query_upnp_descriptor(ip: str, timeout: float = 2.0) -> dict[str, Any]:
     return info
 
 
-def query_mdns_fingerprint(ip: str, timeout: float = 2.0, zc: Any = None) -> dict[str, Any]:
+def query_mdns_fingerprint(ip: str, timeout: float = 2.0, zc: Zeroconf | None = None) -> dict[str, Any]:
     """Queries mDNS/Zeroconf records for AirPlay/HomeKit device models."""
     info: dict[str, Any] = {
         "model_code": None,
@@ -351,7 +354,7 @@ def query_mdns_fingerprint(ip: str, timeout: float = 2.0, zc: Any = None) -> dic
         target_ip = ip
 
         class MDNSListener:
-            def add_service(self, zc_inst: Any, type_: str, name: str) -> None:
+            def add_service(self, zc_inst: Zeroconf, type_: str, name: str) -> None:
                 try:
                     s_info = zc_inst.get_service_info(type_, name)
                     if s_info:
@@ -361,10 +364,10 @@ def query_mdns_fingerprint(ip: str, timeout: float = 2.0, zc: Any = None) -> dic
                 except Exception:
                     pass
 
-            def update_service(self, zc_inst: Any, type_: str, name: str) -> None:
+            def update_service(self, zc_inst: Zeroconf, type_: str, name: str) -> None:
                 pass
 
-            def remove_service(self, zc_inst: Any, type_: str, name: str) -> None:
+            def remove_service(self, zc_inst: Zeroconf, type_: str, name: str) -> None:
                 pass
 
         # Never create a Zeroconf instance here.  Home Assistant 2024.1+ logs a
@@ -402,7 +405,7 @@ def query_mdns_fingerprint(ip: str, timeout: float = 2.0, zc: Any = None) -> dic
     return info
 
 
-def get_device_fingerprint(ip: str, timeout: float = 2.0, zc: Any = None) -> dict[str, Any]:
+def get_device_fingerprint(ip: str, timeout: float = 2.0, zc: Zeroconf | None = None) -> dict[str, Any]:
     """Fetches UPnP, DLNA, and mDNS device metadata for model and capability identification."""
     info = {
         "friendly_name": None,

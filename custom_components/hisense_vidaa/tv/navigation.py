@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .aliases import KEY_ALIASES
+
+if TYPE_CHECKING:
+    from ..client import HisenseTvClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -228,7 +231,7 @@ def resolve_command_key(command: str) -> str:
     return KEY_ALIASES.get(cmd_clean, command.strip().upper())
 
 
-def launch_app_by_name(client: Any, app_name: str) -> bool:
+def launch_app_by_name(client: HisenseTvClient, app_name: str) -> bool:
     """Launches an app on the TV by searching the client's cached app registry."""
     matched = match_app(getattr(client, "apps", []), app_name)
     if matched:
@@ -238,14 +241,14 @@ def launch_app_by_name(client: Any, app_name: str) -> bool:
     return True
 
 
-def change_source_by_name_or_id(client: Any, source_target: str) -> bool:
+def change_source_by_name_or_id(client: HisenseTvClient, source_target: str) -> bool:
     """Changes input source on the TV by matching against available sources."""
     sid, sname = resolve_source(getattr(client, "sources", []), source_target)
     client.change_source(sid, sname)
     return True
 
 
-def cycle_tv_source(client: Any) -> bool:
+def cycle_tv_source(client: HisenseTvClient) -> bool:
     """Cycles through input sources on the TV."""
     cycled = get_next_cycled_source(
         getattr(client, "sources", []), getattr(client, "current_source", None)

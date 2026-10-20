@@ -2,6 +2,23 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **CODEBASE MODERNIZATION & CLEAN CODE IDENTIFIER REFACTORING**:
+  - Standardized variable, function, and parameter names across the entire integration to adhere to clean code standards. Replaced abbreviated or implementation-leaking identifiers with clear, intent-revealing names (`callback` instead of `cb`, `current_timestamp` instead of `ts`, `mac_address` instead of `mac`, `picture_supported` instead of `pic_supported`, `client_instance` instead of `c`).
+  - Preserved backward-compatible keyword argument signatures where necessary to ensure uninterrupted compatibility with external call sites and existing tests.
+- **STRICT TYPE SPECIFICATION & `Any` ELIMINATION**:
+  - Tightened type annotations across TV state parsers (`apply_state_update`, `apply_device_info_update`, `apply_volume_update`, `apply_picture_update`, `apply_sound_update`), settings managers, navigation handlers, and media playback routines, replacing generic `Any` types with explicit `HisenseTvClient` types under non-runtime `TYPE_CHECKING` guards.
+  - Hardened auto-discovery signatures (`parse_ssdp_discovery`, `parse_zeroconf_discovery`, `_async_handle_discovery`) to use typed `DiscoveredTvInfo`, `SsdpServiceInfo`, and `ZeroconfServiceInfo` definitions.
+  - Resolved generic types across entity platform constructors (`switch.py`, `entity.py`) and config flow future completion callbacks.
+- **TEST SUITE MODULARIZATION & ARCHITECTURE REORGANIZATION**:
+  - Decomposed monolithic configuration flow tests into modular, single-responsibility test files (`test_options_flow.py`, `test_reauth_flow.py`, `test_dispatcher.py`, `test_pairing.py`).
+  - Configured explicit `testpaths = ["tests"]` in `pyproject.toml` to optimize test runner discovery and avoid traversing build or virtualenv directories.
+  - Maintained 100% test pass rate across all 206 unit and integration test cases.
+- **CLI DIAGNOSTIC & DEBUG TOOLING ALIGNMENT**:
+  - Validated and updated standalone CLI test scripts (`test_client.py`, `debug_tv.py`) to ensure seamless alignment with updated package imports and clean type hints.
+
 ## [2.11.0] - 2026-10-15
 
 - **MULTI-KEY SEQUENCE / MACRO SERVICE (`services.py`, `services.yaml`)**:

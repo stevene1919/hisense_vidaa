@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import contextlib
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ..client import HisenseTvClient
 
 __all__ = [
     "build_media_channel_label",
@@ -143,7 +146,7 @@ def build_media_player_source_list(
 
 
 def execute_play_media(
-    client: Any,
+    client: HisenseTvClient,
     app_dict: dict[str, dict[str, Any]],
     media_type: str,
     media_id: str,
@@ -190,7 +193,7 @@ def execute_play_media(
 
 
 def execute_select_source(
-    client: Any,
+    client: HisenseTvClient,
     source_dict: dict[str, dict[str, Any]],
     app_dict: dict[str, dict[str, Any]],
     source: str,

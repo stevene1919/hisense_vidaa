@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -332,7 +333,7 @@ class HisenseVidaaConfigFlow(
                 client.disconnect()
 
     @callback
-    def _async_log_remove_exception(self, future: Any) -> None:
+    def _async_log_remove_exception(self, future: asyncio.Future[Any]) -> None:
         """Log a failed async_remove disconnect (the future is otherwise fire-and-forget)."""
         if not future.cancelled() and future.exception() is not None:
             _LOGGER.debug("Error disconnecting flow client during async_remove: %s", future.exception())

@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import contextlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .settings import parse_settings_payload
 
+if TYPE_CHECKING:
+    from ..client import HisenseTvClient
 
-def apply_state_update(client: Any, data: Any) -> None:
+
+def apply_state_update(client: HisenseTvClient, data: Any) -> None:
     """Updates client runtime state attributes from TV state payload."""
     if not isinstance(data, dict):
         return
@@ -74,7 +77,7 @@ def apply_state_update(client: Any, data: Any) -> None:
             client.sleep_timer = int(data["sleep_time"])
 
 
-def apply_device_info_update(client: Any, data: Any) -> None:
+def apply_device_info_update(client: HisenseTvClient, data: Any) -> None:
     """Updates client device information attributes from TV device info payload."""
     if not isinstance(data, dict):
         return
@@ -107,7 +110,7 @@ def apply_device_info_update(client: Any, data: Any) -> None:
         client.firmware_version = str(firmware_version).strip()
 
 
-def apply_volume_update(client: Any, data: Any) -> None:
+def apply_volume_update(client: HisenseTvClient, data: Any) -> None:
     """Updates client volume and mute attributes from TV volume payload."""
     if not isinstance(data, dict):
         return
@@ -136,7 +139,7 @@ def apply_volume_update(client: Any, data: Any) -> None:
         client.muted = bool(data["muted"])
 
 
-def apply_picture_update(client: Any, data: Any) -> None:
+def apply_picture_update(client: HisenseTvClient, data: Any) -> None:
     """Updates client picture settings from TV picture settings payload."""
     parsed_items = parse_settings_payload(data)
     for item in parsed_items:
@@ -155,7 +158,7 @@ def apply_picture_update(client: Any, data: Any) -> None:
                 client.contrast = int(item.value)
 
 
-def apply_sound_update(client: Any, data: Any) -> None:
+def apply_sound_update(client: HisenseTvClient, data: Any) -> None:
     """Updates client sound settings from TV sound settings payload."""
     parsed_items = parse_settings_payload(data)
     for item in parsed_items:

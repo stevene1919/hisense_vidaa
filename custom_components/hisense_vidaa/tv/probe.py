@@ -9,12 +9,15 @@ import sys
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..protocol.auth import probe_tv_auth_methods
 from ..protocol.certs import resolve_ca_certificate, resolve_certificates
 from .fingerprint import format_drift_human, get_arp_mac, get_tv_timestamp
 from .settings import SettingMenuItem
+
+if TYPE_CHECKING:
+    from ..client import HisenseTvClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,7 +102,7 @@ def create_client_from_creds(
 
 
 def probe_tv_features(
-    client: Any,
+    client: HisenseTvClient,
     wait_time: float = 2.5,
 ) -> FeatureProbeResult:
     """Connect to TV, query menu trees, sources, apps, and return probe results."""
@@ -335,7 +338,7 @@ format_probe_results_markdown = generate_markdown_report
 
 
 def probe_tv_features_and_report(
-    client: Any,
+    client: HisenseTvClient,
     ping_result: dict[str, Any],
     ip: str,
     mac: str | None = None,

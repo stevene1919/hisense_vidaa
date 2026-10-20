@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
+
+if TYPE_CHECKING:
+    from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
+    from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .protocol.ping import ping_tv
 from .tv.fingerprint import (
@@ -50,7 +55,9 @@ class DiscoveredTvInfo:
     is_vidaa: bool = True
 
 
-def parse_ssdp_discovery(discovery_info: Any) -> DiscoveredTvInfo | None:
+def parse_ssdp_discovery(
+    discovery_info: SsdpServiceInfo | Mapping[str, Any] | Any,
+) -> DiscoveredTvInfo | None:
     """Parses SSDP discovery info, validating VIDAA compatibility and extracting host, model, MAC, and friendly name."""
     upnp = getattr(discovery_info, "upnp", None) or {}
     model_desc = upnp.get("modelDescription") or ""
@@ -110,7 +117,9 @@ def parse_ssdp_discovery(discovery_info: Any) -> DiscoveredTvInfo | None:
     )
 
 
-def parse_zeroconf_discovery(discovery_info: Any) -> DiscoveredTvInfo | None:
+def parse_zeroconf_discovery(
+    discovery_info: ZeroconfServiceInfo | Mapping[str, Any] | Any,
+) -> DiscoveredTvInfo | None:
     """Parses Zeroconf / mDNS discovery info."""
     host = getattr(discovery_info, "host", None)
     if not host:

@@ -6,7 +6,10 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ..client import HisenseTvClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -203,7 +206,7 @@ def find_menu_item_by_name(
     return None
 
 
-def get_picture_settings(client: Any) -> None:
+def get_picture_settings(client: HisenseTvClient) -> None:
     """Requests current picture settings menu information from the TV."""
     if client.connected and client.mqtt_client:
         client.mqtt_client.publish(
@@ -213,7 +216,7 @@ def get_picture_settings(client: Any) -> None:
 
 
 def set_picture_setting(
-    client: Any, menu_id: int, menu_value: str | int | float
+    client: HisenseTvClient, menu_id: int, menu_value: str | int | float
 ) -> None:
     """Changes a specific picture setting value."""
     if client.connected and client.mqtt_client:
@@ -227,7 +230,7 @@ def set_picture_setting(
             client.picture_settings[int(menu_id)].value = menu_value
 
 
-def set_picture_mode(client: Any, mode: str) -> None:
+def set_picture_mode(client: HisenseTvClient, mode: str) -> None:
     """Sets the TV picture mode preset."""
     pm_item = find_menu_item_by_name(client.picture_settings, "Picture Mode", DEFAULT_MENU_ID_PICTURE_MODE)
     menu_id = pm_item.menu_id if pm_item else DEFAULT_MENU_ID_PICTURE_MODE
@@ -235,7 +238,7 @@ def set_picture_mode(client: Any, mode: str) -> None:
     client.picture_mode = mode
 
 
-def set_backlight(client: Any, level: int) -> None:
+def set_backlight(client: HisenseTvClient, level: int) -> None:
     """Sets the TV backlight level (0–100)."""
     bl_item = find_menu_item_by_name(client.picture_settings, "Backlight", DEFAULT_MENU_ID_BACKLIGHT)
     menu_id = bl_item.menu_id if bl_item else DEFAULT_MENU_ID_BACKLIGHT
@@ -244,7 +247,7 @@ def set_backlight(client: Any, level: int) -> None:
     client.backlight = clamped
 
 
-def set_brightness(client: Any, level: int) -> None:
+def set_brightness(client: HisenseTvClient, level: int) -> None:
     """Sets the TV brightness level (0–100)."""
     br_item = find_menu_item_by_name(client.picture_settings, "Brightness", DEFAULT_MENU_ID_BRIGHTNESS)
     menu_id = br_item.menu_id if br_item else DEFAULT_MENU_ID_BRIGHTNESS
@@ -253,7 +256,7 @@ def set_brightness(client: Any, level: int) -> None:
     client.brightness = clamped
 
 
-def set_contrast(client: Any, level: int) -> None:
+def set_contrast(client: HisenseTvClient, level: int) -> None:
     """Sets the TV contrast level (0–100)."""
     ct_item = find_menu_item_by_name(client.picture_settings, "Contrast", DEFAULT_MENU_ID_CONTRAST)
     menu_id = ct_item.menu_id if ct_item else DEFAULT_MENU_ID_CONTRAST
@@ -262,7 +265,7 @@ def set_contrast(client: Any, level: int) -> None:
     client.contrast = clamped
 
 
-def get_sound_settings(client: Any) -> None:
+def get_sound_settings(client: HisenseTvClient) -> None:
     """Requests current sound settings menu information from the TV."""
     if client.connected and client.mqtt_client:
         client.mqtt_client.publish(
@@ -272,7 +275,7 @@ def get_sound_settings(client: Any) -> None:
 
 
 def set_sound_setting(
-    client: Any, menu_id: int, menu_value: str | int | float
+    client: HisenseTvClient, menu_id: int, menu_value: str | int | float
 ) -> None:
     """Changes a specific sound setting value."""
     if client.connected and client.mqtt_client:
@@ -286,7 +289,7 @@ def set_sound_setting(
             client.sound_settings[int(menu_id)].value = menu_value
 
 
-def set_sound_mode(client: Any, mode: str) -> None:
+def set_sound_mode(client: HisenseTvClient, mode: str) -> None:
     """Sets the TV sound mode preset."""
     sm_item = find_menu_item_by_name(client.sound_settings, "Sound Mode", DEFAULT_MENU_ID_SOUND_MODE)
     menu_id = sm_item.menu_id if sm_item else DEFAULT_MENU_ID_SOUND_MODE

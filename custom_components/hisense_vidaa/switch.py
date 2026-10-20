@@ -22,6 +22,7 @@ from .entity import HisenseVidaaEntity
 
 if TYPE_CHECKING:
     from . import HisenseVidaaConfigEntry
+    from .client import HisenseTvClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
 
     def __init__(
         self,
-        client: Any,
+        client: HisenseTvClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -110,7 +111,7 @@ class HisenseVidaaDebugLoggingSwitch(HisenseVidaaEntity, SwitchEntity):
 
     def __init__(
         self,
-        client: Any,
+        client: HisenseTvClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)

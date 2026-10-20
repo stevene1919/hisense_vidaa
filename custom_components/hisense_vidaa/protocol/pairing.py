@@ -7,9 +7,12 @@ import contextlib
 import json
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..tv.fingerprint import get_tv_timestamp
+
+if TYPE_CHECKING:
+    from ..client import HisenseTvClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,7 +37,7 @@ class PairingStatusError(Exception):
         self.status = status
 
 
-async def async_probe_pairing_challenge(client: Any, timeout: float = 8.0) -> bool:
+async def async_probe_pairing_challenge(client: HisenseTvClient, timeout: float = 8.0) -> bool:
     """Opens the static session and probes whether the TV demands PIN pairing.
 
     On the static session ``gettvstate`` is answered by an ``authentication``
@@ -106,7 +109,7 @@ async def async_probe_pairing_challenge(client: Any, timeout: float = 8.0) -> bo
         client._pairing_event_future = None
 
 
-async def async_start_pairing_handshake(client: Any) -> None:
+async def async_start_pairing_handshake(client: HisenseTvClient) -> None:
     """Initiates pairing handshake cascade across auto/modern/middle/remotenow profiles."""
     if getattr(client, "auth_profile", "auto") in ("legacy", "static"):
         client.client_id = "hisenseservice"
@@ -172,7 +175,7 @@ async def async_start_pairing_handshake(client: Any) -> None:
 
 
 async def _async_execute_pairing_attempt(
-    client: Any, profile: str = "modern", use_new_auth: bool | None = None
+    client: HisenseTvClient, profile: str = "modern", use_new_auth: bool | None = None
 ) -> None:
     loop = asyncio.get_running_loop()
     client._loop = loop
@@ -243,7 +246,7 @@ async def _async_execute_pairing_attempt(
     client._connect_ack_future = None
 
 
-async def async_submit_pin_code(client: Any, pin_code: str) -> dict[str, Any]:
+async def async_submit_pin_code(client: HisenseTvClient, pin_code: str) -> dict[str, Any]:
     """Submits the PIN code entered by the user and retrieves token pair from TV."""
     loop = asyncio.get_running_loop()
     client._loop = loop
