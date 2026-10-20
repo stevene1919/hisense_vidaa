@@ -148,6 +148,15 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - Added step-by-step instructions for 4 debugging methods: on-the-fly via entity switch, UI integration menu, `configuration.yaml` `logger:`, and `logger.set_level` action.
   - Documented official sanitized diagnostics bundle download, privacy masks, and repairs flow.
 
+### 16. Device Registry Metadata & Manufacturer Branding Normalization (`discovery.py`, `entity.py`, `client.py`)
+
+- [ ] **Sanitize Generic Manufacturer Placeholders in Discovery (`discovery.py`)**:
+  - Many Hisense VIDAA televisions hardcode `<manufacturer>SmartTV</manufacturer>` and `<manufacturerURL>http://www.smarttv.com</manufacturerURL>` in their embedded UPnP DLNA MediaRenderer descriptor (`/MediaServer/rendererdevicedesc.xml`), causing Home Assistant to display `58A5FX by SmartTV` in the device card.
+  - In `parse_ssdp_discovery`, detect generic placeholder manufacturers (`"SmartTV"`, `"Smart TV"`, or empty strings) and cross-reference the `#CAP#` block's `brand` attribute (e.g. `brand=his` -> `"Hisense"`, `brand=tos` -> `"Toshiba"`, `brand=loe` -> `"Loewe"`) to assign the true manufacturer brand.
+- [ ] **Live MQTT Device Registry Enrichment (`entity.py`, `client.py`, `coordinator.py`)**:
+  - Dynamically populate `model`, `manufacturer`, and `sw_version` in `DeviceInfo` using live telemetry received over MQTT from `platform_service/data/getdeviceinfo` (`model_name`, `tv_version`) and `platform_service/data/gettvinfo` (`brand`, `uVersion`), rather than relying exclusively on static config entry data.
+  - Call Home Assistant's `async_update_device` upon receiving the first `getdeviceinfo` payload to enrich the device registry with the TV's official firmware build (e.g. `V0000.06.30T.N0921` / `U6.1.0`) and exact model number (`58A53FXVT`).
+
 
 ---
 
