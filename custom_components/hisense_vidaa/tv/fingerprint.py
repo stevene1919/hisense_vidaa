@@ -11,13 +11,17 @@ import urllib.error
 import urllib.request
 from typing import TYPE_CHECKING, Any
 
+from .upnp_desc import (
+    parse_soap_mute_response,
+    parse_soap_transport_info_response,
+    parse_soap_volume_response,
+    parse_upnp_description_properties,
+    parse_upnp_friendly_name,
+    parse_upnp_renderer_descriptor,
+)
+
 if TYPE_CHECKING:
     from zeroconf import Zeroconf
-
-try:
-    import defusedxml.ElementTree as ET
-except ImportError:
-    import xml.etree.ElementTree as ET
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +33,12 @@ __all__ = [
     "get_arp_mac",
     "get_device_fingerprint",
     "get_tv_timestamp",
+    "parse_soap_mute_response",
+    "parse_soap_transport_info_response",
+    "parse_soap_volume_response",
+    "parse_upnp_description_properties",
+    "parse_upnp_friendly_name",
+    "parse_upnp_renderer_descriptor",
     "probe_upnp_services",
     "query_mdns_fingerprint",
     "query_upnp_descriptor",
@@ -89,10 +99,7 @@ def probe_upnp_services(ip: str, verbose: bool = True) -> dict[str, Any]:
             with urllib.request.urlopen(req, timeout=1.5) as resp:
                 if resp.status == 200:
                     text = resp.read().decode("utf-8", errors="ignore")
-                    root = ET.fromstring(text)
-                    ns = {"d": "urn:schemas-upnp-org:device-1-0"}
-                    fn = root.find(".//d:friendlyName", ns)
-                    friendly = fn.text if fn is not None else "Unknown"
+                    friendly = parse_upnp_friendly_name(text) or "Unknown"
                     if verbose:
                         print(f"✅ Found UPnP MediaRenderer on port {port} (Name: {friendly})")
                     active_port = port
@@ -118,20 +125,16 @@ def probe_upnp_services(ip: str, verbose: bool = True) -> dict[str, Any]:
         "<InstanceID>0</InstanceID><Channel>Master</Channel>",
     )
     if status == 200:
-        try:
-            root = ET.fromstring(resp_xml)
-            vol = root.find(".//CurrentVolume")
-            vol_val = int(vol.text) if vol is not None and vol.text else None
-            results["volume"] = vol_val
-            if verbose:
-                print(f"  [GetVolume] Status: 200 OK -> Current Volume: {vol_val}")
-        except Exception as e:
-            if verbose:
-                print(f"  [GetVolume] Status: 200 OK (XML parse error: {e})")
+        vol_val = parse_soap_volume_response(resp_xml)
+        results["volume"] = vol_val
+        if verbose:
+            print(f"  [GetVolume] Status: 200 OK -> Current Volume: {vol_val}")
     elif verbose:
         print(f"  [GetVolume] Failed with status {status}: {resp_xml[:100]}")
 
     # 2. Test RenderingControl GetMute
+    if verbose:
+        print("\n--- 2. Testing RenderingControl (Volume & Mute) ---")
     status, resp_xml = send_soap(
         active_port,
         "/upnp/control/mingusrcr",
@@ -140,22 +143,16 @@ def probe_upnp_services(ip: str, verbose: bool = True) -> dict[str, Any]:
         "<InstanceID>0</InstanceID><Channel>Master</Channel>",
     )
     if status == 200:
-        try:
-            root = ET.fromstring(resp_xml)
-            mute = root.find(".//CurrentMute")
-            is_muted = mute.text == "1" if mute is not None else False
-            results["muted"] = is_muted
-            if verbose:
-                print(f"  [GetMute]   Status: 200 OK -> Muted: {is_muted}")
-        except Exception as e:
-            if verbose:
-                print(f"  [GetMute]   Status: 200 OK (XML parse error: {e})")
+        is_muted = parse_soap_mute_response(resp_xml)
+        results["muted"] = is_muted
+        if verbose:
+            print(f"  [GetMute]   Status: 200 OK -> Muted: {is_muted}")
     elif verbose:
         print(f"  [GetMute]   Failed with status {status}: {resp_xml[:100]}")
 
     # 3. Test AVTransport GetTransportInfo
     if verbose:
-        print("\n--- 2. Testing AVTransport (Playback State) ---")
+        print("\n--- 3. Testing AVTransport (Playback State) ---")
     status, resp_xml = send_soap(
         active_port,
         "/upnp/control/mingusavtr",
@@ -164,19 +161,11 @@ def probe_upnp_services(ip: str, verbose: bool = True) -> dict[str, Any]:
         "<InstanceID>0</InstanceID>",
     )
     if status == 200:
-        try:
-            root = ET.fromstring(resp_xml)
-            state = root.find(".//CurrentTransportState")
-            st = root.find(".//CurrentTransportStatus")
-            state_str = state.text if state is not None else "Unknown"
-            st_str = st.text if st is not None else "Unknown"
-            results["transport_state"] = state_str
-            results["transport_status"] = st_str
-            if verbose:
-                print(f"  [GetTransportInfo] Status: 200 OK -> State: {state_str}, Status: {st_str}")
-        except Exception as e:
-            if verbose:
-                print(f"  [GetTransportInfo] Status: 200 OK (XML parse error: {e})")
+        state_str, st_str = parse_soap_transport_info_response(resp_xml)
+        results["transport_state"] = state_str
+        results["transport_status"] = st_str
+        if verbose:
+            print(f"  [GetTransportInfo] Status: 200 OK -> State: {state_str}, Status: {st_str}")
     elif verbose:
         print(f"  [GetTransportInfo] Failed with status {status}: {resp_xml[:100]}")
 
@@ -291,45 +280,10 @@ def query_upnp_descriptor(ip: str, timeout: float = 2.0) -> dict[str, Any]:
             req = urllib.request.Request(url, headers={"User-Agent": "HisenseVIDAATestClient"})
             with urllib.request.urlopen(req, timeout=timeout) as response:
                 content = response.read().decode("utf-8", errors="ignore")
-                root = ET.fromstring(content)
-                ns = {"d": "urn:schemas-upnp-org:device-1-0"}
-                device = root.find("d:device", ns)
-                if device is not None:
-                    fn = device.find("d:friendlyName", ns)
-                    mn = device.find("d:modelName", ns)
-                    mnum = device.find("d:modelNumber", ns)
-                    mfg = device.find("d:manufacturer", ns)
-                    desc = device.find("d:modelDescription", ns)
-
-                    if fn is not None:
-                        info["friendly_name"] = fn.text
-                    if mn is not None:
-                        info["model_name"] = mn.text
-                    if mnum is not None:
-                        info["model_number"] = mnum.text
-                    if mfg is not None:
-                        info["manufacturer"] = mfg.text
-
-                    if desc is not None and desc.text:
-                        info["upnp_raw"] = desc.text.strip()
-                        for line in desc.text.strip().splitlines():
-                            if "=" in line:
-                                k, v = line.split("=", 1)
-                                k, v = k.strip(), v.strip()
-                                if k == "macWifi":
-                                    info["mac_wifi"] = v
-                                elif k == "macEthernet":
-                                    info["mac_ethernet"] = v
-                                elif k == "brand":
-                                    info["brand"] = v
-                                elif k == "platform":
-                                    info["platform"] = v
-                                elif k == "vidaa_support":
-                                    info["vidaa_support"] = v
-                                elif k == "voice":
-                                    info["voice"] = v
-                                elif k == "transport_protocol":
-                                    info["transport_protocol"] = v
+                parsed_desc = parse_upnp_renderer_descriptor(content)
+                for key, val in parsed_desc.items():
+                    if val is not None:
+                        info[key] = val
             if info["model_name"] or info["friendly_name"]:
                 break
         except Exception as e:

@@ -626,3 +626,21 @@ async def test_change_channel_service():
     with pytest.raises(ServiceValidationError):
         await handlers[SERVICE_CHANGE_CHANNEL](call_invalid)
 
+
+def test_services_helpers() -> None:
+    """Test service helper functions."""
+    from custom_components.hisense_vidaa.services_target import (
+        _as_id_set,
+        parse_key_sequence,
+    )
+
+    assert _as_id_set(None) == set()
+    assert _as_id_set("living_room") == {"living_room"}
+    assert _as_id_set(["room_1", "room_2"]) == {"room_1", "room_2"}
+
+    assert parse_key_sequence("KEY_HOME, KEY_UP, KEY_OK") == ["KEY_HOME", "KEY_UP", "KEY_OK"]
+    assert parse_key_sequence(["KEY_1", "KEY_2"]) == ["KEY_1", "KEY_2"]
+    assert parse_key_sequence(None) == []
+    assert parse_key_sequence("") == []
+
+

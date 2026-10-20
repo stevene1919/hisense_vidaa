@@ -15,7 +15,13 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 - **TEST SUITE MODULARIZATION & ARCHITECTURE REORGANIZATION**:
   - Decomposed monolithic configuration flow tests into modular, single-responsibility test files (`test_options_flow.py`, `test_reauth_flow.py`, `test_dispatcher.py`, `test_pairing.py`).
   - Configured explicit `testpaths = ["tests"]` in `pyproject.toml` to optimize test runner discovery and avoid traversing build or virtualenv directories.
-  - Maintained 100% test pass rate across all 206 unit and integration test cases.
+  - Expanded unit test coverage with dedicated tests for standalone descriptor parsing and service helpers (`test_upnp_desc_parsers`, `test_services_helpers`), reaching 208 passing tests.
+- **SERVICE TARGET RESOLUTION & SCHEMA MODULARIZATION (`services.py`, `services_target.py`)**:
+  - Extracted target resolution algorithms, entity/device/area/floor registry lookups, schema selector generators, and key sequence parsers out of `services.py` into a dedicated `services_target.py` helper module.
+  - Streamlined `services.py` from 581 lines down to 386 lines, focusing the primary file on declarative Home Assistant service registration and execution logic while preserving 100% backward compatibility for all re-exported symbols.
+- **UPNP XML DESCRIPTOR DECOUPLING (`tv/fingerprint.py`, `tv/upnp_desc.py`)**:
+  - Decoupled XML traversal from network socket and HTTP I/O by establishing `tv/upnp_desc.py`.
+  - Introduced dedicated, isolated parsers for UPnP MediaRenderer descriptors (`parse_upnp_renderer_descriptor`), friendly names, model descriptions, and SOAP responses (`parse_soap_volume_response`, `parse_soap_mute_response`, `parse_soap_transport_info_response`), enabling zero-mock unit testing of XML payloads.
 - **CLI DIAGNOSTIC & DEBUG TOOLING ALIGNMENT**:
   - Validated and updated standalone CLI test scripts (`test_client.py`, `debug_tv.py`) to ensure seamless alignment with updated package imports and clean type hints.
 

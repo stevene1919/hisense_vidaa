@@ -253,3 +253,55 @@ async def test_client_upnp_wrappers():
         probe = await tv_client.async_upnp_probe()
         assert probe["friendly_name"] == "Living Room TV"
         mock_probe.assert_called_once()
+
+
+def test_upnp_desc_parsers() -> None:
+    """Test dedicated UPnP descriptor parsing utilities."""
+    from custom_components.hisense_vidaa.tv.upnp_desc import (
+        parse_upnp_description_properties,
+        parse_upnp_friendly_name,
+        parse_upnp_renderer_descriptor,
+    )
+
+    xml_sample = """<?xml version="1.0"?>
+    <root xmlns="urn:schemas-upnp-org:device-1-0">
+        <device>
+            <friendlyName>Lounge Hisense TV</friendlyName>
+            <modelName>VIDAA UHD</modelName>
+            <modelNumber>65U7H</modelNumber>
+            <manufacturer>Hisense</manufacturer>
+            <modelDescription>
+                macWifi=aa:bb:cc:dd:ee:01
+                macEthernet=aa:bb:cc:dd:ee:02
+                brand=Hisense
+                platform=MTK9602
+                vidaa_support=1
+                voice=remote
+                transport_protocol=mqtt
+            </modelDescription>
+        </device>
+    </root>
+    """
+
+    assert parse_upnp_friendly_name(xml_sample) == "Lounge Hisense TV"
+    assert parse_upnp_friendly_name("<invalid>xml") is None
+
+    props = parse_upnp_description_properties("brand=Hisense\nplatform=MTK9602\nkey_without_val")
+    assert props == {"brand": "Hisense", "platform": "MTK9602"}
+
+    desc = parse_upnp_renderer_descriptor(xml_sample)
+    assert desc["friendly_name"] == "Lounge Hisense TV"
+    assert desc["model_name"] == "VIDAA UHD"
+    assert desc["model_number"] == "65U7H"
+    assert desc["manufacturer"] == "Hisense"
+    assert desc["mac_wifi"] == "aa:bb:cc:dd:ee:01"
+    assert desc["mac_ethernet"] == "aa:bb:cc:dd:ee:02"
+    assert desc["brand"] == "Hisense"
+    assert desc["platform"] == "MTK9602"
+    assert desc["vidaa_support"] == "1"
+    assert desc["voice"] == "remote"
+    assert desc["transport_protocol"] == "mqtt"
+
+    empty_desc = parse_upnp_renderer_descriptor("not valid xml")
+    assert empty_desc["friendly_name"] is None
+

@@ -15,6 +15,7 @@ import os
 import sys
 import time
 from datetime import UTC, datetime
+from typing import Any
 
 # Ensure script directory or HA config is in Python path for package resolution
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -61,7 +62,7 @@ from custom_components.hisense_vidaa.tv.probe import (
 DEFAULT_CREDS_FILE = os.path.join(SCRIPT_DIR, "credentials.json")
 
 
-def do_ping(ip: str, creds: dict, certfile: str | None, keyfile: str | None, profile: str = "auto", ca_cert: str | None = None, verify_ssl: bool = False) -> None:
+def do_ping(ip: str, creds: dict[str, Any], certfile: str | None, keyfile: str | None, profile: str = "auto", ca_cert: str | None = None, verify_ssl: bool = False) -> None:
     print(f"\n[PING] Probing TV connectivity and MQTT broker at {ip}:36669 (Profile: {profile})...")
 
     access_token = None
@@ -175,7 +176,7 @@ def do_ping(ip: str, creds: dict, certfile: str | None, keyfile: str | None, pro
         sys.exit(1)
 
 
-def do_probe(ip: str, creds: dict, certfile: str | None, keyfile: str | None, profile: str = "auto", ca_cert: str | None = None, verify_ssl: bool = False) -> None:
+def do_probe(ip: str, creds: dict[str, Any], certfile: str | None, keyfile: str | None, profile: str = "auto", ca_cert: str | None = None, verify_ssl: bool = False) -> None:
     print(f"\n🔍 [PROBE] Probing TV features and menu capabilities at {ip}:36669...\n")
     client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl, auth_profile=profile) if creds else HisenseTvClient(
         ip=ip, certfile=certfile, keyfile=keyfile, ca_cert=ca_cert, auth_profile=profile, verify_ssl=verify_ssl
@@ -222,7 +223,7 @@ def do_probe(ip: str, creds: dict, certfile: str | None, keyfile: str | None, pr
     print("\n" + "=" * 70)
 
 
-def do_report(ip: str, mac: str | None, creds: dict, certfile: str | None, keyfile: str | None, profile: str = "auto", ca_cert: str | None = None, verify_ssl: bool = False, probe: bool = False) -> None:
+def do_report(ip: str, mac: str | None, creds: dict[str, Any], certfile: str | None, keyfile: str | None, profile: str = "auto", ca_cert: str | None = None, verify_ssl: bool = False, probe: bool = False) -> None:
     print(f"\n🔍 [REPORT] Collecting diagnostics and generating GitHub issue report for {ip}...\n")
 
     access_token = None
@@ -395,7 +396,7 @@ async def do_auth(ip: str, mac: str | None, certfile: str | None, keyfile: str |
         sys.exit(1)
 
 
-async def do_listen(creds: dict, certfile: str | None, keyfile: str | None, save_path: str, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
+async def do_listen(creds: dict[str, Any], certfile: str | None, keyfile: str | None, save_path: str, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
     ip = creds.get("ip_address")
     print(f"\n[LISTEN] Connecting to TV at {ip} with stored credentials...")
 
@@ -430,7 +431,7 @@ async def do_listen(creds: dict, certfile: str | None, keyfile: str | None, save
         client.disconnect()
 
 
-def do_refresh(creds: dict, certfile: str | None, keyfile: str | None, save_path: str, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
+def do_refresh(creds: dict[str, Any], certfile: str | None, keyfile: str | None, save_path: str, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
     ip = creds.get("ip_address")
     print(f"\n[REFRESH] Testing synchronous token refresh against TV at {ip}...")
 
@@ -449,7 +450,7 @@ def do_refresh(creds: dict, certfile: str | None, keyfile: str | None, save_path
         print("❌ Token refresh failed. Check TV connectivity and broker logs.")
 
 
-def do_send_key(creds: dict, key_name: str, certfile: str | None, keyfile: str | None, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
+def do_send_key(creds: dict[str, Any], key_name: str, certfile: str | None, keyfile: str | None, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
     ip = creds.get("ip_address")
     print(f"\n[KEY] Sending key '{key_name}' to TV at {ip}...")
 
@@ -470,7 +471,7 @@ def do_send_key(creds: dict, key_name: str, certfile: str | None, keyfile: str |
     client.disconnect()
 
 
-def do_launch_app(creds: dict, app_name: str, app_id: str | None = None, app_url: str | None = None, certfile: str | None = None, keyfile: str | None = None, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
+def do_launch_app(creds: dict[str, Any], app_name: str, app_id: str | None = None, app_url: str | None = None, certfile: str | None = None, keyfile: str | None = None, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
     ip = creds.get("ip_address")
     print(f"\n[APP] Launching application '{app_name or app_id}' on TV at {ip}...")
 
