@@ -171,8 +171,8 @@ class ConnectionManagerMixin:
                 threading.Thread(target=self.sync_clock, kwargs={"timeout": 2.0}, daemon=True).start()
             subscribe_standard_tv_topics(
                 client=client,
-                broadcast_basepath=self.topicBrcsBasepath,
-                mobile_basepath=self.topicMobiBasepath,
+                broadcast_basepath=self.topics.broadcast,
+                mobile_basepath=self.topics.mobile,
             )
             if self.refresh_token and not self._token_manager.refreshing_token:
                 self._token_manager.proactive_token_refresh()

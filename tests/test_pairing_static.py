@@ -43,7 +43,7 @@ def _static_client() -> HisenseTvClient:
     client.client_id = "hisenseservice"
     client.username = "hisenseservice"
     client.password = "multimqttservice"
-    client.define_topic_paths()
+    client.update_topic_paths()
     return client
 
 
@@ -91,7 +91,7 @@ def test_dispatcher_connect_ack_does_not_resolve_pin_future():
         client._connect_ack_future = loop.create_future()
         dispatch_incoming_mqtt_message(
             client,
-            client.topicMobiBasepath + "ui_service/data/vidaa_app_connect",
+            f"{client.topics.mobile}ui_service/data/vidaa_app_connect",
             '{"connect_result":1}',
         )
         assert not client._auth_future.done(), "connect-ACK must not resolve the PIN future"
@@ -107,7 +107,7 @@ def test_dispatcher_auth_challenge_resolves_pin_future():
     try:
         client._auth_future = loop.create_future()
         dispatch_incoming_mqtt_message(
-            client, client.topicMobiBasepath + "ui_service/data/authentication", ""
+            client, f"{client.topics.mobile}ui_service/data/authentication", ""
         )
         assert client._auth_future.done()
         assert client._auth_future.result() == ""
@@ -126,7 +126,7 @@ def test_dispatcher_close_and_toast_resolve_pairing_event_future():
         try:
             fut = loop.create_future()
             client._pairing_event_future = fut
-            dispatch_incoming_mqtt_message(client, client.topicMobiBasepath + topic_suffix, "")
+            dispatch_incoming_mqtt_message(client, f"{client.topics.mobile}{topic_suffix}", "")
             assert fut.done() and fut.result() == expected
         finally:
             loop.close()
@@ -169,7 +169,7 @@ async def test_static_pin_submit_publishes_authnum_without_token_wait():
     result = await async_submit_pin_code(client, "0656")
 
     assert result == {}
-    assert (client.topicTVUIBasepath + "actions/authenticationcode", '{"authNum": 656}') in published
+    assert (f"{client.topics.ui}actions/authenticationcode", '{"authNum": 656}') in published
     assert not any("gettoken" in topic for topic, _ in published)
 
 
@@ -177,7 +177,7 @@ async def test_static_pin_submit_publishes_authnum_without_token_wait():
 async def test_dynamic_pin_submit_still_requests_token():
     client = HisenseTvClient(ip="192.168.50.12", auth_profile="modern")
     client.client_id = "aa$his$BB_vidaacommon_001"
-    client.define_topic_paths()
+    client.update_topic_paths()
     published: list[tuple[str, object]] = []
     mqtt = MagicMock()
 
@@ -468,7 +468,7 @@ def _probe_client() -> tuple[HisenseTvClient, MagicMock]:
     client.client_id = "hisenseservice"
     client.username = "hisenseservice"
     client.password = "multimqttservice"
-    client.define_topic_paths()
+    client.update_topic_paths()
     client.mqtt_client = None
     client.connected = True  # skip the ~10s connect-wait loop
     mqtt = MagicMock()
@@ -613,7 +613,7 @@ async def test_dynamic_connect_ack_unblocks_retry_wait(monkeypatch):
     client.username = "his$1"
     client.password = "pw"
     client.access_token = "at"
-    client.define_topic_paths()
+    client.update_topic_paths()
     client.connected = True
 
     monkeypatch.setattr(
@@ -660,6 +660,6 @@ def test_dispatcher_device_info_requires_exact_topic():
 
     # Exact topic for THIS client still routes.
     dispatch_incoming_mqtt_message(
-        client, client.topicMobiBasepath + "platform_service/data/getdeviceinfo", "{}"
+        client, f"{client.topics.mobile}platform_service/data/getdeviceinfo", "{}"
     )
     assert client._dispatch_device_info_update.called

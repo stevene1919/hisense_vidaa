@@ -53,17 +53,17 @@ def query_initial_state(client: HisenseTvClient, min_interval: float = 3.0) -> N
         # /remoteapp/mobile/broadcast/ui_service/state upon MQTT connect.
         # Do NOT publish actions/gettvstate: on VIDAA firmware, gettvstate
         # is the pairing challenge trigger that commands the TV to pop up a PIN.
-        client.mqtt_client.publish(client.topicTVUIBasepath + "actions/capability", "")
+        client.mqtt_client.publish(f"{client.topics.ui}actions/capability", "")
         time.sleep(0.05)
-        client.mqtt_client.publish(client.topicTVPSBasepath + "actions/getvolume", "")
+        client.mqtt_client.publish(f"{client.topics.platform}actions/getvolume", "")
         time.sleep(0.05)
-        client.mqtt_client.publish(client.topicTVUIBasepath + "actions/sourcelist", "")
+        client.mqtt_client.publish(f"{client.topics.ui}actions/sourcelist", "")
         time.sleep(0.05)
-        client.mqtt_client.publish(client.topicTVUIBasepath + "actions/applist", "")
+        client.mqtt_client.publish(f"{client.topics.ui}actions/applist", "")
         time.sleep(0.05)
-        client.mqtt_client.publish(client.topicTVPSBasepath + "actions/getdeviceinfo", "")
+        client.mqtt_client.publish(f"{client.topics.platform}actions/getdeviceinfo", "")
         time.sleep(0.05)
-        client.mqtt_client.publish(client.topicTVPSBasepath + "actions/gettvinfo", "")
+        client.mqtt_client.publish(f"{client.topics.platform}actions/gettvinfo", "")
 
 
 def show_message(
@@ -81,15 +81,15 @@ def show_message(
         "type": "notify",
     }
     payload = json.dumps(payload_dict)
-    client.mqtt_client.publish(client.topicTVUIBasepath + "actions/showmessage", payload)
-    client.mqtt_client.publish(client.topicTVUIBasepath + "actions/toast", payload)
+    client.mqtt_client.publish(f"{client.topics.ui}actions/showmessage", payload)
+    client.mqtt_client.publish(f"{client.topics.ui}actions/toast", payload)
     return True
 
 
 def send_key(client: HisenseTvClient, key: str) -> None:
     """Publishes a raw keypress event to the TV."""
     if client.connected and client.mqtt_client:
-        client.mqtt_client.publish(client.topicRemoBasepath + "actions/sendkey", key)
+        client.mqtt_client.publish(f"{client.topics.remote}actions/sendkey", key)
 
 
 def send_command(client: HisenseTvClient, command: str) -> bool:
@@ -165,7 +165,7 @@ def change_source_by_name_or_id(client: HisenseTvClient, target: str) -> bool:
 def set_volume(client: HisenseTvClient, volume: int) -> None:
     """Sets the absolute volume on the TV (0–100)."""
     if client.connected and client.mqtt_client:
-        client.mqtt_client.publish(client.topicTVPSBasepath + "actions/changevolume", str(volume))
+        client.mqtt_client.publish(f"{client.topics.platform}actions/changevolume", str(volume))
 
 
 def change_source(
@@ -194,7 +194,7 @@ def change_source(
         payload_dict = {"sourceid": source_id}
 
     payload = json.dumps(payload_dict)
-    client.mqtt_client.publish(client.topicTVUIBasepath + "actions/changesource", payload)
+    client.mqtt_client.publish(f"{client.topics.ui}actions/changesource", payload)
 
     # Dual publish for newer VIDAA firmware expecting source name
     if sname and sid != sname and str(sid).isdigit():
@@ -204,7 +204,7 @@ def change_source(
             sname,
         )
         payload_modern = json.dumps({"sourceid": sname, "sourcename": sname})
-        client.mqtt_client.publish(client.topicTVUIBasepath + "actions/changesource", payload_modern)
+        client.mqtt_client.publish(f"{client.topics.ui}actions/changesource", payload_modern)
 
     if str(sid).upper() == "TV" or (sname and str(sname).upper() == "TV") or str(source_id).lower() == "tv":
         client.send_key("KEY_LIVETV")
@@ -221,15 +221,15 @@ def launch_app(client: HisenseTvClient, app_id: str, app_name: str, url: str) ->
             "appName": app_name,
             "appUrl": url,
         })
-        client.mqtt_client.publish(client.topicTVUIBasepath + "actions/launchapp", payload)
+        client.mqtt_client.publish(f"{client.topics.ui}actions/launchapp", payload)
 
 
 def send_text_input(client: HisenseTvClient, text: str, action: str = "insert") -> None:
     """Sends virtual keyboard string input to active on-screen input/search field."""
     if client.connected and client.mqtt_client:
         payload = json.dumps({"text": text, "action": action})
-        client.mqtt_client.publish(client.topicTVPSBasepath + "actions/txtinputdata", payload)
-        client.mqtt_client.publish(client.topicTVPSBasepath + "actions/bwsinputdata", payload)
+        client.mqtt_client.publish(f"{client.topics.platform}actions/txtinputdata", payload)
+        client.mqtt_client.publish(f"{client.topics.platform}actions/bwsinputdata", payload)
 
 
 def turn_on_tv(

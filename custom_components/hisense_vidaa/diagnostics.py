@@ -81,9 +81,9 @@ async def async_get_config_entry_diagnostics(
             "access_token_expires_in_seconds": token_expires_in,
             "refresh_token_duration_days": client.refresh_token_duration,
             "has_refresh_token": bool(client.refresh_token),
-            "topic_tv_ui": getattr(client, "topicTVUIBasepath", None),
-            "topic_tv_ps": getattr(client, "topicTVPSBasepath", None),
-            "topic_mobile": getattr(client, "topicMobiBasepath", None),
+            "topic_tv_ui": client.topics.ui if hasattr(client, "topics") else None,
+            "topic_tv_ps": client.topics.platform if hasattr(client, "topics") else None,
+            "topic_mobile": client.topics.mobile if hasattr(client, "topics") else None,
         }
 
     # [F12-leg2/F8-leg6]: redact the whole payload, not just entry.data: the

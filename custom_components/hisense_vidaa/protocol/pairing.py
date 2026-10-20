@@ -79,11 +79,11 @@ async def async_probe_pairing_challenge(client: Any, timeout: float = 8.0) -> bo
         # Mirror the push topics the pairing handshake subscribes to, plus the
         # close/toast topics so the TV's dialog events unblock the wait.
         client.mqtt_client.subscribe([
-            (client.topicMobiBasepath + "#", 0),
-            (client.topicMobiBasepath + "ui_service/data/authentication", 0),
-            (client.topicMobiBasepath + "ui_service/data/authenticationcode", 0),
-            (client.topicMobiBasepath + "ui_service/data/authenticationcodeclose", 0),
-            (client.topicMobiBasepath + "ui_service/data/authenticationcodetoast", 0),
+            (f"{client.topics.mobile}#", 0),
+            (f"{client.topics.mobile}ui_service/data/authentication", 0),
+            (f"{client.topics.mobile}ui_service/data/authenticationcode", 0),
+            (f"{client.topics.mobile}ui_service/data/authenticationcodeclose", 0),
+            (f"{client.topics.mobile}ui_service/data/authenticationcodetoast", 0),
         ])
         await asyncio.sleep(0.3)
 
@@ -97,7 +97,7 @@ async def async_probe_pairing_challenge(client: Any, timeout: float = 8.0) -> bo
             if loop.time() >= next_trigger:
                 # gettvstate is the documented trigger; a second publish inside
                 # the window re-opens the dialog if the first was missed.
-                client.mqtt_client.publish(client.topicTVUIBasepath + "actions/gettvstate", "")
+                client.mqtt_client.publish(f"{client.topics.ui}actions/gettvstate", "")
                 next_trigger = loop.time() + timeout / 2
             await asyncio.sleep(0.2)
         return False
@@ -174,7 +174,7 @@ async def _async_execute_pairing_attempt(
     await loop.run_in_executor(None, client.disconnect)
     await asyncio.sleep(0.2)
     tv_ts = await loop.run_in_executor(None, get_tv_timestamp, client.ip, 1.5)
-    client.generate_initial_creds(
+    client.derive_pairing_credentials(
         use_new_auth=use_new_auth, auth_profile=profile, timestamp=tv_ts
     )
     client.mqtt_client = await loop.run_in_executor(
@@ -201,19 +201,19 @@ async def _async_execute_pairing_attempt(
         raise Exception("Cannot connect to TV MQTT Broker (connection timeout)")
 
     client.mqtt_client.subscribe([
-        (client.topicTVUIBasepath + "actions/vidaa_app_connect", 0),
-        (client.topicMobiBasepath + "#", 0),
-        (client.topicMobiBasepath + "ui_service/data/authentication", 0),
-        (client.topicMobiBasepath + "ui_service/data/authenticationcode", 0),
-        (client.topicMobiBasepath + "ui_service/data/vidaa_app_connect", 0),
-        (client.topicMobiBasepath + "platform_service/data/tokenissuance", 0),
+        (f"{client.topics.ui}actions/vidaa_app_connect", 0),
+        (f"{client.topics.mobile}#", 0),
+        (f"{client.topics.mobile}ui_service/data/authentication", 0),
+        (f"{client.topics.mobile}ui_service/data/authenticationcode", 0),
+        (f"{client.topics.mobile}ui_service/data/vidaa_app_connect", 0),
+        (f"{client.topics.mobile}platform_service/data/tokenissuance", 0),
     ])
 
     await asyncio.sleep(0.5)
 
     for attempt in range(3):
         client.mqtt_client.publish(
-            client.topicTVUIBasepath + "actions/vidaa_app_connect",
+            f"{client.topics.ui}actions/vidaa_app_connect",
             '{"app_version":2,"connect_result":0,"device_type":"Mobile App"}',
         )
         try:
@@ -249,7 +249,7 @@ async def async_submit_pin_code(client: Any, pin_code: str) -> dict[str, Any]:
         raise Exception("MQTT client not initialized")
 
     client.mqtt_client.publish(
-        client.topicTVUIBasepath + "actions/authenticationcode",
+        f"{client.topics.ui}actions/authenticationcode",
         json.dumps({"authNum": int(pin_code)}),
     )
 
@@ -282,8 +282,8 @@ async def async_submit_pin_code(client: Any, pin_code: str) -> dict[str, Any]:
         return {}
 
     client._token_future = loop.create_future()
-    client.mqtt_client.publish(client.topicTVPSBasepath + "data/gettoken", '{"refreshtoken": ""}')
-    client.mqtt_client.publish(client.topicTVUIBasepath + "actions/authenticationcodeclose")
+    client.mqtt_client.publish(f"{client.topics.platform}data/gettoken", '{"refreshtoken": ""}')
+    client.mqtt_client.publish(f"{client.topics.ui}actions/authenticationcodeclose")
 
     try:
         token_payload_str = await asyncio.wait_for(client._token_future, timeout=15)

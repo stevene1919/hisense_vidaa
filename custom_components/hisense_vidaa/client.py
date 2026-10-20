@@ -109,11 +109,6 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
 
         # Topic paths
         self.topics = build_topic_paths(self.client_id)
-        self.topicBrcsBasepath = self.topics.broadcast
-        self.topicTVUIBasepath = self.topics.ui
-        self.topicTVPSBasepath = self.topics.platform
-        self.topicMobiBasepath = self.topics.mobile
-        self.topicRemoBasepath = self.topics.remote
 
         # UPnP Client for zero-cert fast reachability, volume, and playback state
         self.upnp = HisenseUpnpClient(self.ip)
@@ -276,23 +271,14 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
     def update_topic_paths(self) -> None:
         """Sets up topic paths for the specific client ID."""
         self.topics = build_topic_paths(self.client_id)
-        self.topicTVUIBasepath = self.topics.ui
-        self.topicTVPSBasepath = self.topics.platform
-        self.topicMobiBasepath = self.topics.mobile
-        self.topicRemoBasepath = self.topics.remote
-        self.topicBrcsBasepath = self.topics.broadcast
 
-    def define_topic_paths(self) -> None:
-        """Deprecated alias for update_topic_paths."""
-        self.update_topic_paths()
-
-    def generate_initial_creds(
+    def derive_pairing_credentials(
         self,
         use_new_auth: bool | None = None,
         auth_profile: str | None = None,
         timestamp: int | None = None,
     ) -> None:
-        """Generates initial dynamic credentials for challenge-response pairing.
+        """Derives initial dynamic credentials for challenge-response pairing.
 
         ``timestamp`` must be supplied by callers that fetched the TV clock
         (off-loop); when omitted the local clock is used.
@@ -306,7 +292,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         )
         self.update_topic_paths()
         _LOGGER.debug(
-            "Generated initial creds (profile=%s, use_new_auth=%s, ts=%s) - Client ID: %s, Username: %s",
+            "Derived pairing credentials (profile=%s, use_new_auth=%s, ts=%s) - Client ID: %s, Username: %s",
             profile,
             use_new_auth,
             timestamp,

@@ -205,7 +205,7 @@ def get_picture_settings(client: Any) -> None:
     """Requests current picture settings menu information from the TV."""
     if client.connected and client.mqtt_client:
         client.mqtt_client.publish(
-            client.topicTVPSBasepath + "actions/picturesetting",
+            f"{client.topics.platform}actions/picturesetting",
             json.dumps({"action": "get_menu_info"}),
         )
 
@@ -220,7 +220,7 @@ def set_picture_setting(
             "menu_id": int(menu_id),
             "menu_value": str(menu_value),
         })
-        client.mqtt_client.publish(client.topicTVPSBasepath + "actions/picturesetting", payload)
+        client.mqtt_client.publish(f"{client.topics.platform}actions/picturesetting", payload)
         if int(menu_id) in client.picture_settings:
             client.picture_settings[int(menu_id)].value = menu_value
 
@@ -264,7 +264,7 @@ def get_sound_settings(client: Any) -> None:
     """Requests current sound settings menu information from the TV."""
     if client.connected and client.mqtt_client:
         client.mqtt_client.publish(
-            client.topicTVPSBasepath + "actions/soundsetting",
+            f"{client.topics.platform}actions/soundsetting",
             json.dumps({"action": "get_menu_info"}),
         )
 
@@ -279,7 +279,7 @@ def set_sound_setting(
             "menu_id": int(menu_id),
             "menu_value": str(menu_value),
         })
-        client.mqtt_client.publish(client.topicTVPSBasepath + "actions/soundsetting", payload)
+        client.mqtt_client.publish(f"{client.topics.platform}actions/soundsetting", payload)
         if int(menu_id) in client.sound_settings:
             client.sound_settings[int(menu_id)].value = menu_value
 

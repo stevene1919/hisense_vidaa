@@ -26,7 +26,7 @@ def test_key_aliases():
 def test_state_dispatch_callbacks():
     """Test state update messages trigger registered callbacks with parsed data."""
     client = HisenseTvClient(ip="192.168.50.12", client_id="test_client")
-    client.define_topic_paths()
+    client.update_topic_paths()
 
     received_state = []
     received_volume = []
@@ -41,21 +41,21 @@ def test_state_dispatch_callbacks():
     mock_msg = MagicMock()
 
     # 1. State update message on broadcast topic
-    mock_msg.topic = client.topicBrcsBasepath + "ui_service/state"
+    mock_msg.topic = f"{client.topics.broadcast}ui_service/state"
     mock_msg.payload = b'{"statetype": "fake_sleep_0"}'
     client._on_message(None, None, mock_msg)
     assert len(received_state) == 1
     assert received_state[0]["statetype"] == "fake_sleep_0"
 
     # 2. Volume update message on broadcast topic
-    mock_msg.topic = client.topicBrcsBasepath + "platform_service/actions/volumechange"
+    mock_msg.topic = f"{client.topics.broadcast}platform_service/actions/volumechange"
     mock_msg.payload = b'{"volume_value": 25, "volume_type": 0}'
     client._on_message(None, None, mock_msg)
     assert len(received_volume) == 1
     assert received_volume[0]["volume_value"] == 25
 
     # 3. App list update message
-    mock_msg.topic = client.topicMobiBasepath + "ui_service/data/applist"
+    mock_msg.topic = f"{client.topics.mobile}ui_service/data/applist"
     mock_msg.payload = b'[{"appId": "1", "appName": "Netflix", "appUrl": "netflix://"}, {"appId": "2", "appName": "YouTube", "appUrl": "youtube://"}]'
     client._on_message(None, None, mock_msg)
     assert len(received_apps) == 1
@@ -63,7 +63,7 @@ def test_state_dispatch_callbacks():
     assert received_apps[0][0]["appName"] == "Netflix"
 
     # 4. Source list update message
-    mock_msg.topic = client.topicMobiBasepath + "ui_service/data/sourcelist"
+    mock_msg.topic = f"{client.topics.mobile}ui_service/data/sourcelist"
     mock_msg.payload = b'[{"sourceId": "1", "sourceName": "HDMI 1"}, {"sourceId": "2", "sourceName": "HDMI 2 (eARC)"}]'
     client._on_message(None, None, mock_msg)
     assert len(received_sources) == 1
@@ -74,13 +74,13 @@ def test_state_dispatch_callbacks():
 def test_volume_alternate_topic_dispatch():
     """Test volume update messages on alternate VIDAA firmware topics."""
     client = HisenseTvClient(ip="192.168.50.12", client_id="test_client")
-    client.define_topic_paths()
+    client.update_topic_paths()
 
     received_volume = []
     client.register_volume_callback(lambda data: received_volume.append(data))
 
     mock_msg = MagicMock()
-    mock_msg.topic = client.topicBrcsBasepath + "ui_service/volume"
+    mock_msg.topic = f"{client.topics.broadcast}ui_service/volume"
     mock_msg.payload = b'{"volume_value": 42, "volume_type": 0}'
     client._on_message(None, None, mock_msg)
 
@@ -211,10 +211,10 @@ def test_source_cycling_and_command_helpers():
 def test_volume_and_mute_state_parsing():
     """Test volume and mute parsing properly distinguishes ARC volume from mute packets."""
     client = HisenseTvClient(ip="192.168.50.12", client_id="test_client")
-    client.define_topic_paths()
+    client.update_topic_paths()
 
     mock_msg = MagicMock()
-    mock_msg.topic = client.topicBrcsBasepath + "platform_service/actions/volumechange"
+    mock_msg.topic = f"{client.topics.broadcast}platform_service/actions/volumechange"
 
     # ARC / eARC volume broadcast (volume_type = 1): updates volume, must not set muted=True
     mock_msg.payload = b'{"volume_value": 35, "volume_type": 1}'
@@ -236,7 +236,7 @@ def test_volume_and_mute_state_parsing():
 def test_livetv_state_parsing_and_cycling():
     """Test Live TV broadcast parsing without sourcename and cycling over hardware sources."""
     client = HisenseTvClient(ip="192.168.50.12", client_id="test_client")
-    client.define_topic_paths()
+    client.update_topic_paths()
     client.change_source = MagicMock()
 
     client.sources = [
@@ -249,7 +249,7 @@ def test_livetv_state_parsing_and_cycling():
     ]
 
     mock_msg = MagicMock()
-    mock_msg.topic = client.topicBrcsBasepath + "ui_service/state"
+    mock_msg.topic = f"{client.topics.broadcast}ui_service/state"
     mock_msg.payload = b'{"statetype":"livetv","list_param":"400001","channel_num":"5000","channel_name":"Mythbusters","sourceid":"TV"}'
     client._on_message(None, None, mock_msg)
 

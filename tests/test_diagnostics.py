@@ -125,9 +125,14 @@ async def test_diagnostics_redacts_fingerprint_and_topic_client_id():
     mock_client.access_token_duration = 3600
     mock_client.refresh_token = "secret_refresh_token"
     mock_client.refresh_token_duration = 86400
-    mock_client.topicTVUIBasepath = f"ui_service/{client_id}/"
-    mock_client.topicTVPSBasepath = f"platform_service/{client_id}/"
-    mock_client.topicMobiBasepath = f"mobile/{client_id}/"
+    from custom_components.hisense_vidaa.protocol.topics import TopicPaths
+    mock_client.topics = TopicPaths(
+        ui=f"ui_service/{client_id}/",
+        platform=f"platform_service/{client_id}/",
+        mobile=f"mobile/{client_id}/",
+        broadcast="/remoteapp/mobile/broadcast/",
+        remote=f"remote_service/{client_id}/",
+    )
     mock_client.get_device_fingerprint.return_value = {
         "model_name": "65U7G",
         "mac_wifi": mac,

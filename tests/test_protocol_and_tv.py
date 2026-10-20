@@ -180,11 +180,17 @@ def test_settings_item_and_probe_report() -> None:
 
 def test_dispatch_incoming_mqtt_message() -> None:
     from custom_components.hisense_vidaa.protocol.dispatcher import dispatch_incoming_mqtt_message
+    from custom_components.hisense_vidaa.protocol.topics import TopicPaths
 
     mock_client = MagicMock()
     mock_client.ip = "192.168.50.12"
-    mock_client.topicMobiBasepath = "hisense_sub_test/"
-    mock_client.topicBrcsBasepath = "hisense_broadcast/"
+    mock_client.topics = TopicPaths(
+        ui="hisense_ui/",
+        platform="hisense_platform/",
+        mobile="hisense_sub_test/",
+        broadcast="hisense_broadcast/",
+        remote="hisense_remote/",
+    )
     mock_client._auth_future = None
     mock_client._auth_code_future = None
     mock_client._token_future = None
@@ -266,7 +272,7 @@ def test_on_connect_subscribes_client_own_mobile_push_tree() -> None:
         for topic, _qos in call.args[0]:
             subscribed.append(topic)
 
-    assert client.topicMobiBasepath + "#" in subscribed
+    assert f"{client.topics.mobile}#" in subscribed
     client.disconnect()
 
 
@@ -279,7 +285,7 @@ def test_query_initial_state_requests_capability() -> None:
 
     client.query_initial_state()
 
-    capability_topic = client.topicTVUIBasepath + "actions/capability"
+    capability_topic = f"{client.topics.ui}actions/capability"
     published = {c.args[0]: c.args[1] for c in mqtt_mock.publish.call_args_list}
     assert capability_topic in published
     assert published[capability_topic] == ""

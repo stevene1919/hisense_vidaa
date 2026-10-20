@@ -25,7 +25,7 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
     # vidaa_app_connect acknowledgement below is a weaker signal (an already
     # authorised client gets it too, with no dialog) and must NOT stand in for
     # the challenge.
-    if client._auth_future and topic == client.topicMobiBasepath + "ui_service/data/authentication":
+    if client._auth_future and topic == f"{client.topics.mobile}ui_service/data/authentication":
         client._safe_set_future_result(client._auth_future, payload)
         return
 
@@ -33,7 +33,7 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
     # It only means the request was accepted, so it is logged and tracked on its
     # own future (the dynamic pairing cascade still falls back to it); it never
     # resolves the PIN-shown future.
-    if topic == client.topicMobiBasepath + "ui_service/data/vidaa_app_connect":
+    if topic == f"{client.topics.mobile}ui_service/data/vidaa_app_connect":
         _LOGGER.info("[%s] TV acknowledged vidaa_app_connect (not a PIN confirmation): %s", ip, payload)
         ack_future = getattr(client, "_connect_ack_future", None)
         if ack_future:
@@ -44,8 +44,8 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
     # ("another remote is pairing"). Neither carries a result, but both must
     # unblock a pending pairing wait so the flow can surface a retryable error.
     if topic in (
-        client.topicMobiBasepath + "ui_service/data/authenticationcodeclose",
-        client.topicMobiBasepath + "ui_service/data/authenticationcodetoast",
+        f"{client.topics.mobile}ui_service/data/authenticationcodeclose",
+        f"{client.topics.mobile}ui_service/data/authenticationcodetoast",
     ):
         event = "closed" if topic.endswith("/authenticationcodeclose") else "busy"
         _LOGGER.info("[%s] TV reported pairing dialog %s", ip, event)
@@ -54,22 +54,22 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
             client._safe_set_future_result(event_future, event)
         return
 
-    if client._auth_code_future and topic == client.topicMobiBasepath + "ui_service/data/authenticationcode":
+    if client._auth_code_future and topic == f"{client.topics.mobile}ui_service/data/authenticationcode":
         client._safe_set_future_result(client._auth_code_future, payload)
         return
 
     if client._token_future and topic in (
-        client.topicMobiBasepath + "platform_service/data/tokenissuance",
-        client.topicMobiBasepath + "platform_service/data/gettoken",
+        f"{client.topics.mobile}platform_service/data/tokenissuance",
+        f"{client.topics.mobile}platform_service/data/gettoken",
     ):
         client._safe_set_future_result(client._token_future, payload)
         return
 
     # 2. State & power updates
     if topic in (
-        client.topicBrcsBasepath + "ui_service/state",
-        client.topicMobiBasepath + "ui_service/data/gettvstate",
-        client.topicMobiBasepath + "ui_service/data/state",
+        f"{client.topics.broadcast}ui_service/state",
+        f"{client.topics.mobile}ui_service/data/gettvstate",
+        f"{client.topics.mobile}ui_service/data/state",
     ):
         try:
             data = json.loads(payload)
@@ -79,9 +79,9 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
         return
 
     if topic in (
-        client.topicBrcsBasepath + "platform_service/actions/volumechange",
-        client.topicBrcsBasepath + "ui_service/volume",
-        client.topicMobiBasepath + "platform_service/data/getvolume",
+        f"{client.topics.broadcast}platform_service/actions/volumechange",
+        f"{client.topics.broadcast}ui_service/volume",
+        f"{client.topics.mobile}platform_service/data/getvolume",
     ):
         try:
             data = json.loads(payload)
@@ -90,11 +90,11 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
             _LOGGER.debug("[%s] Error parsing volume payload: %s", ip, e)
         return
 
-    if topic == client.topicBrcsBasepath + "platform_service/actions/tvsleep":
+    if topic == f"{client.topics.broadcast}platform_service/actions/tvsleep":
         client._dispatch_state_update({"statetype": "fake_sleep_0"})
         return
 
-    if topic == client.topicMobiBasepath + "ui_service/data/sourcelist":
+    if topic == f"{client.topics.mobile}ui_service/data/sourcelist":
         try:
             data = json.loads(payload)
             client._dispatch_sourcelist_update(data)
@@ -102,7 +102,7 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
             _LOGGER.debug("[%s] Error parsing sourcelist payload: %s", ip, e)
         return
 
-    if topic == client.topicMobiBasepath + "ui_service/data/applist":
+    if topic == f"{client.topics.mobile}ui_service/data/applist":
         try:
             data = json.loads(payload)
             client._dispatch_applist_update(data)
@@ -111,8 +111,8 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
         return
 
     if topic in (
-        client.topicMobiBasepath + "platform_service/data/picturesetting",
-        client.topicBrcsBasepath + "platform_service/data/picturesetting",
+        f"{client.topics.mobile}platform_service/data/picturesetting",
+        f"{client.topics.broadcast}platform_service/data/picturesetting",
     ):
         try:
             data = json.loads(payload)
@@ -122,8 +122,8 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
         return
 
     if topic in (
-        client.topicMobiBasepath + "platform_service/data/soundsetting",
-        client.topicBrcsBasepath + "platform_service/data/soundsetting",
+        f"{client.topics.mobile}platform_service/data/soundsetting",
+        f"{client.topics.broadcast}platform_service/data/soundsetting",
     ):
         try:
             data = json.loads(payload)
@@ -132,7 +132,7 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
             _LOGGER.debug("[%s] Error parsing soundsetting payload: %s", ip, e)
         return
 
-    if topic == client.topicMobiBasepath + "ui_service/data/capability":
+    if topic == f"{client.topics.mobile}ui_service/data/capability":
         try:
             data = json.loads(payload)
             if isinstance(data, dict):
@@ -145,8 +145,8 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
         return
 
     if topic in (
-        client.topicMobiBasepath + "platform_service/data/getdeviceinfo",
-        client.topicMobiBasepath + "platform_service/data/gettvinfo",
+        f"{client.topics.mobile}platform_service/data/getdeviceinfo",
+        f"{client.topics.mobile}platform_service/data/gettvinfo",
     ):
         try:
             data = json.loads(payload)
