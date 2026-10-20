@@ -81,7 +81,7 @@ To facilitate real-time monitoring and troubleshooting directly from the Home As
 
 | Entity ID | Entity Name | Description & Attributes |
 | :--- | :--- | :--- |
-| **`sensor.<tv>_clock_drift`** | **Clock Drift** | Reports TV hardware clock drift in seconds relative to the Home Assistant host. Changes icon between `mdi:clock-check-outline` (synced, $< 60\text{s}$) and `mdi:clock-alert-outline` ($> 60\text{s}$). Attributes: `synchronized` (bool), `drift_human` (e.g. `+15s`, `-5d 14h`), `tv_time`, `host_time`, `last_synced`. |
+| **`sensor.<tv>_clock_drift`** | **Clock Drift** | Reports TV hardware clock drift in seconds relative to the Home Assistant host. Automatically synchronized every 2 hours and on wake transition from standby. Changes icon between `mdi:clock-check-outline` (synced, $< 60\text{s}$) and `mdi:clock-alert-outline` ($> 60\text{s}$). Attributes: `synchronized` (bool), `drift_human` (e.g. `+15s`, `-5d 14h`), `tv_time`, `host_time`, `last_synced`. |
 | **`sensor.<tv>_session_status`** | **Session Status** | Indicates active session state (`Active`, `Standby`, `Reauth Required`). Attributes: `encryption` (TLS version/port), `local_only` (bool), `paired_at`, `access_token_expires_at`, `refresh_token_expires_at`. |
 | **`sensor.<tv>_auth_profile`** | **Auth Profile** | Displays the active authentication tier negotiated with the TV (e.g. `VIDAA 2.0 (Newer Firmware / 2024+)`). |
 | **`sensor.<tv>_audio_output`** | **Audio Output** | Displays whether sound is currently output through `TV Speakers` or `ARC / eARC`. |

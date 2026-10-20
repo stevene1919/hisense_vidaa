@@ -134,6 +134,45 @@ When a TV is deployed in a hardened smart home environment:
 
 In this topology, the TV has **no way to reach public NTP servers**. As a result, its hardware clock can drift significantly (often falling behind by hours, days, or even weeks). While the `hisense_vidaa` integration automatically detects clock drift via UPnP `Date:` headers and compensates for timestamp skew during dynamic MQTT challenge generation, extreme drift can affect TLS certificate validation and token expiry calculation.
 
+### 🛑 The DNS Sinkhole Trap (AdGuard Home / Pi-hole returning 0.0.0.0)
+
+> [!WARNING]
+> If you sandbox your TV with AdGuard Home, Pi-hole, or DNS blocklists, a firewall port redirect rule alone is **not sufficient**.
+
+When a blanket block rule (such as `||*$client=hisense-tv`) is applied to sandbox the TV, DNS queries for NTP servers (`au.pool.ntp.org`, `pool.ntp.org`, `time.google.com`) return **`0.0.0.0`** (the default sinkhole null-route).
+
+1. **Why It Breaks**: The Linux network stack in VIDAA OS treats `0.0.0.0` as an invalid destination address (`EADDRNOTAVAIL`). Because DNS resolution fails to return a routable IP, **the TV aborts without ever transmitting any UDP packets to port 123**.
+2. **The Symptom**: Your firewall DNAT redirect rule shows **`0 packets / 0 bytes`**, and the TV clock continues to drift.
+3. **The Fix (DNS Rewrite)**: You must configure a **DNS Rewrite** so that the TV receives the router's local IP address instead of `0.0.0.0`:
+
+#### A. AdGuard Home (Recommended)
+Add the following rules to **Filters $\rightarrow$ Custom filtering rules** (the `$important` modifier overrides client block rules):
+
+```text
+||pool.ntp.org^$dnsrewrite=<router_ip>,important,client=<client_id>
+||*.pool.ntp.org^$dnsrewrite=<router_ip>,important,client=<client_id>
+||time.google.com^$dnsrewrite=<router_ip>,important,client=<client_id>
+||time.android.com^$dnsrewrite=<router_ip>,important,client=<client_id>
+```
+*(Or navigate to **Filters $\rightarrow$ DNS Rewrites** and add `*.pool.ntp.org` $\rightarrow$ `<router_ip>`)*.
+
+#### B. Pi-hole
+Navigate to **Local DNS $\rightarrow$ DNS Records** and add:
+- `pool.ntp.org` $\rightarrow$ `<router_ip>`
+- `time.google.com` $\rightarrow$ `<router_ip>`
+
+#### C. dnsmasq (OpenWrt `/etc/config/dhcp`)
+```uci
+config domain
+	option name 'pool.ntp.org'
+	option ip '<router_ip>'
+```
+
+Once the DNS rewrite is active:
+1. The TV asks for `pool.ntp.org` and immediately receives the router's LAN IP (`<router_ip>`).
+2. The TV sends standard UDP 123 packets directly to the gateway's local NTP server.
+3. Zero queries leave your LAN, preserving 100% WAN isolation.
+
 ### 🛠️ Solution: Gateway NTP DNAT Port Redirection (UDP 123)
 
 To ensure the TV maintains accurate system time without granting it external internet access, configure a **Destination NAT (DNAT) port redirection** rule on your router/gateway. This captures all outbound NTP queries from the TV on `UDP 123` and redirects them to the router's local NTP server (e.g. AdGuard Home, Chrony, ntpd, or Unbound).

@@ -4,6 +4,10 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 
 ## [2.11.0] - 2026-10-20
 
+- **AUTOMATED PERIODIC & WAKE-TRANSITION CLOCK DRIFT TRACKING (`__init__.py`)**:
+  - Registered a 2-hour periodic background poller (`async_track_time_interval`) and wake-transition hook on `client.register_state_callback` to continuously synchronize `sensor.<tv>_clock_drift` and keep `client.clock_offset` current without manual intervention.
+- **ISOLATED IOT NETWORK NTP & DNS SINKHOLE SPECIFICATION (`docs/network_requirements.md`)**:
+  - Documented DNS sinkhole null-route behavior (`0.0.0.0`) in AdGuard Home / Pi-hole causing silent NTP DNAT failure, providing exact `$dnsrewrite` and DNS override rules.
 - **CODEBASE MODERNIZATION & CLEAN CODE IDENTIFIER REFACTORING**:
   - Standardized variable, function, and parameter names across the entire integration to adhere to clean code standards. Replaced abbreviated or implementation-leaking identifiers with clear, intent-revealing names (`callback` instead of `cb`, `current_timestamp` instead of `ts`, `mac_address` instead of `mac`, `picture_supported` instead of `pic_supported`, `client_instance` instead of `c`).
   - Preserved backward-compatible keyword argument signatures where necessary to ensure uninterrupted compatibility with external call sites and existing tests.
