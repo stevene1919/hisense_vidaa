@@ -2,6 +2,21 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [2.11.1] - 2026-10-21
+
+- **MASK SENSITIVE MQTT TOKENS IN DEBUG LOGS (`protocol/dispatcher.py`, `protocol/auth.py`, `protocol/pairing.py`)**:
+  - Implemented `mask_sensitive_payload` and `mask_sensitive_data` to ensure `accesstoken`, `refreshtoken`, `access_token`, `refresh_token`, passwords, and secrets are sanitized (`***`) in Home Assistant debug logs when debug logging is active.
+  - Masked incoming MQTT payload logging in `dispatch_incoming_mqtt_message` on token topics (`tokenissuance`, `gettoken`), while preserving non-sensitive diagnostic integers (`accesstoken_duration_day`, `accesstoken_time`).
+  - Added fallback redaction (`[payload masked]`) for non-JSON or malformed payload strings on token topics, and regex-based fallback for broken JSON.
+  - Masked token payload debug logging in `perform_token_refresh` standalone refresh client (`on_token_message`).
+  - Masked PIN response payloads and exception error strings in `protocol/pairing.py`.
+- **HOME ASSISTANT DIAGNOSTICS WIRE-KEY REDACTION (`diagnostics.py`)**:
+  - Added wire-format payload keys `"accesstoken"` and `"refreshtoken"` to `TO_REDACT` in `diagnostics.py` to ensure diagnostics downloads redact tokens across all key naming variations.
+- **CLI DIAGNOSTIC TOOL REDACTION SAFEGUARDS (`test_client.py`)**:
+  - Masked stdout token printing in `test_client.py` (`*** (valid X days)`) to prevent accidental token exposure when users paste terminal troubleshooting outputs into public GitHub issues.
+- **AUTOMATED SENSITIVE DATA LOGGING TEST SUITE (`tests/test_dispatcher.py`, `tests/test_diagnostics.py`)**:
+  - Added comprehensive unit tests with `pytest` `caplog` fixture verifying that debug logs never leak raw access or refresh tokens across dispatch, refresh, and diagnostics platforms, expanding test suite to 215 tests.
+
 ## [2.11.0] - 2026-10-20
 
 - **AUTOMATED PERIODIC & WAKE-TRANSITION CLOCK DRIFT TRACKING (`__init__.py`)**:

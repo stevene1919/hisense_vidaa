@@ -16,6 +16,7 @@ from typing import Any
 import paho.mqtt.client as mqtt
 
 from ..crypto import generate_initial_credentials
+from .dispatcher import mask_sensitive_payload
 from .topics import TopicPaths, build_topic_paths
 
 _LOGGER = logging.getLogger(__name__)
@@ -144,7 +145,12 @@ def perform_token_refresh(
         nonlocal updated_data
         try:
             payload_str = message.payload.decode("utf-8", errors="ignore")
-            _LOGGER.debug("[%s] Refresh client received message on %s: %s", ip, message.topic, payload_str)
+            _LOGGER.debug(
+                "[%s] Refresh client received message on %s: %s",
+                ip,
+                message.topic,
+                mask_sensitive_payload(payload_str, message.topic),
+            )
             data = json.loads(payload_str)
             if isinstance(data, dict) and "accesstoken" in data:
                 updated_data = data

@@ -4,20 +4,82 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING
+import re
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ..client import HisenseTvClient
 
 _LOGGER = logging.getLogger(__name__)
 
-__all__ = ["dispatch_incoming_mqtt_message"]
+SENSITIVE_KEYS: frozenset[str] = frozenset({
+    "accesstoken",
+    "refreshtoken",
+    "access_token",
+    "refresh_token",
+    "token",
+    "password",
+    "p12_password",
+    "secret",
+})
+
+_SENSITIVE_JSON_PATTERN = re.compile(
+    r'("(?:accesstoken|refreshtoken|access_token|refresh_token|password|p12_password|secret)"\s*:\s*)"[^"]*"',
+    re.IGNORECASE,
+)
+
+__all__ = [
+    "SENSITIVE_KEYS",
+    "dispatch_incoming_mqtt_message",
+    "mask_sensitive_data",
+    "mask_sensitive_payload",
+]
+
+
+def mask_sensitive_data(data: Any) -> Any:
+    """Recursively mask sensitive values in dictionaries and lists."""
+    if isinstance(data, dict):
+        return {
+            k: "***" if str(k).lower() in SENSITIVE_KEYS else mask_sensitive_data(v)
+            for k, v in data.items()
+        }
+    if isinstance(data, list):
+        return [mask_sensitive_data(item) for item in data]
+    return data
+
+
+def mask_sensitive_payload(payload: str, topic: str | None = None) -> str:
+    """Mask sensitive tokens and credentials in MQTT payload strings for safe logging."""
+    if not payload:
+        return payload
+
+    is_token_topic = bool(
+        topic
+        and any(
+            topic.endswith(suffix)
+            for suffix in ("/tokenissuance", "/gettoken", "tokenissuance", "gettoken")
+        )
+    )
+
+    try:
+        data = json.loads(payload)
+        if isinstance(data, (dict, list)):
+            masked_data = mask_sensitive_data(data)
+            return json.dumps(masked_data)
+    except Exception:
+        pass
+
+    if is_token_topic:
+        return "[payload masked]"
+
+    # Fallback regex masking for non-standard or malformed JSON payloads
+    return _SENSITIVE_JSON_PATTERN.sub(r'\1"***"', payload)
 
 
 def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload: str) -> None:
     """Dispatches decoded MQTT messages to appropriate client futures, state updaters, and callbacks."""
     ip = getattr(client, "ip", "Unknown")
-    _LOGGER.debug("[%s] Message received: %s on topic %s", ip, payload, topic)
+    _LOGGER.debug("[%s] Message received: %s on topic %s", ip, mask_sensitive_payload(payload, topic), topic)
 
     # 1. Authentication & pairing futures
     # The PIN dialog is announced by a push to .../ui_service/data/authentication
@@ -34,7 +96,11 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
     # own future (the dynamic pairing cascade still falls back to it); it never
     # resolves the PIN-shown future.
     if topic == f"{client.topics.mobile}ui_service/data/vidaa_app_connect":
-        _LOGGER.info("[%s] TV acknowledged vidaa_app_connect (not a PIN confirmation): %s", ip, payload)
+        _LOGGER.info(
+            "[%s] TV acknowledged vidaa_app_connect (not a PIN confirmation): %s",
+            ip,
+            mask_sensitive_payload(payload, topic),
+        )
         ack_future = getattr(client, "_connect_ack_future", None)
         if ack_future:
             client._safe_set_future_result(ack_future, payload)

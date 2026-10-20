@@ -26,6 +26,8 @@ async def test_diagnostics_redaction():
         "password": "supersecretpassword",
         "access_token": "secret_access_token_12345",
         "refresh_token": "secret_refresh_token_67890",
+        "accesstoken": "secret_wire_access_token_12345",
+        "refreshtoken": "secret_wire_refresh_token_67890",
     }
     entry.options = {"enable_remote": True, "enable_wol": True}
 
@@ -63,6 +65,8 @@ async def test_diagnostics_redaction():
     assert diag["entry"]["data"]["password"] == "**REDACTED**"
     assert diag["entry"]["data"]["access_token"] == "**REDACTED**"
     assert diag["entry"]["data"]["refresh_token"] == "**REDACTED**"
+    assert diag["entry"]["data"]["accesstoken"] == "**REDACTED**"
+    assert diag["entry"]["data"]["refreshtoken"] == "**REDACTED**"
     assert diag["entry"]["data"]["ip_address"] == "192.168.50.12"
 
     assert diag["client"]["connected"] is True

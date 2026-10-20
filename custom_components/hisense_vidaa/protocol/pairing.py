@@ -10,6 +10,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from ..tv.fingerprint import get_tv_timestamp
+from .dispatcher import mask_sensitive_payload
 
 if TYPE_CHECKING:
     from ..client import HisenseTvClient
@@ -274,11 +275,15 @@ async def async_submit_pin_code(client: HisenseTvClient, pin_code: str) -> dict[
         if client._auth_code_future not in done:
             raise Exception("Timeout waiting for PIN validation")
         payload_str = client._auth_code_future.result()
-        _LOGGER.debug("[%s] Received PIN response payload: %s", client.ip, payload_str)
+        _LOGGER.debug("[%s] Received PIN response payload: %s", client.ip, mask_sensitive_payload(payload_str))
         payload = json.loads(payload_str)
         if payload.get("result") != 1:
-            _LOGGER.warning("[%s] PIN validation rejected with payload: %s", client.ip, payload_str)
-            raise Exception(f"Incorrect PIN code (TV response: {payload_str})")
+            _LOGGER.warning(
+                "[%s] PIN validation rejected with payload: %s",
+                client.ip,
+                mask_sensitive_payload(payload_str),
+            )
+            raise Exception(f"Incorrect PIN code (TV response: {mask_sensitive_payload(payload_str)})")
     finally:
         client._auth_code_future = None
         client._pairing_event_future = None

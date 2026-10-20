@@ -6,7 +6,10 @@ import asyncio
 from unittest.mock import MagicMock
 
 from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.protocol.dispatcher import dispatch_incoming_mqtt_message
+from custom_components.hisense_vidaa.protocol.dispatcher import (
+    dispatch_incoming_mqtt_message,
+    mask_sensitive_payload,
+)
 
 
 def _create_test_client() -> HisenseTvClient:
@@ -99,3 +102,122 @@ def test_dispatcher_device_info_requires_exact_topic() -> None:
         client, f"{client.topics.mobile}platform_service/data/getdeviceinfo", "{}"
     )
     assert client._dispatch_device_info_update.called
+
+
+def test_mask_sensitive_payload_tokens() -> None:
+    """Sensitive tokens and credentials in JSON payloads must be masked."""
+    raw_payload = (
+        '{"accesstoken": "super_secret_access_token_12345", '
+        '"refreshtoken": "super_secret_refresh_token_67890", '
+        '"accesstoken_time": 1729000000, '
+        '"accesstoken_duration_day": 30, '
+        '"refreshtoken_time": 1729000000, '
+        '"refreshtoken_duration_day": 30}'
+    )
+    masked = mask_sensitive_payload(raw_payload, "/remoteapp/mobile/test/platform_service/data/tokenissuance")
+    import json
+    parsed = json.loads(masked)
+    assert parsed["accesstoken"] == "***"
+    assert parsed["refreshtoken"] == "***"
+    assert parsed["accesstoken_time"] == 1729000000
+    assert parsed["accesstoken_duration_day"] == 30
+    assert parsed["refreshtoken_time"] == 1729000000
+    assert parsed["refreshtoken_duration_day"] == 30
+    assert "super_secret" not in masked
+
+
+def test_mask_sensitive_payload_token_topics_fallback() -> None:
+    """Non-JSON or malformed payloads on token topics must be replaced with [payload masked]."""
+    raw_payload = "raw_unformatted_secret_token_12345"
+    masked = mask_sensitive_payload(raw_payload, "/remoteapp/mobile/test/platform_service/data/tokenissuance")
+    assert masked == "[payload masked]"
+    assert "secret" not in masked
+
+    masked_gettoken = mask_sensitive_payload(raw_payload, "/remoteapp/mobile/test/platform_service/data/gettoken")
+    assert masked_gettoken == "[payload masked]"
+
+
+def test_mask_sensitive_payload_regex_fallback() -> None:
+    """Malformed JSON containing tokens on non-token topics must be masked via regex."""
+    malformed = '{"accesstoken": "secret_abc_123", "broken_json": '
+    masked = mask_sensitive_payload(malformed, "/some/other/topic")
+    assert '"accesstoken": "***"' in masked
+    assert "secret_abc_123" not in masked
+
+
+def test_mask_sensitive_payload_preserves_non_sensitive_data() -> None:
+    """Non-sensitive payloads should pass through intact."""
+    assert mask_sensitive_payload("") == ""
+    normal_payload = '{"statetype": "fake_sleep_0", "volume": 20}'
+    masked = mask_sensitive_payload(normal_payload, "/remoteapp/tv/broadcast/ui_service/state")
+    assert masked == normal_payload
+
+
+def test_dispatcher_masks_token_payload_in_debug_logs(caplog) -> None:
+    """Verify that dispatching incoming token messages masks tokens in debug logs."""
+    import logging
+    client = _create_test_client()
+    raw_payload = (
+        '{"accesstoken": "LEAK_SECRET_ACCESS_TOKEN", '
+        '"refreshtoken": "LEAK_SECRET_REFRESH_TOKEN", '
+        '"accesstoken_duration_day": 30}'
+    )
+    topic = f"{client.topics.mobile}platform_service/data/tokenissuance"
+
+    with caplog.at_level(logging.DEBUG):
+        dispatch_incoming_mqtt_message(client, topic, raw_payload)
+
+    log_output = caplog.text
+    assert "LEAK_SECRET_ACCESS_TOKEN" not in log_output
+    assert "LEAK_SECRET_REFRESH_TOKEN" not in log_output
+    assert "***" in log_output
+    assert "accesstoken" in log_output
+    assert "30" in log_output
+
+
+def test_auth_token_message_masks_tokens_in_debug_logs(caplog) -> None:
+    """Verify that on_token_message in perform_token_refresh masks debug logs."""
+    import logging
+    from unittest.mock import MagicMock, patch
+
+    import paho.mqtt.client as mqtt
+
+    from custom_components.hisense_vidaa.protocol.auth import perform_token_refresh
+
+    raw_payload = (
+        '{"accesstoken": "AUTH_REFRESH_SECRET_ACCESS", '
+        '"refreshtoken": "AUTH_REFRESH_SECRET_REFRESH", '
+        '"accesstoken_duration_day": 30}'
+    )
+
+    def fake_connect(self, ip, port, keepalive):
+        self.on_connect(self, None, None, 0)
+        # Simulate incoming token message immediately
+        msg = MagicMock()
+        msg.topic = "/remoteapp/mobile/test_client/platform_service/data/tokenissuance"
+        msg.payload = raw_payload.encode("utf-8")
+        self.on_message(self, None, msg)
+
+    with patch.object(mqtt.Client, "connect", fake_connect), \
+         patch.object(mqtt.Client, "subscribe"), \
+         patch.object(mqtt.Client, "publish"), \
+         patch.object(mqtt.Client, "loop_start"), \
+         patch.object(mqtt.Client, "loop_stop"), \
+         patch.object(mqtt.Client, "disconnect"), \
+         caplog.at_level(logging.DEBUG):
+        result = perform_token_refresh(
+            ip="192.168.50.12",
+            client_id="test_client",
+            username="user_123",
+            refresh_token="some_refresh_token",
+            timeout=0.1,
+        )
+
+    assert result is not None
+    assert result["accesstoken"] == "AUTH_REFRESH_SECRET_ACCESS"
+    log_output = caplog.text
+    assert "AUTH_REFRESH_SECRET_ACCESS" not in log_output
+    assert "AUTH_REFRESH_SECRET_REFRESH" not in log_output
+    assert "***" in log_output
+
+

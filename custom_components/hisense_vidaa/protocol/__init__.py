@@ -22,7 +22,12 @@ from .connection import (
     clean_disconnect_mqtt_client,
     subscribe_standard_tv_topics,
 )
-from .dispatcher import dispatch_incoming_mqtt_message
+from .dispatcher import (
+    SENSITIVE_KEYS,
+    dispatch_incoming_mqtt_message,
+    mask_sensitive_data,
+    mask_sensitive_payload,
+)
 from .pairing import async_start_pairing_handshake, async_submit_pin_code
 from .ping import ping_tv
 from .topics import TOPIC_BROADCAST_BASEPATH, TopicPaths, build_topic_paths
@@ -30,6 +35,7 @@ from .upnp import HisenseUpnpClient
 from .wol import send_wake_on_lan
 
 __all__ = [
+    "SENSITIVE_KEYS",
     "TOPIC_BROADCAST_BASEPATH",
     "ConnectionManagerMixin",
     "HisenseUpnpClient",
@@ -45,6 +51,8 @@ __all__ = [
     "extract_pkcs12_to_pem",
     "get_profile_default_cert_paths",
     "is_token_expired",
+    "mask_sensitive_data",
+    "mask_sensitive_payload",
     "perform_token_refresh",
     "ping_tv",
     "probe_tv_auth_methods",

@@ -17,7 +17,9 @@ if TYPE_CHECKING:
 
 TO_REDACT = {
     "access_token",
+    "accesstoken",
     "refresh_token",
+    "refreshtoken",
     "password",
     "username",
     "client_id",

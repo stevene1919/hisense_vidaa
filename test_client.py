@@ -361,8 +361,8 @@ async def do_auth(ip: str, mac: str | None, certfile: str | None, keyfile: str |
         print("\n🎉 Authentication successful!")
         print(f"  • Client ID:     {client.client_id}")
         print(f"  • Username:      {client.username}")
-        print(f"  • Access Token:  {client.access_token[:15]}... ({client.access_token_duration} days)")
-        print(f"  • Refresh Token: {client.refresh_token[:15]}... ({client.refresh_token_duration} days)")
+        print(f"  • Access Token:  *** (valid {client.access_token_duration} days)")
+        print(f"  • Refresh Token: *** (valid {client.refresh_token_duration} days)")
 
         save_credentials_file(save_path, creds)
     except FileNotFoundError as e:
@@ -403,7 +403,7 @@ async def do_listen(creds: dict[str, Any], certfile: str | None, keyfile: str | 
     client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl)
 
     def on_token_refreshed(c: HisenseTvClient) -> None:
-        print(f"\n🔄 [TOKEN REFRESHED] New access token: {c.access_token[:15]}...")
+        print(f"\n🔄 [TOKEN REFRESHED] New access token received (valid {c.access_token_duration} days)")
         creds["accesstoken"] = c.access_token
         creds["accesstoken_time"] = c.access_token_time
         creds["refreshtoken"] = c.refresh_token
@@ -439,7 +439,7 @@ def do_refresh(creds: dict[str, Any], certfile: str | None, keyfile: str | None,
     success = client.check_and_refresh_token(force=True)
     if success:
         print("✅ Token refreshed successfully!")
-        print(f"  • New Access Token:  {client.access_token}")
+        print(f"  • New Access Token:  *** (valid {client.access_token_duration} days)")
         print(f"  • Issued At:         {time.ctime(client.access_token_time)}")
         creds["accesstoken"] = client.access_token
         creds["accesstoken_time"] = client.access_token_time
