@@ -29,13 +29,15 @@ Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using 
 
 The integration automatically detects and supports multiple generations of Hisense and licensed OEM smart TVs:
 
-| TV Generation / Firmware | Profile | Pairing Method | Description |
-| :--- | :--- | :--- | :--- |
-| **Modern VIDAA OS (2024+ / U6+, U7, U8, UX)** | `modern` | 4-Digit Screen PIN | Modern VIDAA 2.0 with dynamic challenge handshake |
-| **Middle VIDAA OS (VIDAA 1.5 / U5, early U6)** | `middle` | 4-Digit Screen PIN | Middle VIDAA transition firmware with dynamic pairing |
-| **Standard VIDAA OS (2018–2023 / U4, U5)** | `remotenow` | 4-Digit Screen PIN | RemoteNOW dynamic PIN protocol |
-| **Legacy Models (Pre-2022 / U2, U3)** | `legacy` | Instant Setup (No PIN) | Static service credential mode |
-| **Auto Detection (All Generations & OEMs)** | `auto` | Automatic | UPnP transport probe with automatic multi-tier fallback |
+| Brand / Manufacturer | Series & Verified Models | Firmware Builds | Auth Profile | Pairing Method |
+| :--- | :--- | :--- | :--- | :--- |
+| **Hisense (Modern)** | U6G, U7G, U8G, U6K, U7K, U8K, UX, A6G, A6H, A7GQ, A63H, E7HQ, E7K PRO | `Q0704`, `V0000.06`, `U6.1.0`, `U7.0`, `U8.0` | `modern` / `auto` | 4-Digit Screen PIN |
+| **Hisense (Middle / Standard)** | U4G, U5G, H8G, H9G, B7100, B7500, A7100, A7300, A7500 | `V0000.01`–`V0000.05`, `U4.0`, `U5.0` | `middle` / `remotenow` | 4-Digit Screen PIN |
+| **Toshiba** | M550, C350, Z770, Z870 (VIDAA OS editions) | `V0000.01`, `V0000.06` | `modern` / `auto` | 4-Digit Screen PIN |
+| **Loewe** | We. SEE 32/43/50/55, bild i / bild c | `V0000.05`, `U5.0` | `middle` / `auto` | 4-Digit Screen PIN |
+| **Schneider / Akai / Beko** | Smart TV 4K series | `V0000` | `middle` / `auto` | 4-Digit Screen PIN |
+| **Telefunken / Bush** | Smart LED Series | `V0000` | `remotenow` / `auto` | 4-Digit Screen PIN |
+| **Auto Detection (All Brands)** | All VIDAA OS televisions | Any build | `auto` | Dynamic UPnP Probe |
 
 > For complete cryptographic formulas, XOR masks, and OEM brand identifiers (Toshiba, Loewe, etc.), see [Protocol & Cryptographic Architecture](docs/protocol_architecture.md).
 

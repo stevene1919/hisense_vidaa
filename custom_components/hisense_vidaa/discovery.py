@@ -26,7 +26,31 @@ from .tv.fingerprint import (
 
 _LOGGER = logging.getLogger(__name__)
 
+GENERIC_MANUFACTURERS: set[str] = {
+    "",
+    "smarttv",
+    "smart tv",
+    "smarttv.com",
+    "http://www.smarttv.com",
+    "https://www.smarttv.com",
+    "unknown",
+}
+
+BRAND_MAP: dict[str, str] = {
+    "his": "Hisense",
+    "tos": "Toshiba",
+    "loe": "Loewe",
+    "sch": "Schneider",
+    "aka": "Akai",
+    "bek": "Beko",
+    "tel": "Telefunken",
+    "bus": "Bush",
+    "vic": "Vizio",
+}
+
 __all__ = [
+    "BRAND_MAP",
+    "GENERIC_MANUFACTURERS",
     "UPNP_PORTS",
     "DiscoveredTvInfo",
     "format_drift_human",
@@ -105,6 +129,18 @@ def parse_ssdp_discovery(
     title = friendly_name if friendly_name and friendly_name != "Renderer" else f"Hisense TV ({host})"
     udn = getattr(discovery_info, "ssdp_udn", None)
     unique_id = mac_address or udn
+
+    manufacturer_clean = (manufacturer or "").strip()
+    if manufacturer_clean.lower() in GENERIC_MANUFACTURERS:
+        detected_brand = None
+        for line in model_desc.splitlines():
+            if "=" in line:
+                k, v = line.split("=", 1)
+                k, v = k.strip().lower(), v.strip().lower()
+                if k == "brand" and v in BRAND_MAP:
+                    detected_brand = BRAND_MAP[v]
+                    break
+        manufacturer = detected_brand or "Hisense"
 
     return DiscoveredTvInfo(
         host=host,

@@ -279,6 +279,40 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
     client.register_state_callback(_on_state_change)
     entry.async_on_unload(lambda: client.unregister_state_callback(_on_state_change))
 
+    # Live MQTT device registry enrichment callback
+    def _on_device_info_update(_data: dict[str, Any]) -> None:
+        try:
+            from homeassistant.helpers import device_registry as dr
+
+            dev_reg = dr.async_get(hass)
+            device = dev_reg.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+            if device:
+                updates: dict[str, Any] = {}
+                if client.model_name and client.model_name != device.model:
+                    updates["model"] = client.model_name
+                if client.manufacturer and client.manufacturer != device.manufacturer:
+                    updates["manufacturer"] = client.manufacturer
+                if client.firmware_version and client.firmware_version != device.sw_version:
+                    updates["sw_version"] = client.firmware_version
+                if updates:
+                    dev_reg.async_update_device(device.id, **updates)
+        except Exception as err:
+            _LOGGER.debug("[%s] Dynamic device registry enrichment failed: %s", client.ip, err)
+
+    client.register_device_info_callback(
+        lambda data: hass.loop.call_soon_threadsafe(lambda: _on_device_info_update(data))
+    )
+    entry.async_on_unload(
+        lambda: client.unregister_device_info_callback(_on_device_info_update)
+    )
+
+    return True
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: Any
+) -> bool:
+    """Remove a config entry from a device (stale device cleanup)."""
     return True
 
 

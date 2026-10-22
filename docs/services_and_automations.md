@@ -254,42 +254,113 @@ cards:
 
 ---
 
-## 🤖 Example Automations
+## 🌟 Real-World Use Cases & Automation Patterns
 
-### Turn on TV & Switch to HDMI 2 when Gaming Console Powers On
+### Use Case 1: Ambient Cinema Atmosphere
+When launching streaming video apps (Netflix, Prime Video, Disney+, Plex) in the evening, automatically dim the living room light scene to 15%, adjust picture mode to `Cinema Night`, and set sound EQ mode to `Theatre`.
+
+### Use Case 2: Game Console Low-Latency Picture Sync
+When switching active source to PlayStation 5 or Xbox Series X on HDMI 1 or HDMI 2, automatically trigger low-latency `Game` picture mode and turn down backlight for night sessions.
+
+### Use Case 3: Bedtime All-Off & Late Night Audio Guard
+When executing a "Good Night" voice command or bedtime automation, if the TV is still playing in the master bedroom, turn off screen backlight via `switch.audio_only` or automatically power off the TV after 30 minutes, switching sound output to `Late Night` EQ mode.
+
+### Use Case 4: Smart Doorbell On-Screen Notifications
+When someone rings the smart video doorbell, display a real-time high-priority text toast banner on the television screen notifying occupants without interrupting current playback.
+
+---
+
+## 🤖 Copy-Paste YAML Automation Recipes
+
+### Recipe 1: Cinema Mode & Ambient Lighting Sync
 ```yaml
-alias: "TV: Switch to Xbox on Power"
+alias: "Cinema: Dim Lights & Set Movie Picture Mode"
+description: "Automatically dim lights and switch to Cinema Night picture mode when movie apps open after sunset."
 trigger:
   - platform: state
-    entity_id: binary_sensor.xbox_power
-    to: "on"
-action:
-  - action: media_player.turn_on
-    target:
-      entity_id: media_player.living_room_tv
-  - delay: "00:00:03"
-  - action: media_player.select_source
-    target:
-      entity_id: media_player.living_room_tv
-    data:
-      source: "HDMI2"
-```
-
-### Automatically Dim Lights When Netflix or Movie App Launches
-```yaml
-alias: "Cinema: Dim Lights on Movie App"
-trigger:
-  - platform: state
-    entity_id: sensor.living_room_tv_active_app
+    entity_id: media_player.living_room_tv
+    attribute: app_name
     to:
       - "Netflix"
       - "Prime Video"
       - "Disney+"
+      - "Plex"
+condition:
+  - condition: sun
+    after: sunset
 action:
+  - action: select.select_option
+    target:
+      entity_id: select.living_room_tv_picture_mode
+    data:
+      option: "Cinema Night"
+  - action: select.select_option
+    target:
+      entity_id: select.living_room_tv_sound_mode
+    data:
+      option: "Theatre"
   - action: light.turn_on
     target:
       area_id: living_room
     data:
-      brightness_pct: 20
+      brightness_pct: 15
       transition: 3
+```
+
+### Recipe 2: PlayStation / Xbox Game Mode Sync
+```yaml
+alias: "Gaming: Activate Game Mode on PS5 Input"
+description: "Switch picture mode to Game and adjust backlight when PS5 is selected."
+trigger:
+  - platform: state
+    entity_id: media_player.living_room_tv
+    attribute: source
+    to: "HDMI 1"
+action:
+  - action: select.select_option
+    target:
+      entity_id: select.living_room_tv_picture_mode
+    data:
+      option: "Game"
+  - action: number.set_value
+    target:
+      entity_id: number.living_room_tv_backlight
+    data:
+      value: 80
+```
+
+### Recipe 3: Smart Doorbell Toast Notification
+```yaml
+alias: "Notifications: Show Doorbell Banner on TV"
+description: "Pop up an on-screen toast message when the front doorbell rings."
+trigger:
+  - platform: state
+    entity_id: binary_sensor.front_doorbell_visitor
+    to: "on"
+action:
+  - action: notify.send_message
+    target:
+      entity_id: notify.living_room_tv_notifications
+    data:
+      title: "🔔 Doorbell Ringing"
+      message: "Someone is at the Front Door!"
+```
+
+### Recipe 4: Late Night Volume & EQ Guard
+```yaml
+alias: "Audio: Late Night Equalizer Guard"
+description: "Switch sound mode to Late Night after 10 PM to compress dynamic volume range."
+trigger:
+  - platform: time
+    at: "22:00:00"
+condition:
+  - condition: state
+    entity_id: media_player.living_room_tv
+    state: "on"
+action:
+  - action: select.select_option
+    target:
+      entity_id: select.living_room_tv_sound_mode
+    data:
+      option: "Late Night"
 ```
