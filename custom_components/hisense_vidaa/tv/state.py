@@ -6,6 +6,7 @@ import contextlib
 from typing import TYPE_CHECKING, Any
 
 from .settings import parse_settings_payload
+from .upnp_desc import normalize_manufacturer_brand
 
 if TYPE_CHECKING:
     from ..client import HisenseTvClient
@@ -103,9 +104,17 @@ def apply_device_info_update(client: HisenseTvClient, data: Any) -> None:
 
     manufacturer_name = data.get("manufacturer") or data.get("brand")
     if manufacturer_name and str(manufacturer_name).strip():
-        client.manufacturer = str(manufacturer_name).strip()
+        client.manufacturer = normalize_manufacturer_brand(
+            str(manufacturer_name).strip(), str(manufacturer_name).strip()
+        )
 
-    firmware_version = data.get("firmware_version") or data.get("sw_version") or data.get("version")
+    firmware_version = (
+        data.get("firmware_version")
+        or data.get("sw_version")
+        or data.get("tv_version")
+        or data.get("uVersion")
+        or data.get("version")
+    )
     if firmware_version and str(firmware_version).strip():
         client.firmware_version = str(firmware_version).strip()
 

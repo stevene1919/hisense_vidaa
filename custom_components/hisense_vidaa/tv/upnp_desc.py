@@ -14,8 +14,66 @@ _LOGGER = logging.getLogger(__name__)
 
 UPNP_DEVICE_NS = {"d": "urn:schemas-upnp-org:device-1-0"}
 
+GENERIC_MANUFACTURERS: frozenset[str] = frozenset({
+    "",
+    "smarttv",
+    "smart tv",
+    "smarttv.",
+    "http://www.smarttv.com",
+    "www.smarttv.com",
+    "renderer",
+    "unknown",
+})
+
+BRAND_MAP: dict[str, str] = {
+    "his": "Hisense",
+    "hisense": "Hisense",
+    "tos": "Toshiba",
+    "toshiba": "Toshiba",
+    "loe": "Loewe",
+    "loewe": "Loewe",
+    "sch": "Schneider",
+    "schneider": "Schneider",
+    "aka": "Akai",
+    "akai": "Akai",
+    "bek": "Beko",
+    "beko": "Beko",
+    "tel": "Telefunken",
+    "telefunken": "Telefunken",
+    "bus": "Bush",
+    "bush": "Bush",
+}
+
+
+def normalize_manufacturer_brand(
+    brand_code: str | None,
+    current_manufacturer: str | None = None,
+) -> str:
+    """Normalizes generic manufacturer placeholders (e.g. SmartTV) or brand codes (e.g. his) to actual brand name."""
+    clean_mfg = (current_manufacturer or "").strip().lower()
+    if clean_mfg in BRAND_MAP:
+        return BRAND_MAP[clean_mfg]
+    if current_manufacturer and clean_mfg not in GENERIC_MANUFACTURERS:
+        return current_manufacturer.strip()
+
+    if brand_code:
+        clean_brand = brand_code.strip().lower()
+        if clean_brand in BRAND_MAP:
+            return BRAND_MAP[clean_brand]
+        for key, val in BRAND_MAP.items():
+            if clean_brand.startswith(key):
+                return val
+        if clean_brand not in GENERIC_MANUFACTURERS:
+            return brand_code.strip().title()
+
+    return "Hisense"
+
+
 __all__ = [
+    "BRAND_MAP",
+    "GENERIC_MANUFACTURERS",
     "UPNP_DEVICE_NS",
+    "normalize_manufacturer_brand",
     "parse_soap_mute_response",
     "parse_soap_transport_info_response",
     "parse_soap_volume_response",
@@ -109,6 +167,10 @@ def parse_upnp_renderer_descriptor(xml_content: str) -> dict[str, Any]:
                     parsed["transport_protocol"] = props["transport_protocol"]
     except Exception as exc:
         _LOGGER.debug("Failed to parse UPnP renderer descriptor XML: %s", exc)
+
+    parsed["manufacturer"] = normalize_manufacturer_brand(
+        parsed.get("brand"), parsed.get("manufacturer")
+    )
 
     return parsed
 

@@ -338,3 +338,55 @@ async def test_periodic_and_wake_clock_sync(mock_entry, mock_client, monkeypatch
     state_cb({"statetype": "app"})
     hass.async_create_background_task.assert_called_once()
 
+
+@pytest.mark.anyio
+async def test_device_registry_live_enrichment_callback(mock_entry, mock_client, monkeypatch):
+    """Test that device_info updates dynamically update the Home Assistant Device Registry."""
+    hass = MagicMock()
+    hass.data = {}
+    hass.config_entries = MagicMock()
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    hass.loop = MagicMock()
+    hass.loop.call_soon_threadsafe = MagicMock(side_effect=lambda func, *args: func(*args))
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.HisenseTvClient",
+        lambda *args, **kwargs: mock_client,
+    )
+    mock_client.has_notifications = False
+    mock_client.check_and_refresh_token = MagicMock(return_value=False)
+    mock_client.connect_and_run = MagicMock()
+
+    mock_dev_reg = MagicMock()
+    mock_device = MagicMock()
+    mock_device.id = "dev_123"
+    mock_device.manufacturer = "SmartTV"
+    mock_device.model = "VIDAA TV"
+    mock_device.sw_version = "1.0"
+    mock_dev_reg.async_get_device.return_value = mock_device
+
+    monkeypatch.setattr(
+        "homeassistant.helpers.device_registry.async_get",
+        lambda hass_arg: mock_dev_reg,
+    )
+
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+
+    result = await async_setup_entry(hass, mock_entry)
+    assert result is True
+
+    mock_client.register_device_info_callback.assert_called_once()
+    dev_info_cb = mock_client.register_device_info_callback.call_args[0][0]
+
+    mock_client.manufacturer = "Hisense"
+    mock_client.model_name = "58A53FXVT"
+    mock_client.firmware_version = "V0000.06.30T.N0921"
+
+    dev_info_cb({})
+
+    mock_dev_reg.async_update_device.assert_called_once_with(
+        "dev_123",
+        manufacturer="Hisense",
+        model="58A53FXVT",
+        sw_version="V0000.06.30T.N0921",
+    )

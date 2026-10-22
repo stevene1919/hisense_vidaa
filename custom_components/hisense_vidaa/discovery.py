@@ -23,6 +23,10 @@ from .tv.fingerprint import (
     query_mdns_fingerprint,
     query_upnp_descriptor,
 )
+from .tv.upnp_desc import (
+    normalize_manufacturer_brand,
+    parse_upnp_description_properties,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -106,11 +110,15 @@ def parse_ssdp_discovery(
     udn = getattr(discovery_info, "ssdp_udn", None)
     unique_id = mac_address or udn
 
+    model_props = parse_upnp_description_properties(model_desc)
+    brand_code = model_props.get("brand")
+    norm_manufacturer = normalize_manufacturer_brand(brand_code, manufacturer)
+
     return DiscoveredTvInfo(
         host=host,
         title=title,
         model=model,
-        manufacturer=manufacturer or "Hisense",
+        manufacturer=norm_manufacturer,
         mac_address=mac_address,
         unique_id=unique_id,
         is_vidaa=True,

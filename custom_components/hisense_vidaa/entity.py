@@ -42,12 +42,15 @@ class HisenseVidaaEntity(Entity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return Home Assistant DeviceInfo linking to this TV."""
+        model = self._client.model_name or self._model
+        manufacturer = self._client.manufacturer or self._manufacturer
+        sw_version = self._client.firmware_version or self._sw_version
         info = DeviceInfo(
             identifiers={(DOMAIN, self._entry_id)},
             name=self._name,
-            manufacturer=self._manufacturer,
-            model=self._model,
-            sw_version=self._sw_version,
+            manufacturer=manufacturer,
+            model=model,
+            sw_version=sw_version,
         )
         if self._mac:
             cleaned_mac = self._mac.replace("-", ":").lower()

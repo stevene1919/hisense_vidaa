@@ -201,6 +201,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         lambda c: hass.loop.call_soon_threadsafe(_handle_auth_failed, c)
     )
 
+    # Live Device Registry enrichment on getdeviceinfo/gettvinfo telemetry
+    def _handle_device_info_update(_data: dict[str, Any]) -> None:
+        """Enrich Home Assistant Device Registry when TV telemetry reports device info."""
+        from homeassistant.helpers import device_registry as dr
+
+        dev_reg = dr.async_get(hass)
+        device = dev_reg.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+        if device:
+            update_kwargs: dict[str, Any] = {}
+            if client.manufacturer and client.manufacturer != device.manufacturer:
+                update_kwargs["manufacturer"] = client.manufacturer
+            if client.model_name and client.model_name != device.model:
+                update_kwargs["model"] = client.model_name
+            if client.firmware_version and client.firmware_version != device.sw_version:
+                update_kwargs["sw_version"] = client.firmware_version
+            if update_kwargs:
+                dev_reg.async_update_device(device.id, **update_kwargs)
+
+    def dev_info_cb(data: Any) -> None:
+        hass.loop.call_soon_threadsafe(_handle_device_info_update, data)
+
+    client.register_device_info_callback(dev_info_cb)
+    entry.async_on_unload(lambda: client.unregister_device_info_callback(dev_info_cb))
+
     # Check and refresh tokens in executor
     updated = await hass.async_add_executor_job(client.check_and_refresh_token)
     if updated:

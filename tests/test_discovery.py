@@ -94,3 +94,45 @@ def test_query_mdns_fingerprint_no_zeroconf():
     assert info["serial_number"] is None
     assert info["manufacturer"] is None
 
+
+def test_normalize_manufacturer_brand():
+    """Test manufacturer brand normalization for generic placeholders and brand codes."""
+    from custom_components.hisense_vidaa.tv.upnp_desc import normalize_manufacturer_brand
+
+    # Generic placeholders with known brand codes
+    assert normalize_manufacturer_brand("his", "SmartTV") == "Hisense"
+    assert normalize_manufacturer_brand("hisense", "Smart TV") == "Hisense"
+    assert normalize_manufacturer_brand("tos", "smarttv.") == "Toshiba"
+    assert normalize_manufacturer_brand("loe", "http://www.smarttv.com") == "Loewe"
+    assert normalize_manufacturer_brand("sch", "") == "Schneider"
+    assert normalize_manufacturer_brand("bek", None) == "Beko"
+
+    # Generic placeholders with no brand code -> default to Hisense
+    assert normalize_manufacturer_brand(None, "SmartTV") == "Hisense"
+    assert normalize_manufacturer_brand("", "smart tv") == "Hisense"
+
+    # Non-generic actual manufacturer names preserved
+    assert normalize_manufacturer_brand("his", "Toshiba") == "Toshiba"
+    assert normalize_manufacturer_brand("loe", "Loewe") == "Loewe"
+
+
+def test_parse_ssdp_discovery_generic_manufacturer_sanitization():
+    """Test parse_ssdp_discovery sanitizes generic SmartTV manufacturer placeholders."""
+    from custom_components.hisense_vidaa.discovery import parse_ssdp_discovery
+
+    sample_info = MagicMock()
+    sample_info.ssdp_headers = {"_host": "192.168.50.12"}
+    sample_info.ssdp_location = "http://192.168.50.12:38400/description.xml"
+    sample_info.ssdp_udn = "uuid:12345"
+    sample_info.upnp = {
+        "friendlyName": "Living Room TV",
+        "modelName": "58A53FXVT",
+        "manufacturer": "SmartTV",
+        "modelDescription": "vidaa_support=1\nbrand=his\nmacWifi=E8:51:77:EC:98:1C\n",
+    }
+
+    discovered = parse_ssdp_discovery(sample_info)
+    assert discovered is not None
+    assert discovered.manufacturer == "Hisense"
+    assert discovered.model == "58A53FXVT"
+    assert discovered.mac_address == "e8:51:77:ec:98:1c"
