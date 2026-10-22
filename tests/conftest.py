@@ -420,6 +420,8 @@ if "homeassistant" not in sys.modules:
     selector = types.ModuleType("homeassistant.helpers.selector")
     class NumberSelector:
         def __init__(self, config): self.config = config
+        def __voluptuous_compile__(self, schema):
+            return lambda val: val
     class NumberSelectorConfig:
         def __init__(self, **kwargs): self.config = kwargs
     class NumberSelectorMode:
@@ -427,6 +429,8 @@ if "homeassistant" not in sys.modules:
         BOX = "box"
     class SelectSelector:
         def __init__(self, config): self.config = config
+        def __voluptuous_compile__(self, schema):
+            return lambda val: val
     class SelectSelectorConfig:
         def __init__(self, **kwargs): self.config = kwargs
     class SelectSelectorMode:

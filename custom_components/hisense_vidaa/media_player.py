@@ -152,6 +152,36 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         return attributes
 
     @property
+    def icon(self) -> str | None:
+        """Return dynamic MDI icon based on active source or application."""
+        if self._state == STATE_OFF:
+            return "mdi:television-off"
+        src = (self.source or self._source or "").lower()
+        if "netflix" in src:
+            return "mdi:netflix"
+        if "youtube" in src or "yt" in src:
+            return "mdi:youtube"
+        if "prime" in src or "amazon" in src:
+            return "mdi:amazon"
+        if "disney" in src:
+            return "mdi:television-classic"
+        if "plex" in src:
+            return "mdi:plex"
+        if "spotify" in src:
+            return "mdi:spotify"
+        if "apple" in src:
+            return "mdi:apple"
+        if "browser" in src or "web" in src:
+            return "mdi:web"
+        if "hdmi" in src:
+            return "mdi:hdmi-port"
+        if "tv" in src or "tuner" in src or "live" in src:
+            return "mdi:television-guide"
+        if "av" in src or "component" in src:
+            return "mdi:video-input-component"
+        return "mdi:television"
+
+    @property
     def media_channel(self) -> str | None:
         """Channel currently tuned to for TV tuner sources."""
         return build_media_channel_label(self._channel_name, self._channel_num)

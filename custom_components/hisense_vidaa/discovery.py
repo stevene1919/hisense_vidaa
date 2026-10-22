@@ -26,7 +26,19 @@ from .tv.fingerprint import (
 
 _LOGGER = logging.getLogger(__name__)
 
+BRAND_MAP: dict[str, str] = {
+    "his": "Hisense",
+    "tos": "Toshiba",
+    "loe": "Loewe",
+    "sch": "Schneider",
+    "aka": "Akai",
+    "bek": "Beko",
+    "tel": "Telefunken",
+    "bus": "Bush",
+}
+
 __all__ = [
+    "BRAND_MAP",
     "UPNP_PORTS",
     "DiscoveredTvInfo",
     "format_drift_human",
@@ -53,6 +65,7 @@ class DiscoveredTvInfo:
     mac_address: str | None = None
     unique_id: str | None = None
     is_vidaa: bool = True
+    brand: str = "his"
 
 
 def parse_ssdp_discovery(
@@ -84,17 +97,22 @@ def parse_ssdp_discovery(
         return None
 
     mac_address = None
+    brand_code = "his"
     for line in model_desc.splitlines():
         if "=" in line:
             k, v = line.split("=", 1)
-            k, v = k.strip(), v.strip()
-            if k in ("macWifi", "macEthernet") and v:
+            k_clean, v_clean = k.strip().lower(), v.strip().lower()
+            if k_clean == "brand" and v_clean:
+                brand_code = v_clean
+            elif k_clean in ("macwifi", "macethernet") and v:
                 mac_clean = v.replace(":", "").replace("-", "").replace(".", "").strip()
                 if len(mac_clean) == 12:
                     mac_address = ":".join(mac_clean[i:i + 2] for i in range(0, 12, 2)).lower()
                 else:
                     mac_address = v.lower()
-                break
+
+    if not manufacturer or manufacturer.strip().lower() in ("", "smarttv", "smart tv", "smarttv."):
+        manufacturer = BRAND_MAP.get(brand_code, "Hisense")
 
     if not mac_address:
         raw_mac = get_arp_mac(host)
@@ -114,6 +132,7 @@ def parse_ssdp_discovery(
         mac_address=mac_address,
         unique_id=unique_id,
         is_vidaa=True,
+        brand=brand_code,
     )
 
 

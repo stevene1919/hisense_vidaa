@@ -201,6 +201,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         lambda c: hass.loop.call_soon_threadsafe(_handle_auth_failed, c)
     )
 
+    # Dynamic device registry enrichment on live MQTT device info
+    def _handle_device_info_update(_info: dict[str, Any]) -> None:
+        try:
+            from homeassistant.helpers import device_registry as dr
+            dev_reg = dr.async_get(hass)
+            device = dev_reg.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+            if device:
+                updates = {}
+                if client.manufacturer and client.manufacturer != device.manufacturer:
+                    updates["manufacturer"] = client.manufacturer
+                if client.model_name and client.model_name != device.model:
+                    updates["model"] = client.model_name
+                if client.firmware_version and client.firmware_version != device.sw_version:
+                    updates["sw_version"] = client.firmware_version
+                if updates:
+                    dev_reg.async_update_device(device.id, **updates)
+        except Exception as err:
+            _LOGGER.debug("[%s] Dynamic device registry enrichment error: %s", client.ip, err)
+
+    client.register_device_info_callback(
+        lambda info: hass.loop.call_soon_threadsafe(_handle_device_info_update, info)
+    )
+
     # Check and refresh tokens in executor
     updated = await hass.async_add_executor_job(client.check_and_refresh_token)
     if updated:

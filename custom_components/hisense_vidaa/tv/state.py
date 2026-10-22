@@ -101,11 +101,40 @@ def apply_device_info_update(client: HisenseTvClient, data: Any) -> None:
     if model and str(model).strip():
         client.model_name = str(model).strip()
 
-    manufacturer_name = data.get("manufacturer") or data.get("brand")
+    manufacturer_name = (
+        data.get("manufacturer")
+        or data.get("brand")
+        or data.get("brand_name")
+    )
     if manufacturer_name and str(manufacturer_name).strip():
-        client.manufacturer = str(manufacturer_name).strip()
+        m_str = str(manufacturer_name).strip()
+        brand_map = {
+            "his": "Hisense",
+            "hisense": "Hisense",
+            "tos": "Toshiba",
+            "toshiba": "Toshiba",
+            "loe": "Loewe",
+            "loewe": "Loewe",
+            "sch": "Schneider",
+            "schneider": "Schneider",
+            "aka": "Akai",
+            "akai": "Akai",
+            "bek": "Beko",
+            "beko": "Beko",
+            "tel": "Telefunken",
+            "telefunken": "Telefunken",
+            "bus": "Bush",
+            "bush": "Bush",
+        }
+        client.manufacturer = brand_map.get(m_str.lower(), m_str)
 
-    firmware_version = data.get("firmware_version") or data.get("sw_version") or data.get("version")
+    firmware_version = (
+        data.get("firmware_version")
+        or data.get("sw_version")
+        or data.get("version")
+        or data.get("uVersion")
+        or data.get("tv_version")
+    )
     if firmware_version and str(firmware_version).strip():
         client.firmware_version = str(firmware_version).strip()
 
