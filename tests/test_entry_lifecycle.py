@@ -378,6 +378,7 @@ async def test_device_info_update_enriches_device_registry(mock_entry, mock_clie
     mock_device.manufacturer = "SmartTV"
     mock_device.sw_version = None
     mock_dev_reg.async_get_device.return_value = mock_device
+    mock_dev_reg.async_get_device_by_identifier.return_value = mock_device
 
     monkeypatch.setattr(
         "homeassistant.helpers.device_registry.async_get",

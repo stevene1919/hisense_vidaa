@@ -2,6 +2,31 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [3.0.0] - 2026-10-28 — 🎉 1,000 Downloads Community Celebration Edition
+
+This milestone release celebrates surpassing **1,000 active downloads** on HACS in just over a week! A heartfelt thank you to our vibrant open-source community, early contributors, and everyone who filed issues, tested hardware edge cases, and helped refine the integration.
+
+**PR's:** @Syax89 @mzhur  
+**Issues:** @cyranius669 @Mrgrafcox @ThatCKx @yagoid @lvbubi @ndesgranges
+
+### 🌟 What's New & Hardened in v3.0.0
+- **LIVE MQTT DEVICE REGISTRY ENRICHMENT & GENERIC PLACEHOLDER SANITIZATION (`discovery.py`, `tv/state.py`, `entity.py`, `__init__.py`)**:
+  - Sanitized generic UPnP `<manufacturer>SmartTV</manufacturer>` placeholders using brand codes (`BRAND_MAP`) parsed from SSDP model descriptions.
+  - Dynamically bound `device_info` in `HisenseVidaaEntity` to live telemetry attributes (`model_name`, `manufacturer`, `firmware_version`), falling back to config entry values.
+  - Implemented real-time `async_update_device` callback on incoming `getdeviceinfo` and `gettvinfo` MQTT telemetry, with clean unload unregistration.
+  - Updated device registry lookup to use modern `async_get_device_by_identifier` with backwards-compatible fallback, preventing deprecation warnings in HA 2025.1+.
+- **DYNAMIC MDI APP & SOURCE ICON BRANDING (`media_player.py`)**:
+  - Added dynamic `icon` property to `HisenseVidaaMediaPlayer` resolving active sources and Smart TV streaming applications (Netflix, YouTube, Prime Video, Disney+, Plex, Spotify, Apple TV, Browser, HDMI ports, Live TV, AV) to intuitive MDI icons.
+- **MULTI-BRAND VIDAA OS PROTOCOL FOUNDATION (`crypto.py`, `client.py`, `flow_discovery.py`)**:
+  - Parameterized the brand identifier across pairing handshake, dynamic username generation, client ID formatting, and password hashing (`"his"`, `"tos"`, `"loe"`, `"sch"`, `"aka"`, `"bek"`, `"tel"`, `"bus"`, `"vic"`), laying the groundwork for the upcoming universal VIDAA integration rebrand.
+- **INTEGRATION QUALITY SCALE (GOLD TIER) HARDENING & EXPANDED DOCUMENTATION**:
+  - Implemented `async_remove_config_entry_device` in `__init__.py` for stale device cleanup (`stale-devices`).
+  - Added formal tracking file `quality_scale.yaml` documenting adherence across Bronze, Silver, and Gold IQS rules.
+  - Pinned `manifest.json` to Bronze pending official staged review by Home Assistant Core reviewers.
+  - Expanded documentation across `docs/README.md`, `docs/parameters.md` (local push architecture, supported entities, known limitations), and `docs/services_and_automations.md` (real-world automation recipes for cinema mode, gaming mode sync, doorbell toast alerts, and late-night audio guard).
+- **TEST SUITE EXPANSION**:
+  - Expanded unit test suite to **221 tests passing** across stale device removal, dynamic source icons, brand credentials derivation, deprecation-free device registry enrichment, and telemetry parsing.
+
 ## [2.11.1] - 2026-10-21
 
 - **MASK SENSITIVE MQTT TOKENS IN DEBUG LOGS (`protocol/dispatcher.py`, `protocol/auth.py`, `protocol/pairing.py`)**:

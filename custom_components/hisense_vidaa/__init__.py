@@ -285,7 +285,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
             from homeassistant.helpers import device_registry as dr
 
             dev_reg = dr.async_get(hass)
-            device = dev_reg.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+            device = None
+            if hasattr(dev_reg, "async_get_device_by_identifier"):
+                device = dev_reg.async_get_device_by_identifier(
+                    (DOMAIN, entry.entry_id), entry.entry_id
+                )
+            if not device and hasattr(dev_reg, "async_get_device"):
+                device = dev_reg.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
             if device:
                 updates: dict[str, Any] = {}
                 if client.model_name and client.model_name != device.model:
