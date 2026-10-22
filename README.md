@@ -27,17 +27,15 @@ Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using 
 
 ## 🧭 Supported Generations & Models
 
-The integration automatically detects and supports multiple generations of Hisense and licensed OEM smart TVs:
+The integration officially supports all smart TV models manufactured by **Hisense** running VIDAA OS:
 
-| TV Generation / Firmware | Profile | Pairing Method | Description |
-| :--- | :--- | :--- | :--- |
-| **Modern VIDAA OS (2024+ / U6+, U7, U8, UX)** | `modern` | 4-Digit Screen PIN | Modern VIDAA 2.0 with dynamic challenge handshake |
-| **Middle VIDAA OS (VIDAA 1.5 / U5, early U6)** | `middle` | 4-Digit Screen PIN | Middle VIDAA transition firmware with dynamic pairing |
-| **Standard VIDAA OS (2018–2023 / U4, U5)** | `remotenow` | 4-Digit Screen PIN | RemoteNOW dynamic PIN protocol |
-| **Legacy Models (Pre-2022 / U2, U3)** | `legacy` | Instant Setup (No PIN) | Static service credential mode |
-| **Auto Detection (All Generations & OEMs)** | `auto` | Automatic | UPnP transport probe with automatic multi-tier fallback |
+| Brand / Manufacturer | Series & Verified Models | Firmware Builds | Auth Profile | Pairing Method |
+| :--- | :--- | :--- | :--- | :--- |
+| **Hisense (Modern)** | U6G, U7G, U8G, U6K, U7K, U8K, UX, A6G, A6H, A7GQ, A63H, E7HQ, E7K PRO | `Q0704`, `V0000.06`, `U6.1.0`, `U7.0`, `U8.0` | `modern` / `auto` | 4-Digit Screen PIN |
+| **Hisense (Middle / Standard)** | U4G, U5G, H8G, H9G, B7100, B7500, A7100, A7300, A7500 | `V0000.01`–`V0000.05`, `U4.0`, `U5.0` | `middle` / `remotenow` | 4-Digit Screen PIN |
+| **Licensed OEM VIDAA Models** *(Pre-release support)* | Toshiba, Loewe, Schneider, Akai, Beko, Telefunken, Bush (VIDAA OS editions) | Various builds | `auto` | 4-Digit Screen PIN |
 
-> For complete cryptographic formulas, XOR masks, and OEM brand identifiers (Toshiba, Loewe, etc.), see [Protocol & Cryptographic Architecture](docs/protocol_architecture.md).
+> **Note on Other Brands**: Underlying protocol support, cryptographic derivation, and manufacturer branding normalization for licensed VIDAA OS OEM manufacturers (Toshiba, Loewe, etc.) are implemented and ready in code. Official brand certification, testing, and dedicated documentation will launch with the upcoming universal VIDAA integration rebranding (`hisense_vidaa` → `vidaa`). For complete cryptographic formulas, XOR masks, and OEM brand identifiers, see [Protocol & Cryptographic Architecture](docs/protocol_architecture.md).
 
 ---
 

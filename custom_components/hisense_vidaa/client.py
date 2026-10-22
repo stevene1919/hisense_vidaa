@@ -67,10 +67,12 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         auth_profile: str = "auto",
         refresh_in_standby: bool = False,
         name: str | None = None,
+        brand: str = "his",
     ) -> None:
         """Initialize the client."""
         self.ip = ip
         self.mac = mac
+        self.brand = brand or "his"
         self.client_id = client_id or ""
         self.username = username or ""
         self.password = password or ""
@@ -289,6 +291,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
             timestamp=timestamp,
             auth_profile=profile,
             use_new_auth=use_new_auth,
+            brand=self.brand,
         )
         self.update_topic_paths()
         _LOGGER.debug(

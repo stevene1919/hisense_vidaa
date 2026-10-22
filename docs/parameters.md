@@ -1,6 +1,44 @@
 # ⚙️ Configuration & Options Parameters Reference
 
-This document provides a comprehensive reference for all user-configurable parameters across the **Initial Setup (Config Flow)** and **Options Flow** in the `hisense_vidaa` Home Assistant integration, adhering to Home Assistant Silver Tier Quality Scale standards.
+This document provides a comprehensive reference for all user-configurable parameters across the **Initial Setup (Config Flow)** and **Options Flow** in the `hisense_vidaa` Home Assistant integration, adhering to Home Assistant Gold Tier Quality Scale standards.
+
+---
+
+## 📡 Data Update & Local Push Architecture
+
+The integration operates using **100% Local Push (`iot_class: local_push`)**:
+- **No Background Polling**: Home Assistant does not poll the TV for power state, volume, active app, or input sources. The TV pushes live state updates over a persistent, encrypted TLS MQTT connection (port `36669`) as events occur.
+- **Instant Response**: Power changes, volume adjustments, and playback state transitions are reflected instantly in Home Assistant UI.
+- **Clock Sync Interval**: A lightweight UPnP request runs every 2 hours (and on wake transition from standby) to check host-to-TV hardware clock drift without polling media telemetry.
+
+---
+
+## 📱 Supported Entities, Platforms & Features
+
+The integration automatically registers entities across 9 Home Assistant platforms:
+
+| Platform | Entity Class | Description & Features |
+| :--- | :--- | :--- |
+| **`media_player`** | `MediaPlayerDeviceClass.TV` | Power toggle, volume step/set, mute, source input switcher, Smart TV app launcher, media transport controls (Play, Pause, Stop, Next, Previous), active source/app artwork, and display state. |
+| **`remote`** | `RemoteEntity` | Discrete key press commands, sequence dispatching (`hisense_vidaa.send_key_sequence`), configurable inter-key delays, and repeat counts. |
+| **`sensor`** | `SensorEntity` | Active Source, Active App, Audio Output Mode, Session Status, Auth Profile, and Hardware Clock Drift offset ($> 60\text{s}$ warning threshold). |
+| **`binary_sensor`** | `BinarySensorEntity` | Live MQTT Connection state and In Use indicator. |
+| **`button`** | `ButtonEntity` | **Sync TV Clock**, **Force Reconnect**, and **Trigger Re-pairing** diagnostic buttons. |
+| **`switch`** | `SwitchEntity` | **Debug Logging** logger toggle and **Audio Only** screen backlight toggle. |
+| **`notify`** | `NotifyEntity` | On-screen toast message notification service (`notify.send_message`). |
+| **`select`** | `SelectEntity` | **Picture Mode** (`Standard`, `Cinema Day`, `Cinema Night`, `Dynamic`, `Sports`, `Game`, `Filmmaker`) and **Sound Mode** switcher (`Standard`, `Theatre`, `Music`, `Speech`, `Late Night`, `Sports`). |
+| **`number`** | `NumberEntity` | Calibration sliders for **Backlight**, **Brightness**, and **Contrast** (0–100). |
+
+---
+
+## ⚠️ Known Limitations
+
+Before deploying the integration, note the following hardware and firmware limitations:
+
+1. **No ICMP Ping in Standby**: Most Hisense VIDAA televisions turn off their ICMP ping responder while in low-power standby (`fake_sleep_0`). ICMP ping integration or ping binary sensors will report the TV as offline during standby.
+2. **Wi-Fi Wake-on-LAN Unreliability**: Wake-on-LAN (WoL) over 802.11 Wi-Fi can drop initial packets when the TV's Wi-Fi module enters deep power-saving mode. Connecting the TV via wired Ethernet or enabling multi-burst WoL in options is strongly recommended.
+3. **Firmware Compatibility Gaps**: Pre-2018 Hisense TV models (VIDAA U2 or earlier) lack the internal MQTT broker daemon on port `36669` and cannot be controlled via local TLS MQTT.
+4. **App Deep-Linking Restrictions**: Certain Smart TV applications (e.g. Netflix, Disney+) enforce proprietary DRM restrictions that prevent launching directly into specific video content URLs without navigating through the app's main UI.
 
 ---
 

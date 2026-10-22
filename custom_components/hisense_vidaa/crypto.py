@@ -38,17 +38,19 @@ def generate_initial_credentials(
     auth_profile: str = "auto",
     use_new_auth: bool | None = None,
     mac_address: str | None = None,
+    brand: str = "his",
 ) -> tuple[str, str, str]:
-    """Derive MQTT authentication parameters (client_id, username, password) for VIDAA pairing.
+    """Derive MQTT authentication parameters (client_id, username, password) for VIDAA pairing across OEM brands.
 
     Returns:
         tuple[client_id, username, password]
     """
     current_timestamp = int(time.time()) if timestamp is None else timestamp
     normalized_mac = normalize_mac_address(mac_address if mac_address is not None else mac)
+    brand_id = (brand or "his").strip().lower()
 
     mac_digest = hashlib.md5(f"{CLIENT_ID_PATTERN}${normalized_mac}".encode()).hexdigest().upper()
-    client_id = f"{normalized_mac}$his${mac_digest[:6]}_vidaacommon_001"
+    client_id = f"{normalized_mac}${brand_id}${mac_digest[:6]}_vidaacommon_001"
 
     profile = (auth_profile or "auto").lower()
     if profile in ("legacy", "static"):
@@ -62,17 +64,17 @@ def generate_initial_credentials(
 
     if is_modern:
         salt = MODERN_SALT
-        username = f"his${current_timestamp ^ XOR_TIMESTAMP_MASK}"
+        username = f"{brand_id}${current_timestamp ^ XOR_TIMESTAMP_MASK}"
     elif is_middle:
         salt = STANDARD_SALT
-        username = f"his${current_timestamp ^ XOR_TIMESTAMP_MASK}"
+        username = f"{brand_id}${current_timestamp ^ XOR_TIMESTAMP_MASK}"
     else:
         # Standard / RemoteNow dynamic
         salt = STANDARD_SALT
-        username = f"his${current_timestamp}"
+        username = f"{brand_id}${current_timestamp}"
 
     digit_sum = sum(int(char) for char in str(current_timestamp) if char.isdigit()) % 10
-    salt_hash = hashlib.md5(f"his{digit_sum}{salt}".encode()).hexdigest().upper()
+    salt_hash = hashlib.md5(f"{brand_id}{digit_sum}{salt}".encode()).hexdigest().upper()
     password = hashlib.md5(f"{current_timestamp}${salt_hash[:6]}".encode()).hexdigest().upper()
 
     return client_id, username, password

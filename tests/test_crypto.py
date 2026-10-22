@@ -326,4 +326,31 @@ def test_get_profile_default_cert_paths(tmp_path):
     assert key_name2 == "remotenow_2018_key.pem"
 
 
+def test_generate_initial_credentials_oem_brands():
+    """Test generating initial dynamic credentials for OEM VIDAA brands."""
+    from custom_components.hisense_vidaa.crypto import generate_initial_credentials
+
+    # Toshiba brand
+    client_id, username, password = generate_initial_credentials(
+        mac="aa:bb:cc:dd:ee:ff",
+        timestamp=1700000000,
+        auth_profile="modern",
+        brand="tos",
+    )
+    assert "aa:bb:cc:dd:ee:ff$tos$" in client_id
+    assert username.startswith("tos$")
+    assert len(password) == 32
+
+    # Loewe brand
+    client_id, username, password = generate_initial_credentials(
+        mac="aa:bb:cc:dd:ee:ff",
+        timestamp=1700000000,
+        auth_profile="auto",
+        brand="loe",
+    )
+    assert "aa:bb:cc:dd:ee:ff$loe$" in client_id
+    assert username.startswith("loe$")
+
+
+
 

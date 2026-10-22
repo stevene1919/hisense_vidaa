@@ -94,3 +94,23 @@ def test_query_mdns_fingerprint_no_zeroconf():
     assert info["serial_number"] is None
     assert info["manufacturer"] is None
 
+
+def test_parse_ssdp_discovery_generic_manufacturer():
+    """Test parse_ssdp_discovery sanitizes generic SmartTV manufacturer placeholders using brand codes."""
+    from custom_components.hisense_vidaa.discovery import parse_ssdp_discovery
+
+    discovery_info = MagicMock()
+    discovery_info.upnp = {
+        "friendlyName": "Toshiba TV",
+        "modelName": "58A53FXVT",
+        "manufacturer": "SmartTV",
+        "modelDescription": "transport_protocol=3290\nbrand=tos\nmacWifi=e85177ec981c",
+    }
+    discovery_info.ssdp_headers = {"_host": "192.168.50.20"}
+
+    info = parse_ssdp_discovery(discovery_info)
+    assert info is not None
+    assert info.host == "192.168.50.20"
+    assert info.manufacturer == "Toshiba"
+    assert info.model == "58A53FXVT"
+    assert info.mac_address == "e8:51:77:ec:98:1c"

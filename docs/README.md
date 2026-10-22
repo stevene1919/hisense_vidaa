@@ -37,3 +37,34 @@ This directory contains in-depth documentation covering installation, networking
 1. [**`parameters.md#4-home-assistant-debugging--diagnostics-guide`**](parameters.md#4-home-assistant-debugging--diagnostics-guide) — Enable real-time debug logging via `switch.<tv>_debug_logging` or `logger`, download sanitized HA diagnostics, and trigger repairs.
 2. [**`cli_tools.md`**](cli_tools.md) — Use `test_client.py ping`, `upnp`, and `test-ssl` to diagnose connection, network, clock drift, or authentication issues directly from terminal.
 3. [**`protocol_architecture.md`**](protocol_architecture.md) — Understand how the multi-tier auth cascade, UPnP LAN control, token persistence, and MQTT topic routing operate under the hood.
+
+---
+
+## 🏆 Integration Quality Scale (Gold Tier) Reference
+
+### 📺 Supported Devices & Brands
+The integration officially supports **Hisense Smart TVs** running **VIDAA OS** (U4, U5, U6, U7, U8, and 2024+ builds).
+Underlying multi-brand protocol handling and brand code mapping are also prepared in code for licensed OEM VIDAA manufacturers (Toshiba, Loewe, Schneider, Akai, Beko, Telefunken, Bush) ahead of the scheduled universal VIDAA integration rebranding.
+
+### ⚡ Data Update Model (Local Push)
+This integration operates as a **pure local-push integration** (`should_poll = False`). It establishes a persistent local TLS connection over MQTT (port `36669`) directly to the television's internal broker. All state changes (power, volume, mute, source input, active app, TV channel, picture/sound modes) are received as real-time push events without network polling.
+
+### 🎮 Supported Platforms & Entities
+- **Media Player** (`media_player.<tv_name>`): Power, volume, mute, input source, app launcher, playback state, channel tuning, and sound mode.
+- **Remote** (`remote.<tv_name>`): Send remote keys, directional navigation, volume, numbers, media playback.
+- **Sensors & Binary Sensors** (`sensor.<tv_name>_*`, `binary_sensor.<tv_name>_*`): Clock drift, session status, connectivity, power.
+- **Buttons, Switches, Selects, Numbers**: On-demand clock sync, force reconnect, trigger re-pairing, picture/sound settings adjustment, debug logging toggle.
+
+### 💡 Real-World Use Cases & Automations
+- **Home Theater Cinema Mode**: Automatically dim ambient lights when video playback starts (`state: playing`) on streaming apps (Netflix, Prime Video).
+- **Auto HDMI Switcher**: Automatically switch receiver or audio output when switching to game consoles (HDMI 1/2) vs TV broadcast.
+- **Sleep Timer & Night Mode**: Trigger bedtime automations to lower TV volume after 10 PM or switch picture mode to Night/Warm color profile.
+
+### ⚠️ Known Limitations
+- **Wi-Fi WoL Packet Dropping**: Waking TVs over Wi-Fi when in deep cold standby may require configuring Wake-on-LAN packet burst sequences in options.
+- **Local Network Requirement**: Home Assistant and TV must reside on reachable local subnets (port 36669 TCP and port 38400 UDP).
+
+### 🛠️ Troubleshooting Guide
+- **Pairing PIN Failures**: Disconnect any running mobile app (RemoteNow/VIDAA app) before pairing.
+- **Certificate Errors**: Place client certificate files in `/config/ssl/` or `/config/certs/` as detailed in [`certificates.md`](certificates.md).
+- **Re-Authentication Prompt**: Use Home Assistant Repairs or the re-configuration flow to refresh PIN auth when TV tokens are invalidated.

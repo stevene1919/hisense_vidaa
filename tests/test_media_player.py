@@ -449,3 +449,51 @@ async def test_media_player_disconnected_and_cold_boot_recovery(mock_client, moc
     assert mp.state == STATE_ON
 
 
+def test_media_player_dynamic_source_icons(mock_client, mock_entry):
+    """Test dynamic MDI icon branding based on active app or source input."""
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+
+    # When off, should return television-off
+    mp._state = STATE_OFF
+    assert mp.icon == "mdi:television-off"
+
+    # When on, check app and input mappings
+    mp._state = STATE_ON
+    mp._source = "Netflix"
+    assert mp.icon == "mdi:netflix"
+
+    mp._source = "YouTube"
+    assert mp.icon == "mdi:youtube"
+
+    mp._source = "Prime Video"
+    assert mp.icon == "mdi:amazon"
+
+    mp._source = "Disney+"
+    assert mp.icon == "mdi:television-classic"
+
+    mp._source = "Plex"
+    assert mp.icon == "mdi:plex"
+
+    mp._source = "Spotify"
+    assert mp.icon == "mdi:spotify"
+
+    mp._source = "Apple TV"
+    assert mp.icon == "mdi:apple"
+
+    mp._source = "Web Browser"
+    assert mp.icon == "mdi:web"
+
+    mp._source = "HDMI 2"
+    assert mp.icon == "mdi:hdmi-port"
+
+    mp._source = "Live TV"
+    assert mp.icon == "mdi:television-guide"
+
+    mp._source = "AV"
+    assert mp.icon == "mdi:video-input-component"
+
+    mp._source = "Other Source"
+    assert mp.icon == "mdi:television"
+
+
+

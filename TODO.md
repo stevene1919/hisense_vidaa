@@ -38,8 +38,8 @@ This document tracks active pending tasks, investigations, and planned enhanceme
 
 ### 5. Dynamic App & Source Icon Branding
 
-- [ ] **Media Dashboard Source Icons**:
-  - Automatically match active sources and installed Smart TV apps (Netflix, YouTube, Prime Video, Disney+, Plex, HDMI inputs) with corresponding high-resolution icons in dashboard cards.
+- [x] **Media Dashboard Source Icons**:
+  - Automatically match active sources and installed Smart TV apps (Netflix, YouTube, Prime Video, Disney+, Plex, HDMI inputs) with corresponding dynamic MDI icons in `media_player.py`.
 
 ### 6. Robust Wake-on-LAN Bursting & Power Recovery
 
@@ -89,14 +89,16 @@ This document tracks active pending tasks, investigations, and planned enhanceme
 
 ### 11. Rebranding as Universal VIDAA Integration & Multi-Brand Architecture
 
-- [ ] **Multi-Brand VIDAA OS Pairing & Authentication (`crypto.py`, `client.py`, `flow_discovery.py`)**:
-  - Parameterize the brand identifier across the pairing handshake instead of hardcoding `"his"`:
+- [x] **Multi-Brand VIDAA OS Protocol Parameterization (`crypto.py`, `client.py`, `flow_discovery.py`, `discovery.py`)**:
+  - Parameterized the brand identifier across pairing handshake and UPnP normalization instead of hardcoding `"his"` / `"Hisense"`:
     - **Client ID**: Format as `{mac}${brand}${hash[:6]}_vidaacommon_{suffix}` in `crypto.py`.
     - **Username**: Format as `{brand}${timestamp}` or `{brand}${timestamp ^ XOR_TIMESTAMP_MASK}`.
     - **Password Hash**: Generate using `{brand}{cross_sum_digit}{salt}`.
-  - Propagate `brand` into `HisenseTvClient` and store `self.brand` (defaulting to `"his"`).
-  - Extract and persist `brand` in `flow_discovery.py` from SSDP/UPnP discovery XML metadata (`device_info.get("brand")`), falling back to `"his"` for manual entry.
-  - Enable seamless pairing for OEM television brands running licensed VIDAA OS (e.g. Toshiba, Loewe, Schneider, Akai, Beko, Telefunken, Bush).
+  - Propagated `brand` into `HisenseTvClient` (`self.brand`), `flow_discovery.py`, and `BRAND_MAP`.
+  - Underlying code is fully ready for OEM brands (Toshiba, Loewe, Schneider, Akai, Beko, Telefunken, Bush).
+- [ ] **Official Multi-Brand OEM Launch & Ecosystem Certification**:
+  - Keep official public support scoped to Hisense until the planned universal VIDAA rebrand (`hisense_vidaa` → `vidaa`).
+  - Community hardware verification on physical non-Hisense VIDAA sets prior to announcing official support.
 
 - [x] **Namespace & Ecosystem Conflict Analysis**:
   - Investigated potential domain conflicts with existing community custom integrations (`warrenrees/ha_vidaatv` which targets `vidaa` / `vidaatv`, and `vidaa4ha`).
@@ -150,10 +152,10 @@ This document tracks active pending tasks, investigations, and planned enhanceme
 
 ### 16. Device Registry Metadata & Manufacturer Branding Normalization (`discovery.py`, `entity.py`, `client.py`)
 
-- [ ] **Sanitize Generic Manufacturer Placeholders in Discovery (`discovery.py`)**:
+- [x] **Sanitize Generic Manufacturer Placeholders in Discovery (`discovery.py`)**:
   - Many Hisense VIDAA televisions hardcode `<manufacturer>SmartTV</manufacturer>` and `<manufacturerURL>http://www.smarttv.com</manufacturerURL>` in their embedded UPnP DLNA MediaRenderer descriptor (`/MediaServer/rendererdevicedesc.xml`), causing Home Assistant to display `58A5FX by SmartTV` in the device card.
   - In `parse_ssdp_discovery`, detect generic placeholder manufacturers (`"SmartTV"`, `"Smart TV"`, or empty strings) and cross-reference the `#CAP#` block's `brand` attribute (e.g. `brand=his` -> `"Hisense"`, `brand=tos` -> `"Toshiba"`, `brand=loe` -> `"Loewe"`) to assign the true manufacturer brand.
-- [ ] **Live MQTT Device Registry Enrichment (`entity.py`, `client.py`, `coordinator.py`)**:
+- [x] **Live MQTT Device Registry Enrichment (`entity.py`, `client.py`, `coordinator.py`)**:
   - Dynamically populate `model`, `manufacturer`, and `sw_version` in `DeviceInfo` using live telemetry received over MQTT from `platform_service/data/getdeviceinfo` (`model_name`, `tv_version`) and `platform_service/data/gettvinfo` (`brand`, `uVersion`), rather than relying exclusively on static config entry data.
   - Call Home Assistant's `async_update_device` upon receiving the first `getdeviceinfo` payload to enrich the device registry with the TV's official firmware build (e.g. `V0000.06.30T.N0921` / `U6.1.0`) and exact model number (`58A53FXVT`).
 
@@ -162,7 +164,7 @@ This document tracks active pending tasks, investigations, and planned enhanceme
 
 ## 🏆 Home Assistant Integration Quality Scale Tracking
 
-Tracking adherence to the official [HA Integration Quality Scale rules](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules) as of **October 2026** (`manifest.json` currently declares `"quality_scale": "bronze"`).
+Tracking adherence to the official [HA Integration Quality Scale rules](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules) as of **October 2026** (`manifest.json` intentionally remains pinned to `"quality_scale": "bronze"` pending formal staged review by Home Assistant Core, while `quality_scale.yaml` documents implementation through Gold Tier).
 
 > **Note on tier shuffles:** The IQS rules have been updated since the initial tracking below was written. Notably: `test-coverage` moved from Gold → Silver, `diagnostics` and `entity-category` moved from Silver/Bronze → Gold, and `entity-category` and `entity-disabled-by-default` are now Gold. Several new rules were added at Bronze (`action-setup`, `config-flow-test-coverage`, `dependency-transparency`, `docs-*`, `entity-event-setup`, `runtime-data`, `test-before-configure`, `unique-config-entry`) and Gold (`dynamic-devices`, `stale-devices`, `entity-device-class`, `docs-*`). Platinum adds `async-dependency` and `inject-websession`.
 
@@ -193,13 +195,13 @@ Tracking adherence to the official [HA Integration Quality Scale rules](https://
 | [`test-before-setup`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-before-setup)                           | ✅ Done   | Connection verified in `async_setup_entry` before platforms loaded                                             |
 | [`unique-config-entry`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/unique-config-entry)                       | ✅ Done   | Unique ID set to MAC; duplicate detected via `_async_abort_entries_match`                                      |
 
-**Bronze status:** 100% complete (declared in `quality_scale.yaml`).
+**Bronze status:** 100% complete (declared in `quality_scale.yaml` and `manifest.json`).
 
 ---
 
 ### 🥈 Silver Tier — Status: ✅ Complete (manifest retained at Bronze)
 
-> **Quality Scale Declaration:** While all functional, architectural, exception-handling, and documentation requirements of Silver Tier have been fully implemented below, `manifest.json` intentionally remains pinned to `"quality_scale": "bronze"` (as the integration has not yet undergone official Home Assistant Core certification).
+> **Quality Scale Declaration:** While all functional, architectural, exception-handling, and documentation requirements of Silver Tier have been fully implemented below, `manifest.json` intentionally remains pinned to `"quality_scale": "bronze"` (as official certification is reviewed in progressive stages).
 
 | Rule                                                                                                                                            | Status | Notes                                                                                                                                      |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -212,39 +214,41 @@ Tracking adherence to the official [HA Integration Quality Scale rules](https://
 | [`log-when-unavailable`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/log-when-unavailable)                   | ✅ Done | Exponential backoff reconnect logs; logs once on disconnect, once on restore.                                                             |
 | [`parallel-updates`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/parallel-updates)                           | ✅ Done | `PARALLEL_UPDATES = 0` declared in all platform modules.                                                                                  |
 | [`reauthentication-flow`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reauthentication-flow)                 | ✅ Done | Interactive re-pairing flow + Repairs issue integration.                                                                                  |
-| [`test-coverage`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-coverage)                                 | ✅ Done | Comprehensive test suite of 206 unit tests passing (77% overall code coverage across all modules).                                        |
+| [`test-coverage`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-coverage)                                 | ✅ Done | Comprehensive test suite of 221 unit tests passing (77% overall code coverage across all modules).                                        |
 
 **Silver Tier Summary:** All action-exceptions, configuration/installation documentation, and test verifications completed.
 
 ---
 
-### 🥇 Gold Tier — Status: ⚠️ ~55% complete
+### 🥇 Gold Tier — Status: ✅ 100% complete (Code & Docs implemented; manifest retained at Bronze)
 
-| Rule                                                                                                                                      | Status     | Notes                                                                                                  |
-| ----------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------ |
-| [`devices`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/devices)                                       | ✅ Done     | Full Device Registry binding with MAC, manufacturer, model, SW version                                 |
-| [`diagnostics`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/diagnostics)                               | ✅ Done     | Sanitized diagnostics in `diagnostics.py`                                                              |
-| [`discovery`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/discovery)                                   | ✅ Done     | SSDP + Zeroconf auto-discovery                                                                         |
-| [`discovery-update-info`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/discovery-update-info)           | ✅ Done     | SSDP/ARP dynamic MAC tracking updates IP in config entry                                               |
-| [`docs-data-update`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-data-update)                     | ⚠️ **TODO** | Document that data is local-push via MQTT (no polling) in docs                                         |
-| [`docs-examples`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-examples)                           | ⚠️ **TODO** | Add automation/dashboard YAML examples to docs (e.g. turn on lights when TV turns on)                  |
-| [`docs-known-limitations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-known-limitations)         | ⚠️ **TODO** | Document known limitations (no ICMP ping, Wi-Fi WoL unreliability, firmware compatibility gaps)        |
-| [`docs-supported-devices`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-supported-devices)         | ⚠️ **TODO** | Add verified device/firmware compatibility table to docs                                               |
-| [`docs-supported-functions`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-supported-functions)     | ⚠️ **TODO** | Document all entities, platforms, services, and supported features in docs                             |
-| [`docs-troubleshooting`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-troubleshooting)             | ⚠️ **TODO** | Expand troubleshooting section in docs (pairing failures, cert issues, reconnect issues)               |
-| [`docs-use-cases`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-use-cases)                         | ⚠️ **TODO** | Add real-world use case descriptions to docs                                                           |
-| [`dynamic-devices`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/dynamic-devices)                       | ✅ Exempt   | Integration is `integration_type: device`; single-TV per config entry by design                        |
-| [`entity-category`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-category)                       | ✅ Done     | `EntityCategory.DIAGNOSTIC` and `CONFIG` applied to all appropriate entities                           |
-| [`entity-device-class`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-device-class)               | ✅ Done     | Device classes used where applicable (`sensor`, `binary_sensor`, `switch`, `media_player`)             |
-| [`entity-disabled-by-default`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-disabled-by-default) | ✅ Done     | Calibration number entities + secondary diagnostic switches disabled by default                        |
-| [`entity-translations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-translations)               | ✅ Done     | Full `_attr_translation_key` across all platforms; 100% parity `strings.json` ↔ `translations/en.json` |
-| [`exception-translations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/exception-translations)         | ✅ Done     | Translatable exception keys in `strings.json`                                                          |
-| [`icon-translations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/icon-translations)                   | ✅ Done     | Full `icons.json` with MDI icons for all entity translation keys and services                          |
-| [`reconfiguration-flow`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reconfiguration-flow)             | ✅ Done     | `async_step_reconfigure` implemented                                                                   |
-| [`repair-issues`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/repair-issues)                           | ✅ Done     | Native HA Repairs issues raised for invalidated tokens and missing certs                               |
-| [`stale-devices`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/stale-devices)                           | ⚠️ **TODO** | Implement stale device cleanup when a device is removed or config entry is deleted                     |
+> **Quality Scale Declaration:** All functional, architectural, exception-handling, and documentation requirements of Gold Tier have been fully implemented and verified via unit tests and Hassfest. However, `manifest.json` intentionally remains pinned to `"quality_scale": "bronze"` because Home Assistant Core vets quality scale tiers in progressive stages upon formal upstream review. `quality_scale.yaml` formally records rule compliance through Gold Tier.
 
-**Gold gaps to fix:** All `docs-*` content expansion, `stale-devices` cleanup handler.
+| Rule                                                                                                                                      | Status   | Notes                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------ |
+| [`devices`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/devices)                                       | ✅ Done   | Full Device Registry binding with MAC, manufacturer, model, SW version                                 |
+| [`diagnostics`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/diagnostics)                               | ✅ Done   | Sanitized diagnostics in `diagnostics.py`                                                              |
+| [`discovery`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/discovery)                                   | ✅ Done   | SSDP + Zeroconf auto-discovery                                                                         |
+| [`discovery-update-info`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/discovery-update-info)           | ✅ Done   | SSDP/ARP dynamic MAC tracking updates IP in config entry                                               |
+| [`docs-data-update`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-data-update)                     | ✅ Done   | Documented local-push via MQTT (no polling) in docs                                                    |
+| [`docs-examples`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-examples)                           | ✅ Done   | Added automation YAML recipes in `docs/services_and_automations.md`                                    |
+| [`docs-known-limitations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-known-limitations)         | ✅ Done   | Documented known limitations in `docs/parameters.md`                                                   |
+| [`docs-supported-devices`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-supported-devices)         | ✅ Done   | Added verified device/firmware compatibility matrix to `README.md` and `docs/protocol_architecture.md`  |
+| [`docs-supported-functions`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-supported-functions)     | ✅ Done   | Documented all entities, platforms, services, and supported features in `docs/parameters.md`           |
+| [`docs-troubleshooting`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-troubleshooting)             | ✅ Done   | Expanded troubleshooting section in `docs/parameters.md`                                               |
+| [`docs-use-cases`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-use-cases)                         | ✅ Done   | Documented real-world use cases in `docs/services_and_automations.md`                                  |
+| [`dynamic-devices`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/dynamic-devices)                       | ✅ Exempt | Integration is `integration_type: device`; single-TV per config entry by design                        |
+| [`entity-category`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-category)                       | ✅ Done   | `EntityCategory.DIAGNOSTIC` and `CONFIG` applied to all appropriate entities                           |
+| [`entity-device-class`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-device-class)               | ✅ Done   | Device classes used where applicable (`sensor`, `binary_sensor`, `switch`, `media_player`)             |
+| [`entity-disabled-by-default`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-disabled-by-default) | ✅ Done   | Calibration number entities + secondary diagnostic switches disabled by default                        |
+| [`entity-translations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-translations)               | ✅ Done   | Full `_attr_translation_key` across all platforms; 100% parity `strings.json` ↔ `translations/en.json` |
+| [`exception-translations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/exception-translations)         | ✅ Done   | Translatable exception keys in `strings.json`                                                          |
+| [`icon-translations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/icon-translations)                   | ✅ Done   | Full `icons.json` with MDI icons for all entity translation keys and services                          |
+| [`reconfiguration-flow`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reconfiguration-flow)             | ✅ Done   | `async_step_reconfigure` implemented                                                                   |
+| [`repair-issues`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/repair-issues)                           | ✅ Done   | Native HA Repairs issues raised for invalidated tokens and missing certs                               |
+| [`stale-devices`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/stale-devices)                           | ✅ Done   | Implemented `async_remove_config_entry_device` in `__init__.py`                                         |
+
+**Gold status:** 100% complete in code & docs (tracked in `quality_scale.yaml`; manifest retained at Bronze).
 
 ---
 
@@ -264,7 +268,7 @@ Tracking adherence to the official [HA Integration Quality Scale rules](https://
 
 The IQS requires integrations tracking their tier to include a `quality_scale.yaml` file in the integration directory. This file is required for official HA Core submission but is also useful for HACS integrations aiming for the standard.
 
-- [ ] **Create `quality_scale.yaml`** with `done` / `exempt` / `todo` status for all rules.
+- [x] **Create `quality_scale.yaml`** with `done` / `exempt` / `todo` status for all rules.
 
 ---
 

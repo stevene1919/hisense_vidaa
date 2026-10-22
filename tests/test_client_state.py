@@ -297,3 +297,49 @@ def test_apply_state_update_fake_sleep_vocabulary():
     assert client.state == "on"
 
 
+def test_device_info_telemetry_and_entity_binding():
+    """Test getdeviceinfo and gettvinfo telemetry update client state and HisenseVidaaEntity device_info."""
+    from custom_components.hisense_vidaa.entity import HisenseVidaaEntity
+
+    client = HisenseTvClient(ip="192.168.50.12", client_id="test_client")
+    client.update_topic_paths()
+
+    # Dispatch getdeviceinfo telemetry
+    mock_msg = MagicMock()
+    mock_msg.topic = f"{client.topics.mobile}platform_service/data/getdeviceinfo"
+    mock_msg.payload = b'{"model_name": "58A53FXVT", "tv_version": "V0000.06.30T.N0921"}'
+    client._on_message(None, None, mock_msg)
+
+    assert client.model_name == "58A53FXVT"
+    assert client.firmware_version == "V0000.06.30T.N0921"
+
+    # Dispatch gettvinfo telemetry
+    mock_msg = MagicMock()
+    mock_msg.topic = f"{client.topics.mobile}platform_service/data/gettvinfo"
+    mock_msg.payload = b'{"brand": "his", "uVersion": "U6.1.0"}'
+    client._on_message(None, None, mock_msg)
+
+    assert client.manufacturer == "Hisense"
+    assert client.firmware_version == "U6.1.0"
+
+    # Test entity device_info property uses live telemetry over static entry fallback
+    mock_entry = MagicMock()
+    mock_entry.entry_id = "test_entry_id"
+    mock_entry.title = "Living Room TV"
+    mock_entry.data = {
+        "mac_address": "e8:51:77:ec:98:1c",
+        "model": "VIDAA TV",
+        "manufacturer": "SmartTV",
+        "sw_version": "1.0",
+    }
+    mock_entry.options = {}
+
+    entity = HisenseVidaaEntity(client, mock_entry)
+    dev_info = entity.device_info
+
+    assert dev_info["manufacturer"] == "Hisense"
+    assert dev_info["model"] == "58A53FXVT"
+    assert dev_info["sw_version"] == "U6.1.0"
+
+
+
