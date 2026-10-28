@@ -216,7 +216,12 @@ flowchart TD
 
 ### 2. Zero-Cost Clock Drift Synchronization
 Dynamic MQTT username hashes require synchronized Unix timestamps:
-$$\text{Username} = \text{brand} + (\text{timestamp} \oplus \text{0x5698\_1477\_2b03\_a968})$$
+$$\text{Username} = \text{brand} + (\text{timestamp} \oplus \text{0x569814772b03a968})$$
+
+```python
+# 64-bit XOR mask constant: 0x5698_1477_2b03_a968 (decimal 6239759785777146216)
+username = f"{brand}{timestamp ^ 0x5698_1477_2b03_a968}"
+```
 
 If the Home Assistant host and the TV clock drift by more than **120 seconds**, the TV broker rejects connection with `rc: 4`. 
 - Every HTTP response from the TV's UPnP port (`38400`) includes the TV's real-time hardware clock in the standard HTTP `Date:` header (RFC 7231, e.g. `Date: Wed, 15 Oct 2026 00:00:00 GMT`).
