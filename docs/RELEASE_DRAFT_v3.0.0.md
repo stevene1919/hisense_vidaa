@@ -13,6 +13,13 @@ A heartfelt thank you to our vibrant open-source smart home community for your t
 
 ---
 
+### ☕ Support the Project
+If this integration has added value to your smart home setup, consider buying me a coffee to support continued development and maintenance:
+
+[![Support on Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/stevene_)
+
+---
+
 ## 🌟 What's New & Hardened in v3.0.0
 
 ### 📡 Live MQTT Device Registry Enrichment & Sanitization (`discovery.py`, `tv/state.py`, `entity.py`, `__init__.py`)
