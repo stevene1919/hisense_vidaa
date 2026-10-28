@@ -8,7 +8,8 @@ This milestone release celebrates surpassing **1,000 active downloads** on HACS 
 A heartfelt thank you to our vibrant open-source smart home community for your testing, feedback, and contributions that helped shape this release:
 
 **PR's:** @Syax89 @mzhur  
-**Issues:** @cyranius669 @Mrgrafcox @ThatCKx @yagoid @lvbubi @ndesgranges
+**Issues:** @cyranius669 @Mrgrafcox @ThatCKx @yagoid @lvbubi @ndesgranges  
+*(Special thanks also to everyone in the Home Assistant community who submitted anonymous diagnostic traces and starred the repository!)*
 
 ---
 

@@ -7,7 +7,8 @@ All notable changes to the Hisense VIDAA TV integration will be documented in th
 This milestone release celebrates surpassing **1,000 active downloads** on HACS in just over a week! A heartfelt thank you to our vibrant open-source community, early contributors, and everyone who filed issues, tested hardware edge cases, and helped refine the integration.
 
 **PR's:** @Syax89 @mzhur  
-**Issues:** @cyranius669 @Mrgrafcox @ThatCKx @yagoid @lvbubi @ndesgranges
+**Issues:** @cyranius669 @Mrgrafcox @ThatCKx @yagoid @lvbubi @ndesgranges  
+*(Special thanks also to everyone in the Home Assistant community who submitted anonymous diagnostic traces and starred the repository!)*
 
 ### 🌟 What's New & Hardened in v3.0.0
 - **LIVE MQTT DEVICE REGISTRY ENRICHMENT & GENERIC PLACEHOLDER SANITIZATION (`discovery.py`, `tv/state.py`, `entity.py`, `__init__.py`)**:
