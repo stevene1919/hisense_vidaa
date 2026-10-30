@@ -14,7 +14,7 @@ A native Home Assistant integration for Hisense smart TVs running VIDAA OS.
 Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using client certificates, providing local push updates, media controls, app launching, Wake-on-LAN, and remote control without external bridges or cloud dependencies.
 
 <p align="center">
-  <img src="assets/screenshots/integration_device.png" alt="Hisense VIDAA TV in Home Assistant" width="100%" />
+  <img src="https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/assets/screenshots/integration_device.png" alt="Hisense VIDAA TV in Home Assistant" width="100%" />
 </p>
 
 <p align="center">
