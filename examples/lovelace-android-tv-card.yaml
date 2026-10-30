@@ -3,13 +3,13 @@
 # ==============================================================================
 # Prerequisites:
 # 1. Install 'android-tv-card' from HACS (https://github.com/Nerwyn/android-tv-card)
-# 2. Replace 'remote.bedroom_smart_tv_remote' and 'media_player.bedroom_smart_tv'
+# 2. Replace 'remote.living_room_hisense_vidaa_tv_remote' and 'media_player.living_room_hisense_vidaa_tv'
 #    with your actual entity IDs.
 # ==============================================================================
 
 type: custom:android-tv-card
-remote_id: remote.bedroom_smart_tv_remote
-media_player_id: media_player.bedroom_smart_tv
+remote_id: remote.living_room_hisense_vidaa_tv_remote
+media_player_id: media_player.living_room_hisense_vidaa_tv
 
 rows:
   - - power
@@ -38,7 +38,7 @@ custom_actions:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: power
 
@@ -48,7 +48,7 @@ custom_actions:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: input
 
@@ -58,7 +58,7 @@ custom_actions:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: "Netflix"
 
@@ -68,7 +68,7 @@ custom_actions:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: "YouTube"
 
@@ -78,7 +78,7 @@ custom_actions:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: "Prime Video"
 
@@ -88,7 +88,7 @@ custom_actions:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: "Stan."
 
@@ -98,7 +98,7 @@ custom_actions:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: back
 
@@ -108,7 +108,7 @@ custom_actions:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: home
 
@@ -118,6 +118,6 @@ custom_actions:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: menu

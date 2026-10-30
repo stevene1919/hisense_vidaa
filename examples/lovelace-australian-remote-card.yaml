@@ -11,7 +11,7 @@
 # 1. Install 'button-card' from HACS (https://github.com/custom-cards/button-card)
 # 2. Install 'stack-in-card' from HACS (https://github.com/custom-cards/stack-in-card)
 # 3. Install 'card-mod' from HACS (https://github.com/thomasloven/lovelace-card-mod)
-# 4. Replace 'remote.bedroom_smart_tv_remote' and 'media_player.bedroom_smart_tv'
+# 4. Replace 'remote.living_room_hisense_vidaa_tv_remote' and 'media_player.living_room_hisense_vidaa_tv'
 #    with your own entity IDs if needed.
 # ==============================================================================
 
@@ -45,7 +45,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: power
     styles:
@@ -81,7 +81,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: input
     styles:
@@ -110,7 +110,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: Disney+
     styles:
@@ -138,7 +138,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: YouTube
     styles:
@@ -165,7 +165,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: Prime Video
     styles:
@@ -195,7 +195,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: Stan.
     styles:
@@ -223,7 +223,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: Kayo
     styles:
@@ -250,7 +250,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: DEEZER
     styles:
@@ -279,7 +279,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: NBA
     styles:
@@ -306,7 +306,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: ABC iview
     styles:
@@ -333,7 +333,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: Kidoodle TV
     styles:
@@ -362,7 +362,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: Netflix
     styles:
@@ -389,7 +389,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: VIDAA tv
     styles:
@@ -417,7 +417,7 @@ cards:
       action: perform-action
       perform_action: media_player.select_source
       target:
-        entity_id: media_player.bedroom_smart_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         source: Plex
     styles:
@@ -445,7 +445,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: red
     styles:
@@ -465,7 +465,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: green
     styles:
@@ -485,7 +485,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: yellow
     styles:
@@ -505,7 +505,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: blue
     styles:
@@ -528,7 +528,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: menu
     styles:
@@ -561,7 +561,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: play_pause
     styles:
@@ -604,7 +604,7 @@ cards:
         action: perform-action
         perform_action: remote.send_command
         target:
-          entity_id: remote.bedroom_smart_tv_remote
+          entity_id: remote.living_room_hisense_vidaa_tv_remote
         data:
           command: up
       styles:
@@ -628,7 +628,7 @@ cards:
         action: perform-action
         perform_action: remote.send_command
         target:
-          entity_id: remote.bedroom_smart_tv_remote
+          entity_id: remote.living_room_hisense_vidaa_tv_remote
         data:
           command: left
       styles:
@@ -650,7 +650,7 @@ cards:
         action: perform-action
         perform_action: remote.send_command
         target:
-          entity_id: remote.bedroom_smart_tv_remote
+          entity_id: remote.living_room_hisense_vidaa_tv_remote
         data:
           command: ok
       styles:
@@ -673,7 +673,7 @@ cards:
         action: perform-action
         perform_action: remote.send_command
         target:
-          entity_id: remote.bedroom_smart_tv_remote
+          entity_id: remote.living_room_hisense_vidaa_tv_remote
         data:
           command: right
       styles:
@@ -697,7 +697,7 @@ cards:
         action: perform-action
         perform_action: remote.send_command
         target:
-          entity_id: remote.bedroom_smart_tv_remote
+          entity_id: remote.living_room_hisense_vidaa_tv_remote
         data:
           command: down
       styles:
@@ -721,7 +721,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: back
     styles:
@@ -754,7 +754,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: exit
     styles:
@@ -782,7 +782,7 @@ cards:
         action: perform-action
         perform_action: remote.send_command
         target:
-          entity_id: remote.bedroom_smart_tv_remote
+          entity_id: remote.living_room_hisense_vidaa_tv_remote
         data:
           command: volume_up
       styles:
@@ -819,7 +819,7 @@ cards:
         action: perform-action
         perform_action: remote.send_command
         target:
-          entity_id: remote.bedroom_smart_tv_remote
+          entity_id: remote.living_room_hisense_vidaa_tv_remote
         data:
           command: volume_down
       styles:
@@ -843,7 +843,7 @@ cards:
         action: perform-action
         perform_action: remote.send_command
         target:
-          entity_id: remote.bedroom_smart_tv_remote
+          entity_id: remote.living_room_hisense_vidaa_tv_remote
         data:
           command: home
       styles:
@@ -866,7 +866,7 @@ cards:
         action: perform-action
         perform_action: remote.send_command
         target:
-          entity_id: remote.bedroom_smart_tv_remote
+          entity_id: remote.living_room_hisense_vidaa_tv_remote
         data:
           command: mute
       styles:
@@ -891,7 +891,7 @@ cards:
         action: perform-action
         perform_action: remote.send_command
         target:
-          entity_id: remote.bedroom_smart_tv_remote
+          entity_id: remote.living_room_hisense_vidaa_tv_remote
         data:
           command: channel_up
       styles:
@@ -928,7 +928,7 @@ cards:
         action: perform-action
         perform_action: remote.send_command
         target:
-          entity_id: remote.bedroom_smart_tv_remote
+          entity_id: remote.living_room_hisense_vidaa_tv_remote
         data:
           command: channel_down
       styles:
@@ -952,7 +952,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: subtitle
     styles:
@@ -976,7 +976,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: text
     styles:
@@ -1000,7 +1000,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: info
     styles:
@@ -1026,7 +1026,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: '1'
     styles:
@@ -1050,7 +1050,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: '2'
     styles:
@@ -1074,7 +1074,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: '3'
     styles:
@@ -1100,7 +1100,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: '4'
     styles:
@@ -1124,7 +1124,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: '5'
     styles:
@@ -1148,7 +1148,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: '6'
     styles:
@@ -1174,7 +1174,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: '7'
     styles:
@@ -1198,7 +1198,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: '8'
     styles:
@@ -1222,7 +1222,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: '9'
     styles:
@@ -1248,7 +1248,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: guide
     styles:
@@ -1272,7 +1272,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: '0'
     styles:
@@ -1296,7 +1296,7 @@ cards:
       action: perform-action
       perform_action: remote.send_command
       target:
-        entity_id: remote.bedroom_smart_tv_remote
+        entity_id: remote.living_room_hisense_vidaa_tv_remote
       data:
         command: chlist
     styles:

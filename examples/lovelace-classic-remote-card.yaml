@@ -8,12 +8,12 @@
 #   - HACS: button-card (custom:button-card)
 #   - HACS: card-mod (optional, for enhanced styling)
 #
-# Replace 'remote.bedroom_smart_tv_remote' and 'media_player.bedroom_smart_tv'
+# Replace 'remote.living_room_hisense_vidaa_tv_remote' and 'media_player.living_room_hisense_vidaa_tv'
 # with your actual Hisense VIDAA entity IDs.
 # ==============================================================================
 
 type: custom:button-card
-entity: media_player.bedroom_smart_tv
+entity: media_player.living_room_hisense_vidaa_tv
 show_name: false
 show_state: false
 show_icon: false
@@ -44,7 +44,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_POWER
               styles:
                 card:
@@ -77,7 +77,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_INPUT
               styles:
                 card:
@@ -100,7 +100,7 @@ custom_fields:
         # Status Badge
         # ----------------------------------------------------------------------
         - type: custom:button-card
-          entity: media_player.bedroom_smart_tv
+          entity: media_player.living_room_hisense_vidaa_tv
           show_name: true
           show_state: true
           show_icon: false
@@ -136,7 +136,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_MENU
               styles:
                 card:
@@ -155,7 +155,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_INFO
               styles:
                 card:
@@ -174,7 +174,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_SUBTITLE
               styles:
                 card:
@@ -193,7 +193,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_EXIT
               styles:
                 card:
@@ -225,7 +225,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_UP
               styles:
                 card:
@@ -248,7 +248,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_LEFT
               styles:
                 card:
@@ -267,7 +267,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_OK
               styles:
                 card:
@@ -289,7 +289,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_RIGHT
               styles:
                 card:
@@ -312,7 +312,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_DOWN
               styles:
                 card:
@@ -340,7 +340,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_BACK
               styles:
                 card:
@@ -364,7 +364,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_HOME
               styles:
                 card:
@@ -402,7 +402,7 @@ custom_fields:
                     action: call-service
                     service: remote.send_command
                     service_data:
-                      entity_id: remote.bedroom_smart_tv_remote
+                      entity_id: remote.living_room_hisense_vidaa_tv_remote
                       command: KEY_VOLUMEUP
                   styles:
                     card:
@@ -425,7 +425,7 @@ custom_fields:
                     action: call-service
                     service: remote.send_command
                     service_data:
-                      entity_id: remote.bedroom_smart_tv_remote
+                      entity_id: remote.living_room_hisense_vidaa_tv_remote
                       command: KEY_VOLUMEDOWN
                   styles:
                     card:
@@ -448,7 +448,7 @@ custom_fields:
                     action: call-service
                     service: remote.send_command
                     service_data:
-                      entity_id: remote.bedroom_smart_tv_remote
+                      entity_id: remote.living_room_hisense_vidaa_tv_remote
                       command: KEY_MUTE
                   styles:
                     card:
@@ -472,7 +472,7 @@ custom_fields:
                     action: call-service
                     service: remote.send_command
                     service_data:
-                      entity_id: remote.bedroom_smart_tv_remote
+                      entity_id: remote.living_room_hisense_vidaa_tv_remote
                       command: KEY_GUIDE
                   styles:
                     card:
@@ -499,7 +499,7 @@ custom_fields:
                     action: call-service
                     service: remote.send_command
                     service_data:
-                      entity_id: remote.bedroom_smart_tv_remote
+                      entity_id: remote.living_room_hisense_vidaa_tv_remote
                       command: KEY_CHANNELUP
                   styles:
                     card:
@@ -522,7 +522,7 @@ custom_fields:
                     action: call-service
                     service: remote.send_command
                     service_data:
-                      entity_id: remote.bedroom_smart_tv_remote
+                      entity_id: remote.living_room_hisense_vidaa_tv_remote
                       command: KEY_CHANNELDOWN
                   styles:
                     card:
@@ -552,7 +552,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_1
               styles:
                 card:
@@ -571,7 +571,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_2
               styles:
                 card:
@@ -590,7 +590,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_3
               styles:
                 card:
@@ -612,7 +612,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_4
               styles:
                 card:
@@ -631,7 +631,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_5
               styles:
                 card:
@@ -650,7 +650,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_6
               styles:
                 card:
@@ -672,7 +672,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_7
               styles:
                 card:
@@ -691,7 +691,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_8
               styles:
                 card:
@@ -710,7 +710,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_9
               styles:
                 card:
@@ -732,7 +732,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_DOT
               styles:
                 card:
@@ -751,7 +751,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_0
               styles:
                 card:
@@ -770,7 +770,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_CHLIST
               styles:
                 card:
@@ -799,7 +799,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_RED
               styles:
                 card:
@@ -813,7 +813,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_GREEN
               styles:
                 card:
@@ -827,7 +827,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_YELLOW
               styles:
                 card:
@@ -841,7 +841,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_BLUE
               styles:
                 card:
@@ -867,7 +867,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_REWIND
               styles:
                 card:
@@ -885,7 +885,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_PLAY
               styles:
                 card:
@@ -903,7 +903,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_STOP
               styles:
                 card:
@@ -921,7 +921,7 @@ custom_fields:
                 action: call-service
                 service: remote.send_command
                 service_data:
-                  entity_id: remote.bedroom_smart_tv_remote
+                  entity_id: remote.living_room_hisense_vidaa_tv_remote
                   command: KEY_FORWARDS
               styles:
                 card:

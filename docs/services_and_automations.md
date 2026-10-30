@@ -15,7 +15,7 @@ is useful when a launch needs a specific app ID and deep link. You can also omit
 ```yaml
 action: hisense_vidaa.launch_app
 target:
-  entity_id: media_player.living_room_tv
+  entity_id: media_player.living_room_hisense_vidaa_tv
 data:
   app: "Netflix" # Options: Netflix, YouTube, Prime Video, Plex, Disney+, Stan, etc.
 ```
@@ -26,7 +26,7 @@ and `--url` arguments):
 ```yaml
 action: hisense_vidaa.launch_app
 target:
-  entity_id: media_player.living_room_tv
+  entity_id: media_player.living_room_hisense_vidaa_tv
 data:
   app: "YouTube"
   app_id: "3"
@@ -45,7 +45,7 @@ Send fast single or repeated key commands with configurable delays.
 ```yaml
 action: hisense_vidaa.send_key
 target:
-  entity_id: remote.living_room_tv_remote
+  entity_id: remote.living_room_hisense_vidaa_tv_remote
 data:
   key: "home" # Supports all aliases: up, down, left, right, ok, back, home, menu, volume_up, etc.
   repeat: 1
@@ -58,7 +58,7 @@ Inject virtual keyboard text directly into on-screen search bars and text inputs
 ```yaml
 action: hisense_vidaa.send_text_input
 target:
-  entity_id: media_player.living_room_tv
+  entity_id: media_player.living_room_hisense_vidaa_tv
 data:
   text: "The Matrix"
 ```
@@ -69,7 +69,7 @@ Execute custom picture setting adjustments via raw menu ID and parameter value.
 ```yaml
 action: hisense_vidaa.set_picture_setting
 target:
-  entity_id: media_player.living_room_tv
+  entity_id: media_player.living_room_hisense_vidaa_tv
 data:
   menu_id: 91
   menu_value: "Cinema Night"
@@ -81,7 +81,7 @@ Execute custom sound equalizer adjustments via raw menu ID and parameter value.
 ```yaml
 action: hisense_vidaa.set_sound_setting
 target:
-  entity_id: media_player.living_room_tv
+  entity_id: media_player.living_room_hisense_vidaa_tv
 data:
   menu_id: 1
   menu_value: "Theatre"
@@ -93,7 +93,7 @@ Send a sequence of remote key commands with configurable delays between keys. Su
 ```yaml
 action: hisense_vidaa.send_key_sequence
 target:
-  entity_id: media_player.living_room_tv
+  entity_id: media_player.living_room_hisense_vidaa_tv
 data:
   sequence:
     - home
@@ -107,7 +107,7 @@ Or using comma-separated notation:
 ```yaml
 action: hisense_vidaa.send_key_sequence
 target:
-  entity_id: media_player.living_room_tv
+  entity_id: media_player.living_room_hisense_vidaa_tv
 data:
   sequence: "home, right, ok"
   delay: 0.3
@@ -119,7 +119,7 @@ Directly tune to a numeric TV channel by sequentially dispatching number keys wi
 ```yaml
 action: hisense_vidaa.change_channel
 target:
-  entity_id: media_player.living_room_tv
+  entity_id: media_player.living_room_hisense_vidaa_tv
 data:
   channel: 701
   confirm: true
@@ -136,7 +136,7 @@ Control display parameters in automations using standard `number.set_value`:
 ```yaml
 action: number.set_value
 target:
-  entity_id: number.living_room_tv_backlight
+  entity_id: number.living_room_hisense_vidaa_tv_backlight
 data:
   value: 45 # Range: 0 - 100
 ```
@@ -147,7 +147,7 @@ Switch Picture Mode based on ambient light or time of day:
 ```yaml
 action: select.select_option
 target:
-  entity_id: select.living_room_tv_picture_mode
+  entity_id: select.living_room_hisense_vidaa_tv_picture_mode
 data:
   option: "Cinema Night" # Options: Standard, Cinema Day, Cinema Night, Dynamic, Sports, Game, Filmmaker Mode
 ```
@@ -158,7 +158,7 @@ Change audio EQ presets based on active media or content:
 ```yaml
 action: select.select_option
 target:
-  entity_id: select.living_room_tv_sound_mode
+  entity_id: select.living_room_hisense_vidaa_tv_sound_mode
 data:
   option: "Theatre" # Options: Standard, Theatre, Music, Speech, Late Night, Sports
 ```
@@ -172,7 +172,7 @@ Send on-screen alert notifications and toast banners directly onto the TV displa
 ```yaml
 action: notify.send_message
 target:
-  entity_id: notify.living_room_tv_notifications
+  entity_id: notify.living_room_hisense_vidaa_tv_notifications
 data:
   message: "Front Doorbell: Motion detected"
   title: "Security Alert"
@@ -187,7 +187,7 @@ Switch the TV sound output mode programmatically between internal speakers, ARC/
 ```yaml
 action: select.select_option
 target:
-  entity_id: select.living_room_tv_audio_output
+  entity_id: select.living_room_hisense_vidaa_tv_audio_output
 data:
   option: "ARC / eARC" # Options: "TV Speakers", "ARC / eARC", "Headphone / Bluetooth"
 ```
@@ -201,7 +201,7 @@ Home Assistant's native `remote.send_command` action can dispatch ordered key se
 ```yaml
 action: remote.send_command
 target:
-  entity_id: remote.living_room_tv_remote
+  entity_id: remote.living_room_hisense_vidaa_tv_remote
 data:
   command:
     - home
@@ -227,7 +227,7 @@ cards:
       action: perform-action
       perform_action: hisense_vidaa.launch_app
       target:
-        entity_id: media_player.living_room_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         app: Netflix
   - type: button
@@ -237,7 +237,7 @@ cards:
       action: perform-action
       perform_action: hisense_vidaa.launch_app
       target:
-        entity_id: media_player.living_room_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         app: YouTube
   - type: button
@@ -247,7 +247,7 @@ cards:
       action: perform-action
       perform_action: hisense_vidaa.launch_app
       target:
-        entity_id: media_player.living_room_tv
+        entity_id: media_player.living_room_hisense_vidaa_tv
       data:
         app: Prime Video
 ```
@@ -263,7 +263,7 @@ When launching streaming video apps (Netflix, Prime Video, Disney+, Plex) in the
 When switching active source to PlayStation 5 or Xbox Series X on HDMI 1 or HDMI 2, automatically trigger low-latency `Game` picture mode and turn down backlight for night sessions.
 
 ### Use Case 3: Bedtime All-Off & Late Night Audio Guard
-When executing a "Good Night" voice command or bedtime automation, if the TV is still playing in the master bedroom, turn off screen backlight via `switch.audio_only` or automatically power off the TV after 30 minutes, switching sound output to `Late Night` EQ mode.
+When executing a "Good Night" voice command or bedtime automation, if the TV is still playing in the living room, turn off screen backlight via `switch.living_room_hisense_vidaa_tv_audio_only` or automatically power off the TV after 30 minutes, switching sound output to `Late Night` EQ mode.
 
 ### Use Case 4: Smart Doorbell On-Screen Notifications
 When someone rings the smart video doorbell, display a real-time high-priority text toast banner on the television screen notifying occupants without interrupting current playback.
@@ -278,7 +278,7 @@ alias: "Cinema: Dim Lights & Set Movie Picture Mode"
 description: "Automatically dim lights and switch to Cinema Night picture mode when movie apps open after sunset."
 trigger:
   - platform: state
-    entity_id: media_player.living_room_tv
+    entity_id: media_player.living_room_hisense_vidaa_tv
     attribute: app_name
     to:
       - "Netflix"
@@ -291,12 +291,12 @@ condition:
 action:
   - action: select.select_option
     target:
-      entity_id: select.living_room_tv_picture_mode
+      entity_id: select.living_room_hisense_vidaa_tv_picture_mode
     data:
       option: "Cinema Night"
   - action: select.select_option
     target:
-      entity_id: select.living_room_tv_sound_mode
+      entity_id: select.living_room_hisense_vidaa_tv_sound_mode
     data:
       option: "Theatre"
   - action: light.turn_on
@@ -313,18 +313,18 @@ alias: "Gaming: Activate Game Mode on PS5 Input"
 description: "Switch picture mode to Game and adjust backlight when PS5 is selected."
 trigger:
   - platform: state
-    entity_id: media_player.living_room_tv
+    entity_id: media_player.living_room_hisense_vidaa_tv
     attribute: source
     to: "HDMI 1"
 action:
   - action: select.select_option
     target:
-      entity_id: select.living_room_tv_picture_mode
+      entity_id: select.living_room_hisense_vidaa_tv_picture_mode
     data:
       option: "Game"
   - action: number.set_value
     target:
-      entity_id: number.living_room_tv_backlight
+      entity_id: number.living_room_hisense_vidaa_tv_backlight
     data:
       value: 80
 ```
@@ -340,7 +340,7 @@ trigger:
 action:
   - action: notify.send_message
     target:
-      entity_id: notify.living_room_tv_notifications
+      entity_id: notify.living_room_hisense_vidaa_tv_notifications
     data:
       title: "🔔 Doorbell Ringing"
       message: "Someone is at the Front Door!"
@@ -355,12 +355,12 @@ trigger:
     at: "22:00:00"
 condition:
   - condition: state
-    entity_id: media_player.living_room_tv
+    entity_id: media_player.living_room_hisense_vidaa_tv
     state: "on"
 action:
   - action: select.select_option
     target:
-      entity_id: select.living_room_tv_sound_mode
+      entity_id: select.living_room_hisense_vidaa_tv_sound_mode
     data:
       option: "Late Night"
 ```
