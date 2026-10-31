@@ -2,6 +2,29 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [3.1.0] - 2026-10-31 — ⚡ Native `aiomqtt` Async Engine & Platinum Quality Scale Edition
+
+This release marks a major architectural milestone for the Hisense VIDAA TV integration, completing a full migration to native async MQTT (`aiomqtt>=2.3.0`), eliminating all threaded callbacks and executor offloading, and achieving **100% Platinum Tier compliance** on Home Assistant's Integration Quality Scale.
+
+### 🌟 What's New & Hardened in v3.1.0
+- **NATIVE `aiomqtt>=2.3.0` ASYNC TRANSPORT ENGINE (`async-dependency: done`)**:
+  - Replaced legacy threaded `paho-mqtt` (`loop_start()` / `loop_stop()`, `threading.Timer`, `threading.Lock`, `threading.Thread`, and cross-thread `hass.loop.call_soon_threadsafe`) with native `aiomqtt.Client` async context managers running directly on Home Assistant's event loop.
+  - Replaced synchronous locks and thread sleeps with `asyncio.Task`, `asyncio.Lock`, and `asyncio.Future` query routing for snappy, non-blocking TV state requests and commands.
+  - Eliminated unnecessary `hass.async_add_executor_job` invocations across all platforms (`media_player`, `remote`, `button`, `switch`, `select`, `number`, `notify`, `services`).
+- **SHARED `aiohttp.ClientSession` WEBSESSION INJECTION (`inject-websession: done`)**:
+  - Injected Home Assistant's shared `aiohttp.ClientSession` via `async_get_clientsession(hass)` into `HisenseTvClient` and `HisenseUpnpClient`.
+  - Added non-blocking async UPnP HTTP `Date` header synchronization (`async_get_tv_timestamp`) and device fingerprinting (`async_get_device_fingerprint`), replacing legacy `urllib.request.urlopen`.
+- **MULTI-DEVICE SERVICE TARGET AMBIGUITY GUARD (`services_target.py`)**:
+  - Safeguarded custom services (`send_key`, `launch_app`, `send_text_input`, `set_picture_setting`, `set_sound_setting`, `send_key_sequence`, `change_channel`) from unintended broadcast when multiple TVs are present.
+  - Single configured TV: Automatically executes without requiring target selectors (zero breaking changes for single-TV homes).
+  - Multiple configured TVs without target: Raises `ServiceValidationError` (`ambiguous_target`) prompting for specific target.
+  - Multi-TV broadcast: Explicitly broadcast to all configured TVs using `entity_id: "all"`.
+  - Full localization added across 7 languages (`en`, `de`, `es`, `fr`, `it`, `pt`, `pt-BR`) in `strings.json` and translation catalogs.
+- **HOME ASSISTANT INTEGRATION QUALITY SCALE (PLATINUM TIER)**:
+  - Formally achieved 100% rule compliance across Bronze, Silver, Gold, and Platinum tiers in `quality_scale.yaml` (`async-dependency`, `inject-websession`, `strict-typing`).
+- **EXPANDED TEST SUITE (224 TESTS PASSING)**:
+  - Expanded unit test coverage across async MQTT lifecycle, proactive token refresh in standby, multi-device ambiguity guards, Websession retention, and Hassfest container verification.
+
 ## [3.0.0] - 2026-10-28 — 🎉 1,000 Downloads Community Celebration Edition
 
 This milestone release celebrates surpassing **1,000 active downloads** on HACS in just over a week! A heartfelt thank you to our vibrant open-source community, early contributors, and everyone who filed issues, tested hardware edge cases, and helped refine the integration.
