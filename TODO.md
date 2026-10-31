@@ -252,15 +252,15 @@ Tracking adherence to the official [HA Integration Quality Scale rules](https://
 
 ---
 
-### 🏆 Platinum Tier — Status: ⚠️ ~33% complete
+### 🏆 Platinum Tier — Status: ✅ 100% complete
 
 | Rule                                                                                                                    | Status     | Notes                                                                                                                                                                  |
 | ----------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`async-dependency`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/async-dependency)   | ⚠️ **TODO** | `paho-mqtt` is a synchronous library; all MQTT callbacks dispatched via `call_soon_threadsafe`. Evaluate `aiomqtt` or `asyncio-mqtt` for a fully async MQTT dependency |
-| [`inject-websession`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/inject-websession) | ✅ Exempt   | Integration uses raw TLS/MQTT sockets — no HTTP web session required                                                                                                   |
+| [`async-dependency`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/async-dependency)   | ✅ Done     | Migrated MQTT transport to `aiomqtt>=2.3.0` running natively on Home Assistant's asyncio event loop. |
+| [`inject-websession`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/inject-websession) | ✅ Done     | Injected Home Assistant's shared `aiohttp.ClientSession` into `HisenseUpnpClient` via `async_get_clientsession(hass)`. |
 | [`strict-typing`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/strict-typing)         | ✅ Done     | `py.typed` marker + inline type annotations throughout                                                                                                                 |
 
-**Platinum gap:** `async-dependency` — evaluating async MQTT library migration (see Task #1 above for connection research context).
+**Platinum status:** 100% complete in code & docs (tracked in `quality_scale.yaml`).
 
 ---
 

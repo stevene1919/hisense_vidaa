@@ -305,3 +305,33 @@ def test_upnp_desc_parsers() -> None:
     empty_desc = parse_upnp_renderer_descriptor("not valid xml")
     assert empty_desc["friendly_name"] is None
 
+
+@pytest.mark.anyio
+async def test_upnp_injected_session_retention():
+    """Verify that injecting an external aiohttp.ClientSession does not close it on client close."""
+    external_session = MagicMock()
+    external_session.closed = False
+    external_session.close = AsyncMock()
+
+    client = HisenseUpnpClient("192.168.50.12", session=external_session)
+    assert client._session is external_session
+    assert client._owns_session is False
+
+    await client.close()
+    external_session.close.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_upnp_owned_session_closed():
+    """Verify that when no session is injected, the internally created session is closed."""
+    client = HisenseUpnpClient("192.168.50.12", session=None)
+    mock_internal_session = MagicMock()
+    mock_internal_session.closed = False
+    mock_internal_session.close = AsyncMock()
+    client._session = mock_internal_session
+    client._owns_session = True
+
+    await client.close()
+    mock_internal_session.close.assert_called_once()
+
+

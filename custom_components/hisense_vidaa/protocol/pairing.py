@@ -9,7 +9,6 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-from ..tv.fingerprint import get_tv_timestamp
 from .dispatcher import mask_sensitive_payload
 
 if TYPE_CHECKING:
@@ -53,36 +52,26 @@ async def async_probe_pairing_challenge(client: HisenseTvClient, timeout: float 
     """
     loop = asyncio.get_running_loop()
     client._loop = loop
-    await loop.run_in_executor(None, client.disconnect)
+    await client.async_disconnect()
     await asyncio.sleep(0.1)
 
     client._auth_future = loop.create_future()
     client._pairing_event_future = loop.create_future()
     try:
-        client.mqtt_client = await loop.run_in_executor(
-            None, client.create_mqtt_client, client.client_id, client.username, client.password
-        )
-        client.mqtt_client.reconnect_delay_set(min_delay=30, max_delay=60)
-        client.mqtt_client.connect_async(client.ip, 36669, 60)
-        client.mqtt_client.loop_start()
-
-        # Wait up to ~10s for the connection (mirrors the dynamic handshake).
-        for _ in range(50):
-            if client.connected or client._auth_future.done():
-                break
-            await asyncio.sleep(0.2)
-
-        if not client.connected:
-            if client._auth_future.done() and not client._auth_future.cancelled():
-                _LOGGER.warning(
-                    "[%s] Static session could not connect for pairing probe: %s",
-                    client.ip, client._auth_future.exception(),
-                )
+        try:
+            await client.async_open_pairing_session(
+                client.client_id, client.username, client.password, timeout=10.0
+            )
+        except Exception as err:
+            _LOGGER.warning("[%s] Static session could not connect for pairing probe: %s", client.ip, err)
             return False
+        # The session failure path may have resolved the future; reset it for the probe.
+        if client._auth_future.done():
+            client._auth_future = loop.create_future()
 
         # Mirror the push topics the pairing handshake subscribes to, plus the
         # close/toast topics so the TV's dialog events unblock the wait.
-        client.mqtt_client.subscribe([
+        await client.async_subscribe([
             (f"{client.topics.mobile}#", 0),
             (f"{client.topics.mobile}ui_service/data/authentication", 0),
             (f"{client.topics.mobile}ui_service/data/authenticationcode", 0),
@@ -101,7 +90,7 @@ async def async_probe_pairing_challenge(client: HisenseTvClient, timeout: float 
             if loop.time() >= next_trigger:
                 # gettvstate is the documented trigger; a second publish inside
                 # the window re-opens the dialog if the first was missed.
-                client.mqtt_client.publish(f"{client.topics.ui}actions/gettvstate", "")
+                await client.async_publish(f"{client.topics.ui}actions/gettvstate", "")
                 next_trigger = loop.time() + timeout / 2
             await asyncio.sleep(0.2)
         return False
@@ -131,8 +120,7 @@ async def async_start_pairing_handshake(client: HisenseTvClient) -> None:
         profiles_to_try = ["modern", "middle", "remotenow"]
         if getattr(client, "ip", None):
             try:
-                loop = asyncio.get_running_loop()
-                fingerprint = await loop.run_in_executor(None, client.get_device_fingerprint, 1.0)
+                fingerprint = await client.async_get_device_fingerprint(1.0)
                 transport_protocol = fingerprint.get("transport_protocol")
                 if transport_protocol:
                     with contextlib.suppress(ValueError, TypeError):
@@ -180,36 +168,21 @@ async def _async_execute_pairing_attempt(
 ) -> None:
     loop = asyncio.get_running_loop()
     client._loop = loop
-    await loop.run_in_executor(None, client.disconnect)
+    await client.async_disconnect()
     await asyncio.sleep(0.2)
-    tv_timestamp = await loop.run_in_executor(None, get_tv_timestamp, client.ip, 1.5)
+    tv_timestamp = await client.upnp.async_get_tv_timestamp(1.5)
     client.derive_pairing_credentials(
         use_new_auth=use_new_auth, auth_profile=profile, timestamp=tv_timestamp
     )
-    client.mqtt_client = await loop.run_in_executor(
-        None, client.create_mqtt_client, client.client_id, client.username, client.password
-    )
-    client.mqtt_client.reconnect_delay_set(min_delay=30, max_delay=60)
 
+    # Raises the CONNACK rejection immediately so the profile cascade can fall back.
+    await client.async_open_pairing_session(
+        client.client_id, client.username, client.password, timeout=10.0
+    )
     client._auth_future = loop.create_future()
     client._connect_ack_future = loop.create_future()
-    client.mqtt_client.connect_async(client.ip, 36669, 60)
-    client.mqtt_client.loop_start()
 
-    # Wait up to 10 seconds for connection
-    for _ in range(50):
-        if client.connected:
-            break
-        if client._auth_future.done() and client._auth_future.exception():
-            await loop.run_in_executor(None, client.disconnect)
-            raise client._auth_future.exception()
-        await asyncio.sleep(0.2)
-
-    if not client.connected:
-        await loop.run_in_executor(None, client.disconnect)
-        raise Exception("Cannot connect to TV MQTT Broker (connection timeout)")
-
-    client.mqtt_client.subscribe([
+    await client.async_subscribe([
         (f"{client.topics.ui}actions/vidaa_app_connect", 0),
         (f"{client.topics.mobile}#", 0),
         (f"{client.topics.mobile}ui_service/data/authentication", 0),
@@ -221,7 +194,7 @@ async def _async_execute_pairing_attempt(
     await asyncio.sleep(0.5)
 
     for attempt in range(3):
-        client.mqtt_client.publish(
+        await client.async_publish(
             f"{client.topics.ui}actions/vidaa_app_connect",
             '{"app_version":2,"connect_result":0,"device_type":"Mobile App"}',
         )
@@ -241,7 +214,7 @@ async def _async_execute_pairing_attempt(
                 _LOGGER.debug("[%s] No response to vidaa_app_connect on attempt %d, retrying...", client.ip, attempt + 1)
                 await asyncio.sleep(0.5)
             else:
-                await loop.run_in_executor(None, client.disconnect)
+                await client.async_disconnect()
                 raise Exception("TV authentication request timed out (TV did not show PIN)")
     client._auth_future = None
     client._connect_ack_future = None
@@ -257,7 +230,7 @@ async def async_submit_pin_code(client: HisenseTvClient, pin_code: str) -> dict[
     if not client.mqtt_client:
         raise Exception("MQTT client not initialized")
 
-    client.mqtt_client.publish(
+    await client.async_publish(
         f"{client.topics.ui}actions/authenticationcode",
         json.dumps({"authNum": int(pin_code)}),
     )
@@ -295,8 +268,8 @@ async def async_submit_pin_code(client: HisenseTvClient, pin_code: str) -> dict[
         return {}
 
     client._token_future = loop.create_future()
-    client.mqtt_client.publish(f"{client.topics.platform}data/gettoken", '{"refreshtoken": ""}')
-    client.mqtt_client.publish(f"{client.topics.ui}actions/authenticationcodeclose")
+    await client.async_publish(f"{client.topics.platform}data/gettoken", '{"refreshtoken": ""}')
+    await client.async_publish(f"{client.topics.ui}actions/authenticationcodeclose")
 
     try:
         token_payload_str = await asyncio.wait_for(client._token_future, timeout=15)

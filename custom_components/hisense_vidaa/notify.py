@@ -42,9 +42,7 @@ class HisenseVidaaNotifyEntity(HisenseVidaaEntity, NotifyEntity):
 
     async def async_send_message(self, message: str, title: str | None = None) -> None:
         """Send a notification message to the TV."""
-        await self.hass.async_add_executor_job(
-            self._client.show_message, message, title
-        )
+        await self._client.async_show_message(message, title)
 
 
 async def async_setup_entry(

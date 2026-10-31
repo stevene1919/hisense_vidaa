@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import logging
-import threading
 import time
 from typing import TYPE_CHECKING
 
@@ -25,58 +25,54 @@ class TokenLifecycleManager:
 
     def __init__(self, client: HisenseTvClient) -> None:
         self.client = client
-        self.refresh_lock = threading.Lock()
+        self.refresh_lock = asyncio.Lock()
         self.refreshing_token: bool = False
         self.last_refresh_attempt: float = 0.0
-        self.token_watch: threading.Timer | None = None
+        self.token_watch_task: asyncio.Task | None = None
         self.token_watch_closed: bool = False
         self.awake_refresh_failures: int = 0
         self.last_awake_refresh_attempt: float = 0.0
         self.rejected_refresh_failures: int = 0
-        self.rejected_retry_timer: threading.Timer | None = None
+        self.rejected_retry_task: asyncio.Task | None = None
         self.broker_rejection_failures: int = 0
         self.last_refresh_connect_rc: int | None = None
 
     def start_token_watch(self) -> None:
-        """Start the periodic token watch timer."""
-        with self.refresh_lock:
-            # The latch is only meaningful for the current watch run: clear it so a
-            # stop (Force Reconnect / flow disconnect) does not permanently disable
-            # mid-session token renewal after the next reconnect.
-            self.token_watch_closed = False
-            if self.token_watch is not None:
-                return
-            timer = threading.Timer(self.TOKEN_WATCH_INTERVAL, self._token_watch_tick)
-            timer.daemon = True
-            self.token_watch = timer
-            timer.start()
+        """Start the periodic token watch loop task."""
+        self.token_watch_closed = False
+        if self.token_watch_task is not None and not self.token_watch_task.done():
+            return
+        with contextlib.suppress(RuntimeError):
+            self.token_watch_task = asyncio.create_task(self._token_watch_loop())
 
     def stop_token_watch(self) -> None:
-        """Stop the periodic token watch timer."""
-        with self.refresh_lock:
-            self.token_watch_closed = True
-            timer, self.token_watch = self.token_watch, None
-        if timer:
-            with contextlib.suppress(Exception):
-                timer.cancel()
+        """Stop the periodic token watch loop task."""
+        self.token_watch_closed = True
+        if self.token_watch_task is not None:
+            self.token_watch_task.cancel()
+            self.token_watch_task = None
+
+    async def _token_watch_loop(self) -> None:
+        """Runs periodic checks for token expiry while awake."""
+        while not self.token_watch_closed:
+            await asyncio.sleep(self.TOKEN_WATCH_INTERVAL)
+            if self.token_watch_closed:
+                break
+            try:
+                await self.async_maybe_refresh_while_awake()
+            except Exception as e:
+                _LOGGER.debug("[%s] Token watch error: %s", self.client.ip, e)
 
     def _token_watch_tick(self) -> None:
-        with self.refresh_lock:
-            self.token_watch = None
+        """Synchronous tick helper for manual testing or timer callbacks."""
         try:
-            self.client._maybe_refresh_while_awake()
-        except Exception as e:
-            _LOGGER.debug("[%s] Token watch error: %s", self.client.ip, e)
-        self.start_token_watch()
+            loop = asyncio.get_running_loop()
+            self._watch_tick_task = loop.create_task(self.async_maybe_refresh_while_awake())
+        except RuntimeError:
+            asyncio.run(self.async_maybe_refresh_while_awake())
 
     def can_refresh_in_standby(self) -> bool:
-        """Whether a token refresh may run while the TV is in standby (``refresh_in_standby`` option).
-
-        TVs that keep their MQTT broker up when switched off (fake sleep) answer gettoken there, too. A refresh
-        drops the main connection and a failed one restores it with the current access token, so in standby it
-        is attempted only while that token is still valid: once it has expired the open connection (which keeps
-        working) could not be re-established, and it is left alone until the TV wakes.
-        """
+        """Whether a token refresh may run while the TV is in standby (``refresh_in_standby`` option)."""
         client = self.client
         return bool(getattr(client, "refresh_in_standby", False)) and not is_token_expired(
             client.access_token_time,
@@ -84,7 +80,7 @@ class TokenLifecycleManager:
             clock_offset=client.clock_offset,
         )
 
-    def maybe_refresh_while_awake(self) -> None:
+    async def async_maybe_refresh_while_awake(self) -> None:
         """Renews a near-expiry access token once the TV is awake (with backoff on failure)."""
         client = self.client
         if not (client.connected and client.access_token and client.refresh_token):
@@ -98,9 +94,10 @@ class TokenLifecycleManager:
             clock_offset=client.clock_offset,
         ):
             return
+
         backoff = min(600 * (2 ** self.awake_refresh_failures), 6 * 3600)
         now = time.time()
-        with self.refresh_lock:
+        async with self.refresh_lock:
             if (
                 self.refreshing_token
                 or now - self.last_awake_refresh_attempt < backoff
@@ -110,15 +107,17 @@ class TokenLifecycleManager:
             self.refreshing_token = True
             self.last_refresh_attempt = now
             self.last_awake_refresh_attempt = now
+
         ok = False
         try:
             _LOGGER.info("[%s] TV is awake and the access token is near expiration. Renewing tokens...", client.ip)
-            ok = client.refresh_tokens()
+            ok = await client.async_refresh_tokens()
         except Exception as e:
             _LOGGER.warning("[%s] Token refresh while awake failed: %s", client.ip, e)
         finally:
-            with self.refresh_lock:
+            async with self.refresh_lock:
                 self.refreshing_token = False
+
         if ok:
             self.awake_refresh_failures = 0
             _LOGGER.info("[%s] Tokens renewed successfully", client.ip)
@@ -131,7 +130,15 @@ class TokenLifecycleManager:
                 min(600 * (2 ** self.awake_refresh_failures), 6 * 3600) // 60,
             )
 
-    def proactive_token_refresh(self) -> None:
+    def maybe_refresh_while_awake(self) -> None:
+        """Synchronous wrapper for async_maybe_refresh_while_awake."""
+        try:
+            loop = asyncio.get_running_loop()
+            self._awake_refresh_task = loop.create_task(self.async_maybe_refresh_while_awake())
+        except RuntimeError:
+            asyncio.run(self.async_maybe_refresh_while_awake())
+
+    async def async_proactive_token_refresh(self) -> None:
         """Proactively refreshes the token if access token is within 12h of expiration."""
         client = self.client
         should_refresh = False
@@ -142,7 +149,7 @@ class TokenLifecycleManager:
                 margin_seconds=43200,
                 clock_offset=client.clock_offset,
             ):
-                time.sleep(self.PROACTIVE_REFRESH_SETTLE_SECONDS)
+                await asyncio.sleep(self.PROACTIVE_REFRESH_SETTLE_SECONDS)
                 if not client.is_on and not self.can_refresh_in_standby():
                     _LOGGER.info(
                         "[%s] Access token is near expiration, but the TV is in standby; deferring token refresh until it is awake",
@@ -150,29 +157,34 @@ class TokenLifecycleManager:
                     )
                     return
                 current_time = time.time()
-                with self.refresh_lock:
+                async with self.refresh_lock:
                     should_refresh = not self.refreshing_token and (current_time - self.last_refresh_attempt > 60)
                     if should_refresh:
                         self.refreshing_token = True
                         self.last_refresh_attempt = current_time
                 if should_refresh:
                     _LOGGER.info("[%s] Access token is near expiration (<12h remaining). Proactively renewing tokens...", client.ip)
-                    client.refresh_tokens()
+                    await client.async_refresh_tokens()
         except Exception as e:
             _LOGGER.debug("[%s] Proactive token refresh check error: %s", client.ip, e)
         finally:
-            with self.refresh_lock:
-                # Only release the flag if THIS call acquired it; otherwise a no-op
-                # call would clobber another thread's in-flight refresh.
+            async with self.refresh_lock:
                 if should_refresh:
                     self.refreshing_token = False
 
-    def handle_auth_rejection(self, rc: int) -> None:
-        """Handles MQTT auth rejection (rc 4 or 5) on connect."""
+    def proactive_token_refresh(self) -> None:
+        """Synchronous wrapper for async_proactive_token_refresh."""
+        try:
+            loop = asyncio.get_running_loop()
+            self._proactive_refresh_task = loop.create_task(self.async_proactive_token_refresh())
+        except RuntimeError:
+            asyncio.run(self.async_proactive_token_refresh())
+
+    async def async_handle_auth_rejection(self, rc: int) -> None:
+        """Handles MQTT auth rejection (rc 4, 5, 134, 135) on connect."""
         client = self.client
-        # Query TV UPnP clock to check for clock jump or rollback before deciding token validity
         with contextlib.suppress(Exception):
-            client.sync_clock(timeout=2.0)
+            await client.async_sync_clock(timeout=2.0)
 
         if client.refresh_token and not is_token_expired(
             client.refresh_token_time,
@@ -180,50 +192,65 @@ class TokenLifecycleManager:
             clock_offset=client.clock_offset,
         ):
             current_time = time.time()
-            with self.refresh_lock:
-                retry_after = min(60 * (2 ** self.rejected_refresh_failures), 1800)
+            retry_after = min(60 * (2 ** self.rejected_refresh_failures), 1800)
+            should_refresh = False
+            async with self.refresh_lock:
                 should_refresh = not self.refreshing_token and (current_time - self.last_refresh_attempt > retry_after)
                 if should_refresh:
                     self.refreshing_token = True
                     self.last_refresh_attempt = current_time
             if should_refresh:
                 _LOGGER.info("[%s] Authentication failed on connect. Refreshing token in background...", client.ip)
-                threading.Thread(target=client._refresh_token_and_update_creds, daemon=True).start()
+                self.auth_refresh_task = asyncio.create_task(self.async_refresh_token_and_update_creds())
             else:
-                client._schedule_rejected_retry(max(5.0, retry_after - (current_time - self.last_refresh_attempt)))
+                self.client._schedule_rejected_retry(max(5.0, retry_after - (current_time - self.last_refresh_attempt)))
         else:
             _LOGGER.warning("[%s] MQTT authentication rejected and no valid refresh token available. Reauthentication required.", client.ip)
             client._dispatch_auth_failed()
 
+    def handle_auth_rejection(self, rc: int) -> None:
+        """Synchronous wrapper for async_handle_auth_rejection."""
+        try:
+            loop = asyncio.get_running_loop()
+            self._handle_rejection_task = loop.create_task(self.async_handle_auth_rejection(rc))
+        except RuntimeError:
+            asyncio.run(self.async_handle_auth_rejection(rc))
+
     def schedule_rejected_retry(self, delay: float) -> None:
-        with self.refresh_lock:
-            if self.rejected_retry_timer is not None:
-                return
-            timer = threading.Timer(delay, self.client._rejected_retry_fire)
-            timer.daemon = True
-            self.rejected_retry_timer = timer
-            timer.start()
+        """Schedules a delayed reconnection attempt after rejection."""
+        self.cancel_rejected_retry()
+        with contextlib.suppress(RuntimeError):
+            self.rejected_retry_task = asyncio.create_task(self._rejected_retry_runner(delay))
         _LOGGER.debug("[%s] Next reconnect attempt in %.0f s", self.client.ip, delay)
 
-    def _rejected_retry_fire(self) -> None:
-        with self.refresh_lock:
-            self.rejected_retry_timer = None
+    async def _rejected_retry_runner(self, delay: float) -> None:
+        """Waits delay seconds and triggers reconnection."""
+        await asyncio.sleep(delay)
+        self.rejected_retry_task = None
         try:
-            self.client.connect_and_run()
+            await self.client.async_connect_and_run()
         except Exception as e:
             _LOGGER.debug("[%s] Scheduled reconnect failed: %s", self.client.ip, e)
 
-    def cancel_rejected_retry(self) -> None:
-        with self.refresh_lock:
-            timer, self.rejected_retry_timer = self.rejected_retry_timer, None
-        if timer:
-            with contextlib.suppress(Exception):
-                timer.cancel()
+    def _rejected_retry_fire(self) -> None:
+        """Immediate retry trigger for tests or manual invocation."""
+        try:
+            loop = asyncio.get_running_loop()
+            self._retry_fire_task = loop.create_task(self.client.async_connect_and_run())
+        except RuntimeError:
+            asyncio.run(self.client.async_connect_and_run())
 
-    def refresh_token_and_update_creds(self) -> None:
+    def cancel_rejected_retry(self) -> None:
+        """Cancels any pending rejection retry task."""
+        if self.rejected_retry_task is not None:
+            self.rejected_retry_task.cancel()
+            self.rejected_retry_task = None
+
+    async def async_refresh_token_and_update_creds(self) -> None:
+        """Attempts token refresh and dispatches reauth if broker repeatedly rejects."""
         client = self.client
         try:
-            if client.check_and_refresh_token(force=True):
+            if await client.async_check_and_refresh_token(force=True):
                 _LOGGER.info("[%s] Token successfully refreshed on connection failure.", client.ip)
                 self.rejected_refresh_failures = 0
                 self.broker_rejection_failures = 0
@@ -259,5 +286,13 @@ class TokenLifecycleManager:
             if not client.refresh_token or is_token_expired(client.refresh_token_time, client.refresh_token_duration):
                 client._dispatch_auth_failed()
         finally:
-            with self.refresh_lock:
+            async with self.refresh_lock:
                 self.refreshing_token = False
+
+    def refresh_token_and_update_creds(self) -> None:
+        """Synchronous wrapper for async_refresh_token_and_update_creds."""
+        try:
+            loop = asyncio.get_running_loop()
+            self._creds_refresh_task = loop.create_task(self.async_refresh_token_and_update_creds())
+        except RuntimeError:
+            asyncio.run(self.async_refresh_token_and_update_creds())

@@ -49,6 +49,10 @@ async def test_services_registration_and_send_key():
 
     mock_client = MagicMock()
     mock_client.ip = "192.168.50.12"
+    mock_client.async_send_command = AsyncMock(side_effect=mock_client.send_command)
+    mock_client.async_set_picture_setting = AsyncMock(side_effect=mock_client.set_picture_setting)
+    mock_client.async_set_sound_setting = AsyncMock(side_effect=mock_client.set_sound_setting)
+    mock_client.async_send_text_input = AsyncMock(side_effect=mock_client.send_text_input)
     hass.data[DOMAIN] = {"entry_1": {"client": mock_client}}
 
     success = await async_setup(hass, {})
@@ -95,6 +99,7 @@ async def test_launch_app_service_matching():
 
     mock_client = MagicMock()
     mock_client.ip = "192.168.50.12"
+    mock_client.async_launch_app = AsyncMock(side_effect=mock_client.launch_app)
     mock_client.apps = [
         {"name": "YouTube", "appId": "youtube_app_01", "url": "https://youtube.com/tv"},
         {"appName": "Netflix", "appId": "netflix_app_02", "appUrl": "netflix://"},
@@ -154,6 +159,7 @@ async def test_launch_app_service_with_app_id_and_url_overrides():
 
     mock_client = MagicMock()
     mock_client.ip = "192.168.50.12"
+    mock_client.async_launch_app = AsyncMock(side_effect=mock_client.launch_app)
     mock_client.apps = [
         {"name": "YouTube", "appId": "3", "url": "https://youtube.com"},
     ]
@@ -216,6 +222,10 @@ async def test_picture_sound_and_text_input_services():
 
     mock_client = MagicMock()
     mock_client.ip = "192.168.50.12"
+    mock_client.async_send_command = AsyncMock(side_effect=mock_client.send_command)
+    mock_client.async_set_picture_setting = AsyncMock(side_effect=mock_client.set_picture_setting)
+    mock_client.async_set_sound_setting = AsyncMock(side_effect=mock_client.set_sound_setting)
+    mock_client.async_send_text_input = AsyncMock(side_effect=mock_client.send_text_input)
     hass.data[DOMAIN] = {"entry_1": {"client": mock_client}}
 
     await async_setup(hass, {})
@@ -284,9 +294,15 @@ async def test_service_target_resolution():
     call_mac = ServiceCall(domain=DOMAIN, service=SERVICE_SEND_KEY, data={"mac": "e8:51:77:ec:98:1c"})
     assert _get_target_clients(hass, call_mac) == [client_1]
 
-    # 4. Fallback to all when no target filter specified
-    call_all = ServiceCall(domain=DOMAIN, service=SERVICE_SEND_KEY, data={})
+    # 4. Explicit broadcast to all via entity_id="all" when multiple TVs configured
+    call_all = ServiceCall(domain=DOMAIN, service=SERVICE_SEND_KEY, data={"entity_id": "all"})
     assert len(_get_target_clients(hass, call_all)) == 2
+
+    # 5. Untargeted call on multiple TVs raises ambiguous_target
+    call_untargeted = ServiceCall(domain=DOMAIN, service=SERVICE_SEND_KEY, data={})
+    with pytest.raises(ServiceValidationError) as exc_info:
+        _get_target_clients(hass, call_untargeted)
+    assert exc_info.value.translation_key == "ambiguous_target"
 
 
 # ---------------------------------------------------------------------------
@@ -332,9 +348,21 @@ def _two_tv_hass():
     client_living = MagicMock()
     client_living.ip = "192.168.50.12"
     client_living.mac = "e8:51:77:ec:98:1c"
+    client_living.async_send_command = AsyncMock(side_effect=client_living.send_command)
+    client_living.async_launch_app = AsyncMock(side_effect=client_living.launch_app)
+    client_living.async_set_picture_setting = AsyncMock(side_effect=client_living.set_picture_setting)
+    client_living.async_set_sound_setting = AsyncMock(side_effect=client_living.set_sound_setting)
+    client_living.async_send_text_input = AsyncMock(side_effect=client_living.send_text_input)
+
     client_kitchen = MagicMock()
     client_kitchen.ip = "192.168.50.15"
     client_kitchen.mac = "e8:51:77:ec:98:2d"
+    client_kitchen.async_send_command = AsyncMock(side_effect=client_kitchen.send_command)
+    client_kitchen.async_launch_app = AsyncMock(side_effect=client_kitchen.launch_app)
+    client_kitchen.async_set_picture_setting = AsyncMock(side_effect=client_kitchen.set_picture_setting)
+    client_kitchen.async_set_sound_setting = AsyncMock(side_effect=client_kitchen.set_sound_setting)
+    client_kitchen.async_send_text_input = AsyncMock(side_effect=client_kitchen.send_text_input)
+
     hass.data = {
         DOMAIN: {
             "entry_living": {"client": client_living},
@@ -505,7 +533,7 @@ async def test_call_against_disconnected_tvs_raises_not_connected():
     client_kitchen.connected = False
 
     call = ServiceCall(
-        domain=DOMAIN, service=SERVICE_SEND_KEY, data={ATTR_KEY: "KEY_HOME"}
+        domain=DOMAIN, service=SERVICE_SEND_KEY, data={ATTR_KEY: "KEY_HOME", "entity_id": "all"}
     )
 
     with pytest.raises(ServiceValidationError) as err:
@@ -642,5 +670,71 @@ def test_services_helpers() -> None:
     assert parse_key_sequence(["KEY_1", "KEY_2"]) == ["KEY_1", "KEY_2"]
     assert parse_key_sequence(None) == []
     assert parse_key_sequence("") == []
+
+
+def test_multi_tv_ambiguous_target_guard() -> None:
+    """Test single-TV auto targeting, multi-TV ambiguous target exception, and 'all' broadcast."""
+    from types import SimpleNamespace
+
+    from custom_components.hisense_vidaa.services_target import (
+        _get_target_clients,
+        _resolve_service_targets,
+    )
+
+    hass = MagicMock(spec=HomeAssistant)
+    hass.data = {}
+    hass.config_entries = MagicMock()
+
+    client1 = MagicMock()
+    client1.ip = "10.0.0.1"
+    client1.mac = "AA:BB:CC:DD:EE:01"
+    client1.connected = True
+
+    client2 = MagicMock()
+    client2.ip = "10.0.0.2"
+    client2.mac = "AA:BB:CC:DD:EE:02"
+    client2.connected = True
+
+    entry1 = SimpleNamespace(entry_id="entry_1", runtime_data=SimpleNamespace(client=client1))
+    entry2 = SimpleNamespace(entry_id="entry_2", runtime_data=SimpleNamespace(client=client2))
+
+    # Case 1: Single TV configured, no target given -> auto-targets the single TV
+    hass.config_entries.async_loaded_entries = MagicMock(return_value=[entry1])
+    call_single = ServiceCall(domain=DOMAIN, service=SERVICE_SEND_KEY, data={})
+    assert _get_target_clients(hass, call_single) == [client1]
+
+    # Case 2: Multiple TVs configured, no target given -> raises ambiguous_target
+    hass.config_entries.async_loaded_entries = MagicMock(return_value=[entry1, entry2])
+    call_multi_no_target = ServiceCall(domain=DOMAIN, service=SERVICE_SEND_KEY, data={})
+    with pytest.raises(ServiceValidationError) as exc_info:
+        _get_target_clients(hass, call_multi_no_target)
+    assert exc_info.value.translation_key == "ambiguous_target"
+
+    # Case 3: Multiple TVs configured, entity_id: "all" string -> targets all
+    call_broadcast_str = ServiceCall(
+        domain=DOMAIN, service=SERVICE_SEND_KEY, data={"entity_id": "ALL"}
+    )
+    assert _get_target_clients(hass, call_broadcast_str) == [client1, client2]
+
+    # Case 4: Multiple TVs configured, entity_id: ["all"] list -> targets all
+    call_broadcast_list = ServiceCall(
+        domain=DOMAIN, service=SERVICE_SEND_KEY, data={"entity_id": ["all"]}
+    )
+    assert _get_target_clients(hass, call_broadcast_list) == [client1, client2]
+
+    # Case 5: Target by explicit IP address
+    call_ip = ServiceCall(
+        domain=DOMAIN, service=SERVICE_SEND_KEY, data={"ip_address": "10.0.0.2"}
+    )
+    assert _get_target_clients(hass, call_ip) == [client2]
+
+    # Case 6: Target by non-existent IP address -> raises no_target_device
+    call_unknown_ip = ServiceCall(
+        domain=DOMAIN, service=SERVICE_SEND_KEY, data={"ip_address": "192.168.1.99"}
+    )
+    with pytest.raises(ServiceValidationError) as exc_unknown:
+        _resolve_service_targets(hass, call_unknown_ip)
+    assert exc_unknown.value.translation_key == "no_target_device"
+
 
 

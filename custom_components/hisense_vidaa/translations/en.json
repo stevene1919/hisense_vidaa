@@ -337,6 +337,9 @@
     }
   },
   "exceptions": {
+    "ambiguous_target": {
+      "message": "Multiple Hisense VIDAA TVs are configured. Please specify a target TV, or use 'all' to target every TV."
+    },
     "no_target_device": {
       "message": "No matching Hisense VIDAA TV was found for the specified service call target."
     },

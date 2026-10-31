@@ -35,11 +35,11 @@ from .entity import HisenseVidaaEntity
 if TYPE_CHECKING:
     from . import HisenseVidaaConfigEntry
 from .tv.media import (
+    async_execute_play_media,
+    async_execute_select_source,
     build_media_channel_label,
     build_media_player_current_source,
     build_media_player_source_list,
-    execute_play_media,
-    execute_select_source,
     parse_applist_data,
     parse_media_state_broadcast,
     parse_sourcelist_data,
@@ -97,7 +97,7 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         if getattr(self._client, "connected", False):
             self._state = STATE_ON if self._client.is_on else STATE_OFF
             if not self._source_dict or not self._app_dict:
-                await self.hass.async_add_executor_job(self._client.query_initial_state)
+                await self._client.async_query_initial_state()
 
     async def async_will_remove_from_hass(self) -> None:
         """Unregister callbacks when entity is removed."""
@@ -305,24 +305,22 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
             if sec_mac and sec_mac not in mac_targets:
                 mac_targets.append(sec_mac)
 
-        await self.hass.async_add_executor_job(
-            self._client.turn_on, mac_targets if mac_targets else None
-        )
+        await self._client.async_turn_on(mac_targets if mac_targets else None)
         self.async_write_ha_state()
 
     async def async_turn_off(self) -> None:
         """Turn off the TV."""
-        await self.hass.async_add_executor_job(self._client.turn_off)
+        await self._client.async_turn_off()
         self.async_write_ha_state()
 
     async def async_set_volume_level(self, volume: float) -> None:
-        await self.hass.async_add_executor_job(self._client.set_volume, int(volume * 100))
+        await self._client.async_set_volume(int(volume * 100))
 
     async def async_volume_up(self) -> None:
-        await self.hass.async_add_executor_job(self._client.send_key, "KEY_VOLUMEUP")
+        await self._client.async_send_key("KEY_VOLUMEUP")
 
     async def async_volume_down(self) -> None:
-        await self.hass.async_add_executor_job(self._client.send_key, "KEY_VOLUMEDOWN")
+        await self._client.async_send_key("KEY_VOLUMEDOWN")
 
     async def async_mute_volume(self, mute: bool) -> None:
         # KEY_MUTE is a toggle: only send it when the requested state differs from
@@ -330,38 +328,38 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         # the TV on every run.
         if bool(mute) == bool(self._muted):
             return
-        await self.hass.async_add_executor_job(self._client.send_key, "KEY_MUTE")
+        await self._client.async_send_key("KEY_MUTE")
 
     async def async_media_play(self) -> None:
-        await self.hass.async_add_executor_job(self._client.send_key, "KEY_PLAY")
+        await self._client.async_send_key("KEY_PLAY")
 
     async def async_media_pause(self) -> None:
-        await self.hass.async_add_executor_job(self._client.send_key, "KEY_PAUSE")
+        await self._client.async_send_key("KEY_PAUSE")
 
     async def async_media_stop(self) -> None:
-        await self.hass.async_add_executor_job(self._client.send_key, "KEY_STOP")
+        await self._client.async_send_key("KEY_STOP")
 
     async def async_media_next_track(self) -> None:
-        await self.hass.async_add_executor_job(self._client.send_key, "KEY_FORWARDS")
+        await self._client.async_send_key("KEY_FORWARDS")
 
     async def async_media_previous_track(self) -> None:
-        await self.hass.async_add_executor_job(self._client.send_key, "KEY_BACK")
+        await self._client.async_send_key("KEY_BACK")
 
     async def async_play_media(self, media_type: str, media_id: str, **kwargs: Any) -> None:
         """Launch an app, tune to channel, open URL/deep-link, or execute key command."""
-        await self.hass.async_add_executor_job(
-            execute_play_media, self._client, self._app_dict, media_type, media_id
+        await async_execute_play_media(
+            self._client, self._app_dict, media_type, media_id
         )
 
     async def async_select_source(self, source: str) -> None:
         """Select input source or smart application."""
-        await self.hass.async_add_executor_job(
-            execute_select_source, self._client, self._source_dict, self._app_dict, source
+        await async_execute_select_source(
+            self._client, self._source_dict, self._app_dict, source
         )
 
     async def async_select_sound_mode(self, sound_mode: str) -> None:
         """Select sound mode."""
-        await self.hass.async_add_executor_job(self._client.set_sound_mode, sound_mode)
+        await self._client.async_set_sound_mode(sound_mode)
         self.async_write_ha_state()
 
     def _handle_sound_update(self, data: dict[str, Any]) -> None:
@@ -389,11 +387,10 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
             parsed["is_on"]
             and (was_off or not self._source_dict or not self._app_dict)
             and self.hass
-            and hasattr(self.hass, "loop")
-            and self.hass.loop
         ):
-            self.hass.loop.call_soon_threadsafe(
-                self.hass.async_add_executor_job, self._client.query_initial_state
+            self.hass.async_create_background_task(
+                self._client.async_query_initial_state(),
+                "hisense_vidaa_media_player_initial_state",
             )
 
         self.schedule_update_ha_state()

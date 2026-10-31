@@ -70,7 +70,14 @@ async def async_get_config_entry_diagnostics(
 
         fp = None
         with contextlib.suppress(Exception):
-            fp = await hass.async_add_executor_job(client.get_device_fingerprint, 1.5)
+            if hasattr(client, "async_get_device_fingerprint"):
+                res = client.async_get_device_fingerprint(1.5)
+                if hasattr(res, "__await__"):
+                    fp = await res
+                else:
+                    fp = res
+            elif hasattr(client, "get_device_fingerprint"):
+                fp = client.get_device_fingerprint(1.5)
         tv_diagnostics = {
             "connected": client.connected,
             "auth_profile": client.auth_profile,

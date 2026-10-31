@@ -114,7 +114,7 @@ async def async_discover_device_details(
         return details
 
     try:
-        fp = await hass.async_add_executor_job(client.get_device_fingerprint, 1.5)
+        fp = await client.async_get_device_fingerprint(1.5)
         discovered_name = fp.get("friendly_name") or fp.get("model_code")
         if (
             discovered_name
@@ -141,8 +141,8 @@ async def async_probe_device_capabilities(
     if not client or not client.connected:
         return
     try:
-        await hass.async_add_executor_job(client.get_picture_settings)
-        await hass.async_add_executor_job(client.get_sound_settings)
+        await client.async_get_picture_settings()
+        await client.async_get_sound_settings()
         await asyncio.sleep(1.0)
     except Exception as e:
         _LOGGER.debug("[%s] Error during capability probe: %s", ip_address, e)
@@ -175,7 +175,7 @@ async def async_disconnect_existing_client(
         ):
             _LOGGER.debug("Disconnecting existing running client for %s during pairing flow", ip_address)
             with contextlib.suppress(Exception):
-                await hass.async_add_executor_job(client.disconnect)
+                await client.async_disconnect()
 
     if hasattr(hass, "data") and isinstance(hass.data, dict) and DOMAIN in hass.data:
         for current_entry_id, entry_data in list(hass.data.get(DOMAIN, {}).items()):
@@ -188,7 +188,7 @@ async def async_disconnect_existing_client(
             ):
                 _LOGGER.debug("Disconnecting existing running client for %s during pairing flow", ip_address)
                 with contextlib.suppress(Exception):
-                    await hass.async_add_executor_job(client.disconnect)
+                    await client.async_disconnect()
 
 
 async def async_resolve_mac(hass: HomeAssistant, ip_address: str | None) -> str | None:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Any
 
@@ -10,6 +9,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import AbortFlow
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .client import HisenseTvClient
 from .const import (
@@ -128,22 +128,20 @@ class HisenseVidaaConfigFlow(
             self._abort_if_unique_id_configured()
 
         await self._async_disconnect_existing_client()
-        self.client = await self.hass.async_add_executor_job(
-            lambda: HisenseTvClient(
-                self.ip_address,
-                self.mac_address,
-                auth_profile=self.auth_profile,
-                certfile=self.certfile if self.use_ssl else None,
-                keyfile=self.keyfile if self.use_ssl else None,
-                use_ssl=self.use_ssl,
-            )
+        session = async_get_clientsession(self.hass) if self.hass else None
+        self.client = HisenseTvClient(
+            self.ip_address,
+            self.mac_address,
+            auth_profile=self.auth_profile,
+            certfile=self.certfile if self.use_ssl else None,
+            keyfile=self.keyfile if self.use_ssl else None,
+            use_ssl=self.use_ssl,
+            session=session,
         )
         self.client._loop = self.hass.loop
 
         if self.auth_profile == "auto":
-            probe = await self.hass.async_add_executor_job(
-                self.client.probe_auth_methods, 1.5
-            )
+            probe = await self.client.async_probe_auth_methods(1.5)
             if (
                 probe.get("legacy_static", {}).get("supported")
                 and not probe.get("modern_dynamic", {}).get("supported")
@@ -182,7 +180,7 @@ class HisenseVidaaConfigFlow(
 
         # No challenge: behave exactly as today. Drop the probe connection so
         # the remaining steps see the same (unconnected) client as before.
-        await self.hass.async_add_executor_job(self.client.disconnect)
+        await self.client.async_disconnect()
         if is_reauth and self._reauth_entry:
             return await self._async_finish_reauth(reason=reauth_reason)
         await self._async_discover_device_name()
@@ -246,10 +244,12 @@ class HisenseVidaaConfigFlow(
                 self.auth_profile = self._reauth_entry.data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
 
             if self.ip_address:
-                self.client = await self.hass.async_add_executor_job(
-                    lambda: HisenseTvClient(
-                        self.ip_address, self.mac_address, auth_profile=self.auth_profile
-                    )
+                session = async_get_clientsession(self.hass) if self.hass else None
+                self.client = HisenseTvClient(
+                    self.ip_address,
+                    self.mac_address,
+                    auth_profile=self.auth_profile,
+                    session=session,
                 )
                 self.client._loop = self.hass.loop
                 try:
@@ -306,7 +306,7 @@ class HisenseVidaaConfigFlow(
         if user_input is not None and self.client:
             entry_data = self._get_client_auth_data()
 
-            await self.hass.async_add_executor_job(self.client.disconnect)
+            await self.client.async_disconnect()
             self.client = None
 
             return self.async_create_entry(
@@ -327,13 +327,20 @@ class HisenseVidaaConfigFlow(
             client = self.client
             self.client = None
             if hasattr(self, "hass") and self.hass:
-                future = self.hass.async_add_executor_job(client.disconnect)
-                future.add_done_callback(self._async_log_remove_exception)
+                task = self.hass.async_create_background_task(
+                    client.async_disconnect(),
+                    "hisense_vidaa_config_flow_remove",
+                )
+                def _done_callback(fut: Any) -> None:
+                    if not fut.cancelled() and fut.exception():
+                        _LOGGER.debug("Error disconnecting client on flow remove: %s", fut.exception())
+                task.add_done_callback(_done_callback)
             else:
-                client.disconnect()
-
-    @callback
-    def _async_log_remove_exception(self, future: asyncio.Future[Any]) -> None:
-        """Log a failed async_remove disconnect (the future is otherwise fire-and-forget)."""
-        if not future.cancelled() and future.exception() is not None:
-            _LOGGER.debug("Error disconnecting flow client during async_remove: %s", future.exception())
+                try:
+                    import asyncio
+                    loop = asyncio.get_running_loop()
+                    self._remove_task = loop.create_task(client.async_disconnect())
+                except RuntimeError:
+                    # Fallback if no running loop: close sync or ignore
+                    if hasattr(client, "disconnect"):
+                        client.disconnect()

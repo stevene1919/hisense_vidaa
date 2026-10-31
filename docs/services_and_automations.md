@@ -128,6 +128,17 @@ data:
 
 ---
 
+## 🎯 Service Target Resolution (Single-TV vs Multi-TV)
+
+All `hisense_vidaa.*` action services support targeting via standard Home Assistant selectors: `target.entity_id`, `target.device_id`, `target.area_id`, `target.floor_id`, or `target.label_id`.
+
+* **Single TV Setup**: If you only have one Hisense VIDAA TV configured in Home Assistant, omitting the `target` parameter will automatically target that single TV for convenience.
+* **Multiple TVs Setup**: When 2 or more Hisense VIDAA TVs are configured:
+  * You **must** provide a target selector (`target.entity_id`, `target.device_id`, etc.) identifying which TV should receive the command. Omitting the target will raise a `ServiceValidationError` (`ambiguous_target`) to prevent inadvertent commands being sent to the wrong TV.
+  * To explicitly broadcast a service command to all configured TVs at once, pass `entity_id: "all"` (e.g. `target: { entity_id: "all" }`).
+
+---
+
 ## 🎛️ Picture & Sound Controls (`number` and `select` entities)
 
 ### Adjust Backlight, Brightness, and Contrast Sliders

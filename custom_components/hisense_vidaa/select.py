@@ -96,13 +96,13 @@ class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
         """Change the audio output option."""
         if option == AUDIO_OUTPUT_TV_SPEAKERS:
             self._volume_type = 0
-            await self.hass.async_add_executor_job(self._client.send_key, "KEY_AUDIO_ONLY")
+            await self._client.async_send_key("KEY_AUDIO_ONLY")
         elif option == AUDIO_OUTPUT_ARC:
             self._volume_type = 1
-            await self.hass.async_add_executor_job(self._client.send_key, "KEY_SOUND")
+            await self._client.async_send_key("KEY_SOUND")
         elif option == AUDIO_OUTPUT_HEADPHONE:
             self._volume_type = 2
-            await self.hass.async_add_executor_job(self._client.send_key, "KEY_HEADPHONE")
+            await self._client.async_send_key("KEY_HEADPHONE")
         self.async_write_ha_state()
 
 
@@ -156,7 +156,7 @@ class HisenseVidaaPictureModeSelect(HisenseVidaaEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Change picture mode option."""
         self._current_mode = option
-        await self.hass.async_add_executor_job(self._client.set_picture_mode, option)
+        await self._client.async_set_picture_mode(option)
         self.async_write_ha_state()
 
 
@@ -211,7 +211,7 @@ class HisenseVidaaSoundModeSelect(HisenseVidaaEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Change sound mode option."""
         self._current_mode = option
-        await self.hass.async_add_executor_job(self._client.set_sound_mode, option)
+        await self._client.async_set_sound_mode(option)
         self.async_write_ha_state()
 
 

@@ -91,6 +91,15 @@ if "homeassistant" not in sys.modules:
         data = None
         loop = None
 
+        def async_create_background_task(self, target, name=None):
+            return None
+
+        def async_create_task(self, target, name=None):
+            return None
+
+        def async_add_executor_job(self, target, *args):
+            return None
+
         def __init__(self):
             self.config_entries = MagicMock()
             self.services = MagicMock()
@@ -549,6 +558,14 @@ if "homeassistant" not in sys.modules:
     helpers.event = event
     sys.modules["homeassistant.helpers.event"] = event
 
+    # helpers.aiohttp_client
+    aiohttp_client = types.ModuleType("homeassistant.helpers.aiohttp_client")
+    def async_get_clientsession(hass=None, verify_ssl=True):
+        return MagicMock()
+    aiohttp_client.async_get_clientsession = async_get_clientsession
+    helpers.aiohttp_client = aiohttp_client
+    sys.modules["homeassistant.helpers.aiohttp_client"] = aiohttp_client
+
     ha.helpers = helpers
     sys.modules["homeassistant.helpers"] = helpers
     sys.modules["homeassistant"] = ha
@@ -626,11 +643,14 @@ def mock_entry(mock_client):
 
 @pytest.fixture
 def mock_client():
+    from unittest.mock import AsyncMock
+
     from custom_components.hisense_vidaa.tv.actions import turn_off_tv, turn_on_tv
 
     client = MagicMock()
     client.ip = "192.168.50.12"
     client.connected = True
+    client.is_on = True
     client.auth_profile = "modern"
     client.access_token_time = 1700000000
     client.access_token_duration = 3600
@@ -646,7 +666,54 @@ def mock_client():
     client.clock_offset = 0
     client.last_clock_sync = 0.0
     client.tv_timestamp = None
+    client.picture_settings = []
+    client.sound_settings = []
     client.sync_clock = MagicMock(return_value=0)
+    client.async_sync_clock = AsyncMock(return_value=0)
+    client.async_connect_and_run = AsyncMock()
+    client.async_disconnect = AsyncMock()
+    client.async_check_and_refresh_token = AsyncMock(return_value=False)
+    client.async_query_initial_state = AsyncMock()
+    client.async_turn_on = AsyncMock()
+    client.async_turn_off = AsyncMock()
+    client.async_set_volume = AsyncMock()
+    client.async_send_key = AsyncMock()
+    client.async_send_command = AsyncMock(return_value=True)
+    client.async_set_sound_mode = AsyncMock()
+    client.async_set_picture_mode = AsyncMock()
+    client.async_set_backlight = AsyncMock()
+    client.async_set_brightness = AsyncMock()
+    client.async_set_contrast = AsyncMock()
+    client.async_set_picture_setting = AsyncMock()
+    client.async_set_sound_setting = AsyncMock()
+    client.async_send_text_input = AsyncMock()
+    client.async_show_message = AsyncMock(return_value=True)
+    client.async_launch_app = AsyncMock()
+    client.async_get_picture_settings = AsyncMock()
+    client.async_get_sound_settings = AsyncMock()
+    client.async_get_device_fingerprint = AsyncMock(return_value={})
+    client.async_turn_on.side_effect = lambda *a, **k: client.turn_on(*a, **k)
+    client.async_turn_off.side_effect = lambda *a, **k: client.turn_off(*a, **k)
+    client.async_set_volume.side_effect = lambda *a, **k: client.set_volume(*a, **k)
+    client.async_send_key.side_effect = lambda *a, **k: client.send_key(*a, **k)
+    client.async_send_command.side_effect = lambda *a, **k: client.send_command(*a, **k) or True
+    client.async_set_sound_mode.side_effect = lambda *a, **k: client.set_sound_mode(*a, **k)
+    client.async_set_picture_mode.side_effect = lambda *a, **k: client.set_picture_mode(*a, **k)
+    client.async_set_backlight.side_effect = lambda *a, **k: client.set_backlight(*a, **k)
+    client.async_set_brightness.side_effect = lambda *a, **k: client.set_brightness(*a, **k)
+    client.async_set_contrast.side_effect = lambda *a, **k: client.set_contrast(*a, **k)
+    client.async_set_picture_setting.side_effect = lambda *a, **k: client.set_picture_setting(*a, **k)
+    client.async_set_sound_setting.side_effect = lambda *a, **k: client.set_sound_setting(*a, **k)
+    client.async_send_text_input.side_effect = lambda *a, **k: client.send_text_input(*a, **k)
+    client.async_show_message.side_effect = lambda *a, **k: client.show_message(*a, **k) or True
+    client.async_launch_app.side_effect = lambda *a, **k: client.launch_app(*a, **k)
+    client.async_change_source = AsyncMock(side_effect=lambda *a, **k: client.change_source(*a, **k))
+    client.async_cycle_source = AsyncMock(side_effect=lambda *a, **k: client.cycle_source(*a, **k))
+    client.async_disconnect.side_effect = lambda *a, **k: client.disconnect(*a, **k)
+    client.async_connect_and_run.side_effect = lambda *a, **k: client.connect_and_run(*a, **k)
+    client.async_sync_clock.side_effect = lambda *a, **k: client.sync_clock(*a, **k) or 0
+    client.async_get_device_fingerprint.side_effect = lambda *a, **k: client.get_device_fingerprint(*a, **k) or {}
+    client.async_check_and_refresh_token.side_effect = lambda *a, **k: client.check_and_refresh_token(*a, **k) or False
     client.turn_on.side_effect = lambda mac_targets=None: turn_on_tv(client, mac_targets)
     client.turn_off.side_effect = lambda: turn_off_tv(client)
     return client

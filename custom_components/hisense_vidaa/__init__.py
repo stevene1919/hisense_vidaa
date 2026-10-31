@@ -12,6 +12,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv, issue_registry as ir
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
 
 from .client import HisenseTvClient
@@ -113,25 +114,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
     certfile = entry.options.get(CONF_CERTFILE, data.get(CONF_CERTFILE))
     keyfile = entry.options.get(CONF_KEYFILE, data.get(CONF_KEYFILE))
 
-    client = await hass.async_add_executor_job(
-        lambda: HisenseTvClient(
-            ip=data[CONF_IP_ADDRESS],
-            mac=mac,
-            client_id=data.get(CONF_CLIENT_ID),
-            username=data.get(CONF_USERNAME),
-            password=data.get(CONF_PASSWORD),
-            access_token=data.get(CONF_ACCESS_TOKEN),
-            access_token_time=data.get(CONF_ACCESS_TOKEN_TIME),
-            access_token_duration=data.get(CONF_ACCESS_TOKEN_DURATION),
-            refresh_token=data.get(CONF_REFRESH_TOKEN),
-            refresh_token_time=data.get(CONF_REFRESH_TOKEN_TIME),
-            refresh_token_duration=data.get(CONF_REFRESH_TOKEN_DURATION),
-            auth_profile=entry.options.get(CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, "auto")),
-            refresh_in_standby=entry.options.get(CONF_REFRESH_IN_STANDBY, DEFAULT_REFRESH_IN_STANDBY),
-            certfile=certfile,
-            keyfile=keyfile,
-            use_ssl=use_ssl,
-        )
+    client = HisenseTvClient(
+        ip=data[CONF_IP_ADDRESS],
+        mac=mac,
+        client_id=data.get(CONF_CLIENT_ID),
+        username=data.get(CONF_USERNAME),
+        password=data.get(CONF_PASSWORD),
+        access_token=data.get(CONF_ACCESS_TOKEN),
+        access_token_time=data.get(CONF_ACCESS_TOKEN_TIME),
+        access_token_duration=data.get(CONF_ACCESS_TOKEN_DURATION),
+        refresh_token=data.get(CONF_REFRESH_TOKEN),
+        refresh_token_time=data.get(CONF_REFRESH_TOKEN_TIME),
+        refresh_token_duration=data.get(CONF_REFRESH_TOKEN_DURATION),
+        auth_profile=entry.options.get(CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, "auto")),
+        refresh_in_standby=entry.options.get(CONF_REFRESH_IN_STANDBY, DEFAULT_REFRESH_IN_STANDBY),
+        certfile=certfile,
+        keyfile=keyfile,
+        use_ssl=use_ssl,
+        session=async_get_clientsession(hass),
     )
     client._loop = hass.loop
 
@@ -177,9 +177,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
             },
         )
 
-    client.register_token_refreshed_callback(
-        lambda c: hass.loop.call_soon_threadsafe(update_entry_tokens, c)
-    )
+    client.register_token_refreshed_callback(update_entry_tokens)
 
     def _handle_auth_failed(failed_client: HisenseTvClient) -> None:
         """Raise a persistent Repairs issue and start the reauth flow."""
@@ -197,16 +195,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         )
         entry.async_start_reauth(hass)
 
-    client.register_auth_failed_callback(
-        lambda c: hass.loop.call_soon_threadsafe(_handle_auth_failed, c)
-    )
+    client.register_auth_failed_callback(_handle_auth_failed)
 
-    # Check and refresh tokens in executor
-    updated = await hass.async_add_executor_job(client.check_and_refresh_token)
+    # Check and refresh tokens
+    updated = await client.async_check_and_refresh_token()
     if updated:
         update_entry_tokens(client)
 
-    # Start running background thread loop for MQTT client in executor
+    # Start running background task for MQTT client
     platforms_to_setup = [
         "media_player",
         "sensor",
@@ -227,12 +223,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
     ):
         platforms_to_setup.append("notify")
 
-    # Start running background thread loop for MQTT client in executor.
-    # [F10-leg2]: connect_and_run builds the TLS context, so a missing/invalid
-    # certfile or keyfile raises out of paho's tls_set.  Without this guard the
-    # raw traceback escapes setup instead of a clean, retried setup failure.
+    # Connect to MQTT broker
     try:
-        await hass.async_add_executor_job(client.connect_and_run)
+        await client.async_connect_and_run()
     except Exception as err:
         raise ConfigEntryNotReady(
             f"Cannot connect to Hisense TV at {client.ip}: {err}"
@@ -253,7 +246,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         if not client.connected or not client.is_on:
             return
         try:
-            await hass.async_add_executor_job(client.sync_clock, 2.0)
+            await client.async_sync_clock(2.0)
         except Exception as err:
             _LOGGER.debug("[%s] Periodic clock sync failed: %s", client.ip, err)
 
@@ -269,11 +262,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         now_on = client.is_on
         last_power_state[0] = now_on
         if not was_on and now_on:
-            hass.loop.call_soon_threadsafe(
-                lambda: hass.async_create_background_task(
-                    _async_sync_tv_clock(),
-                    f"hisense_vidaa_wake_clock_sync_{entry.entry_id}",
-                )
+            hass.async_create_background_task(
+                _async_sync_tv_clock(),
+                f"hisense_vidaa_wake_clock_sync_{entry.entry_id}",
             )
 
     client.register_state_callback(_on_state_change)
@@ -305,9 +296,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         except Exception as err:
             _LOGGER.debug("[%s] Dynamic device registry enrichment failed: %s", client.ip, err)
 
-    client.register_device_info_callback(
-        lambda data: hass.loop.call_soon_threadsafe(lambda: _on_device_info_update(data))
-    )
+    client.register_device_info_callback(_on_device_info_update)
     entry.async_on_unload(
         lambda: client.unregister_device_info_callback(_on_device_info_update)
     )
@@ -349,6 +338,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry
     )
     if unload_ok:
         if client:
-            await hass.async_add_executor_job(client.disconnect)
+            await client.async_disconnect()
         await async_unload_services(hass)
     return unload_ok

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import time
 from typing import TYPE_CHECKING, Any
@@ -10,6 +11,8 @@ if TYPE_CHECKING:
     from ..client import HisenseTvClient
 
 __all__ = [
+    "async_execute_play_media",
+    "async_execute_select_source",
     "build_media_channel_label",
     "build_media_player_current_source",
     "build_media_player_source_list",
@@ -192,6 +195,53 @@ def execute_play_media(
     client.send_command(media_id)
 
 
+async def async_execute_play_media(
+    client: HisenseTvClient,
+    app_dict: dict[str, dict[str, Any]],
+    media_type: str,
+    media_id: str,
+) -> None:
+    """Executes media playback command asynchronously: launches app, tunes channel number, or sends key."""
+    type_lower = media_type.lower()
+    if type_lower in ("app", "application", "url", "deep_link", "video", "music") or "://" in media_id:
+        # Check app dictionary for direct match or scheme match
+        app = app_dict.get(media_id)
+        if app:
+            await client.async_launch_app(
+                str(app.get("appId") or app.get("app_id") or ""),
+                str(app.get("name") or ""),
+                str(app.get("url") or app.get("appUrl") or ""),
+            )
+            return
+        for app_name, app_info in app_dict.items():
+            if app_name.lower() == media_id.lower() or (
+                str(app_info.get("url") or "").lower() == media_id.lower()
+            ):
+                await client.async_launch_app(
+                    str(app_info.get("appId") or app_info.get("app_id") or ""),
+                    str(app_info.get("name") or app_name),
+                    str(app_info.get("url") or app_info.get("appUrl") or ""),
+                )
+                return
+
+        # Direct URL / deep-link launch
+        if "://" in media_id or type_lower in ("url", "deep_link"):
+            await client.async_launch_app("", media_id, media_id)
+            return
+
+    if type_lower in ("channel", "tvshow"):
+        for char in str(media_id):
+            if char.isdigit():
+                await client.async_send_key(f"KEY_{char}")
+                await asyncio.sleep(0.1)
+            elif char in (".", "-"):
+                await client.async_send_key("KEY_CHANNELDOT")
+                await asyncio.sleep(0.1)
+        return
+
+    await client.async_send_command(media_id)
+
+
 def execute_select_source(
     client: HisenseTvClient,
     source_dict: dict[str, dict[str, Any]],
@@ -230,6 +280,46 @@ def execute_select_source(
         return
 
     client.change_source(cleaned_source)
+
+
+async def async_execute_select_source(
+    client: HisenseTvClient,
+    source_dict: dict[str, dict[str, Any]],
+    app_dict: dict[str, dict[str, Any]],
+    source: str,
+) -> None:
+    """Resolves and selects a source input or smart TV application asynchronously."""
+    if not source:
+        return
+    cleaned_source = clean_source_label(source)
+    source_lower = source.strip().lower()
+    cleaned_lower = cleaned_source.strip().lower()
+
+    # 1. Check app dictionary (exact and case-insensitive)
+    app = app_dict.get(source) or app_dict.get(cleaned_source)
+    if not app:
+        for app_name, app_data in app_dict.items():
+            if isinstance(app_data, dict) and app_name.lower() in (source_lower, cleaned_lower):
+                app = app_data
+                break
+    if app:
+        await client.async_launch_app(str(app.get("appId", "")), str(app.get("name", "")), str(app.get("url", "")))
+        return
+
+    # 2. Input source match (exact and case-insensitive)
+    matched_source = source_dict.get(source) or source_dict.get(cleaned_source)
+    if not matched_source:
+        for source_name, source_data in source_dict.items():
+            if isinstance(source_data, dict) and source_name.lower() in (source_lower, cleaned_lower):
+                matched_source = source_data
+                break
+    if matched_source:
+        resolved_source_id = str(matched_source.get("sourceid") or matched_source.get("sourcename") or "")
+        resolved_source_name = str(matched_source.get("sourcename") or cleaned_source)
+        await client.async_change_source(resolved_source_id, resolved_source_name)
+        return
+
+    await client.async_change_source(cleaned_source)
 
 
 def parse_media_state_broadcast(

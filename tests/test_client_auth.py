@@ -1,7 +1,6 @@
 """Unit tests for HisenseTvClient authentication and token lifecycle."""
 
 import asyncio
-import threading
 import time
 from unittest.mock import MagicMock, patch
 
@@ -77,7 +76,8 @@ def test_check_and_refresh_token_missing_metadata_does_not_refresh():
     assert client.check_and_refresh_token(force=False) is False
 
 
-def test_check_and_refresh_token_expired():
+@pytest.mark.anyio
+async def test_check_and_refresh_token_expired():
     """Test token refresh is triggered when token has expired (>48 hours)."""
     now = int(time.time())
     client = HisenseTvClient(
@@ -92,18 +92,12 @@ def test_check_and_refresh_token_expired():
         refresh_token_duration=30,
     )
 
-    mock_mqtt_instance = MagicMock()
-    mock_mqtt_instance.connect.return_value = 0
-
-    with patch("paho.mqtt.client.Client", return_value=mock_mqtt_instance), patch("ssl.create_default_context"):
-        # Trigger refresh; no fresh token arrives from the (mocked) broker.
-        assert client.check_and_refresh_token(force=False) is False
-
-    # The refresh attempt must actually reach the broker: a dedicated MQTT client
-    # connects with the refresh token and requests a new access token.
-    mock_mqtt_instance.username_pw_set.assert_called_once_with(username="test_client", password="valid_refresh")
-    mock_mqtt_instance.connect.assert_called_once_with("192.168.50.12", 36669, 60)
-    mock_mqtt_instance.loop_start.assert_called_once()
+    with patch("custom_components.hisense_vidaa.client.async_perform_token_refresh", return_value=None) as mock_refresh, \
+         patch.object(client, "async_sync_clock"):
+        assert await client.async_check_and_refresh_token(force=False) is False
+        mock_refresh.assert_awaited_once()
+        assert mock_refresh.call_args[1]["refresh_token"] == "valid_refresh"
+        assert mock_refresh.call_args[1]["username"] == "test_client"
 
 
 
@@ -127,29 +121,22 @@ def test_probe_auth_methods():
         assert "supported" in probe["modern_dynamic"]
 
 
-def test_ensure_connected_rate_limiting_and_cleanup():
-    """Test ensure_connected rate limits reconnection attempts and cleans up previous loops."""
+@pytest.mark.anyio
+async def test_ensure_connected_rate_limiting_and_cleanup():
+    """Test async_ensure_connected rate limits reconnection attempts."""
     client = HisenseTvClient(ip="192.168.50.12", client_id="test_client", username="u", access_token="t")
-
-    mock_old_mqtt = MagicMock()
-    client.mqtt_client = mock_old_mqtt
     client.connected = False
 
-    # First call triggers reconnect
-    with patch.object(client, "create_mqtt_client") as mock_create:
-        mock_new_mqtt = MagicMock()
-        mock_create.return_value = mock_new_mqtt
-
-        res1 = client.ensure_connected(min_interval=5.0)
+    with patch.object(client, "async_connect_and_run") as mock_connect, \
+         patch.object(client, "async_check_and_refresh_token"):
+        res1 = await client.async_ensure_connected(min_interval=5.0)
         assert res1 is True
-        mock_old_mqtt.loop_stop.assert_called_once()
-        mock_old_mqtt.disconnect.assert_called_once()
-        mock_new_mqtt.connect_async.assert_called_once()
-        mock_new_mqtt.loop_start.assert_called_once()
+        mock_connect.assert_awaited_once()
 
         # Immediate second call is rate-limited
-        res2 = client.ensure_connected(min_interval=5.0)
+        res2 = await client.async_ensure_connected(min_interval=5.0)
         assert res2 is False
+        assert mock_connect.await_count == 1
 
 
 def test_on_connect_rc5_no_refresh_token():
@@ -269,8 +256,9 @@ def test_auth_failed_and_token_refreshed_callback_dispatches():
     assert token_refreshed_calls[0] is client
 
 
-def test_on_connect_rc4_with_valid_refresh_token_triggers_background_refresh():
-    """Test rc=4 connection rejection with valid refresh token starts background thread and does not dispatch auth_failed immediately."""
+@pytest.mark.anyio
+async def test_on_connect_rc4_with_valid_refresh_token_triggers_background_refresh():
+    """Test rc=4 connection rejection with valid refresh token starts background task and does not dispatch auth_failed immediately."""
     now = int(time.time())
     client = HisenseTvClient(
         ip="192.168.50.12",
@@ -278,14 +266,13 @@ def test_on_connect_rc4_with_valid_refresh_token_triggers_background_refresh():
         refresh_token_time=now - 86400,  # 1 day old (valid 30 days)
         refresh_token_duration=30,
     )
-    mock_mqtt = MagicMock()
     mock_auth_failed = MagicMock()
     client.register_auth_failed_callback(mock_auth_failed)
 
-    with patch("threading.Thread") as mock_thread:
-        client._on_connect(mock_mqtt, None, None, rc=4)
-        mock_mqtt.loop_stop.assert_called_once()
-        mock_thread.assert_called_once()
+    with patch.object(client._token_manager, "async_refresh_token_and_update_creds") as mock_refresh, \
+         patch.object(client, "async_sync_clock"):
+        await client._token_manager.async_handle_auth_rejection(4)
+        mock_refresh.assert_called_once()
         mock_auth_failed.assert_not_called()
 
 
@@ -412,7 +399,8 @@ def test_token_watch_refreshes_in_standby_when_enabled():
         mock_refresh.assert_not_called()
 
 
-def test_refresh_tokens_restores_connection_on_failure():
+@pytest.mark.anyio
+async def test_refresh_tokens_restores_connection_on_failure():
     """A failed refresh (TV in standby) must reconnect with the current access token."""
     client = HisenseTvClient(
         ip="192.168.50.12",
@@ -424,13 +412,15 @@ def test_refresh_tokens_restores_connection_on_failure():
     client.mqtt_client = MagicMock()
     client.connected = True
 
-    with patch("custom_components.hisense_vidaa.client.perform_token_refresh", return_value=None), \
-         patch.object(client, "connect_and_run") as mock_connect:
-        assert client.refresh_tokens() is False
-        mock_connect.assert_called_once()
+    with patch("custom_components.hisense_vidaa.client.async_perform_token_refresh", return_value=None), \
+         patch.object(client, "async_sync_clock"), \
+         patch.object(client, "async_connect_and_run") as mock_connect:
+        assert await client.async_refresh_tokens() is False
+        mock_connect.assert_awaited_once()
 
 
-def test_rejected_connection_schedules_delayed_reconnect():
+@pytest.mark.anyio
+async def test_rejected_connection_schedules_delayed_reconnect():
     """On rc 5 inside the backoff window a reconnect is scheduled instead of stranding the client."""
     client = HisenseTvClient(
         ip="192.168.50.12",
@@ -444,20 +434,22 @@ def test_rejected_connection_schedules_delayed_reconnect():
     client._last_refresh_attempt = time.time()  # a refresh was attempted seconds ago
     client._rejected_refresh_failures = 1
 
-    with patch.object(client, "_schedule_rejected_retry") as mock_schedule:
-        client._on_connect(MagicMock(), None, None, 5)
+    with patch.object(client, "_schedule_rejected_retry") as mock_schedule, \
+         patch.object(client, "async_sync_clock"):
+        await client._token_manager.async_handle_auth_rejection(5)
         mock_schedule.assert_called_once()
         assert mock_schedule.call_args[0][0] >= 5.0
 
-    # After the backoff has passed a refresh thread is started instead
+    # After the backoff has passed a refresh task is started instead
     client._last_refresh_attempt = time.time() - 10_000
-    with patch("custom_components.hisense_vidaa.client.threading.Thread") as mock_thread, \
-         patch.object(client, "_schedule_rejected_retry") as mock_schedule:
-        client._on_connect(MagicMock(), None, None, 5)
-        mock_thread.assert_called_once()
+    with patch.object(client._token_manager, "async_refresh_token_and_update_creds") as mock_refresh_task, \
+         patch.object(client, "_schedule_rejected_retry") as mock_schedule, \
+         patch.object(client, "async_sync_clock"):
+        await client._token_manager.async_handle_auth_rejection(5)
+        mock_refresh_task.assert_called_once()
         mock_schedule.assert_not_called()
     client._refreshing_token = False
-    client.disconnect()
+    await client.async_disconnect()
 
 
 # ---------------------------------------------------------------------------
@@ -597,7 +589,8 @@ def test_broker_rejection_counter_resets_on_successful_refresh():
 # Transport / lifecycle fixes (FIX leg C)
 # ---------------------------------------------------------------------------
 
-def test_token_watch_restarts_after_stop():
+@pytest.mark.anyio
+async def test_token_watch_restarts_after_stop():
     """F1-leg1: stop_token_watch's one-way latch must be cleared on restart.
 
     Force Reconnect / flow disconnect call stop_token_watch(); without clearing
@@ -637,47 +630,52 @@ def test_proactive_refresh_noop_does_not_clear_inflight_flag():
     assert client._refreshing_token is True
 
 
-def test_on_connect_tracks_query_timer_and_disconnect_cancels_it():
-    """F4-leg1: the query_initial_state Timer must be stored and cancelled by disconnect()."""
+@pytest.mark.anyio
+async def test_on_connect_tracks_query_timer_and_disconnect_cancels_it():
+    """F4-leg1: the query_initial_state task must be stored and cancelled by async_disconnect()."""
     client = HisenseTvClient(ip="192.168.50.12", client_id="cid", username="his$1", access_token="tok")
     client.mqtt_client = MagicMock()
-    with patch.object(client, "query_initial_state"):
+    with patch.object(client, "async_query_initial_state"):
         client._on_connect(client.mqtt_client, None, None, 0)
 
-    timer = client._query_timer
-    assert timer is not None
+    task = client._query_timer
+    assert task is not None
 
-    real_cancel = timer.cancel
-    with patch.object(timer, "cancel", side_effect=real_cancel) as mock_cancel:
-        client.disconnect()
-        mock_cancel.assert_called_once()
+    with patch.object(task, "cancel", wraps=task.cancel) as mock_cancel:
+        await client.async_disconnect()
+        assert mock_cancel.called
     assert client._query_timer is None
 
 
-def test_connect_and_run_is_serialized_by_reconnect_lock():
-    """F5-leg1: connect_and_run must hold _reconnect_lock so concurrent callers cannot race."""
+@pytest.mark.anyio
+async def test_connect_and_run_is_serialized_by_reconnect_lock():
+    """F5-leg1: async_connect_and_run must hold _reconnect_lock so concurrent callers cannot race."""
     client = HisenseTvClient(ip="192.168.50.12", client_id="cid", username="his$1", access_token="tok")
-    done = threading.Event()
+    done = asyncio.Event()
 
-    def worker():
-        client.connect_and_run()
-        done.set()
-
-    with patch.object(client, "create_mqtt_client", return_value=MagicMock()) as mock_create:
-        client._reconnect_lock.acquire()
+    with patch.object(client, "_async_build_ssl_context", return_value=None), \
+         patch.object(client, "_mqtt_session_loop", return_value=None):
+        await client._reconnect_lock.acquire()
         try:
-            threading.Thread(target=worker, daemon=True).start()
-            # While the lock is held (a reconnect in progress) a second caller must block.
-            assert not done.wait(0.3)
+            async def worker():
+                await client.async_connect_and_run()
+                done.set()
+
+            task = asyncio.create_task(worker())
+            await asyncio.sleep(0.05)
+            # While the lock is held, async_connect_and_run cannot proceed
+            assert not done.is_set()
         finally:
             client._reconnect_lock.release()
-        assert done.wait(2)
-    assert mock_create.call_count == 1
-    client.disconnect()
+
+        await asyncio.wait_for(done.wait(), timeout=1.0)
+        await task
+    await client.async_disconnect()
 
 
-def test_refresh_tokens_unbinds_callbacks_before_teardown():
-    """F6-leg1: refresh_tokens must unbind callbacks before tearing down the main client."""
+@pytest.mark.anyio
+async def test_refresh_tokens_unbinds_callbacks_before_teardown():
+    """F6-leg1: async_refresh_tokens must tear down previous session before refreshing."""
     now = int(time.time())
     client = HisenseTvClient(
         ip="192.168.50.12",
@@ -690,21 +688,21 @@ def test_refresh_tokens_unbinds_callbacks_before_teardown():
         refresh_token_time=now,
         refresh_token_duration=30,
     )
-    main = MagicMock()
-    main.on_connect = client._on_connect
-    main.on_disconnect = client._on_disconnect
-    main.on_message = client._on_message
-    client.mqtt_client = main
+    old_session = MagicMock()
+    client.mqtt_client = old_session
     client.connected = True
 
-    with patch("custom_components.hisense_vidaa.client.perform_token_refresh", return_value={}), \
-         patch.object(client, "create_mqtt_client", return_value=MagicMock()):
-        client.refresh_tokens()
+    with patch("custom_components.hisense_vidaa.client.async_perform_token_refresh", return_value={
+            "accesstoken": "new_at",
+            "accesstoken_time": now,
+            "accesstoken_duration_day": 2,
+         }), \
+         patch.object(client, "async_sync_clock"), \
+         patch.object(client, "async_connect_and_run"):
+        await client.async_refresh_tokens()
 
-    assert main.on_connect is None
-    assert main.on_disconnect is None
-    assert main.on_message is None
-    client.disconnect()
+    old_session.close.assert_called_once()
+    await client.async_disconnect()
 
 
 def test_is_token_expired_with_clock_offset():

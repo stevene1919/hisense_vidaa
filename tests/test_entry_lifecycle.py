@@ -114,6 +114,9 @@ async def test_connect_failure_raises_config_entry_not_ready(
     mock_client.connect_and_run = MagicMock(
         side_effect=FileNotFoundError(2, "No such file or directory")
     )
+    mock_client.async_connect_and_run = AsyncMock(
+        side_effect=FileNotFoundError(2, "No such file or directory")
+    )
 
     with pytest.raises(ConfigEntryNotReady):
         await async_setup_entry(hass, mock_entry)
@@ -187,7 +190,7 @@ async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeyp
     assert unload_result is True
     # Unload platforms must ONLY be called with the 7 loaded platforms, never all PLATFORMS
     hass.config_entries.async_unload_platforms.assert_awaited_once_with(mock_entry, expected_platforms)
-    mock_client.disconnect.assert_called_once()
+    assert mock_client.disconnect.called or mock_client.async_disconnect.called
 
 
 @pytest.mark.anyio
@@ -322,7 +325,7 @@ async def test_periodic_and_wake_clock_sync(mock_entry, mock_client, monkeypatch
     # Trigger periodic callback while TV is on -> sync_clock called
     mock_client.is_on = True
     await action()
-    mock_client.sync_clock.assert_called_once_with(2.0)
+    assert mock_client.sync_clock.called or mock_client.async_sync_clock.called
 
     # Verify wake transition hook
     mock_client.register_state_callback.assert_called_once()

@@ -2,25 +2,28 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import logging
 import os
-import socket
-import threading
-import warnings
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import paho.mqtt.client as mqtt
+from .auth import (
+    async_probe_tv_auth_methods,
+    async_test_tv_ssl_connection,
+    build_mqtt_ssl_context,
+    extract_connect_rc,
+)
 
-from ..tv.fingerprint import get_device_fingerprint
-from .auth import probe_tv_auth_methods, test_tv_ssl_connection
+if TYPE_CHECKING:
+    from .upnp import HisenseUpnpClient
 
 _LOGGER = logging.getLogger(__name__)
 
-__all__ = ["ping_tv"]
+__all__ = ["async_ping_tv", "ping_tv"]
 
 
-def ping_tv(
+async def async_ping_tv(
     ip: str,
     certfile: str | None = None,
     keyfile: str | None = None,
@@ -31,10 +34,9 @@ def ping_tv(
     password: str | None = None,
     mac: str | None = None,
     timeout: float = 3.0,
+    upnp: HisenseUpnpClient | None = None,
 ) -> dict[str, Any]:
     """Quickly tests if TV broker is listening, accepting TLS, and responding to MQTT packets."""
-    import ssl
-
     results: dict[str, Any] = {
         "tcp_port_open": False,
         "tls_handshake": False,
@@ -53,18 +55,27 @@ def ping_tv(
 
     # 1. Test TCP port
     try:
-        with socket.create_connection((ip, 36669), timeout=timeout):
-            results["tcp_port_open"] = True
+        _reader, writer = await asyncio.wait_for(asyncio.open_connection(ip, 36669), timeout=timeout)
+        writer.close()
+        with contextlib.suppress(Exception):
+            await writer.wait_closed()
+        results["tcp_port_open"] = True
     except Exception as e:
         results["error"] = f"TCP connection failed (TV may be in deep sleep / off): {e}"
         return results
 
-    valid_cert = certfile if (certfile and os.path.isfile(certfile)) else None
-    valid_key = keyfile if (keyfile and os.path.isfile(keyfile)) else None
+    loop = asyncio.get_running_loop()
+    valid_cert, valid_key = await loop.run_in_executor(
+        None,
+        lambda: (
+            certfile if (certfile and os.path.isfile(certfile)) else None,
+            keyfile if (keyfile and os.path.isfile(keyfile)) else None,
+        ),
+    )
 
     # 2. Test TLS Handshake
     try:
-        ssl_info = test_tv_ssl_connection(
+        ssl_info = await async_test_tv_ssl_connection(
             ip, certfile=valid_cert, keyfile=valid_key, ca_cert=ca_cert, verify_ssl=verify_ssl, timeout=timeout
         )
         results["tls_handshake"] = ssl_info.get("connected", False)
@@ -79,60 +90,41 @@ def ping_tv(
 
     # 3. Test MQTT Broker Response (if credentials available)
     if client_id and username and password:
+        from aiomqtt import Client, MqttError, ProtocolVersion
+        from aiomqtt.exceptions import MqttConnectError
+
+        conn_rc: int | None = None
         try:
-            conn_event = threading.Event()
-            conn_rc: list[int | None] = [None]
+            ssl_ctx = await loop.run_in_executor(
+                None, build_mqtt_ssl_context, valid_cert, valid_key, ca_cert, verify_ssl, True
+            )
+            try:
+                async with asyncio.timeout(timeout):
+                    async with Client(
+                        hostname=ip,
+                        port=36669,
+                        username=username,
+                        password=password,
+                        identifier=client_id,
+                        tls_context=ssl_ctx,
+                        protocol=ProtocolVersion.V311,
+                        clean_session=True,
+                        timeout=timeout,
+                    ):
+                        conn_rc = 0
+            except MqttConnectError as err:
+                conn_rc = extract_connect_rc(err)
+            except (TimeoutError, MqttError, OSError):
+                conn_rc = None
 
-            def on_conn(c: mqtt.Client, userdata: Any, flags: Any, rc: int) -> None:
-                conn_rc[0] = rc
-                conn_event.set()
-
-            client_kwargs: dict[str, Any] = {
-                "client_id": client_id,
-                "clean_session": True,
-                "protocol": mqtt.MQTTv311,
-            }
-            if hasattr(mqtt, "CallbackAPIVersion"):
-                client_kwargs["callback_api_version"] = mqtt.CallbackAPIVersion.VERSION1
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
-                c = mqtt.Client(**client_kwargs)
-            if certfile and keyfile and os.path.isfile(certfile) and os.path.isfile(keyfile):
-                if verify_ssl and ca_cert and os.path.isfile(ca_cert):
-                    c.tls_set(
-                        ca_certs=ca_cert,
-                        certfile=certfile,
-                        keyfile=keyfile,
-                        cert_reqs=ssl.CERT_REQUIRED,
-                        tls_version=ssl.PROTOCOL_TLS,
-                    )
-                else:
-                    c.tls_set(
-                        ca_certs=None,
-                        certfile=certfile,
-                        keyfile=keyfile,
-                        cert_reqs=ssl.CERT_NONE,
-                        tls_version=ssl.PROTOCOL_TLS,
-                    )
-                c.tls_insecure_set(True)
-            c.username_pw_set(username=username, password=password)
-            c.on_connect = on_conn
-            c.on_disconnect = lambda c, u, rc: conn_event.set()
-
-            c.connect_async(ip, 36669, 5)
-            c.loop_start()
-            conn_event.wait(timeout=timeout)
-            c.loop_stop()
-            c.disconnect()
-
-            results["mqtt_rc"] = conn_rc[0]
-            if conn_rc[0] == 0:
+            results["mqtt_rc"] = conn_rc
+            if conn_rc == 0:
                 results["mqtt_connected"] = True
                 results["mqtt_status"] = "Connected successfully"
-            elif conn_rc[0] in (4, 5, 134, 135):
+            elif conn_rc in (4, 5, 134, 135):
                 results["mqtt_status"] = "Rejected: Bad username or password / Expired access token"
-            elif conn_rc[0] is not None:
-                results["mqtt_status"] = f"Broker rejected connection with code {conn_rc[0]}"
+            elif conn_rc is not None:
+                results["mqtt_status"] = f"Broker rejected connection with code {conn_rc}"
             else:
                 results["mqtt_status"] = "Timeout waiting for broker CONNACK"
         except Exception as e:
@@ -140,12 +132,22 @@ def ping_tv(
 
     # 4. Probe auth methods
     with contextlib.suppress(Exception):
-        results["auth_probe"] = probe_tv_auth_methods(
+        results["auth_probe"] = await async_probe_tv_auth_methods(
             ip, certfile=valid_cert, keyfile=valid_key, mac=mac, timeout=1.5
         )
 
     # 5. Device fingerprint
     with contextlib.suppress(Exception):
-        results["device_info"] = get_device_fingerprint(ip, timeout=1.5)
+        if upnp is not None:
+            results["device_info"] = await upnp.async_get_device_fingerprint(timeout=1.5)
+        else:
+            from ..tv.fingerprint import get_device_fingerprint
+
+            results["device_info"] = await loop.run_in_executor(None, get_device_fingerprint, ip, 1.5)
 
     return results
+
+
+def ping_tv(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """Synchronous (CLI) wrapper for async_ping_tv."""
+    return asyncio.run(async_ping_tv(*args, **kwargs))

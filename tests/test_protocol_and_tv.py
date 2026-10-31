@@ -5,6 +5,8 @@ from __future__ import annotations
 import time
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from custom_components.hisense_vidaa.client import HisenseTvClient
 from custom_components.hisense_vidaa.protocol.auth import (
     apply_mqtt_tls,
@@ -92,32 +94,48 @@ def test_perform_token_refresh_validation() -> None:
     assert perform_token_refresh(ip="192.168.50.12", client_id="", username="", refresh_token="") is None
 
 
-def test_perform_token_refresh_subscriptions() -> None:
-    """Test that perform_token_refresh subscribes to exact topics rather than wildcard."""
-    from unittest.mock import patch
+@pytest.mark.anyio
+async def test_perform_token_refresh_subscriptions() -> None:
+    """Test that async_perform_token_refresh subscribes to exact topics rather than wildcard."""
+    from unittest.mock import AsyncMock, patch
 
-    import paho.mqtt.client as mqtt
+    from custom_components.hisense_vidaa.protocol.auth import async_perform_token_refresh
 
-    subscribed_topics = []
-    published_topics = []
+    subscribed_topics: list[tuple[str, int]] = []
+    published_topics: list[tuple[str, str]] = []
 
-    def fake_connect(self, ip, port, keepalive):
-        # Simulate successful connect
-        self.on_connect(self, None, None, 0)
+    mock_client_instance = AsyncMock()
 
-    def fake_subscribe(self, topics, qos=0):
-        subscribed_topics.append(topics)
+    # Async iterator for messages that terminates after yielding nothing
+    async def empty_messages():
+        if False:
+            yield None
 
-    def fake_publish(self, topic, payload):
-        published_topics.append((topic, payload))
+    mock_client_instance.messages = empty_messages()
 
-    with patch.object(mqtt.Client, "connect", fake_connect), \
-         patch.object(mqtt.Client, "subscribe", fake_subscribe), \
-         patch.object(mqtt.Client, "publish", fake_publish), \
-         patch.object(mqtt.Client, "loop_start"), \
-         patch.object(mqtt.Client, "loop_stop"), \
-         patch.object(mqtt.Client, "disconnect"):
-        perform_token_refresh(
+    async def fake_subscribe(topic, qos=0):
+        subscribed_topics.append((topic, qos))
+
+    async def fake_publish(topic, payload=None, qos=0):
+        published_topics.append((topic, str(payload)))
+
+    mock_client_instance.subscribe = fake_subscribe
+    mock_client_instance.publish = fake_publish
+
+    # Make Client context manager return mock_client_instance
+    class MockClientContext:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return mock_client_instance
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    with patch("aiomqtt.Client", MockClientContext), \
+         patch("custom_components.hisense_vidaa.protocol.auth.build_mqtt_ssl_context"):
+        await async_perform_token_refresh(
             ip="192.168.50.12",
             client_id="test_client_id",
             username="his$123",
@@ -125,11 +143,11 @@ def test_perform_token_refresh_subscriptions() -> None:
             timeout=0.1,
         )
 
-    assert len(subscribed_topics) == 1
-    topics = subscribed_topics[0]
+    assert len(subscribed_topics) == 2
+    topics = [t[0] for t in subscribed_topics]
     # Verify exact topics were subscribed (avoiding wildcard # which modern TVs reject with SUBACK 128)
-    assert ("/remoteapp/mobile/test_client_id/platform_service/data/tokenissuance", 0) in topics
-    assert ("/remoteapp/mobile/test_client_id/platform_service/data/gettoken", 0) in topics
+    assert "/remoteapp/mobile/test_client_id/platform_service/data/tokenissuance" in topics
+    assert "/remoteapp/mobile/test_client_id/platform_service/data/gettoken" in topics
 
 
 def test_navigation_feature_helpers() -> None:
@@ -208,22 +226,24 @@ def test_dispatch_incoming_mqtt_message() -> None:
     mock_client._dispatch_device_info_update.assert_called_with({"devicename": "Living Room TV"})
 
 
-def test_test_tv_ssl_connection_unauthenticated():
-    """Verify test_tv_ssl_connection allows testing TLS handshake without presenting client certificates."""
-    from custom_components.hisense_vidaa.protocol.auth import test_tv_ssl_connection
+@pytest.mark.anyio
+async def test_test_tv_ssl_connection_unauthenticated():
+    """Verify async_test_tv_ssl_connection allows testing TLS handshake without presenting client certificates."""
+    from unittest.mock import AsyncMock
 
-    mock_sock = MagicMock()
+    from custom_components.hisense_vidaa.protocol.auth import async_test_tv_ssl_connection
+
+    mock_reader = AsyncMock()
+    mock_writer = MagicMock()
+    mock_writer.wait_closed = AsyncMock()
     mock_ssock = MagicMock()
     mock_ssock.cipher.return_value = ("TLS_AES_256_GCM_SHA384", "TLSv1.3", 256)
     mock_ssock.version.return_value = "TLSv1.3"
-    mock_ssock.__enter__.return_value = mock_ssock
+    mock_writer.get_extra_info.return_value = mock_ssock
 
-    mock_ctx = MagicMock()
-    mock_ctx.wrap_socket.return_value = mock_ssock
-
-    with patch("socket.create_connection", return_value=mock_sock), \
-         patch("ssl.SSLContext", return_value=mock_ctx):
-        res = test_tv_ssl_connection("192.168.50.12")
+    with patch("asyncio.open_connection", return_value=(mock_reader, mock_writer)), \
+         patch("custom_components.hisense_vidaa.protocol.auth.build_mqtt_ssl_context"):
+        res = await async_test_tv_ssl_connection("192.168.50.12")
         assert res["connected"] is True
         assert res["tls_version"] == "TLSv1.3"
         assert res["cipher"] == "TLS_AES_256_GCM_SHA384"
@@ -231,13 +251,17 @@ def test_test_tv_ssl_connection_unauthenticated():
         assert res["certfile"] is None
 
 
-def test_ping_tv_client_cert_tracking():
-    """Verify ping_tv accurately tracks whether client certificates were presented."""
-    from custom_components.hisense_vidaa.protocol.ping import ping_tv
+@pytest.mark.anyio
+async def test_ping_tv_client_cert_tracking():
+    """Verify async_ping_tv accurately tracks whether client certificates were presented."""
+    from unittest.mock import AsyncMock
 
-    mock_sock = MagicMock()
-    with patch("socket.create_connection", return_value=mock_sock), \
-         patch("custom_components.hisense_vidaa.protocol.ping.test_tv_ssl_connection", return_value={
+    from custom_components.hisense_vidaa.protocol.ping import async_ping_tv
+
+    mock_reader = AsyncMock()
+    mock_writer = AsyncMock()
+    with patch("asyncio.open_connection", return_value=(mock_reader, mock_writer)), \
+         patch("custom_components.hisense_vidaa.protocol.ping.async_test_tv_ssl_connection", return_value={
              "connected": True,
              "tls_version": "TLSv1.3",
              "cipher": "TLS_AES_256_GCM_SHA384",
@@ -245,15 +269,15 @@ def test_ping_tv_client_cert_tracking():
              "certfile": None,
              "keyfile": None,
          }), \
-         patch("custom_components.hisense_vidaa.protocol.ping.probe_tv_auth_methods", return_value={
+         patch("custom_components.hisense_vidaa.protocol.ping.async_probe_tv_auth_methods", return_value={
              "legacy_static": {"rc": None, "supported": False},
              "standard_dynamic": {"rc": None, "supported": False},
              "middle_dynamic": {"rc": None, "supported": False},
              "modern_dynamic": {"rc": None, "supported": False},
              "client_cert_presented": False,
          }), \
-         patch("custom_components.hisense_vidaa.protocol.ping.get_device_fingerprint", return_value={}):
-        res = ping_tv("192.168.50.12")
+         patch("custom_components.hisense_vidaa.tv.fingerprint.get_device_fingerprint", return_value={}):
+        res = await async_ping_tv("192.168.50.12")
         assert res["tcp_port_open"] is True
         assert res["tls_handshake"] is True
         assert res["client_cert_presented"] is False

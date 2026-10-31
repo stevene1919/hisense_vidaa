@@ -9,6 +9,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     AUTH_PROFILE_SELECTOR,
@@ -40,7 +41,7 @@ class ReauthFlowMixin:
         if self._reauth_entry:
             auth_data = self._get_client_auth_data()
             if self.client:
-                await self.hass.async_add_executor_job(self.client.disconnect)
+                await self.client.async_disconnect()
                 self.client = None
             self.hass.config_entries.async_update_entry(
                 self._reauth_entry,
@@ -106,15 +107,15 @@ class ReauthFlowMixin:
             # duplicate MQTT Client ID collisions during the reauth flow.
             await self._async_disconnect_existing_client()
 
-            self.client = await self.hass.async_add_executor_job(
-                lambda: HisenseTvClient(
-                    self.ip_address,
-                    self.mac_address,
-                    auth_profile=self.auth_profile,
-                    certfile=self.certfile if self.use_ssl else None,
-                    keyfile=self.keyfile if self.use_ssl else None,
-                    use_ssl=self.use_ssl,
-                )
+            session = async_get_clientsession(self.hass) if self.hass else None
+            self.client = HisenseTvClient(
+                self.ip_address,
+                self.mac_address,
+                auth_profile=self.auth_profile,
+                certfile=self.certfile if self.use_ssl else None,
+                keyfile=self.keyfile if self.use_ssl else None,
+                use_ssl=self.use_ssl,
+                session=session,
             )
             self.client._loop = self.hass.loop
             try:

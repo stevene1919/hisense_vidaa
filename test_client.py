@@ -419,7 +419,7 @@ async def do_listen(creds: dict[str, Any], certfile: str | None, keyfile: str | 
     client.register_applist_callback(lambda data: print(f"📱 [APPS] Found {len(data)} installed apps"))
     client.register_disconnected_callback(lambda: print("⚠️ [DISCONNECTED] TV disconnected"))
 
-    client.connect_and_run()
+    await client.async_connect_and_run()
     print("Listening for TV events (Press Ctrl+C to stop)...")
 
     try:
@@ -428,7 +428,7 @@ async def do_listen(creds: dict[str, Any], certfile: str | None, keyfile: str | 
     except KeyboardInterrupt:
         print("\nStopping...")
     finally:
-        client.disconnect()
+        await client.async_disconnect()
 
 
 def do_refresh(creds: dict[str, Any], certfile: str | None, keyfile: str | None, save_path: str, ca_cert: str | None = None, verify_ssl: bool = False) -> None:

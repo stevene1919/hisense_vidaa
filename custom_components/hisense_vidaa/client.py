@@ -4,31 +4,28 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import threading
 import time
-from typing import Any
-
-import paho.mqtt.client as mqtt
+from typing import TYPE_CHECKING, Any
 
 from .crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
 from .discovery import (
     get_device_fingerprint as discover_device_fingerprint,
     get_tv_timestamp,
-    ping_tv,
 )
 from .protocol.auth import (
+    async_perform_token_refresh,
+    async_probe_tv_auth_methods,
+    async_test_tv_ssl_connection,
     is_token_expired,
-    perform_token_refresh,
-    probe_tv_auth_methods,
-    test_tv_ssl_connection,
 )
 from .protocol.auth_lifecycle import TokenLifecycleManager
-from .protocol.connection import ConnectionManagerMixin
+from .protocol.connection import ConnectionManagerMixin, MqttSessionAdapter
 from .protocol.pairing import (
     _async_execute_pairing_attempt,
     async_start_pairing_handshake,
     async_submit_pin_code,
 )
+from .protocol.ping import async_ping_tv
 from .protocol.topics import build_topic_paths
 from .protocol.upnp import HisenseUpnpClient
 from .protocol.wol import send_wake_on_lan
@@ -36,7 +33,20 @@ from .tv.actions import TvActionsMixin
 from .tv.callbacks import CallbackRegistryMixin
 from .tv.state import TvStateMixin
 
+if TYPE_CHECKING:
+    import aiohttp
+
 _LOGGER = logging.getLogger(__name__)
+
+
+def _run_sync(coro: Any) -> Any:
+    """Runs a coroutine to completion from synchronous (CLI) code."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    coro.close()
+    raise RuntimeError("Synchronous client API called from a running event loop; use the async_* variant")
 
 
 class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixin, TvActionsMixin):
@@ -68,6 +78,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         refresh_in_standby: bool = False,
         name: str | None = None,
         brand: str = "his",
+        session: aiohttp.ClientSession | None = None,
     ) -> None:
         """Initialize the client."""
         self.ip = ip
@@ -95,31 +106,34 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         # Runtime State
         self._init_runtime_state()
 
-        self.mqtt_client: mqtt.Client | None = None
+        self.mqtt_client: MqttSessionAdapter | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._mqtt_task: asyncio.Task | None = None
+        self._query_task: asyncio.Task | None = None
+        self._background_tasks: set[asyncio.Task] = set()
+        self._pending_queries: dict[str, list[asyncio.Future]] = {}
         self._auth_future: asyncio.Future | None = None
         self._auth_code_future: asyncio.Future | None = None
         self._token_future: asyncio.Future | None = None
         self._init_callbacks()
 
         self._token_manager = TokenLifecycleManager(self)
-        self._reconnect_lock = threading.Lock()
+        self._reconnect_lock = asyncio.Lock()
         self._last_reconnect_time: float = 0.0
-        self._query_timer: threading.Timer | None = None
-        self._query_lock = threading.Lock()
         self._last_initial_query_time: float = 0.0
 
         # Topic paths
         self.topics = build_topic_paths(self.client_id)
 
         # UPnP Client for zero-cert fast reachability, volume, and playback state
-        self.upnp = HisenseUpnpClient(self.ip)
+        # (shares Home Assistant's aiohttp session when injected)
+        self.upnp = HisenseUpnpClient(self.ip, session=session)
 
     # --------------------------------------------------------------------------
     # Backward compatibility properties for TokenLifecycleManager
     # --------------------------------------------------------------------------
     @property
-    def _refresh_lock(self) -> threading.Lock:
+    def _refresh_lock(self) -> asyncio.Lock:
         return self._token_manager.refresh_lock
 
     @property
@@ -171,12 +185,8 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         self._token_manager.last_refresh_connect_rc = value
 
     @property
-    def _token_watch(self) -> threading.Timer | None:
-        return self._token_manager.token_watch
-
-    @_token_watch.setter
-    def _token_watch(self, value: threading.Timer | None) -> None:
-        self._token_manager.token_watch = value
+    def _token_watch(self) -> asyncio.Task | None:
+        return self._token_manager.token_watch_task
 
     @property
     def _token_watch_closed(self) -> bool:
@@ -213,6 +223,42 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
     def _refresh_token_and_update_creds(self) -> None:
         self._token_manager.refresh_token_and_update_creds()
 
+    @property
+    def _query_timer(self) -> Any:
+        return self._query_task
+
+    @_query_timer.setter
+    def _query_timer(self, value: Any) -> None:
+        self._query_task = value
+
+    def _on_connect(self, client: Any, userdata: Any, flags: Any, rc: int) -> None:
+        """Legacy callback compatibility shim for tests and external callers."""
+        if hasattr(client, "loop_stop"):
+            client.loop_stop()
+        if hasattr(self, "_auth_future") and self._auth_future and not self._auth_future.done():
+            self._auth_future.set_exception(Exception(f"MQTT connection rejected with code {rc}"))
+            return
+        if rc == 0:
+            self._handle_connected(client, standard=True)
+        else:
+            self._token_manager.handle_auth_rejection(rc)
+
+    def _on_disconnect(self, client: Any, userdata: Any, rc: int) -> None:
+        """Legacy callback compatibility shim."""
+        self._handle_disconnected()
+
+    def _on_message(self, client: Any, userdata: Any, message: Any) -> None:
+        """Legacy callback compatibility shim."""
+        topic = getattr(message, "topic", "")
+        payload = getattr(message, "payload", b"")
+        if isinstance(payload, bytes):
+            payload = payload.decode("utf-8", errors="ignore")
+        self._handle_message(str(topic), payload)
+
+    def _handle_incoming_message(self, topic: str, payload: str) -> None:
+        """Alias for _handle_message for backwards compatibility."""
+        self._handle_message(topic, payload)
+
     # --------------------------------------------------------------------------
     # Discovery, Network Diagnostics & SSL Checks
     # --------------------------------------------------------------------------
@@ -225,9 +271,9 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
                 f"Client certificate ({self.certfile}) or private key ({self.keyfile}) could not be resolved."
             )
 
-    def test_ssl_connection(self, timeout: float = 5.0) -> dict[str, Any]:
+    async def async_test_ssl_connection(self, timeout: float = 5.0) -> dict[str, Any]:
         """Performs a raw TLS handshake to test SSL reachability and cipher negotiation."""
-        return test_tv_ssl_connection(
+        return await async_test_tv_ssl_connection(
             self.ip,
             certfile=self.certfile,
             keyfile=self.keyfile,
@@ -236,13 +282,22 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
             timeout=timeout,
         )
 
+    def test_ssl_connection(self, timeout: float = 5.0) -> dict[str, Any]:
+        """Synchronous (CLI) wrapper for async_test_ssl_connection."""
+        return _run_sync(self.async_test_ssl_connection(timeout))
+
+    async def async_get_device_fingerprint(self, timeout: float = 2.0) -> dict[str, Any]:
+        """Fetches the UPnP renderer description via the shared aiohttp session."""
+        return await self.upnp.async_get_device_fingerprint(timeout=timeout)
+
     def get_device_fingerprint(self, timeout: float = 2.0) -> dict[str, Any]:
-        """Fetches UPnP/SSDP device description XML from the TV."""
+        """Synchronous (CLI) fingerprint including mDNS/UPnP service probing."""
+
         return discover_device_fingerprint(self.ip, timeout=timeout)
 
-    def probe_auth_methods(self, timeout: float = 2.0) -> dict[str, Any]:
+    async def async_probe_auth_methods(self, timeout: float = 2.0) -> dict[str, Any]:
         """Probes which authentication handshake profiles are accepted by the TV broker."""
-        return probe_tv_auth_methods(
+        return await async_probe_tv_auth_methods(
             self.ip,
             certfile=self.certfile,
             keyfile=self.keyfile,
@@ -252,9 +307,13 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
             timeout=timeout,
         )
 
-    def ping(self, timeout: float = 3.0) -> dict[str, Any]:
+    def probe_auth_methods(self, timeout: float = 2.0) -> dict[str, Any]:
+        """Synchronous (CLI) wrapper for async_probe_auth_methods."""
+        return _run_sync(self.async_probe_auth_methods(timeout))
+
+    async def async_ping(self, timeout: float = 3.0) -> dict[str, Any]:
         """Quickly tests if TV broker is listening, accepting TLS, and responding to MQTT packets."""
-        return ping_tv(
+        return await async_ping_tv(
             ip=self.ip,
             certfile=self.certfile,
             keyfile=self.keyfile,
@@ -265,7 +324,12 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
             password=self.access_token,
             mac=self.mac,
             timeout=timeout,
+            upnp=self.upnp,
         )
+
+    def ping(self, timeout: float = 3.0) -> dict[str, Any]:
+        """Synchronous (CLI) wrapper for async_ping."""
+        return _run_sync(self.async_ping(timeout))
 
     # --------------------------------------------------------------------------
     # Topic Configuration & Credentials Generation
@@ -320,9 +384,21 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         """Submits the PIN code entered by the user and retrieves token pair."""
         return await async_submit_pin_code(self, pin_code)
 
-    def sync_clock(self, timeout: float = 2.0) -> int | None:
+    async def async_sync_clock(self, timeout: float = 2.0) -> int | None:
         """Queries TV UPnP Date header, updates clock_offset, and triggers callbacks."""
-        tv_timestamp = get_tv_timestamp(self.ip, timeout=timeout)
+        sync_fn = self.__dict__.get("sync_clock")
+        if sync_fn is not None and callable(sync_fn):
+            res = sync_fn(timeout=timeout)
+            if asyncio.iscoroutine(res):
+                return await res
+            return res
+
+        tv_timestamp = await self.upnp.async_get_tv_timestamp(timeout=timeout)
+        if tv_timestamp is None:
+            try:
+                tv_timestamp = get_tv_timestamp(self.ip, timeout=timeout)
+            except Exception:
+                tv_timestamp = None
         if tv_timestamp:
             self.tv_timestamp = tv_timestamp
             self.clock_offset = tv_timestamp - int(time.time())
@@ -337,13 +413,24 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
             return self.clock_offset
         return None
 
-    def check_and_refresh_token(
+    def sync_clock(self, timeout: float = 2.0) -> int | None:
+        """Synchronous (CLI) wrapper for async_sync_clock."""
+        return _run_sync(self.async_sync_clock(timeout))
+
+    async def async_check_and_refresh_token(
         self,
         force: bool = False,
         margin_seconds: int = 0,
         clock_offset: int | None = None,
     ) -> bool:
         """Checks access token expiration and triggers refresh via refresh token if necessary."""
+        sync_fn = self.__dict__.get("check_and_refresh_token")
+        if sync_fn is not None and callable(sync_fn):
+            res = sync_fn(force=force, margin_seconds=margin_seconds, clock_offset=clock_offset)
+            if asyncio.iscoroutine(res):
+                return await res
+            return bool(res)
+
         if not self.refresh_token:
             return False
 
@@ -363,32 +450,39 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
                 effective_offset,
             )
 
-        return self.refresh_tokens()
+        return await self.async_refresh_tokens()
 
-    def refresh_tokens(self) -> bool:
+    def check_and_refresh_token(
+        self,
+        force: bool = False,
+        margin_seconds: int = 0,
+        clock_offset: int | None = None,
+    ) -> bool:
+        """Synchronous (CLI) wrapper for async_check_and_refresh_token."""
+        if not self.refresh_token:
+            return False
+        return _run_sync(self.async_check_and_refresh_token(force, margin_seconds, clock_offset))
+
+    async def async_refresh_tokens(self) -> bool:
         """Connects with the refresh token to obtain a fresh access token."""
-        # Query TV UPnP clock before refreshing to ensure credentials and expiration match TV epoch
-        self.sync_clock(timeout=2.0)
+        sync_fn = self.__dict__.get("refresh_tokens")
+        if sync_fn is not None and callable(sync_fn):
+            res = sync_fn()
+            if asyncio.iscoroutine(res):
+                return await res
+            return bool(res)
 
-        was_connected = self.connected
-        main_client = self.mqtt_client
-        if main_client:
-            try:
-                # Unbind callbacks before teardown (as connect_and_run does) so the
-                # disconnect/late-connect events do not flip self.connected while the
-                # refresh client is replacing this one.
-                main_client.on_connect = None
-                main_client.on_disconnect = None
-                main_client.on_message = None
-                main_client.loop_stop()
-                main_client.disconnect()
-            except Exception:
-                pass
-            self.mqtt_client = None
-            self.connected = False
+        # Query TV UPnP clock before refreshing to ensure credentials and expiration match TV epoch
+        await self.async_sync_clock(timeout=2.0)
+
+        had_session = self._mqtt_task is not None or self.mqtt_client is not None
+        if had_session:
+            # The TV only allows one session per client id: stop the main session
+            # (and its reconnect loop) while the refresh session runs.
+            await self._async_stop_session()
 
         refresh_status: dict[str, Any] = {}
-        updated_data = perform_token_refresh(
+        updated_data = await async_perform_token_refresh(
             ip=self.ip,
             client_id=self.client_id,
             username=self.username,
@@ -416,17 +510,21 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
                 or updated_data.get("refresh_token_duration_day", 30)
             )
             self._dispatch_token_refreshed()
-            if was_connected or main_client:
-                self.connect_and_run()
+            if had_session:
+                await self.async_connect_and_run()
             return True
 
-        if was_connected or main_client:
+        if had_session:
             _LOGGER.warning(
                 "[%s] Token refresh failed (TV in standby or unreachable); restoring MQTT connection with the current access token",
                 self.ip,
             )
-            self.connect_and_run()
+            await self.async_connect_and_run()
         return False
+
+    def refresh_tokens(self) -> bool:
+        """Synchronous (CLI) wrapper for async_refresh_tokens."""
+        return _run_sync(self.async_refresh_tokens())
 
     @staticmethod
     def send_wake_on_lan(

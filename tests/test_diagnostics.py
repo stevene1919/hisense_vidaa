@@ -44,11 +44,13 @@ async def test_diagnostics_redaction():
     mock_client.access_token_duration = 3600
     mock_client.refresh_token_time = 1700000000
     mock_client.refresh_token_duration = 86400
-    mock_client.get_device_fingerprint.return_value = {
+    fingerprint_data = {
         "model_name": "65U7G",
         "manufacturer": "Hisense",
         "firmware_version": "V0000.01.00a.N0120",
     }
+    mock_client.get_device_fingerprint.return_value = fingerprint_data
+    mock_client.async_get_device_fingerprint = AsyncMock(return_value=fingerprint_data)
 
     hass.data = {
         DOMAIN: {
@@ -137,12 +139,14 @@ async def test_diagnostics_redacts_fingerprint_and_topic_client_id():
         broadcast="/remoteapp/mobile/broadcast/",
         remote=f"remote_service/{client_id}/",
     )
-    mock_client.get_device_fingerprint.return_value = {
+    fp_redact_data = {
         "model_name": "65U7G",
         "mac_wifi": mac,
         "mac_ethernet": mac,
         "serial_number": serial,
     }
+    mock_client.get_device_fingerprint.return_value = fp_redact_data
+    mock_client.async_get_device_fingerprint = AsyncMock(return_value=fp_redact_data)
 
     hass.data = {DOMAIN: {entry.entry_id: {"client": mock_client}}}
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))

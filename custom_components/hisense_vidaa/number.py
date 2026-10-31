@@ -93,7 +93,7 @@ class HisenseVidaaBacklightNumber(HisenseVidaaBaseNumber):
     async def async_set_native_value(self, value: float) -> None:
         """Set new backlight level."""
         self._value = value
-        await self.hass.async_add_executor_job(self._client.set_backlight, int(value))
+        await self._client.async_set_backlight(int(value))
         self.async_write_ha_state()
 
 
@@ -128,7 +128,7 @@ class HisenseVidaaBrightnessNumber(HisenseVidaaBaseNumber):
     async def async_set_native_value(self, value: float) -> None:
         """Set new brightness level."""
         self._value = value
-        await self.hass.async_add_executor_job(self._client.set_brightness, int(value))
+        await self._client.async_set_brightness(int(value))
         self.async_write_ha_state()
 
 
@@ -164,7 +164,7 @@ class HisenseVidaaContrastNumber(HisenseVidaaBaseNumber):
     async def async_set_native_value(self, value: float) -> None:
         """Set new contrast level."""
         self._value = value
-        await self.hass.async_add_executor_job(self._client.set_contrast, int(value))
+        await self._client.async_set_contrast(int(value))
         self.async_write_ha_state()
 
 

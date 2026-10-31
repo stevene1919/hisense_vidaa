@@ -176,11 +176,9 @@ def test_dispatcher_masks_token_payload_in_debug_logs(caplog) -> None:
 
 
 def test_auth_token_message_masks_tokens_in_debug_logs(caplog) -> None:
-    """Verify that on_token_message in perform_token_refresh masks debug logs."""
+    """Verify that incoming token message in perform_token_refresh masks debug logs."""
     import logging
     from unittest.mock import MagicMock, patch
-
-    import paho.mqtt.client as mqtt
 
     from custom_components.hisense_vidaa.protocol.auth import perform_token_refresh
 
@@ -190,27 +188,36 @@ def test_auth_token_message_masks_tokens_in_debug_logs(caplog) -> None:
         '"accesstoken_duration_day": 30}'
     )
 
-    def fake_connect(self, ip, port, keepalive):
-        self.on_connect(self, None, None, 0)
-        # Simulate incoming token message immediately
-        msg = MagicMock()
-        msg.topic = "/remoteapp/mobile/test_client/platform_service/data/tokenissuance"
-        msg.payload = raw_payload.encode("utf-8")
-        self.on_message(self, None, msg)
+    msg = MagicMock()
+    msg.topic = "/remoteapp/mobile/test_client/platform_service/data/tokenissuance"
+    msg.payload = raw_payload.encode("utf-8")
 
-    with patch.object(mqtt.Client, "connect", fake_connect), \
-         patch.object(mqtt.Client, "subscribe"), \
-         patch.object(mqtt.Client, "publish"), \
-         patch.object(mqtt.Client, "loop_start"), \
-         patch.object(mqtt.Client, "loop_stop"), \
-         patch.object(mqtt.Client, "disconnect"), \
-         caplog.at_level(logging.DEBUG):
+    class FakeAiomqttClient:
+        def __init__(self, *args, **kwargs):
+            self.messages = self._gen_messages()
+
+        async def _gen_messages(self):
+            yield msg
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def subscribe(self, *args, **kwargs):
+            pass
+
+        async def publish(self, *args, **kwargs):
+            pass
+
+    with patch("aiomqtt.Client", FakeAiomqttClient), caplog.at_level(logging.DEBUG):
         result = perform_token_refresh(
             ip="192.168.50.12",
             client_id="test_client",
             username="user_123",
             refresh_token="some_refresh_token",
-            timeout=0.1,
+            timeout=1.0,
         )
 
     assert result is not None

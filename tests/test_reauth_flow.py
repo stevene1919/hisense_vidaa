@@ -159,13 +159,15 @@ async def test_finish_reauth_disconnects_client() -> None:
     mock_client.refresh_token = "reftoken_reauth"
     mock_client.refresh_token_time = 1700000000
     mock_client.refresh_token_duration = 86400
+    mock_client.async_disconnect = AsyncMock()
+    mock_client.disconnect = MagicMock()
     flow.client = mock_client
     flow.ip_address = "192.168.50.12"
 
     result = await flow._async_finish_reauth(reason="reauth_successful")
     assert result["type"] == "abort"
     assert result["reason"] == "reauth_successful"
-    assert mock_client.disconnect.called
+    assert (mock_client.async_disconnect.called or mock_client.disconnect.called)
     assert flow.client is None
     assert hass.config_entries.async_reload.called
 
@@ -341,6 +343,7 @@ async def test_reauth_confirm_disconnects_existing_running_client_before_start_a
     running_client.ip = "192.168.50.12"
     running_client.mac = "e8:51:77:ec:98:1c"
     hass.data = {DOMAIN: {"test_entry": {"client": running_client}}}
+    hass.config_entries.async_entries = MagicMock(return_value=[entry])
 
     flow = _reauth_flow(hass, entry, "test_entry")
     flow.ip_address = "192.168.50.12"
@@ -349,7 +352,12 @@ async def test_reauth_confirm_disconnects_existing_running_client_before_start_a
     flow.use_ssl = True
 
     events = []
-    running_client.disconnect = MagicMock(side_effect=lambda: events.append("disconnect_existing"))
+    running_client.async_disconnect = AsyncMock(
+        side_effect=lambda: events.append("disconnect_existing")
+    )
+    running_client.disconnect = MagicMock(
+        side_effect=lambda: events.append("disconnect_existing")
+    )
 
     async def mock_start_auth(self):
         events.append("start_auth")

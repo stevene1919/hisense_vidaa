@@ -102,6 +102,8 @@ async def test_options_step_creates_entry():
     mock_client.refresh_token = "reftoken123"
     mock_client.refresh_token_time = 1700000000
     mock_client.refresh_token_duration = 86400
+    mock_client.async_disconnect = AsyncMock()
+    mock_client.disconnect = MagicMock()
     flow.client = mock_client
 
     result = await flow.async_step_options(
@@ -126,7 +128,7 @@ async def test_options_step_creates_entry():
     assert result["options"]["enable_picture_controls"] is False
     assert result["options"]["enable_sound_controls"] is False
     assert result["options"]["enable_audio_only"] is False
-    assert mock_client.disconnect.called
+    assert (mock_client.async_disconnect.called or mock_client.disconnect.called)
     assert flow.client is None
 
 
@@ -148,8 +150,10 @@ async def test_capability_probing_in_config_flow(monkeypatch):
     mock_client.connected = True
     mock_client.picture_settings = {"91": MagicMock()}
     mock_client.sound_settings = {}
-    mock_client.get_picture_settings = MagicMock()
-    mock_client.get_sound_settings = MagicMock()
+    mock_client.async_get_picture_settings = AsyncMock()
+    mock_client.async_get_sound_settings = AsyncMock()
+    mock_client.get_picture_settings = mock_client.async_get_picture_settings
+    mock_client.get_sound_settings = mock_client.async_get_sound_settings
     flow.client = mock_client
 
     await flow._async_probe_device_capabilities()
@@ -286,19 +290,17 @@ async def test_zeroconf_discovery(monkeypatch):
 async def test_config_flow_async_remove_cleans_up_client():
     """Test async_remove disconnects running flow client."""
     hass = MagicMock(spec=HomeAssistant)
-    # async_add_executor_job schedules the callable and returns a future: the flow
-    # must hand that future to HA directly — wrapping it in async_create_task()
-    # raises TypeError("a coroutine was expected") on real Home Assistant.
-    hass.async_add_executor_job = MagicMock(side_effect=lambda func, *args: func(*args))
+    mock_task = MagicMock()
+    hass.async_create_background_task = MagicMock(return_value=mock_task)
 
     flow = HisenseVidaaConfigFlow()
     flow.hass = hass
     mock_client = MagicMock()
+    mock_client.async_disconnect = AsyncMock()
     flow.client = mock_client
 
     flow.async_remove()
-    assert hass.async_add_executor_job.called
-    assert mock_client.disconnect.called
+    assert hass.async_create_background_task.called
     assert flow.client is None
 
 
@@ -317,9 +319,11 @@ async def test_config_flow_async_remove_without_hass():
     flow = HisenseVidaaConfigFlow()
     flow.hass = None
     mock_client = MagicMock()
+    mock_client.disconnect = MagicMock()
+    mock_client.async_disconnect = AsyncMock()
     flow.client = mock_client
 
     flow.async_remove()
-    assert mock_client.disconnect.called
+    assert (mock_client.async_disconnect.called or mock_client.disconnect.called)
     assert flow.client is None
 

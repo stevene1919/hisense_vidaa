@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from .auth import (
     apply_mqtt_tls,
+    async_perform_token_refresh,
+    async_probe_tv_auth_methods,
+    async_test_tv_ssl_connection,
+    build_mqtt_ssl_context,
+    extract_connect_rc,
     is_token_expired,
     perform_token_refresh,
     probe_tv_auth_methods,
@@ -18,9 +23,8 @@ from .certs import (
 )
 from .connection import (
     ConnectionManagerMixin,
-    build_mqtt_client,
-    clean_disconnect_mqtt_client,
-    subscribe_standard_tv_topics,
+    MqttSessionAdapter,
+    standard_tv_topics,
 )
 from .dispatcher import (
     SENSITIVE_KEYS,
@@ -29,7 +33,7 @@ from .dispatcher import (
     mask_sensitive_payload,
 )
 from .pairing import async_start_pairing_handshake, async_submit_pin_code
-from .ping import ping_tv
+from .ping import async_ping_tv, ping_tv
 from .topics import TOPIC_BROADCAST_BASEPATH, TopicPaths, build_topic_paths
 from .upnp import HisenseUpnpClient
 from .wol import send_wake_on_lan
@@ -39,15 +43,20 @@ __all__ = [
     "TOPIC_BROADCAST_BASEPATH",
     "ConnectionManagerMixin",
     "HisenseUpnpClient",
+    "MqttSessionAdapter",
     "TopicPaths",
     "apply_mqtt_tls",
+    "async_perform_token_refresh",
+    "async_ping_tv",
+    "async_probe_tv_auth_methods",
     "async_start_pairing_handshake",
     "async_submit_pin_code",
-    "build_mqtt_client",
+    "async_test_tv_ssl_connection",
+    "build_mqtt_ssl_context",
     "build_topic_paths",
     "check_certs_exist",
-    "clean_disconnect_mqtt_client",
     "dispatch_incoming_mqtt_message",
+    "extract_connect_rc",
     "extract_pkcs12_to_pem",
     "get_profile_default_cert_paths",
     "is_token_expired",
@@ -59,6 +68,6 @@ __all__ = [
     "resolve_ca_certificate",
     "resolve_certificates",
     "send_wake_on_lan",
-    "subscribe_standard_tv_topics",
+    "standard_tv_topics",
     "test_tv_ssl_connection",
 ]

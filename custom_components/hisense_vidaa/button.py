@@ -64,8 +64,8 @@ class HisenseVidaaForceReconnectButton(HisenseVidaaBaseButton):
     async def async_press(self) -> None:
         """Handle button press."""
         _LOGGER.info("Manually forcing MQTT reconnection to TV at %s", self._client.ip)
-        await self.hass.async_add_executor_job(self._client.disconnect)
-        await self.hass.async_add_executor_job(self._client.connect_and_run)
+        await self._client.async_disconnect()
+        await self._client.async_connect_and_run()
 
 
 class HisenseVidaaSyncClockButton(HisenseVidaaBaseButton):
@@ -80,7 +80,7 @@ class HisenseVidaaSyncClockButton(HisenseVidaaBaseButton):
 
     async def async_press(self) -> None:
         """Handle button press."""
-        offset = await self.hass.async_add_executor_job(self._client.sync_clock, 2.0)
+        offset = await self._client.async_sync_clock(2.0)
         if offset is not None:
             _LOGGER.info(
                 "[%s] Successfully synchronized TV clock (offset: %d s)",
@@ -108,8 +108,8 @@ class HisenseVidaaProbeCapabilitiesButton(HisenseVidaaBaseButton):
             return
 
         _LOGGER.info("[%s] Probing TV picture and sound menu capabilities over MQTT...", self._client.ip)
-        await self.hass.async_add_executor_job(self._client.get_picture_settings)
-        await self.hass.async_add_executor_job(self._client.get_sound_settings)
+        await self._client.async_get_picture_settings()
+        await self._client.async_get_sound_settings()
         await asyncio.sleep(2.0)
 
         pic_supported = bool(self._client.picture_settings)

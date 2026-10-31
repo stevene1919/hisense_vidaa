@@ -17,12 +17,23 @@ _LOGGER = logging.getLogger(__name__)
 __all__ = [
     "_as_id_set",
     "_async_target_entry_ids_from_registries",
+    "_extract_entry_client",
     "_get_target_clients",
     "_resolve_service_targets",
     "_target_selector_fields",
     "_validate_launch_app_data",
     "parse_key_sequence",
 ]
+
+
+def _extract_entry_client(entry: Any) -> Any:
+    """Extract the HisenseTvClient instance from an entry's runtime data."""
+    runtime_data = getattr(entry, "runtime_data", None)
+    if isinstance(runtime_data, dict):
+        return runtime_data.get("client")
+    if runtime_data is not None:
+        return getattr(runtime_data, "client", runtime_data)
+    return None
 
 
 def _as_id_set(value: Any) -> set[str]:
@@ -152,46 +163,59 @@ def _get_target_clients(hass: HomeAssistant, call: ServiceCall) -> list[Any]:
         except Exception:
             pass
 
+    raw_entity_id = call.data.get("entity_id")
+    is_broadcast_all = False
+    if (isinstance(raw_entity_id, str) and raw_entity_id.strip().lower() == "all") or (isinstance(raw_entity_id, (list, tuple, set)) and any(
+        isinstance(item, str) and item.strip().lower() == "all" for item in raw_entity_id
+    )):
+        is_broadcast_all = True
+
+    if is_broadcast_all:
+        for entry in loaded_entries:
+            client = _extract_entry_client(entry)
+            if client:
+                clients.append(client)
+        return clients
+
     # ip/mac/entry_id are explicit targets, so the broadcast fallback must never fire
     # once anything targets the call.
     selector_given = bool(
         target_entry_ids or target_ip or target_mac or registry_ids_given
     )
 
-    for entry in loaded_entries:
-        runtime_data = getattr(entry, "runtime_data", None)
-        if isinstance(runtime_data, dict):
-            client = runtime_data.get("client")
-        elif runtime_data is not None:
-            client = getattr(runtime_data, "client", runtime_data)
-        else:
-            client = None
-        if not client:
-            continue
-        if target_entry_ids and entry.entry_id not in target_entry_ids:
-            continue
-        # A registry-backed target (entity/device/area/floor/label) that resolves
-        # to no entry matches nothing - it must not degrade into a broadcast.
-        if registry_ids_given and not target_entry_ids:
-            continue
-        if target_ip and getattr(client, "ip", None) != target_ip:
-            continue
-        if target_mac and getattr(client, "mac", None) != target_mac:
-            continue
-        clients.append(client)
-
-    if not clients and not selector_given:
+    if selector_given:
         for entry in loaded_entries:
-            runtime_data = getattr(entry, "runtime_data", None)
-            if isinstance(runtime_data, dict):
-                client = runtime_data.get("client")
-            elif runtime_data is not None:
-                client = getattr(runtime_data, "client", runtime_data)
-            else:
-                client = None
-            if client:
-                clients.append(client)
-    return clients
+            client = _extract_entry_client(entry)
+            if not client:
+                continue
+            if target_entry_ids and entry.entry_id not in target_entry_ids:
+                continue
+            # A registry-backed target (entity/device/area/floor/label) that resolves
+            # to no entry matches nothing - it must not degrade into a broadcast.
+            if registry_ids_given and not target_entry_ids:
+                continue
+            if target_ip and getattr(client, "ip", None) != target_ip:
+                continue
+            if target_mac and getattr(client, "mac", None) != target_mac:
+                continue
+            clients.append(client)
+        return clients
+
+    all_clients: list[Any] = []
+    for entry in loaded_entries:
+        client = _extract_entry_client(entry)
+        if client:
+            all_clients.append(client)
+
+    if len(all_clients) == 1:
+        return all_clients
+    if len(all_clients) > 1:
+        raise ServiceValidationError(
+            "Multiple Hisense VIDAA TVs are configured. Please specify a target TV, or use 'all' to target every TV.",
+            translation_domain=DOMAIN,
+            translation_key="ambiguous_target",
+        )
+    return []
 
 
 def _resolve_service_targets(hass: HomeAssistant, call: ServiceCall) -> list[Any]:

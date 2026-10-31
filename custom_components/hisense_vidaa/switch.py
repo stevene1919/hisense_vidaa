@@ -87,9 +87,9 @@ class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
         if not self._client or not self._client.connected:
             return
         # Guarantee screen is awake first, then toggle off
-        await self.hass.async_add_executor_job(self._client.send_key, WAKE_KEY)
+        await self._client.async_send_key(WAKE_KEY)
         await asyncio.sleep(KEY_GAP_SECONDS)
-        await self.hass.async_add_executor_job(self._client.send_key, AUDIO_ONLY_KEY)
+        await self._client.async_send_key(AUDIO_ONLY_KEY)
         self._is_on = True
         self.async_write_ha_state()
 
@@ -97,7 +97,7 @@ class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
         """Wake the screen back up."""
         if not self._client or not self._client.connected:
             return
-        await self.hass.async_add_executor_job(self._client.send_key, WAKE_KEY)
+        await self._client.async_send_key(WAKE_KEY)
         self._is_on = False
         self.async_write_ha_state()
 

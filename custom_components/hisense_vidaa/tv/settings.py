@@ -61,6 +61,15 @@ __all__ = [
     "STANDARD_PICTURE_MODES",
     "STANDARD_SOUND_MODES",
     "SettingMenuItem",
+    "async_get_picture_settings",
+    "async_get_sound_settings",
+    "async_set_backlight",
+    "async_set_brightness",
+    "async_set_contrast",
+    "async_set_picture_mode",
+    "async_set_picture_setting",
+    "async_set_sound_mode",
+    "async_set_sound_setting",
     "find_menu_item_by_name",
     "get_picture_settings",
     "get_sound_settings",
@@ -294,5 +303,96 @@ def set_sound_mode(client: HisenseTvClient, mode: str) -> None:
     sm_item = find_menu_item_by_name(client.sound_settings, "Sound Mode", DEFAULT_MENU_ID_SOUND_MODE)
     menu_id = sm_item.menu_id if sm_item else DEFAULT_MENU_ID_SOUND_MODE
     client.set_sound_setting(menu_id, mode)
+    client.sound_mode = mode
+
+
+async def async_get_picture_settings(client: HisenseTvClient) -> None:
+    """Requests current picture settings menu information from the TV asynchronously."""
+    if client.connected and client.mqtt_client:
+        await client.async_publish(
+            f"{client.topics.platform}actions/picturesetting",
+            json.dumps({"action": "get_menu_info"}),
+        )
+
+
+async def async_set_picture_setting(
+    client: HisenseTvClient, menu_id: int, menu_value: str | int | float
+) -> None:
+    """Changes a specific picture setting value asynchronously."""
+    if client.connected and client.mqtt_client:
+        payload = json.dumps({
+            "action": "notify_value_changed",
+            "menu_id": int(menu_id),
+            "menu_value": str(menu_value),
+        })
+        await client.async_publish(f"{client.topics.platform}actions/picturesetting", payload)
+        if int(menu_id) in client.picture_settings:
+            client.picture_settings[int(menu_id)].value = menu_value
+
+
+async def async_set_picture_mode(client: HisenseTvClient, mode: str) -> None:
+    """Sets the TV picture mode preset asynchronously."""
+    pm_item = find_menu_item_by_name(client.picture_settings, "Picture Mode", DEFAULT_MENU_ID_PICTURE_MODE)
+    menu_id = pm_item.menu_id if pm_item else DEFAULT_MENU_ID_PICTURE_MODE
+    await client.async_set_picture_setting(menu_id, mode)
+    client.picture_mode = mode
+
+
+async def async_set_backlight(client: HisenseTvClient, level: int) -> None:
+    """Sets the TV backlight level (0–100) asynchronously."""
+    bl_item = find_menu_item_by_name(client.picture_settings, "Backlight", DEFAULT_MENU_ID_BACKLIGHT)
+    menu_id = bl_item.menu_id if bl_item else DEFAULT_MENU_ID_BACKLIGHT
+    clamped = max(0, min(100, int(level)))
+    await client.async_set_picture_setting(menu_id, clamped)
+    client.backlight = clamped
+
+
+async def async_set_brightness(client: HisenseTvClient, level: int) -> None:
+    """Sets the TV brightness level (0–100) asynchronously."""
+    br_item = find_menu_item_by_name(client.picture_settings, "Brightness", DEFAULT_MENU_ID_BRIGHTNESS)
+    menu_id = br_item.menu_id if br_item else DEFAULT_MENU_ID_BRIGHTNESS
+    clamped = max(0, min(100, int(level)))
+    await client.async_set_picture_setting(menu_id, clamped)
+    client.brightness = clamped
+
+
+async def async_set_contrast(client: HisenseTvClient, level: int) -> None:
+    """Sets the TV contrast level (0–100) asynchronously."""
+    ct_item = find_menu_item_by_name(client.picture_settings, "Contrast", DEFAULT_MENU_ID_CONTRAST)
+    menu_id = ct_item.menu_id if ct_item else DEFAULT_MENU_ID_CONTRAST
+    clamped = max(0, min(100, int(level)))
+    await client.async_set_picture_setting(menu_id, clamped)
+    client.contrast = clamped
+
+
+async def async_get_sound_settings(client: HisenseTvClient) -> None:
+    """Requests current sound settings menu information from the TV asynchronously."""
+    if client.connected and client.mqtt_client:
+        await client.async_publish(
+            f"{client.topics.platform}actions/soundsetting",
+            json.dumps({"action": "get_menu_info"}),
+        )
+
+
+async def async_set_sound_setting(
+    client: HisenseTvClient, menu_id: int, menu_value: str | int | float
+) -> None:
+    """Changes a specific sound setting value asynchronously."""
+    if client.connected and client.mqtt_client:
+        payload = json.dumps({
+            "action": "notify_value_changed",
+            "menu_id": int(menu_id),
+            "menu_value": str(menu_value),
+        })
+        await client.async_publish(f"{client.topics.platform}actions/soundsetting", payload)
+        if int(menu_id) in client.sound_settings:
+            client.sound_settings[int(menu_id)].value = menu_value
+
+
+async def async_set_sound_mode(client: HisenseTvClient, mode: str) -> None:
+    """Sets the TV sound mode preset asynchronously."""
+    sm_item = find_menu_item_by_name(client.sound_settings, "Sound Mode", DEFAULT_MENU_ID_SOUND_MODE)
+    menu_id = sm_item.menu_id if sm_item else DEFAULT_MENU_ID_SOUND_MODE
+    await client.async_set_sound_setting(menu_id, mode)
     client.sound_mode = mode
 

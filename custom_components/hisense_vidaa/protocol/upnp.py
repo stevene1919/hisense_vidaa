@@ -101,6 +101,84 @@ class HisenseUpnpClient:
                 _LOGGER.debug("UPnP probe on %s:%s failed: %s", self.host, port, err)
         return None
 
+    async def async_get_tv_timestamp(self, timeout: float = 2.0) -> int | None:
+        """Fetches the live timestamp from the TV's UPnP HTTP Date header asynchronously."""
+        import email.utils
+
+        session = await self._get_session()
+        ports_to_try = [self.port] if self._active_port == self.port else list(CANDIDATE_UPNP_PORTS)
+        for port in ports_to_try:
+            url = f"http://{self.host}:{port}/MediaServer/rendererdevicedesc.xml"
+            try:
+                async with session.get(
+                    url,
+                    headers={"User-Agent": "HisenseVIDAAClient/1.0"},
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                ) as resp:
+                    date_str = resp.headers.get("Date")
+                    if date_str:
+                        dt = email.utils.parsedate_to_datetime(date_str)
+                        self._active_port = port
+                        return int(dt.timestamp())
+            except Exception as err:
+                _LOGGER.debug(
+                    "Could not fetch TV clock from HTTP Date header on %s:%s: %s",
+                    self.host,
+                    port,
+                    err,
+                )
+        return None
+
+    async def async_get_device_fingerprint(self, timeout: float = 2.0) -> dict[str, Any]:
+        """Queries UPnP/DLNA XML descriptors asynchronously across candidate ports."""
+        info: dict[str, Any] = {
+            "friendly_name": None,
+            "model_name": None,
+            "model_number": None,
+            "manufacturer": None,
+            "serial_number": None,
+            "presentation_url": None,
+            "upnp_port": None,
+        }
+        session = await self._get_session()
+        ports_to_try = [self.port] if self._active_port == self.port else list(CANDIDATE_UPNP_PORTS)
+        for port in ports_to_try:
+            url = f"http://{self.host}:{port}/MediaServer/rendererdevicedesc.xml"
+            try:
+                async with session.get(
+                    url,
+                    headers={"User-Agent": "HisenseVIDAAClient/1.0"},
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                ) as resp:
+                    if resp.status == 200:
+                        content = await resp.read()
+                        root = ET.fromstring(content.decode("utf-8", errors="ignore"))
+                        ns = {"d": "urn:schemas-upnp-org:device-1-0"}
+                        device = root.find(".//d:device", ns)
+                        if device is not None:
+                            for tag, key in (
+                                ("friendlyName", "friendly_name"),
+                                ("modelName", "model_name"),
+                                ("modelNumber", "model_number"),
+                                ("manufacturer", "manufacturer"),
+                                ("serialNumber", "serial_number"),
+                                ("presentationURL", "presentation_url"),
+                            ):
+                                el = device.find(f"d:{tag}", ns)
+                                if el is not None and el.text:
+                                    info[key] = el.text.strip()
+                            info["upnp_port"] = port
+                            self._active_port = port
+                            return info
+            except Exception as err:
+                _LOGGER.debug(
+                    "Could not fetch UPnP descriptor on %s:%s: %s",
+                    self.host,
+                    port,
+                    err,
+                )
+        return info
+
     async def async_send_soap(
         self,
         control_path: str,

@@ -94,10 +94,11 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
         return bool(self._entry_id and (self._client.access_token or self._mac))
 
     async def _async_exec(self, func: Any, *args: Any) -> Any:
-        """Execute a client function in the executor if hass is present, or directly if testing."""
-        if getattr(self, "hass", None) is not None:
-            return await self.hass.async_add_executor_job(func, *args)
-        return func(*args)
+        """Execute a client function."""
+        res = func(*args)
+        if asyncio.iscoroutine(res):
+            return await res
+        return res
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the TV on."""
@@ -109,12 +110,12 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
             if sec_mac and sec_mac not in mac_targets:
                 mac_targets.append(sec_mac)
 
-        await self._async_exec(self._client.turn_on, mac_targets if mac_targets else None)
+        await self._client.async_turn_on(mac_targets if mac_targets else None)
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the TV off."""
-        await self._async_exec(self._client.turn_off)
+        await self._client.async_turn_off()
         self.async_write_ha_state()
 
     async def async_send_command(self, command: Iterable[str], **kwargs: Any) -> None:
@@ -133,17 +134,17 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
                 if hold_secs and hold_secs > 0:
                     cmd_lower = single_cmd.strip().lower()
                     if cmd_lower in ("ok", "enter", "select", "key_ok"):
-                        await self._async_exec(self._client.send_key, "KEY_OK_LONG_PRESS")
+                        await self._client.async_send_key("KEY_OK_LONG_PRESS")
                     elif cmd_lower in ("mute", "key_mute"):
-                        await self._async_exec(self._client.send_key, "KEY_MUTE_LONG_PRESS")
+                        await self._client.async_send_key("KEY_MUTE_LONG_PRESS")
                     else:
                         # Emulate key hold by rapid repetition over hold_secs
                         steps = max(1, round(hold_secs / 0.1))
                         for _ in range(steps):
-                            await self._async_exec(self._client.send_command, single_cmd)
+                            await self._client.async_send_command(single_cmd)
                             await asyncio.sleep(0.1)
                 else:
-                    await self._async_exec(self._client.send_command, single_cmd)
+                    await self._client.async_send_command(single_cmd)
                 if delay_secs > 0:
                     await asyncio.sleep(delay_secs)
 

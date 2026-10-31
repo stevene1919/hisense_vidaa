@@ -75,7 +75,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 if i > 0 and delay > 0:
                     await asyncio.sleep(delay)
                 try:
-                    await hass.async_add_executor_job(client.send_command, key)
+                    await client.async_send_command(key)
                 except Exception as err:
                     raise HomeAssistantError(f"Failed to send key command '{key}': {err}") from err
 
@@ -101,7 +101,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 if i > 0 and delay > 0:
                     await asyncio.sleep(delay)
                 try:
-                    await hass.async_add_executor_job(client.send_command, key)
+                    await client.async_send_command(key)
                 except Exception as err:
                     raise HomeAssistantError(
                         f"Failed to execute key sequence at step '{key}': {err}"
@@ -133,7 +133,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     await asyncio.sleep(delay)
                 key = f"KEY_{digit}"
                 try:
-                    await hass.async_add_executor_job(client.send_command, key)
+                    await client.async_send_command(key)
                 except Exception as err:
                     raise HomeAssistantError(
                         f"Failed to send channel digit '{digit}': {err}"
@@ -143,7 +143,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 if delay > 0:
                     await asyncio.sleep(delay)
                 try:
-                    await hass.async_add_executor_job(client.send_command, "KEY_OK")
+                    await client.async_send_command("KEY_OK")
                 except Exception as err:
                     raise HomeAssistantError(
                         f"Failed to send channel confirm command: {err}"
@@ -189,8 +189,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             app_url = str(call.data.get(ATTR_URL, app_url))
 
             try:
-                await hass.async_add_executor_job(
-                    client.launch_app,
+                await client.async_launch_app(
                     app_id,
                     app_name,
                     app_url,
@@ -218,7 +217,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         target_clients = _resolve_service_targets(hass, call)
         for client in target_clients:
             try:
-                await hass.async_add_executor_job(client.set_picture_setting, menu_id, menu_val)
+                await client.async_set_picture_setting(menu_id, menu_val)
             except Exception as err:
                 raise HomeAssistantError(f"Failed to set picture setting (menu_id={menu_id}): {err}") from err
         return {
@@ -235,7 +234,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         target_clients = _resolve_service_targets(hass, call)
         for client in target_clients:
             try:
-                await hass.async_add_executor_job(client.set_sound_setting, menu_id, menu_val)
+                await client.async_set_sound_setting(menu_id, menu_val)
             except Exception as err:
                 raise HomeAssistantError(f"Failed to set sound setting (menu_id={menu_id}): {err}") from err
         return {
@@ -252,7 +251,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         target_clients = _resolve_service_targets(hass, call)
         for client in target_clients:
             try:
-                await hass.async_add_executor_job(client.send_text_input, text, action)
+                await client.async_send_text_input(text, action)
             except Exception as err:
                 raise HomeAssistantError(f"Failed to send text input: {err}") from err
         return {

@@ -337,6 +337,9 @@
     }
   },
   "exceptions": {
+    "ambiguous_target": {
+      "message": "Sono configurate più Hisense VIDAA TV. Specificare una TV di destinazione oppure utilizzare 'all' per indirizzare tutte le TV."
+    },
     "no_target_device": {
       "message": "Nessuna Hisense VIDAA TV corrispondente è stata trovata per la destinazione specificata della chiamata di servizio."
     },

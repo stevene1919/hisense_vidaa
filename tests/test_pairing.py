@@ -91,6 +91,7 @@ async def test_static_pin_submit_publishes_authnum_without_token_wait():
         return (0, 1)
 
     mqtt.publish.side_effect = fake_publish
+    mqtt.async_publish = AsyncMock(side_effect=fake_publish)
     client.mqtt_client = mqtt
 
     result = await async_submit_pin_code(client, "0656")
@@ -130,6 +131,7 @@ async def test_dynamic_pin_submit_still_requests_token():
         return (0, 1)
 
     mqtt.publish.side_effect = fake_publish
+    mqtt.async_publish = AsyncMock(side_effect=fake_publish)
     client.mqtt_client = mqtt
 
     data = await async_submit_pin_code(client, "1234")
@@ -154,6 +156,7 @@ async def test_pin_submit_rejects_wrong_code():
         return (0, 1)
 
     mqtt.publish.side_effect = fake_publish
+    mqtt.async_publish = AsyncMock(side_effect=fake_publish)
     client.mqtt_client = mqtt
 
     with pytest.raises(Exception, match="Incorrect PIN"):
@@ -173,6 +176,7 @@ async def test_pin_submit_raises_pairing_status_on_busy():
         return (0, 1)
 
     mqtt.publish.side_effect = fake_publish
+    mqtt.async_publish = AsyncMock(side_effect=fake_publish)
     client.mqtt_client = mqtt
 
     with pytest.raises(PairingStatusError) as exc:
@@ -339,7 +343,7 @@ async def test_duplicate_add_keeps_running_client_connected():
     with pytest.raises(AbortFlow):
         await flow._async_init_client_and_auth()
 
-    assert not running.disconnect.called
+    assert not running.disconnect.called and not running.async_disconnect.called
 
 
 @pytest.mark.anyio
@@ -348,9 +352,11 @@ async def test_reauth_disconnects_only_its_own_client():
     own = MagicMock()
     own.ip = "192.168.50.12"
     own.mac = "e8:51:77:ec:98:1c"
+    own.async_disconnect = AsyncMock()
     sibling = MagicMock()
     sibling.ip = "192.168.50.12"  # same IP, different entry
     sibling.mac = "e8:51:77:ec:98:1d"
+    sibling.async_disconnect = AsyncMock()
     hass.data = {"hisense_vidaa": {"entry_1": {"client": own}, "entry_2": {"client": sibling}}}
 
     flow = _flow(hass)
@@ -359,12 +365,12 @@ async def test_reauth_disconnects_only_its_own_client():
 
     await flow._async_disconnect_existing_client()
 
-    assert own.disconnect.called
-    assert not sibling.disconnect.called
+    assert own.async_disconnect.called
+    assert not sibling.async_disconnect.called
 
 
 # ---------------------------------------------------------------------------
-# F10-leg6: async_remove keeps and logs the executor future
+# F10-leg6: async_remove keeps and logs the background task future
 # ---------------------------------------------------------------------------
 def test_async_remove_registers_done_callback():
     flow = HisenseVidaaConfigFlow()
@@ -372,7 +378,7 @@ def test_async_remove_registers_done_callback():
     fut.cancelled.return_value = False
     fut.exception.return_value = RuntimeError("disconnect failed")
     hass = MagicMock()
-    hass.async_add_executor_job = MagicMock(return_value=fut)
+    hass.async_create_background_task = MagicMock(return_value=fut)
     flow.hass = hass
     flow.client = MagicMock()
 
@@ -399,7 +405,14 @@ def _probe_client() -> tuple[HisenseTvClient, MagicMock]:
     client.mqtt_client = None
     client.connected = True  # skip the ~10s connect-wait loop
     mqtt = MagicMock()
+    mqtt.async_publish = AsyncMock()
+    mqtt.async_subscribe = AsyncMock(return_value=True)
     client.create_mqtt_client = MagicMock(return_value=mqtt)
+
+    async def fake_open_session(*args, **kwargs):
+        client.mqtt_client = mqtt
+
+    client.async_open_pairing_session = AsyncMock(side_effect=fake_open_session)
     return client, mqtt
 
 
@@ -422,6 +435,7 @@ async def test_probe_close_event_cleans_up_futures():
         return (0, 1)
 
     mqtt.publish.side_effect = fake_publish
+    mqtt.async_publish = AsyncMock(side_effect=fake_publish)
 
     with pytest.raises(PairingStatusError) as exc:
         await async_probe_pairing_challenge(client, timeout=1.0)
@@ -440,6 +454,7 @@ async def test_probe_challenge_returns_true_and_cleans_up_futures():
         return (0, 1)
 
     mqtt.publish.side_effect = fake_publish
+    mqtt.async_publish = AsyncMock(side_effect=fake_publish)
 
     assert await async_probe_pairing_challenge(client, timeout=1.0) is True
     assert client._auth_future is None, "probe must null _auth_future after a challenge"
@@ -457,9 +472,17 @@ async def test_static_no_challenge_disconnects_probe_client(monkeypatch, no_netw
     monkeypatch.setattr(PROBE_PATH, AsyncMock(return_value=False))
 
     disconnected: list[object] = []
+
+    async def fake_disconnect(self):
+        disconnected.append(self)
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.client.HisenseTvClient.async_disconnect",
+        fake_disconnect,
+    )
     monkeypatch.setattr(
         "custom_components.hisense_vidaa.client.HisenseTvClient.disconnect",
-        lambda self: disconnected.append(self),
+        fake_disconnect,
     )
 
     result = await flow._async_init_client_and_auth()
@@ -481,10 +504,12 @@ async def test_static_reauth_disconnects_own_entry_before_probe(monkeypatch, no_
     own.ip = "192.168.50.12"
     own.mac = "e8:51:77:ec:98:1c"
     own.disconnect = MagicMock(side_effect=lambda: events.append("disconnect:own"))
+    own.async_disconnect = AsyncMock(side_effect=lambda: events.append("disconnect:own"))
     sibling = MagicMock()
     sibling.ip = "192.168.50.12"  # same IP, different entry
     sibling.mac = "e8:51:77:ec:98:1d"
     sibling.disconnect = MagicMock(side_effect=lambda: events.append("disconnect:sibling"))
+    sibling.async_disconnect = AsyncMock(side_effect=lambda: events.append("disconnect:sibling"))
     hass.data = {"hisense_vidaa": {"entry_1": {"client": own}, "entry_2": {"client": sibling}}}
 
     flow = _flow(hass, profile="legacy")
@@ -543,10 +568,7 @@ async def test_dynamic_connect_ack_unblocks_retry_wait(monkeypatch):
     client.update_topic_paths()
     client.connected = True
 
-    monkeypatch.setattr(
-        "custom_components.hisense_vidaa.protocol.pairing.get_tv_timestamp",
-        lambda ip, timeout: 1700000000,
-    )
+    client.upnp.async_get_tv_timestamp = AsyncMock(return_value=1700000000)
 
     mqtt = MagicMock()
 
@@ -558,7 +580,14 @@ async def test_dynamic_connect_ack_unblocks_retry_wait(monkeypatch):
         return (0, 1)
 
     mqtt.publish.side_effect = fake_publish
+    mqtt.async_publish = AsyncMock(side_effect=fake_publish)
+    mqtt.async_subscribe = AsyncMock(return_value=True)
     client.create_mqtt_client = MagicMock(return_value=mqtt)
+
+    async def fake_open_session(*args, **kwargs):
+        client.mqtt_client = mqtt
+
+    client.async_open_pairing_session = AsyncMock(side_effect=fake_open_session)
 
     # Must return cleanly (ACK breaks the retry loop) instead of raising the
     # "TV did not show PIN" timeout after three attempts.
