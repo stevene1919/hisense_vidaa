@@ -67,4 +67,4 @@ This integration operates as a **pure local-push integration** (`should_poll = F
 ### 🛠️ Troubleshooting Guide
 - **Pairing PIN Failures**: Disconnect any running mobile app (RemoteNow/VIDAA app) before pairing.
 - **Certificate Errors**: Place client certificate files in `/config/ssl/` or `/config/certs/` as detailed in [`certificates.md`](certificates.md).
-- **Re-Authentication Prompt**: Use Home Assistant Repairs or the re-configuration flow to refresh PIN auth when TV tokens are invalidated.
+- **Re-Authentication Prompt / Frequent Token Loss**: Verify that external streaming dongles (Chromecast, Fire TV, Roku) are powered by their dedicated wall AC adapter rather than the TV's USB port (which triggers brownouts and wipes RAM on standby), and ensure **Auto Standby with No Signal** is disabled in TV settings. Use Home Assistant Repairs or the re-configuration flow to refresh PIN auth if tokens are invalidated.

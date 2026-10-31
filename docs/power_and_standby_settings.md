@@ -115,6 +115,52 @@ Streaming boxes routinely put their video outputs to sleep after 15–30 minutes
 - If **Auto Standby with No Signal** is left at its default (15 minutes), the TV will shut down exactly 15 minutes after the streaming box sleeps, wiping all MQTT credentials.
 - **Remedy**: Always disable **Auto Standby with No Signal** when using an external HDMI streaming stick as your primary video source.
 
+### ⚠️ Hardware Requirement: Dedicated Power for HDMI Streaming Devices (Do Not Use TV USB)
+
+> [!CAUTION]
+> **CRITICAL HARDWARE DIRECTIVE**: Never power external HDMI streaming dongles (Chromecast with Google TV, Amazon Fire TV Stick 4K, Roku Streaming Stick, Apple TV adapters) from the TV's onboard USB ports. **Always use an independent mains AC wall adapter.**
+
+#### 1. Severe Power Mismatch (2.5W vs. 7.5W+)
+* **TV USB Port Limit**: Standard Hisense VIDAA USB 2.0 ports deliver only **5V @ 0.5A (2.5W)** (or up to 4.5W on USB 3.0).
+* **Streaming Stick Demands**: Devices like Chromecast with Google TV (`sabrina`) require a minimum of **5V @ 1.5A (7.5W)**.
+* **The Squeeze**: While idle video playback may occasionally survive on 2.5W due to dedicated hardware ASIC decoding, background OS tasks (app auto-updates, storage writes, Android ART `bg-dexopt` package compilation, and 5GHz Wi-Fi bursts) spike instantaneous power draw past 7.5W–10W.
+
+#### 2. The Cascading Failure Mode & Standby Brownout
+Powering streaming sticks from the TV's USB port induces an electrical brownout sequence that invalidates the `hisense_vidaa` integration:
+
+```
+[TV Enters Standby: fake_sleep_0]
+       │
+       ▼
+[5V Standby Rail Amperage Collapses] ─── (Streaming stick Wi-Fi / CEC burst)
+       │                                            │
+       ▼                                            ▼
+[Over-Current Protection (OCP) Trips] ◄─── [Severe Undervoltage Event]
+       │
+       ▼
+[Mainboard Cuts DC Rails (Dirty Reset)]
+       │
+       ▼
+[Volatile RAM Wiped Cold] ───► Broker token table destroyed
+       │
+       ▼
+[TV Reboots into Standby] ───► Rejects Home Assistant tokens (rc: 4 / 134) ──► Reauth Required!
+```
+
+1. **Standby Rail Collapse**:
+   * When the TV receives a screen-off command, VIDAA OS broadcasts `{"statetype": "fake_sleep_0"}`.
+   * During the next 15–20 seconds, the TV power supply unit (PSU) transitions from high-amperage run mode to low-amperage standby mode.
+   * If the connected dongle attempts to communicate over Wi-Fi, adjust HDMI-CEC routing, or perform maintenance, its current demand overwhelms the collapsing 5V standby rail.
+2. **Mainboard Protection Trip (Dirty Reset)**:
+   * The TV’s Power Management IC (PMIC) detects an Over-Current Protection (OCP) or undervoltage spike and abruptly cuts DC power rails to protect the silicon.
+   * Both the TV mainboard and the streaming stick suffer an ungraceful electrical brownout.
+3. **MQTT Token Database Invalidation (`rc: 134`)**:
+   * Because the TV crashes dirty rather than completing a graceful OS power transition, volatile system RAM (`libmqttcrypt.so`) is wiped.
+   * Upon waking, the broker boots cold with an empty token table and actively rejects previously valid tokens with connection return code `4` or MQTT v5 reason code `134` (*Bad authentication data*).
+   * In Home Assistant, this trips repeated rejections and forces the integration into **`Reauth Required`**, requiring manual or automated re-pairing.
+4. **Abrupt USB Power Cutoff**:
+   * Even without an electrical trip, VIDAA firmware completely de-energizes the +5V USB power rail ~15–20 seconds after entering deep standby (`fake_sleep_0`). This abruptly kills the streaming stick, severing ADB, Google Cast, and network presence without sending clean Wi-Fi disassociation frames.
+
 ### 2. PC / Laptop as Monitor (HDMI)
 When used as a desktop computer display:
 - When your operating system enters display sleep or powers down the GPU output, the TV transitions to "No Signal".

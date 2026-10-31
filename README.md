@@ -95,6 +95,10 @@ Copy your client certificate / key (or `.p12` bundle) to `/config/ssl/` (or `/ss
 > **Recommended TV Settings**:
 > To ensure your TV remains responsive in standby and avoids losing paired tokens when connected HDMI devices (e.g. Chromecast, Apple TV, PC) sleep, refer to the **[TV Power, Standby & Network Settings Guide](docs/power_and_standby_settings.md)**.
 
+> [!IMPORTANT]
+> **Hardware Power Warning (HDMI Streaming Devices)**:
+> Never power external HDMI streaming dongles (Chromecast, Fire TV, Roku) from the TV's onboard USB port. The TV's USB port cannot sustain the peak current demands, triggering electrical brownouts during standby transitions that crash the TV mainboard and wipe paired MQTT credentials (`Reauth Required`). Always use the streaming device's supplied mains AC wall adapter. See [Dedicated Power for HDMI Devices](docs/power_and_standby_settings.md#%EF%B8%8F-hardware-requirement-dedicated-power-for-hdmi-streaming-devices-do-not-use-tv-usb).
+
 ---
 
 ## 📚 Detailed Documentation & Guides

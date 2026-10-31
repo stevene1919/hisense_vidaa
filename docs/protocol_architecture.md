@@ -175,6 +175,10 @@ Different VIDAA models expose varying subsets of the MQTT protocol depending on 
    - Upon next power-up or wake, the broker starts with an unpopulated token table and actively rejects previously valid credentials with `rc: 4` (*Bad username or password*) or MQTT v5 reason code `134` (*Bad authentication data*).
    - The integration specifically tracks broker rejection return codes (`connect_rc in (4, 5, 134, 135)`) versus standard standby timeouts (`connect_rc == 0`), auto-escalating to the Home Assistant Repairs dashboard after 3 consecutive rejections while preserving retry backoff for ordinary standby.
 
+> [!WARNING]
+> **Dirty Resets & USB Power Brownouts**:
+> In addition to statutory Tier 2 sleep timers, ungraceful power loss—such as powering an external HDMI streaming stick (e.g. Chromecast with Google TV) from the TV's 2.5W USB port—triggers the TV's Over-Current Protection (OCP) circuit during the `fake_sleep_0` transition. This causes an abrupt mainboard brownout, wiping volatile RAM and triggering immediate `rc: 4` / `134` rejection on subsequent boots. External media devices must always be powered via independent mains power adapters. See [TV Power, Standby & Network Settings Guide](power_and_standby_settings.md) for full circuit analysis.
+
 ---
 
 ## 📡 UPnP / DLNA LAN Control Subsystem
