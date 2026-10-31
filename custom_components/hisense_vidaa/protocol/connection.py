@@ -213,6 +213,8 @@ class ConnectionManagerMixin:
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
+            if asyncio.iscoroutine(coro):
+                coro.close()
             return None
         task = loop.create_task(coro)
         self._background_tasks.add(task)
