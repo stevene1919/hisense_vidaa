@@ -2,9 +2,15 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
-## [3.1.0] - 2026-10-31 — ⚡ Native `aiomqtt` Async Engine & Architecture Hardening Edition
+## [3.1.0] - 2026-11-01 — ⚡ Native `aiomqtt` Async Engine & Architecture Hardening Edition
 
 This release marks a major architectural milestone for the Hisense VIDAA TV integration, completing a full migration to native async MQTT (`aiomqtt>=2.3.0`), eliminating all threaded callbacks and executor offloading, modernizing Lovelace remote card designs, standardizing documentation examples, and achieving complete architectural compliance with all 54 Home Assistant Integration Quality Scale rules in `quality_scale.yaml`.
+
+### ☕ Support the Project
+
+If this integration has added value to your smart home setup, consider buying me a coffee to support continued development and maintenance:
+
+[![Support on Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/stevene_)
 
 ### 🌟 What's New & Hardened in v3.1.0
 - **NATIVE `aiomqtt>=2.3.0` ASYNC TRANSPORT ENGINE (`async-dependency: done`)**:
