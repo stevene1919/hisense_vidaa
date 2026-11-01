@@ -164,44 +164,47 @@ This document tracks active pending tasks, investigations, and planned enhanceme
 
 ## 🏆 Home Assistant Integration Quality Scale Tracking
 
-Tracking adherence to the official [HA Integration Quality Scale rules](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules) as of **October 2026** (`manifest.json` intentionally remains pinned to `"quality_scale": "bronze"` pending formal staged review by Home Assistant Core, while `quality_scale.yaml` documents implementation through Gold Tier).
+Tracking adherence to the official [HA Integration Quality Scale rules](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules) across all 54 rules in Home Assistant Core (20 Bronze, 10 Silver, 21 Gold, 3 Platinum). Formally tracked and validated via `quality_scale.yaml` (manifest remains conservatively pinned to `"quality_scale": "bronze"` until formal Core upstream submission).
 
-> **Note on tier shuffles:** The IQS rules have been updated since the initial tracking below was written. Notably: `test-coverage` moved from Gold → Silver, `diagnostics` and `entity-category` moved from Silver/Bronze → Gold, and `entity-category` and `entity-disabled-by-default` are now Gold. Several new rules were added at Bronze (`action-setup`, `config-flow-test-coverage`, `dependency-transparency`, `docs-*`, `entity-event-setup`, `runtime-data`, `test-before-configure`, `unique-config-entry`) and Gold (`dynamic-devices`, `stale-devices`, `entity-device-class`, `docs-*`). Platinum adds `async-dependency` and `inject-websession`.
+> **Note on HA Core Rule Architecture & AST Validation:**
+> Home Assistant's official `hassfest` tool enforces strict voluptuous schema formatting on `quality_scale.yaml` and executes Python AST syntax trees against integration sources. Notably:
+> - **Schema Standards**: Bare strings (`rule: exempt`) fail schema validation; exempt rules must use dictionary syntax `{status: exempt, comment: "..."}`.
+> - **AST Validation Rules**: `reconfiguration-flow` inspects `config_flow.py` AST directly for `async_step_reconfigure`. `runtime-data` verifies that config entry signatures strictly follow the `^[A-Za-z][A-Za-z0-9]+ConfigEntry$` pattern (`HisenseVidaaConfigEntry`).
+> - **Translations**: Error messages under `"exceptions"` must not enclose format placeholders in single quotes (`'{key}'` is invalid; `{key}` is required).
+> - **Rule Mapping**: In HA Core, `entity-category` is in Gold, `has-entity-name` is in Bronze, and `config-entry-unloading` is in Silver. Device automation docs are tracked under `docs-actions` (done), `docs-conditions` (exempt), and `docs-triggers` (exempt).
 
 ---
 
-### 🥉 Bronze Tier — Status: ✅ 100% complete
+### 🥉 Bronze Tier — Status: ✅ 100% complete (20/20 Rules)
 
-| Rule                                                                                                                                              | Status   | Notes                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| [`action-setup`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/action-setup)                                     | ✅ Done   | Services registered in `async_setup` via `services.py`                                                         |
-| [`appropriate-polling`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/appropriate-polling)                       | ✅ Exempt | `should_poll = False`; pure local push via MQTT                                                                |
-| [`brands`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/brands)                                                 | ✅ Done   | Brand assets in `brand/` directory                                                                             |
-| [`common-modules`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/common-modules)                                 | ✅ Done   | Standard entity platforms + shared `entity.py`, `const.py`, `coordinator` pattern                              |
-| [`config-flow`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/config-flow)                                       | ✅ Done   | Full UI config flow in `config_flow.py`                                                                        |
-| [`config-flow-test-coverage`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/config-flow-test-coverage)           | ✅ Done   | `tests/test_config_flow.py` covers full config flow paths                                                      |
-| [`dependency-transparency`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/dependency-transparency)               | ✅ Done   | `requirements` pinned in `manifest.json` (`defusedxml`, `paho-mqtt`, `cryptography`)                           |
-| [`docs-actions`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-actions)                                     | ✅ Done   | Documented in `README.md` and dedicated [`docs/services_and_automations.md`](docs/services_and_automations.md) |
-| [`docs-triggers`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-triggers)                                   | ✅ Exempt | Integration provides no custom triggers; standard entity triggers via HA                                       |
-| [`docs-conditions`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-conditions)                               | ✅ Exempt | Integration provides no custom conditions                                                                      |
-| [`docs-high-level-description`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-high-level-description)       | ✅ Done   | README.md and docs site provide high-level brand/product description                                           |
-| [`docs-installation-instructions`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-installation-instructions) | ✅ Done   | README.md has step-by-step HACS + manual install instructions                                                  |
-| [`docs-removal-instructions`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-removal-instructions)           | ✅ Done   | Documented in `README.md` and dedicated [`docs/removal.md`](docs/removal.md)                                   |
-| [`entity-event-setup`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-event-setup)                         | ✅ Done   | MQTT subscriptions registered in `async_added_to_hass`, unsubscribed in `async_will_remove_from_hass`          |
-| [`entity-unique-id`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-unique-id)                             | ✅ Done   | All entities have stable unique IDs derived from MAC + entry ID                                                |
-| [`has-entity-name`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/has-entity-name)                               | ✅ Done   | `_attr_has_entity_name = True` implemented across all platforms                                                |
-| [`runtime-data`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/runtime-data)                                     | ✅ Done   | Fully migrated to `HisenseVidaaConfigEntry` & `entry.runtime_data` dataclass                                   |
-| [`test-before-configure`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-before-configure)                   | ✅ Done   | Connection test + PIN validation in config flow before entry creation                                          |
-| [`test-before-setup`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-before-setup)                           | ✅ Done   | Connection verified in `async_setup_entry` before platforms loaded                                             |
-| [`unique-config-entry`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/unique-config-entry)                       | ✅ Done   | Unique ID set to MAC; duplicate detected via `_async_abort_entries_match`                                      |
+| Rule | Status | Notes |
+| :--- | :--- | :--- |
+| [`action-setup`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/action-setup) | ✅ Done | Services registered in `async_setup` via `services.py` |
+| [`appropriate-polling`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/appropriate-polling) | ✅ Exempt | `should_poll = False`; pure local push via MQTT |
+| [`brands`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/brands) | ✅ Done | Brand assets in `brand/` directory |
+| [`common-modules`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/common-modules) | ✅ Done | Standard entity platforms + shared `entity.py`, `const.py`, `coordinator` pattern |
+| [`config-flow`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/config-flow) | ✅ Done | Full UI config flow in `config_flow.py` |
+| [`config-flow-test-coverage`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/config-flow-test-coverage) | ✅ Done | `tests/test_config_flow.py` covers full config flow paths |
+| [`dependency-transparency`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/dependency-transparency) | ✅ Done | `requirements` pinned in `manifest.json` (`aiomqtt>=2.3.0`, `defusedxml>=0.7.1`) |
+| [`docs-actions`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-actions) | ✅ Done | Documented in `README.md` and dedicated [`docs/services_and_automations.md`](docs/services_and_automations.md) |
+| [`docs-triggers`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-triggers) | ✅ Exempt | Integration provides no custom triggers; standard entity triggers via HA |
+| [`docs-conditions`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-conditions) | ✅ Exempt | Integration provides no custom conditions |
+| [`docs-high-level-description`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-high-level-description) | ✅ Done | README.md and docs site provide high-level brand/product description |
+| [`docs-installation-instructions`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-installation-instructions) | ✅ Done | README.md has step-by-step HACS + manual install instructions |
+| [`docs-removal-instructions`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-removal-instructions) | ✅ Done | Documented in `README.md` and dedicated [`docs/removal.md`](docs/removal.md) |
+| [`entity-event-setup`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-event-setup) | ✅ Done | MQTT subscriptions registered in `async_added_to_hass`, unsubscribed in `async_will_remove_from_hass` |
+| [`entity-unique-id`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-unique-id) | ✅ Done | All entities have stable unique IDs derived from MAC + entry ID |
+| [`has-entity-name`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/has-entity-name) | ✅ Done | `_attr_has_entity_name = True` implemented across all platforms |
+| [`runtime-data`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/runtime-data) | ✅ Done | Fully migrated to `HisenseVidaaConfigEntry` & `entry.runtime_data` dataclass |
+| [`test-before-configure`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-before-configure) | ✅ Done | Connection test + PIN validation in config flow before entry creation |
+| [`test-before-setup`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-before-setup) | ✅ Done | Connection verified in `async_setup_entry` before platforms loaded |
+| [`unique-config-entry`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/unique-config-entry) | ✅ Done | Unique ID set to MAC; duplicate detected via `_async_abort_entries_match` |
 
 **Bronze status:** 100% complete (declared in `quality_scale.yaml` and `manifest.json`).
 
 ---
 
-### 🥈 Silver Tier — Status: ✅ Complete (manifest retained at Bronze)
-
-> **Quality Scale Declaration:** While all functional, architectural, exception-handling, and documentation requirements of Silver Tier have been fully implemented below, `manifest.json` intentionally remains pinned to `"quality_scale": "bronze"` (as official certification is reviewed in progressive stages).
+### 🥈 Silver Tier — Status: ✅ 100% complete (10/10 Rules)
 
 | Rule                                                                                                                                            | Status | Notes                                                                                                                                      |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -214,15 +217,13 @@ Tracking adherence to the official [HA Integration Quality Scale rules](https://
 | [`log-when-unavailable`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/log-when-unavailable)                   | ✅ Done | Exponential backoff reconnect logs; logs once on disconnect, once on restore.                                                             |
 | [`parallel-updates`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/parallel-updates)                           | ✅ Done | `PARALLEL_UPDATES = 0` declared in all platform modules.                                                                                  |
 | [`reauthentication-flow`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reauthentication-flow)                 | ✅ Done | Interactive re-pairing flow + Repairs issue integration.                                                                                  |
-| [`test-coverage`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-coverage)                                 | ✅ Done | Comprehensive test suite of 221 unit tests passing (77% overall code coverage across all modules).                                        |
+| [`test-coverage`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-coverage)                                 | ✅ Done | Comprehensive test suite of 224 unit tests passing (77% overall code coverage across all modules).                                        |
 
-**Silver Tier Summary:** All action-exceptions, configuration/installation documentation, and test verifications completed.
+**Silver Tier Summary:** 100% complete. All action-exceptions, configuration/installation documentation, and test verifications completed.
 
 ---
 
-### 🥇 Gold Tier — Status: ✅ 100% complete (Code & Docs implemented; manifest retained at Bronze)
-
-> **Quality Scale Declaration:** All functional, architectural, exception-handling, and documentation requirements of Gold Tier have been fully implemented and verified via unit tests and Hassfest. However, `manifest.json` intentionally remains pinned to `"quality_scale": "bronze"` because Home Assistant Core vets quality scale tiers in progressive stages upon formal upstream review. `quality_scale.yaml` formally records rule compliance through Gold Tier.
+### 🥇 Gold Tier — Status: ✅ 100% complete (21/21 Rules)
 
 | Rule                                                                                                                                      | Status   | Notes                                                                                                  |
 | ----------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------ |
@@ -242,17 +243,17 @@ Tracking adherence to the official [HA Integration Quality Scale rules](https://
 | [`entity-device-class`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-device-class)               | ✅ Done   | Device classes used where applicable (`sensor`, `binary_sensor`, `switch`, `media_player`)             |
 | [`entity-disabled-by-default`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-disabled-by-default) | ✅ Done   | Calibration number entities + secondary diagnostic switches disabled by default                        |
 | [`entity-translations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-translations)               | ✅ Done   | Full `_attr_translation_key` across all platforms; 100% parity `strings.json` ↔ `translations/en.json` |
-| [`exception-translations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/exception-translations)         | ✅ Done   | Translatable exception keys in `strings.json`                                                          |
+| [`exception-translations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/exception-translations)         | ✅ Done   | Translatable exception keys in `strings.json` and all `translations/*.json`                           |
 | [`icon-translations`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/icon-translations)                   | ✅ Done   | Full `icons.json` with MDI icons for all entity translation keys and services                          |
-| [`reconfiguration-flow`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reconfiguration-flow)             | ✅ Done   | `async_step_reconfigure` implemented                                                                   |
+| [`reconfiguration-flow`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reconfiguration-flow)             | ✅ Done   | `async_step_reconfigure` implemented directly on flow class (passing AST check)                        |
 | [`repair-issues`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/repair-issues)                           | ✅ Done   | Native HA Repairs issues raised for invalidated tokens and missing certs                               |
 | [`stale-devices`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/stale-devices)                           | ✅ Done   | Implemented `async_remove_config_entry_device` in `__init__.py`                                         |
 
-**Gold status:** 100% complete in code & docs (tracked in `quality_scale.yaml`; manifest retained at Bronze).
+**Gold status:** 100% complete in code & docs (tracked in `quality_scale.yaml`).
 
 ---
 
-### 🏆 Platinum Tier — Status: ✅ 100% complete
+### 🏆 Platinum Tier — Status: ✅ 100% complete (3/3 Rules)
 
 | Rule                                                                                                                    | Status     | Notes                                                                                                                                                                  |
 | ----------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -260,7 +261,7 @@ Tracking adherence to the official [HA Integration Quality Scale rules](https://
 | [`inject-websession`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/inject-websession) | ✅ Done     | Injected Home Assistant's shared `aiohttp.ClientSession` into `HisenseUpnpClient` via `async_get_clientsession(hass)`. |
 | [`strict-typing`](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/strict-typing)         | ✅ Done     | `py.typed` marker + inline type annotations throughout                                                                                                                 |
 
-**Platinum status:** 100% complete in code & docs (tracked in `quality_scale.yaml`).
+**Platinum status:** 100% complete in code & docs (tracked and validated in `quality_scale.yaml`; manifest retained at Bronze).
 
 ---
 

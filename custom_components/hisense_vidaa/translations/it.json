@@ -345,6 +345,36 @@
     },
     "not_connected": {
       "message": "Impossibile inviare il comando: la TV è attualmente disconnessa."
+    },
+    "send_key_failed": {
+      "message": "Impossibile inviare il tasto {key}: {error}"
+    },
+    "empty_key_sequence": {
+      "message": "La sequenza deve contenere almeno un tasto."
+    },
+    "send_key_sequence_failed": {
+      "message": "Impossibile inviare il tasto di sequenza {key}: {error}"
+    },
+    "invalid_channel_digits": {
+      "message": "Il canale {channel} non contiene cifre valide."
+    },
+    "change_channel_digit_failed": {
+      "message": "Impossibile inviare la cifra del canale {digit}: {error}"
+    },
+    "change_channel_confirm_failed": {
+      "message": "Impossibile inviare il tasto di conferma del canale: {error}"
+    },
+    "launch_app_failed": {
+      "message": "Impossibile avviare l'app {app_name}: {error}"
+    },
+    "set_picture_setting_failed": {
+      "message": "Impossibile impostare l'impostazione immagine (menu_id={menu_id}): {error}"
+    },
+    "set_sound_setting_failed": {
+      "message": "Impossibile impostare l'impostazione audio (menu_id={menu_id}): {error}"
+    },
+    "send_text_input_failed": {
+      "message": "Impossibile inviare l'input di testo: {error}"
     }
   },
   "selector": {

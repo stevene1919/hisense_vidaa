@@ -18,6 +18,7 @@ This directory contains in-depth documentation covering installation, networking
 | [**`lovelace_cards.md`**](lovelace_cards.md) | **Dashboard UI Cards** | Lovelace UI dashboard designs, custom TV remote controller cards, and media playback widgets. |
 | [**`cli_tools.md`**](cli_tools.md) | **CLI Diagnostics Tool** | Guide for using the standalone `test_client.py` and `debug_tv.py` CLI utilities to test reachability, TLS handshakes, UPnP, and pairing without running Home Assistant. |
 | [**`screenshots.md`**](screenshots.md) | **Visual Showcase** | Gallery of integration screenshots, entity platform views, and categorized options menus. |
+| [**`troubleshooting.md`**](troubleshooting.md) | **Troubleshooting & Error Reference** | Action error resolution table, standby wake issues, pairing/token recovery, and network connectivity diagnostics. |
 
 ---
 

@@ -345,6 +345,36 @@
     },
     "not_connected": {
       "message": "Befehl kann nicht gesendet werden: Der Fernseher ist derzeit nicht verbunden."
+    },
+    "send_key_failed": {
+      "message": "Taste {key} konnte nicht gesendet werden: {error}"
+    },
+    "empty_key_sequence": {
+      "message": "Die Sequenz muss mindestens eine Taste enthalten."
+    },
+    "send_key_sequence_failed": {
+      "message": "Sequenztaste {key} konnte nicht gesendet werden: {error}"
+    },
+    "invalid_channel_digits": {
+      "message": "Kanal {channel} enthält keine gültigen Ziffern."
+    },
+    "change_channel_digit_failed": {
+      "message": "Kanalziffer {digit} konnte nicht gesendet werden: {error}"
+    },
+    "change_channel_confirm_failed": {
+      "message": "Kanal-Bestätigungstaste konnte nicht gesendet werden: {error}"
+    },
+    "launch_app_failed": {
+      "message": "App {app_name} konnte nicht gestartet werden: {error}"
+    },
+    "set_picture_setting_failed": {
+      "message": "Bildeinstellung konnte nicht gesetzt werden (menu_id={menu_id}): {error}"
+    },
+    "set_sound_setting_failed": {
+      "message": "Toneinstellung konnte nicht gesetzt werden (menu_id={menu_id}): {error}"
+    },
+    "send_text_input_failed": {
+      "message": "Texteingabe konnte nicht gesendet werden: {error}"
     }
   },
   "selector": {

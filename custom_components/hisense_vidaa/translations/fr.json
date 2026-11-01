@@ -345,6 +345,36 @@
     },
     "not_connected": {
       "message": "Impossible d'envoyer la commande : le téléviseur est actuellement déconnecté."
+    },
+    "send_key_failed": {
+      "message": "Échec de l'envoi de la touche {key} : {error}"
+    },
+    "empty_key_sequence": {
+      "message": "La séquence doit contenir au moins une touche."
+    },
+    "send_key_sequence_failed": {
+      "message": "Échec de l'envoi de la touche de séquence {key} : {error}"
+    },
+    "invalid_channel_digits": {
+      "message": "Le canal {channel} ne contient aucun chiffre valide."
+    },
+    "change_channel_digit_failed": {
+      "message": "Échec de l'envoi du chiffre de canal {digit} : {error}"
+    },
+    "change_channel_confirm_failed": {
+      "message": "Échec de l'envoi de la touche de confirmation de canal : {error}"
+    },
+    "launch_app_failed": {
+      "message": "Échec du lancement de l'application {app_name} : {error}"
+    },
+    "set_picture_setting_failed": {
+      "message": "Échec du réglage de l'image (menu_id={menu_id}) : {error}"
+    },
+    "set_sound_setting_failed": {
+      "message": "Échec du réglage du son (menu_id={menu_id}) : {error}"
+    },
+    "send_text_input_failed": {
+      "message": "Échec de l'envoi de la saisie de texte : {error}"
     }
   },
   "selector": {

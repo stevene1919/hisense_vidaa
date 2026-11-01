@@ -305,13 +305,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: Any
+    hass: HomeAssistant, config_entry: HisenseVidaaConfigEntry, device_entry: Any
 ) -> bool:
     """Remove a config entry from a device (stale device cleanup)."""
     return True
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_remove_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry) -> None:
     """Clean up the persistent Repairs issues belonging to a removed entry."""
     # [F4-leg2/F5-leg6]: is_persistent issues survive entry removal and would
     # keep showing an unfixable card for a TV that is no longer configured.

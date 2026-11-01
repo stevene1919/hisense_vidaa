@@ -2,9 +2,9 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
-## [3.1.0] - 2026-10-31 — ⚡ Native `aiomqtt` Async Engine & Platinum Quality Scale Edition
+## [3.1.0] - 2026-10-31 — ⚡ Native `aiomqtt` Async Engine & Architecture Hardening Edition
 
-This release marks a major architectural milestone for the Hisense VIDAA TV integration, completing a full migration to native async MQTT (`aiomqtt>=2.3.0`), eliminating all threaded callbacks and executor offloading, and achieving **100% Platinum Tier compliance** on Home Assistant's Integration Quality Scale.
+This release marks a major architectural milestone for the Hisense VIDAA TV integration, completing a full migration to native async MQTT (`aiomqtt>=2.3.0`), eliminating all threaded callbacks and executor offloading, modernizing Lovelace remote card designs, standardizing documentation examples, and achieving complete architectural compliance with all 54 Home Assistant Integration Quality Scale rules in `quality_scale.yaml`.
 
 ### 🌟 What's New & Hardened in v3.1.0
 - **NATIVE `aiomqtt>=2.3.0` ASYNC TRANSPORT ENGINE (`async-dependency: done`)**:
@@ -14,14 +14,28 @@ This release marks a major architectural milestone for the Hisense VIDAA TV inte
 - **SHARED `aiohttp.ClientSession` WEBSESSION INJECTION (`inject-websession: done`)**:
   - Injected Home Assistant's shared `aiohttp.ClientSession` via `async_get_clientsession(hass)` into `HisenseTvClient` and `HisenseUpnpClient`.
   - Added non-blocking async UPnP HTTP `Date` header synchronization (`async_get_tv_timestamp`) and device fingerprinting (`async_get_device_fingerprint`), replacing legacy `urllib.request.urlopen`.
+- **LOVELACE REMOTE EXAMPLES & DARK MODE MODERNIZATION (`examples/`)**:
+  - Optimized `examples/lovelace-australian-remote-card.yaml` and `examples/lovelace-us-remote-card.yaml` for Home Assistant dark mode and browser rendering engines.
+  - Added `keep` config (`background: true`, `box_shadow: true`, `border_radius: true`) to `custom:stack-in-card` to eliminate seam artifacts between card segments.
+  - Protected buttons against Chrome/Blink auto-dark-mode contrast inversion with `forced-color-adjust: none` and `color-scheme: light`.
+  - Enhanced Australian remote with authentic Stan branding, white pill styling for streaming apps, glowing borders, and 3D tactile gradients on colored navigation buttons.
+  - Redesigned power button with circular recessed styling and illuminated red status icon.
+  - Updated high-resolution brand assets (`brand/icon@2x.png`, `brand/logo@2x.png`) and integration screenshots.
+- **STANDARDIZED ENTITY IDS ACROSS EXAMPLES & AUTOMATION DOCS (`examples/`, `docs/`)**:
+  - Standardized entity IDs to `living_room_hisense_vidaa_tv` across all 6 Lovelace card examples (`australian-remote`, `us-remote`, `classic-remote`, `button-card-remote`, `android-tv-card`, `tv-card`) and throughout `docs/services_and_automations.md`.
 - **MULTI-DEVICE SERVICE TARGET AMBIGUITY GUARD (`services_target.py`)**:
   - Safeguarded custom services (`send_key`, `launch_app`, `send_text_input`, `set_picture_setting`, `set_sound_setting`, `send_key_sequence`, `change_channel`) from unintended broadcast when multiple TVs are present.
   - Single configured TV: Automatically executes without requiring target selectors (zero breaking changes for single-TV homes).
   - Multiple configured TVs without target: Raises `ServiceValidationError` (`ambiguous_target`) prompting for specific target.
   - Multi-TV broadcast: Explicitly broadcast to all configured TVs using `entity_id: "all"`.
   - Full localization added across 7 languages (`en`, `de`, `es`, `fr`, `it`, `pt`, `pt-BR`) in `strings.json` and translation catalogs.
-- **HOME ASSISTANT INTEGRATION QUALITY SCALE (PLATINUM TIER)**:
-  - Formally achieved 100% rule compliance across Bronze, Silver, Gold, and Platinum tiers in `quality_scale.yaml` (`async-dependency`, `inject-websession`, `strict-typing`).
+- **TV USB POWER LIMITATIONS & STANDBY BROWNOUT DOCUMENTATION (`docs/power_and_standby_settings.md`)**:
+  - Documented volatile token memory wipes caused by external streaming sticks (Chromecast, Fire TV, Roku) powered by TV USB ports during standby transitions, providing power and standby mitigation instructions.
+- **PROTOCOL & EVENT LOOP RUNTIMEWARNING FIX (`protocol/ping.py`)**:
+  - Closed unspawned coroutines cleanly when the event loop is absent to eliminate Python `RuntimeWarning` messages in test harnesses and standalone scripts.
+- **INTEGRATION QUALITY SCALE ALIGNMENT (`quality_scale.yaml`)**:
+  - Formally achieved 100% rule compliance across all 54 Bronze, Silver, Gold, and Platinum rules in `quality_scale.yaml` (`async-dependency`, `inject-websession`, `strict-typing`, `reconfiguration-flow`, `runtime-data`).
+  - Conservatively retains `manifest.json` at `"quality_scale": "bronze"` in accordance with Home Assistant Core staged review policy.
 - **EXPANDED TEST SUITE (224 TESTS PASSING)**:
   - Expanded unit test coverage across async MQTT lifecycle, proactive token refresh in standby, multi-device ambiguity guards, Websession retention, and Hassfest container verification.
 

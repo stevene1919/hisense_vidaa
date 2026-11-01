@@ -103,7 +103,24 @@ To customize integration behavior for an existing TV, navigate to **Settings $\r
 
 ---
 
-## 🩺 3. Diagnostic, Telemetry & Debugging Entities
+## 🔄 3. Reconfiguration Flow (Gold IQS Standard)
+
+In addition to the options flow, the integration implements a native **Reconfiguration Flow** (`async_step_reconfigure`).
+
+If your TV's local IP address changes (for example, if DHCP assigns a new lease) or you need to switch authentication profiles / update client certificates without losing device history:
+
+1. Go to **Settings $\rightarrow$ Devices & Services**.
+2. Locate your **Hisense VIDAA TV** integration entry.
+3. Click the three-dots menu (`⋮`) and select **Reconfigure**.
+4. Update the **IP Address** and/or **Authentication Profile**.
+5. Home Assistant verifies the connection to the new IP and updates the existing configuration entry in place.
+
+> [!TIP]
+> Reconfiguring preserves all entity IDs, customized names, area assignments, dashboard cards, and historical statistics without requiring device deletion.
+
+---
+
+## 🩺 4. Diagnostic, Telemetry & Debugging Entities
 
 To facilitate real-time monitoring and troubleshooting directly from the Home Assistant UI, the integration provides several built-in diagnostic and maintenance entities under the **Diagnostic** category:
 

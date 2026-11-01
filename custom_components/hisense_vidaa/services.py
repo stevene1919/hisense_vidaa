@@ -77,7 +77,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 try:
                     await client.async_send_command(key)
                 except Exception as err:
-                    raise HomeAssistantError(f"Failed to send key command '{key}': {err}") from err
+                    raise HomeAssistantError(
+                        f"Failed to send key {key}: {err}",
+                        translation_domain=DOMAIN,
+                        translation_key="send_key_failed",
+                        translation_placeholders={"key": str(key), "error": str(err)},
+                    ) from err
 
         return {
             "key": key,
@@ -94,7 +99,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         sequence = parse_key_sequence(raw_sequence)
 
         if not sequence:
-            raise ServiceValidationError("No valid keys provided in sequence.")
+            raise ServiceValidationError(
+                "No valid keys provided in sequence.",
+                translation_domain=DOMAIN,
+                translation_key="empty_key_sequence",
+            )
 
         for client in target_clients:
             for i, key in enumerate(sequence):
@@ -104,7 +113,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     await client.async_send_command(key)
                 except Exception as err:
                     raise HomeAssistantError(
-                        f"Failed to execute key sequence at step '{key}': {err}"
+                        f"Failed to execute key sequence at step {key}: {err}",
+                        translation_domain=DOMAIN,
+                        translation_key="send_key_sequence_failed",
+                        translation_placeholders={"key": str(key), "error": str(err)},
                     ) from err
 
         return {
@@ -124,7 +136,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         digits = [ch for ch in raw_channel if ch.isdigit()]
         if not digits:
             raise ServiceValidationError(
-                f"Invalid channel '{raw_channel}': must contain at least one numeric digit."
+                f"Channel {raw_channel} contains no valid digits.",
+                translation_domain=DOMAIN,
+                translation_key="invalid_channel_digits",
+                translation_placeholders={"channel": raw_channel},
             )
 
         for client in target_clients:
@@ -136,7 +151,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     await client.async_send_command(key)
                 except Exception as err:
                     raise HomeAssistantError(
-                        f"Failed to send channel digit '{digit}': {err}"
+                        f"Failed to send channel digit {digit}: {err}",
+                        translation_domain=DOMAIN,
+                        translation_key="change_channel_digit_failed",
+                        translation_placeholders={"digit": str(digit), "error": str(err)},
                     ) from err
 
             if confirm:
@@ -146,7 +164,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     await client.async_send_command("KEY_OK")
                 except Exception as err:
                     raise HomeAssistantError(
-                        f"Failed to send channel confirm command: {err}"
+                        f"Failed to send channel confirm command: {err}",
+                        translation_domain=DOMAIN,
+                        translation_key="change_channel_confirm_failed",
+                        translation_placeholders={"error": str(err)},
                     ) from err
 
         return {
@@ -195,7 +216,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     app_url,
                 )
             except Exception as err:
-                raise HomeAssistantError(f"Failed to launch app '{app_name}': {err}") from err
+                raise HomeAssistantError(
+                    f"Failed to launch app {app_name}: {err}",
+                    translation_domain=DOMAIN,
+                    translation_key="launch_app_failed",
+                    translation_placeholders={"app_name": str(app_name), "error": str(err)},
+                ) from err
 
             launched.append({
                 "ip": getattr(client, "ip", "unknown"),
@@ -219,7 +245,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             try:
                 await client.async_set_picture_setting(menu_id, menu_val)
             except Exception as err:
-                raise HomeAssistantError(f"Failed to set picture setting (menu_id={menu_id}): {err}") from err
+                raise HomeAssistantError(
+                    f"Failed to set picture setting (menu_id={menu_id}): {err}",
+                    translation_domain=DOMAIN,
+                    translation_key="set_picture_setting_failed",
+                    translation_placeholders={"menu_id": str(menu_id), "error": str(err)},
+                ) from err
         return {
             "menu_id": menu_id,
             "menu_value": menu_val,
@@ -236,7 +267,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             try:
                 await client.async_set_sound_setting(menu_id, menu_val)
             except Exception as err:
-                raise HomeAssistantError(f"Failed to set sound setting (menu_id={menu_id}): {err}") from err
+                raise HomeAssistantError(
+                    f"Failed to set sound setting (menu_id={menu_id}): {err}",
+                    translation_domain=DOMAIN,
+                    translation_key="set_sound_setting_failed",
+                    translation_placeholders={"menu_id": str(menu_id), "error": str(err)},
+                ) from err
         return {
             "menu_id": menu_id,
             "menu_value": menu_val,
@@ -253,7 +289,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             try:
                 await client.async_send_text_input(text, action)
             except Exception as err:
-                raise HomeAssistantError(f"Failed to send text input: {err}") from err
+                raise HomeAssistantError(
+                    f"Failed to send text input: {err}",
+                    translation_domain=DOMAIN,
+                    translation_key="send_text_input_failed",
+                    translation_placeholders={"error": str(err)},
+                ) from err
         return {
             "text": text,
             "action": action,

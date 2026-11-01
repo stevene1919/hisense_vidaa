@@ -345,6 +345,36 @@
     },
     "not_connected": {
       "message": "Cannot send command: TV is currently disconnected."
+    },
+    "send_key_failed": {
+      "message": "Failed to send key {key}: {error}"
+    },
+    "empty_key_sequence": {
+      "message": "Sequence must contain at least one key."
+    },
+    "send_key_sequence_failed": {
+      "message": "Failed to send sequence key {key}: {error}"
+    },
+    "invalid_channel_digits": {
+      "message": "Channel {channel} contains no valid digits."
+    },
+    "change_channel_digit_failed": {
+      "message": "Failed to send channel digit {digit}: {error}"
+    },
+    "change_channel_confirm_failed": {
+      "message": "Failed to send channel confirm key: {error}"
+    },
+    "launch_app_failed": {
+      "message": "Failed to launch app {app_name}: {error}"
+    },
+    "set_picture_setting_failed": {
+      "message": "Failed to set picture setting (menu_id={menu_id}): {error}"
+    },
+    "set_sound_setting_failed": {
+      "message": "Failed to set sound setting (menu_id={menu_id}): {error}"
+    },
+    "send_text_input_failed": {
+      "message": "Failed to send text input: {error}"
     }
   },
   "selector": {

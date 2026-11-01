@@ -1,23 +1,28 @@
 # Home Assistant Integration Quality Scale Tracking
 # Official vetting by Home Assistant Core reviewers occurs in progressive stages.
 # manifest.json is pinned to "bronze", while this file documents implemented compliance
-# across Silver and Gold tier criteria in preparation for formal staged certification.
+# across Silver, Gold, and Platinum tier criteria in preparation for formal staged certification.
 rules:
   # Bronze
   action-setup: done
-  appropriate-polling: exempt
+  appropriate-polling:
+    status: exempt
+    comment: "The integration uses local push-based updates via MQTT; polling is not required."
   brands: done
   common-modules: done
-  config-entry-unloading: done
   config-flow: done
   config-flow-test-coverage: done
   dependency-transparency: done
   docs-actions: done
-  docs-conditions: exempt
+  docs-conditions:
+    status: exempt
+    comment: "The integration does not expose custom device conditions."
   docs-high-level-description: done
   docs-installation-instructions: done
   docs-removal-instructions: done
-  docs-triggers: exempt
+  docs-triggers:
+    status: exempt
+    comment: "The integration does not expose custom device triggers."
   entity-event-setup: done
   entity-unique-id: done
   has-entity-name: done
@@ -28,6 +33,7 @@ rules:
 
   # Silver
   action-exceptions: done
+  config-entry-unloading: done
   docs-configuration-parameters: done
   docs-installation-parameters: done
   entity-unavailable: done
@@ -49,7 +55,9 @@ rules:
   docs-supported-functions: done
   docs-troubleshooting: done
   docs-use-cases: done
-  dynamic-devices: exempt
+  dynamic-devices:
+    status: exempt
+    comment: "The integration configures a single TV device per config entry."
   entity-category: done
   entity-device-class: done
   entity-disabled-by-default: done

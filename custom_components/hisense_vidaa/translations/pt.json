@@ -345,6 +345,36 @@
     },
     "not_connected": {
       "message": "Não é possível enviar o comando: a TV está atualmente desligada."
+    },
+    "send_key_failed": {
+      "message": "Falha ao enviar a tecla {key}: {error}"
+    },
+    "empty_key_sequence": {
+      "message": "A sequência deve conter pelo menos uma tecla."
+    },
+    "send_key_sequence_failed": {
+      "message": "Falha ao enviar a tecla de sequência {key}: {error}"
+    },
+    "invalid_channel_digits": {
+      "message": "O canal {channel} não contém dígitos válidos."
+    },
+    "change_channel_digit_failed": {
+      "message": "Falha ao enviar o dígito de canal {digit}: {error}"
+    },
+    "change_channel_confirm_failed": {
+      "message": "Falha ao enviar a tecla de confirmação de canal: {error}"
+    },
+    "launch_app_failed": {
+      "message": "Falha ao iniciar a aplicação {app_name}: {error}"
+    },
+    "set_picture_setting_failed": {
+      "message": "Falha ao definir a configuração de imagem (menu_id={menu_id}): {error}"
+    },
+    "set_sound_setting_failed": {
+      "message": "Falha ao definir a configuração de som (menu_id={menu_id}): {error}"
+    },
+    "send_text_input_failed": {
+      "message": "Falha ao enviar a entrada de texto: {error}"
     }
   },
   "selector": {
