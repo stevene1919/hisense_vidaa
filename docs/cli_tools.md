@@ -11,7 +11,7 @@ Clone the repository and run the scripts directly:
 ```bash
 git clone https://github.com/stevene1919/hisense_vidaa.git
 cd hisense_vidaa
-pip install paho-mqtt defusedxml cryptography pytest
+pip install aiomqtt defusedxml cryptography pytest
 
 # Probe TV features & capabilities:
 python3 test_client.py probe --ip <TV_IP>
@@ -63,6 +63,10 @@ python3 test_client.py ping --ip <TV_IP>
 # Test specific authentication profile (modern / middle / remotenow / legacy):
 python3 test_client.py ping --ip <TV_IP> --profile modern
 python3 test_client.py ping --ip <TV_IP> --profile middle
+
+# Test specific OEM partner brand (his / tos / loe / tpv):
+python3 test_client.py ping --ip <TV_IP> --brand toshiba
+python3 test_client.py ping --ip <TV_IP> --brand loewe
 ```
 
 > [!NOTE]
@@ -83,7 +87,7 @@ Initiates the challenge handshake, displays the on-screen 4-digit PIN on the TV,
 ```bash
 python3 test_client.py auth --ip <TV_IP>
 python3 test_client.py auth --ip <TV_IP> --profile modern
-python3 test_client.py auth --ip <TV_IP> --profile middle
+python3 test_client.py auth --ip <TV_IP> --brand toshiba
 ```
 
 ### 6. Test Token Renewal (`refresh`)
@@ -92,33 +96,33 @@ Tests renewal of the 2-day access token using the 30-day refresh token:
 python3 test_client.py refresh
 ```
 
-### 6. Listen to Real-Time TV Events (`listen`)
+### 7. Listen to Real-Time TV Events (`listen`)
 Subscribes to live state changes, volume updates, source list, and app list:
 ```bash
 python3 test_client.py listen
 ```
 
-### 7. Send Remote Key Command (`send-key`)
+### 8. Send Remote Key Command (`send-key`)
 Dispatches a single key command:
 ```bash
 python3 test_client.py send-key KEY_VOLUMEUP
 python3 test_client.py send-key KEY_POWER
 ```
 
-### 8. Launch App by Name (`launch-app`)
+### 9. Launch App by Name (`launch-app`)
 Launches an installed Smart TV application by name:
 ```bash
 python3 test_client.py launch-app "YouTube"
 python3 test_client.py launch-app "Netflix"
 ```
 
-### 9. Wake-on-LAN Broadcast (`wake`)
+### 10. Wake-on-LAN Broadcast (`wake`)
 Broadcasts a subnet-directed magic packet:
 ```bash
 python3 test_client.py wake --mac E8:51:77:EC:98:1C
 ```
 
-### 10. Probe UPnP MediaRenderer Services (`upnp`)
+### 11. Probe UPnP MediaRenderer Services (`upnp`)
 Probes UPnP MediaRenderer SOAP services (`RenderingControl:1`, `AVTransport:1`, and `LanControlInfo:1`) on port `38400` / `18400`:
 ```bash
 python3 test_client.py upnp --ip <TV_IP>
@@ -155,8 +159,8 @@ python3 debug_tv.py --probe-upnp
 # Inspect UPnP Date header and calculate TV clock drift:
 python3 debug_tv.py --sync-clock
 
-# Override TV IP:
-python3 debug_tv.py --ip 192.168.50.12 --monitor
+# Override TV IP and test OEM partner brand:
+python3 debug_tv.py --ip 192.168.50.12 --brand toshiba --monitor
 
 # Verbose debug logging:
 python3 debug_tv.py --dump-state -v

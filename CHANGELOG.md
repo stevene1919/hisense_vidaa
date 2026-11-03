@@ -15,23 +15,30 @@ If this integration has added value to your smart home setup, consider buying me
 ### 🌟 What's New & Hardened in v3.2.0
 - **UNIVERSAL VIDAA OEM MULTI-BRAND SUPPORT**:
   - Full cryptographic and lifecycle support for all licensed partner TV brands running VIDAA OS: Hisense (`his`), Toshiba (`tos`), Loewe / We. by Loewe (`loe`), TPV Technology / Philips / AOC (`tpv`), Schneider (`sch`), Akai (`aka`), Beko (`bek`), Telefunken (`tel`), Bush (`bus`), and Vizio (`vic`).
-  - Added canonical brand normalization via `normalize_brand_code()` and brand mapping dictionary in `discovery.py`.
-  - Automatic OEM brand detection from UPnP/SSDP `<modelDescription>` key-value pairs (`brand=...`), resolving real manufacturer names even when UPnP reports generic `"SmartTV"` or `"Renderer"`.
-  - Upgraded manual IP configuration flow to probe UPnP descriptors on both ports `38400` and `18400` before connection, auto-populating brand credentials.
-  - Seamless persistence of `CONF_BRAND` across discovery, config flow, reauth flow, entry data, and diagnostics.
-  - Dynamically updates device registry fallback to the detected brand (`Toshiba TV`, `Loewe TV`, `TPV TV`, etc.).
+  - **Candidate OEM Brand Handshake Cascade (`protocol/pairing.py`)**: When pairing over manual IP or isolated IoT VLANs without UPnP discovery, if the broker rejects the initial connection with `rc: 5` (Not Authorized), the pairing engine automatically cascades through candidate brands (`tos`, `loe`, `tpv`), auto-adopting the accepted brand and updating the Home Assistant device registry.
+  - **Automatic OEM Brand Detection from Certificate Filenames (`protocol/certs.py`)**: Added `detect_brand_from_cert_paths()`. Placing brand-named certificates in `/config/ssl/` (e.g. `toshiba.crt`/`toshiba.key`, `loewe.crt`/`loewe.key`, `philips.crt`/`philips.key`, `tpv.crt`/`tpv.key`, or `.p12` archives) automatically hints the TV manufacturer and pre-configures the dynamic OEM salt.
+  - **Device Options Flow Brand Selector (`options_flow.py`)**: Added `CONF_BRAND` dropdown to Security Options, allowing users to inspect or change their TV OEM brand at any time.
+  - **Canonical Brand Normalization (`discovery.py`)**: Added `normalize_brand_code()` and brand mapping dictionary in `discovery.py`.
+  - **UPnP / SSDP `<modelDescription>` Brand Extraction**: Resolves authentic manufacturer names from UPnP/SSDP `<modelDescription>` key-value pairs (`brand=...`), even when UPnP reports generic `"SmartTV"` or `"Renderer"`.
+  - **Manual IP Descriptor Probing**: Upgraded manual IP configuration flow to probe UPnP descriptors on both ports `38400` and `18400` before connection, auto-populating brand credentials.
+  - **Seamless Configuration Persistence**: Full backwards-compatible persistence of `CONF_BRAND` across discovery, config flow, options flow, reauth flow, entry data, and diagnostics.
+  - **CLI Diagnostics Multi-Brand Support**: Added `--brand` parameter to [`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py).
 - **SSL CLIENT CERTIFICATE INTEGRITY VALIDATION (`protocol/certs.py`)**:
   - Implemented strict PEM certificate and private key validation via `validate_ssl_certs()`.
   - Validates BEGIN/END headers, Base64 decoding, ASN.1 structure, modulus matching between certificate and private key, and PKCS#8 decryption without hard external cryptography dependencies.
   - Provides clear, actionable error feedback when invalid or mismatched certificates are uploaded during manual certificate setup.
+  - Clarified universal app architecture in documentation: the official **VIDAA Smart TV** app (`com.universal.remote.multi`) is universal across all brands and its client certificate (`CN=VidaaAppAndroidV01`) authenticates with any VIDAA OS TV.
 - **ASYNC UPnP `<modelDescription>` CAPABILITY EXTRACTION (`protocol/upnp.py`)**:
   - Enhanced `HisenseUpnpClient.async_get_device_fingerprint()` to parse `<modelDescription>` as key-value pairs, extracting `brand`, `platform`, `vidaa_support`, `voice`, `transport_protocol`, `mac_wifi`, and `mac_ethernet` asynchronously.
 - **ZEROCONF / HOMEKIT mDNS METADATA ENRICHMENT (`discovery.py`)**:
   - Enriched `parse_zeroconf_discovery()` to extract actual model names (`md`/`model`) and manufacturer branding from mDNS TXT properties advertised by Apple HomeKit / AirPlay (`_hap._tcp.local.`, `_airplay._tcp.local.`).
   - Completely decoupled from control: graceful fallback to defaults if HomeKit/AirPlay is disabled or properties are absent.
-- **EXPANDED TEST SUITE (236 PASSING TESTS)**:
-  - 12 new comprehensive test cases added across multi-brand discovery, SSDP OEM parsing, SSL cert validation, async UPnP descriptor parsing, and HomeKit mDNS fallback.
-  - 100% passing test suite with 0 linter errors and 0 Hassfest errors.
+- **TEST SUITE MODULARIZATION & EXPANSION (240 PASSING TESTS)**:
+  - Decoupled oversized test suites into modular, single-responsibility modules:
+    - Split `test_client_auth.py` into `test_client_tokens.py` (token lifecycle/drift/standby), `test_client_reconnect.py` (reconnect locks/backoff/rejection thresholds), and `test_client_auth.py` (core auth profiles/probing).
+    - Split `test_pairing.py` into `test_pairing_guards.py` (abort flow/duplicate guards), `test_pairing_cascade.py` (brand fallback cascade/profile fallback), and `test_pairing.py` (PIN challenge probing/flows).
+    - Split `test_services.py` into `test_services_targeting.py` (device/area/floor/label resolution & guards) and `test_services.py` (service executions).
+  - 100% passing test suite across all 240 unit tests with 0 linter errors and 0 Hassfest errors.
 
 ## [3.1.0] - 2026-11-01 — ⚡ Native `aiomqtt` Async Engine & Architecture Hardening Edition
 
