@@ -140,6 +140,7 @@ class HisenseUpnpClient:
             "presentation_url": None,
             "upnp_port": None,
             "brand": None,
+            "model": None,
             "platform": None,
             "vidaa_support": None,
             "voice": None,
@@ -187,6 +188,8 @@ class HisenseUpnpClient:
                                         v_strip = v.strip()
                                         if k_strip == "brand":
                                             info["brand"] = v_strip
+                                        elif k_strip == "model":
+                                            info["model"] = v_strip
                                         elif k_strip == "platform":
                                             info["platform"] = v_strip
                                         elif k_strip == "vidaa_support":

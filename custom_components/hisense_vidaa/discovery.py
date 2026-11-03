@@ -178,7 +178,22 @@ def parse_ssdp_discovery(
         if raw_mac:
             mac_address = raw_mac.lower()
 
-    model = upnp.get("modelName") or upnp.get("modelNumber") or "VIDAA TV"
+    detected_model = None
+    for line in model_desc.splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            k_s, v_s = k.strip().lower(), v.strip()
+            if k_s == "model" and v_s:
+                detected_model = v_s
+                break
+
+    raw_model_name = (upnp.get("modelName") or "").strip()
+    model = (
+        (raw_model_name if raw_model_name and raw_model_name != "Renderer" else None)
+        or (upnp.get("modelNumber") or "").strip()
+        or detected_model
+        or "VIDAA TV"
+    )
     udn = getattr(discovery_info, "ssdp_udn", None)
     unique_id = mac_address or udn
 

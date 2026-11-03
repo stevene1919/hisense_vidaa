@@ -125,8 +125,14 @@ async def async_discover_device_details(
             and discovered_name.strip() != "Renderer"
         ):
             details["title"] = discovered_name.strip()
-        if fp.get("model_code") or fp.get("model_name"):
-            details["model"] = fp.get("model_code") or fp.get("model_name")
+        candidate_model = (
+            fp.get("model_code")
+            or (fp.get("model_name") if fp.get("model_name") and fp.get("model_name").strip() != "Renderer" else None)
+            or fp.get("model_number")
+            or fp.get("model")
+        )
+        if candidate_model:
+            details["model"] = candidate_model.strip()
         if fp.get("manufacturer") or fp.get("brand"):
             raw_mfg = fp.get("manufacturer") or fp.get("brand")
             mfg_clean = (raw_mfg or "").strip()

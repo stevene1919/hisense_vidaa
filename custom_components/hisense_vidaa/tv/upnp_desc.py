@@ -56,6 +56,7 @@ def parse_upnp_renderer_descriptor(xml_content: str) -> dict[str, Any]:
         "friendly_name": None,
         "model_name": None,
         "model_number": None,
+        "model": None,
         "manufacturer": None,
         "brand": None,
         "platform": None,
@@ -99,6 +100,8 @@ def parse_upnp_renderer_descriptor(xml_content: str) -> dict[str, Any]:
                     parsed["mac_ethernet"] = props["macEthernet"]
                 if "brand" in props:
                     parsed["brand"] = props["brand"]
+                if "model" in props:
+                    parsed["model"] = props["model"]
                 if "platform" in props:
                     parsed["platform"] = props["platform"]
                 if "vidaa_support" in props:
