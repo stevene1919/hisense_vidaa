@@ -335,3 +335,46 @@ async def test_upnp_owned_session_closed():
     mock_internal_session.close.assert_called_once()
 
 
+@pytest.mark.anyio
+async def test_upnp_get_device_fingerprint_with_model_description(mock_session):
+    """Verify that async_get_device_fingerprint parses key=value pairs from modelDescription."""
+    desc_xml = """<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+    <device>
+        <friendlyName>Toshiba TV</friendlyName>
+        <modelName>Renderer</modelName>
+        <modelNumber>55C350</modelNumber>
+        <manufacturer>SmartTV</manufacturer>
+        <modelDescription>vidaa_support=1
+brand=tos
+platform=MTK9602
+transport_protocol=3290
+macWifi=e85177ec981c
+macEthernet=001122334455</modelDescription>
+    </device>
+</root>
+"""
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.read = AsyncMock(return_value=desc_xml.encode("utf-8"))
+
+    cm = AsyncMock()
+    cm.__aenter__.return_value = mock_resp
+    mock_session.get.return_value = cm
+
+    client = HisenseUpnpClient("192.168.1.100", session=mock_session)
+    info = await client.async_get_device_fingerprint()
+
+    assert info["friendly_name"] == "Toshiba TV"
+    assert info["model_name"] == "Renderer"
+    assert info["model_number"] == "55C350"
+    assert info["manufacturer"] == "SmartTV"
+    assert info["brand"] == "tos"
+    assert info["vidaa_support"] == "1"
+    assert info["platform"] == "MTK9602"
+    assert info["transport_protocol"] == "3290"
+    assert info["mac_wifi"] == "e85177ec981c"
+    assert info["mac_ethernet"] == "001122334455"
+
+
+

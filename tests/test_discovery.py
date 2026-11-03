@@ -140,6 +140,10 @@ def test_normalize_brand_code():
     assert normalize_brand_code("Bush") == "bus"
     assert normalize_brand_code("vic") == "vic"
     assert normalize_brand_code("Vizio") == "vic"
+    assert normalize_brand_code("tpv") == "tpv"
+    assert normalize_brand_code("TPV") == "tpv"
+    assert normalize_brand_code("Philips") == "tpv"
+    assert normalize_brand_code("aoc") == "tpv"
     assert normalize_brand_code(None) == "his"
     assert normalize_brand_code("") == "his"
     assert normalize_brand_code("unrecognized_brand") == "his"
@@ -180,3 +184,49 @@ def test_parse_ssdp_discovery_oem_brands():
     assert info_beko.brand == "bek"
     assert info_beko.manufacturer == "Beko"
     assert info_beko.title == "Beko TV (192.168.50.40)"
+
+
+def test_parse_zeroconf_discovery_with_homekit_properties():
+    """Test parse_zeroconf_discovery enriches metadata from HomeKit/AirPlay mDNS properties."""
+    from custom_components.hisense_vidaa.discovery import parse_zeroconf_discovery
+
+    zc_info = MagicMock()
+    zc_info.host = "192.168.50.55"
+    zc_info.name = "Bedroom Toshiba TV._hap._tcp.local."
+    zc_info.properties = {
+        b"md": b"55C350",
+        b"company": b"Toshiba",
+    }
+
+    with patch("custom_components.hisense_vidaa.discovery.get_arp_mac", return_value="11:22:33:44:55:66"):
+        info = parse_zeroconf_discovery(zc_info)
+
+    assert info is not None
+    assert info.host == "192.168.50.55"
+    assert info.title == "Bedroom Toshiba TV"
+    assert info.model == "55C350"
+    assert info.manufacturer == "Toshiba"
+    assert info.brand == "tos"
+    assert info.mac_address == "11:22:33:44:55:66"
+
+
+def test_parse_zeroconf_discovery_fallback_when_properties_absent():
+    """Test parse_zeroconf_discovery gracefully falls back when HomeKit is disabled or properties are empty."""
+    from custom_components.hisense_vidaa.discovery import parse_zeroconf_discovery
+
+    zc_info = MagicMock()
+    zc_info.host = "192.168.50.60"
+    zc_info.name = "Smart TV._airplay._tcp.local."
+    zc_info.properties = {}
+
+    with patch("custom_components.hisense_vidaa.discovery.get_arp_mac", return_value="aa:bb:cc:dd:ee:ff"):
+        info = parse_zeroconf_discovery(zc_info)
+
+    assert info is not None
+    assert info.host == "192.168.50.60"
+    assert info.title == "Hisense TV (192.168.50.60)"
+    assert info.model == "VIDAA TV"
+    assert info.manufacturer == "Hisense"
+    assert info.brand == "his"
+    assert info.mac_address == "aa:bb:cc:dd:ee:ff"
+

@@ -43,6 +43,9 @@ BRAND_MAP: dict[str, str] = {
     "toshiba": "Toshiba",
     "loe": "Loewe",
     "loewe": "Loewe",
+    "tpv": "TPV",
+    "philips": "Philips",
+    "aoc": "AOC",
     "sch": "Schneider",
     "schneider": "Schneider",
     "aka": "Akai",
@@ -64,6 +67,9 @@ BRAND_CODE_MAP: dict[str, str] = {
     "toshiba": "tos",
     "loe": "loe",
     "loewe": "loe",
+    "tpv": "tpv",
+    "philips": "tpv",
+    "aoc": "tpv",
     "sch": "sch",
     "schneider": "sch",
     "aka": "aka",
@@ -222,14 +228,47 @@ def parse_zeroconf_discovery(
     if not host:
         return None
 
+    properties = getattr(discovery_info, "properties", {}) or {}
+
+    def _get_prop(*keys: str) -> str | None:
+        if not isinstance(properties, Mapping):
+            return None
+        for key in keys:
+            for k, v in properties.items():
+                k_str = k.decode("utf-8", errors="ignore") if isinstance(k, bytes) else str(k)
+                if k_str.lower() == key.lower():
+                    if isinstance(v, bytes):
+                        return v.decode("utf-8", errors="ignore").strip()
+                    return str(v).strip()
+        return None
+
+    raw_model = _get_prop("md", "model")
+    raw_mfg = _get_prop("manufacturer", "company", "brand")
+
+    brand_code = normalize_brand_code(raw_mfg)
+    mfg_clean = (raw_mfg or "").strip()
+    if mfg_clean.lower() in GENERIC_MANUFACTURERS or not mfg_clean:
+        manufacturer = BRAND_MAP.get(brand_code, "Hisense")
+    else:
+        manufacturer = BRAND_MAP.get(mfg_clean.lower(), mfg_clean)
+
+    svc_name = getattr(discovery_info, "name", None) or ""
+    clean_name = svc_name.split("._")[0].strip() if "._" in svc_name else svc_name.strip()
+    if clean_name and clean_name.lower() not in GENERIC_MANUFACTURERS and clean_name.lower() != "smart tv":
+        title = clean_name
+    else:
+        title = f"{manufacturer} TV ({host})"
+
+    model = raw_model or "VIDAA TV"
     mac_address = get_arp_mac(host)
+
     return DiscoveredTvInfo(
         host=host,
-        title=f"Hisense TV ({host})",
-        model="VIDAA TV",
-        manufacturer="Hisense",
+        title=title,
+        model=model,
+        manufacturer=manufacturer,
         mac_address=mac_address,
         unique_id=mac_address,
         is_vidaa=True,
-        brand="his",
+        brand=brand_code,
     )

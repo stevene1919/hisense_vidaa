@@ -139,6 +139,14 @@ class HisenseUpnpClient:
             "serial_number": None,
             "presentation_url": None,
             "upnp_port": None,
+            "brand": None,
+            "platform": None,
+            "vidaa_support": None,
+            "voice": None,
+            "transport_protocol": None,
+            "mac_wifi": None,
+            "mac_ethernet": None,
+            "model_description": None,
         }
         session = await self._get_session()
         ports_to_try = [self.port] if self._active_port == self.port else list(CANDIDATE_UPNP_PORTS)
@@ -167,6 +175,31 @@ class HisenseUpnpClient:
                                 el = device.find(f"d:{tag}", ns)
                                 if el is not None and el.text:
                                     info[key] = el.text.strip()
+
+                            desc_el = device.find("d:modelDescription", ns)
+                            if desc_el is not None and desc_el.text:
+                                raw_desc = desc_el.text.strip()
+                                info["model_description"] = raw_desc
+                                for line in raw_desc.splitlines():
+                                    if "=" in line:
+                                        k, _, v = line.partition("=")
+                                        k_strip = k.strip()
+                                        v_strip = v.strip()
+                                        if k_strip == "brand":
+                                            info["brand"] = v_strip
+                                        elif k_strip == "platform":
+                                            info["platform"] = v_strip
+                                        elif k_strip == "vidaa_support":
+                                            info["vidaa_support"] = v_strip
+                                        elif k_strip == "voice":
+                                            info["voice"] = v_strip
+                                        elif k_strip == "transport_protocol":
+                                            info["transport_protocol"] = v_strip
+                                        elif k_strip == "macWifi":
+                                            info["mac_wifi"] = v_strip
+                                        elif k_strip == "macEthernet":
+                                            info["mac_ethernet"] = v_strip
+
                             info["upnp_port"] = port
                             self._active_port = port
                             return info
