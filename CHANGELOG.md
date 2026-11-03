@@ -2,6 +2,37 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [3.2.0] - 2026-11-03 — 🌐 Universal VIDAA OEM Multi-Brand & SSL Certificate Validation Edition
+
+This release expands the integration beyond Hisense-badged hardware to provide comprehensive, end-to-end support for all partner TV brands operating on the VIDAA Smart TV platform (including Toshiba, Loewe, TPV Technology / Philips, Schneider, Akai, Beko, and others). It also introduces robust client SSL certificate semantic and syntactic validation, enriched async UPnP descriptor parsing, and graceful Zeroconf / HomeKit metadata extraction.
+
+### ☕ Support the Project
+
+If this integration has added value to your smart home setup, consider buying me a coffee to support continued development and maintenance:
+
+[![Support on Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/stevene_)
+
+### 🌟 What's New & Hardened in v3.2.0
+- **UNIVERSAL VIDAA OEM MULTI-BRAND SUPPORT**:
+  - Full cryptographic and lifecycle support for all licensed partner TV brands running VIDAA OS: Hisense (`his`), Toshiba (`tos`), Loewe / We. by Loewe (`loe`), TPV Technology / Philips / AOC (`tpv`), Schneider (`sch`), Akai (`aka`), Beko (`bek`), Telefunken (`tel`), Bush (`bus`), and Vizio (`vic`).
+  - Added canonical brand normalization via `normalize_brand_code()` and brand mapping dictionary in `discovery.py`.
+  - Automatic OEM brand detection from UPnP/SSDP `<modelDescription>` key-value pairs (`brand=...`), resolving real manufacturer names even when UPnP reports generic `"SmartTV"` or `"Renderer"`.
+  - Upgraded manual IP configuration flow to probe UPnP descriptors on both ports `38400` and `18400` before connection, auto-populating brand credentials.
+  - Seamless persistence of `CONF_BRAND` across discovery, config flow, reauth flow, entry data, and diagnostics.
+  - Dynamically updates device registry fallback to the detected brand (`Toshiba TV`, `Loewe TV`, `TPV TV`, etc.).
+- **SSL CLIENT CERTIFICATE INTEGRITY VALIDATION (`protocol/certs.py`)**:
+  - Implemented strict PEM certificate and private key validation via `validate_ssl_certs()`.
+  - Validates BEGIN/END headers, Base64 decoding, ASN.1 structure, modulus matching between certificate and private key, and PKCS#8 decryption without hard external cryptography dependencies.
+  - Provides clear, actionable error feedback when invalid or mismatched certificates are uploaded during manual certificate setup.
+- **ASYNC UPnP `<modelDescription>` CAPABILITY EXTRACTION (`protocol/upnp.py`)**:
+  - Enhanced `HisenseUpnpClient.async_get_device_fingerprint()` to parse `<modelDescription>` as key-value pairs, extracting `brand`, `platform`, `vidaa_support`, `voice`, `transport_protocol`, `mac_wifi`, and `mac_ethernet` asynchronously.
+- **ZEROCONF / HOMEKIT mDNS METADATA ENRICHMENT (`discovery.py`)**:
+  - Enriched `parse_zeroconf_discovery()` to extract actual model names (`md`/`model`) and manufacturer branding from mDNS TXT properties advertised by Apple HomeKit / AirPlay (`_hap._tcp.local.`, `_airplay._tcp.local.`).
+  - Completely decoupled from control: graceful fallback to defaults if HomeKit/AirPlay is disabled or properties are absent.
+- **EXPANDED TEST SUITE (236 PASSING TESTS)**:
+  - 12 new comprehensive test cases added across multi-brand discovery, SSDP OEM parsing, SSL cert validation, async UPnP descriptor parsing, and HomeKit mDNS fallback.
+  - 100% passing test suite with 0 linter errors and 0 Hassfest errors.
+
 ## [3.1.0] - 2026-11-01 — ⚡ Native `aiomqtt` Async Engine & Architecture Hardening Edition
 
 This release marks a major architectural milestone for the Hisense VIDAA TV integration, completing a full migration to native async MQTT (`aiomqtt>=2.3.0`), eliminating all threaded callbacks and executor offloading, modernizing Lovelace remote card designs, standardizing documentation examples, and achieving complete architectural compliance with all 54 Home Assistant Integration Quality Scale rules in `quality_scale.yaml`.
