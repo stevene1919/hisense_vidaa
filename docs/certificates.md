@@ -41,12 +41,21 @@ The integration natively supports both **auto-extracted PKCS#12 archives** (`.p1
 If you have extracted the PKCS#12 bundle from the official VIDAA Android / iOS app (`client_mobile_android.p12`, `El.p12`, or `rcamobile.p12`), you do **not** need to manually split it with OpenSSL.
 
 ### Extracting `El.p12` from the VIDAA Smart TV App:
-In the official **VIDAA Smart TV** Android APK (`com.universal.remote.multi`), the client keystore is bundled inside the APK zip at `res/El.p12`:
+In the official **VIDAA Smart TV** Android APK (`com.universal.remote.multi`), the client keystore is bundled inside the APK zip (commonly at `res/El.p12`, `res/3R.p12`, or `res/raw/client_mobile_android.p12`).
+
+> [!NOTE]
+> **One Universal App for All Brands:**
+> There are no separate remote apps for Toshiba, Loewe, or other VIDAA OS brands. The official **VIDAA Smart TV** app (`com.universal.remote.multi`) is the universal remote app for the entire VIDAA platform. The client certificate bundled inside (`CN=VidaaAppAndroidV01`) is accepted by all VIDAA OS televisions regardless of badging, because all hardware brokers share the same root certificate authority (`RemoteCA`).
+
 1. Extract the file directly from the APK archive:
    ```bash
    unzip -j app.apk res/El.p12
+   # Or in some APK builds:
+   # unzip -j app.apk res/3R.p12
+   # unzip -j app.apk res/raw/client_mobile_android.p12
    ```
 2. Place `El.p12` in `/config/ssl/` (or `/ssl/` / `/config/certs/`).
+   *(Optional: You may rename it to your TV brand, e.g. `toshiba.p12` or `loewe.p12`, for automatic brand detection).*
 3. The integration automatically discovers `El.p12`, decrypts it using the embedded keystore password, and writes `El_cert.pem` and `El_key.pem`.
 
 > [!NOTE]
