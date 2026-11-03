@@ -44,7 +44,7 @@ Before deploying the integration, note the following hardware and firmware limit
 
 ## 🚀 1. Installation & Setup Parameters (Config Flow)
 
-When adding a new Hisense VIDAA TV (**Settings $\rightarrow$ Devices & Services $\rightarrow$ Add Integration $\rightarrow$ Hisense VIDAA TV**), the following parameters are available:
+When adding a new Hisense VIDAA TV (**Settings → Devices & Services → Add Integration → Hisense VIDAA TV**), the following parameters are available:
 
 | Parameter | Type | Required | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
@@ -61,7 +61,7 @@ When adding a new Hisense VIDAA TV (**Settings $\rightarrow$ Devices & Services 
 
 ## 🎛️ 2. Options Flow Parameters
 
-To customize integration behavior for an existing TV, navigate to **Settings $\rightarrow$ Devices & Services $\rightarrow$ Hisense VIDAA TV $\rightarrow$ Configure**. Options are organized into 4 categorized tabs:
+To customize integration behavior for an existing TV, navigate to **Settings → Devices & Services → Hisense VIDAA TV → Configure**. Options are organized into 4 categorized tabs:
 
 ### 2.1 Power & Network (`power_network`)
 
@@ -109,7 +109,7 @@ In addition to the options flow, the integration implements a native **Reconfigu
 
 If your TV's local IP address changes (for example, if DHCP assigns a new lease) or you need to switch authentication profiles / update client certificates without losing device history:
 
-1. Go to **Settings $\rightarrow$ Devices & Services**.
+1. Go to **Settings → Devices & Services**.
 2. Locate your **Hisense VIDAA TV** integration entry.
 3. Click the three-dots menu (`⋮`) and select **Reconfigure**.
 4. Update the **IP Address** and/or **Authentication Profile**.

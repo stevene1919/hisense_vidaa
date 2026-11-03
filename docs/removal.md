@@ -6,7 +6,7 @@ This guide details the procedure for cleanly removing and uninstalling the **His
 
 ## 1. Delete Config Entry
 
-1. In the Home Assistant web interface, navigate to **Settings $\rightarrow$ Devices & Services $\rightarrow$ Integrations**.
+1. In the Home Assistant web interface, navigate to **Settings → Devices & Services → Integrations**.
 2. Locate the **Hisense VIDAA TV** integration card.
 3. If you have multiple configured TVs, select the TV you wish to remove.
 4. Click the three vertical dots (`⋮`) menu in the card header and click **Delete**.
@@ -29,7 +29,7 @@ If you placed client certificates or key files in `/config/ssl/hisense_vidaa/` (
 ## 3. Uninstall Component
 
 ### Via HACS (Recommended)
-1. Navigate to **HACS $\rightarrow$ Integrations**.
+1. Navigate to **HACS → Integrations**.
 2. Find **Hisense VIDAA TV** in the list of installed integrations.
 3. Click the three vertical dots (`⋮`) on the integration row and select **Remove**.
 4. Confirm the removal.
@@ -46,4 +46,4 @@ If you placed client certificates or key files in `/config/ssl/hisense_vidaa/` (
 ## 4. Restart Home Assistant
 
 Restart Home Assistant to flush cached Python modules:
-- Navigate to **Settings $\rightarrow$ System $\rightarrow$ Restart** (top right) $\rightarrow$ **Restart Home Assistant**.
+- Navigate to **Settings → System → Restart** (top right) → **Restart Home Assistant**.

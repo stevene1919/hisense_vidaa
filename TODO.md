@@ -13,7 +13,7 @@ This document tracks active pending tasks, investigations, and planned enhanceme
   - Explicitly recognize MQTT v5 Connack reason codes `134` (Bad user name or password) and `135` (Not authorized) to immediately trigger repair issue / reauth rather than spinning in exponential reconnect loops.
   - Eliminated erroneous boot-up pairing prompts by removing premature `gettvstate` queries during early setup and debouncing startup status queries.
 - [ ] **Community Verification with 4-Tier Auth Cascade**:
-  - Test pairing on TV firmware builds with `transport_protocol` in the Middle tier (3000–3285) and Modern tier ($\ge 3290$) using the automated fallback cascade.
+  - Test pairing on TV firmware builds with `transport_protocol` in the Middle tier (3000–3285) and Modern tier (≥ 3290) using the automated fallback cascade.
   - Verify whether TVs with full internal paired device storage benefit from clearing paired mobile devices in TV Settings (*Settings → System → Advanced Settings → Mobile App Connection / Paired Devices*).
 
 ### 2. Playback State Debounce & Settle Window

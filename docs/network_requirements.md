@@ -84,17 +84,17 @@ To prevent connected HDMI devices (such as **Chromecast with Google TV**, **Appl
 
 ## 🔒 5. IoT VLAN Firewall & Port Matrix
 
-If your Hisense TV is placed on an isolated **IoT VLAN** separate from your Home Assistant server (e.g. `HA_VLAN` $\leftrightarrow$ `IOT_VLAN`), configure the following firewall rules on your router/gateway:
+If your Hisense TV is placed on an isolated **IoT VLAN** separate from your Home Assistant server (e.g. `HA_VLAN` ↔ `IOT_VLAN`), configure the following firewall rules on your router/gateway:
 
 ### 📋 Port & Protocol Matrix
 
 | Port | Protocol | Traffic Type | Direction | Purpose | Required? |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`36669`** | TCP | Unicast (TLS) | HA $\rightarrow$ TV | **Core TV MQTT Control Channel** (Pairing, commands, state updates, source switching, volume) | **Mandatory** |
-| **`56669`** | TCP | Unicast (Plain) | HA $\rightarrow$ TV | **Legacy Plaintext MQTT Channel** (Pre-2018 / legacy models operating without SSL) | *Optional (Legacy only)* |
-| **`38400`** | TCP | Unicast (HTTP) | HA $\rightarrow$ TV | **UPnP / DLNA LAN Control (`RenderingControl:1`, `AVTransport:1`, `LanControlInfo`, Clock Sync)** (Modern VIDAA) | **Recommended** |
-| **`18400`** | TCP | Unicast (HTTP) | HA $\rightarrow$ TV | **UPnP / DLNA LAN Control (`RenderingControl:1`, `AVTransport:1`, `LanControlInfo`, Clock Sync)** (Alternate VIDAA port) | **Recommended** |
-| **`9` / `7`** | UDP | Directed Broadcast / Unicast | HA $\rightarrow$ TV | **Wake-on-LAN (WoL)** (Power-on magic packet to wake TV from deep standby) | **Recommended** |
+| **`36669`** | TCP | Unicast (TLS) | HA → TV | **Core TV MQTT Control Channel** (Pairing, commands, state updates, source switching, volume) | **Mandatory** |
+| **`56669`** | TCP | Unicast (Plain) | HA → TV | **Legacy Plaintext MQTT Channel** (Pre-2018 / legacy models operating without SSL) | *Optional (Legacy only)* |
+| **`38400`** | TCP | Unicast (HTTP) | HA → TV | **UPnP / DLNA LAN Control (`RenderingControl:1`, `AVTransport:1`, `LanControlInfo`, Clock Sync)** (Modern VIDAA) | **Recommended** |
+| **`18400`** | TCP | Unicast (HTTP) | HA → TV | **UPnP / DLNA LAN Control (`RenderingControl:1`, `AVTransport:1`, `LanControlInfo`, Clock Sync)** (Alternate VIDAA port) | **Recommended** |
+| **`9` / `7`** | UDP | Directed Broadcast / Unicast | HA → TV | **Wake-on-LAN (WoL)** (Power-on magic packet to wake TV from deep standby) | **Recommended** |
 | **`1900`** | UDP | Multicast (`239.255.255.250`) | Both / Multicast | **SSDP / UPnP Auto-Discovery** (Automatic discovery of TV IP and device metadata) | *Optional (Discovery)* |
 | **`5353`** | UDP | Multicast (`224.0.0.251`) | Both / Multicast | **mDNS / Zeroconf Network Discovery** | *Optional (Discovery)* |
 
@@ -146,7 +146,7 @@ When a blanket block rule (such as `||*$client=hisense-tv`) is applied to sandbo
 3. **The Fix (DNS Rewrite)**: You must configure a **DNS Rewrite** so that the TV receives the router's local IP address instead of `0.0.0.0`:
 
 #### A. AdGuard Home (Recommended)
-Add the following rules to **Filters $\rightarrow$ Custom filtering rules** (the `$important` modifier overrides client block rules):
+Add the following rules to **Filters → Custom filtering rules** (the `$important` modifier overrides client block rules):
 
 ```text
 ||pool.ntp.org^$dnsrewrite=<router_ip>,important,client=<client_id>
@@ -154,12 +154,12 @@ Add the following rules to **Filters $\rightarrow$ Custom filtering rules** (the
 ||time.google.com^$dnsrewrite=<router_ip>,important,client=<client_id>
 ||time.android.com^$dnsrewrite=<router_ip>,important,client=<client_id>
 ```
-*(Or navigate to **Filters $\rightarrow$ DNS Rewrites** and add `*.pool.ntp.org` $\rightarrow$ `<router_ip>`)*.
+*(Or navigate to **Filters → DNS Rewrites** and add `*.pool.ntp.org` → `<router_ip>`)*.
 
 #### B. Pi-hole
-Navigate to **Local DNS $\rightarrow$ DNS Records** and add:
-- `pool.ntp.org` $\rightarrow$ `<router_ip>`
-- `time.google.com` $\rightarrow$ `<router_ip>`
+Navigate to **Local DNS → DNS Records** and add:
+- `pool.ntp.org` → `<router_ip>`
+- `time.google.com` → `<router_ip>`
 
 #### C. dnsmasq (OpenWrt `/etc/config/dhcp`)
 ```uci
@@ -227,7 +227,7 @@ iptables -t nat -A PREROUTING -i iot0 -p udp --dport 123 -j REDIRECT --to-ports 
 - **Interface**: `IoT`
 - **Address Family**: `IPv4`
 - **Protocol**: `UDP`
-- **Destination**: Invert Destination (`[X] Invert match`) $\rightarrow$ `IoT Address`
+- **Destination**: Invert Destination (`[X] Invert match`) → `IoT Address`
 - **Destination Port Range**: `123 (NTP)` to `123 (NTP)`
 - **Redirect Target IP**: `127.0.0.1` (or local IoT Gateway IP)
 - **Redirect Target Port**: `123 (NTP)`

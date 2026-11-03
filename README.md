@@ -68,7 +68,7 @@ Click the button below to add this repository directly to your HACS installation
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
-*Or manually in HACS:* **HACS** $\rightarrow$ **Integrations** $\rightarrow$ **Custom repositories** $\rightarrow$ Add `https://github.com/stevene1919/hisense_vidaa` (Category: *Integration*).
+*Or manually in HACS:* **HACS** → **Integrations** → **Custom repositories** → Add `https://github.com/stevene1919/hisense_vidaa` (Category: *Integration*).
 
 ---
 
@@ -86,8 +86,8 @@ Copy your client certificate / key (or `.p12` bundle) to `/config/ssl/` (or `/ss
 
 ### Step 3: Pair Your TV
 
-1. **Restart Home Assistant** (`Settings` $\rightarrow$ `System` $\rightarrow$ `Restart`).
-2. Go to **Settings $\rightarrow$ Devices & Services $\rightarrow$ Add Integration** and search for **Hisense VIDAA TV**.
+1. **Restart Home Assistant** (`Settings` → `System` → `Restart`).
+2. Go to **Settings → Devices & Services → Add Integration** and search for **Hisense VIDAA TV**.
 3. Enter your TV's IP address and select `Auto Detect (Recommended)`.
 4. Enter the 4-digit PIN displayed on your TV screen to complete setup.
 
@@ -115,6 +115,7 @@ For deep technical details, configuration parameters, and dashboard templates, r
 | 🌐 **[Network & Wake-on-LAN Requirements](docs/network_requirements.md)** | **Networking** | 100% local LAN architecture, UPnP LAN control, IoT VLAN rules, and reliable wired WoL setup. |
 | 🧪 **[CLI Testing & Diagnostic Tools](docs/cli_tools.md)** | **CLI Utilities** | Standalone [`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py) command-line tool reference. |
 | 🔬 **[Protocol & Cryptographic Architecture](docs/protocol_architecture.md)** | **Architecture** | Reverse-engineered UPnP LAN control, XOR bitmasks, token lifecycles, and multi-brand ecosystem. |
+| 🩺 **[Troubleshooting & Error Reference](docs/troubleshooting.md)** | **Troubleshooting** | Diagnostic procedures, error recovery, pairing resets, and action error resolutions. |
 | 🗑️ **[Removal & Uninstallation Guide](docs/removal.md)** | **Uninstallation** | Step-by-step device deletion, certificate cleanup, and HACS component uninstallation. |
 | 🖼️ **[Screenshots & UI Gallery](docs/screenshots.md)** | **Showcase** | Full visual tour of device controls, media player dialogs, source dropdowns, and option menus. |
 
@@ -155,8 +156,8 @@ The integration provides custom Home Assistant actions for advanced automation a
 ## 🗑️ Removal & Uninstallation
 
 To cleanly remove the Hisense VIDAA TV integration:
-1. In Home Assistant, navigate to **Settings $\rightarrow$ Devices & Services**, locate **Hisense VIDAA TV**, click the three vertical dots (`⋮`), and select **Delete**.
-2. Remove the component from **HACS $\rightarrow$ Integrations** (or delete `/config/custom_components/hisense_vidaa/`), then restart Home Assistant (`Settings` $\rightarrow$ `System` $\rightarrow$ `Restart`).
+1. In Home Assistant, navigate to **Settings → Devices & Services**, locate **Hisense VIDAA TV**, click the three vertical dots (`⋮`), and select **Delete**.
+2. Remove the component from **HACS → Integrations** (or delete `/config/custom_components/hisense_vidaa/`), then restart Home Assistant (`Settings` → `System` → `Restart`).
 
 > For detailed certificate cleanup and multi-device removal steps, see the dedicated **[Removal & Uninstallation Guide](docs/removal.md)**.
 

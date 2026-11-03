@@ -1,0 +1,111 @@
+name: "🐛 Bug Report"
+description: "Report an issue, defect, or unexpected behavior with Hisense VIDAA TV"
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 🧪 Diagnostic Testing
+        Before opening a bug report, running the built-in diagnostic tool against your TV's IP address can often pinpoint the exact issue (firmware compatibility, certificate error, or network block).
+
+        > [!NOTE]
+        > `test_client.py` is a standalone developer utility located in the [GitHub repository root](https://github.com/stevene1919/hisense_vidaa/blob/main/test_client.py) (it is **not** bundled inside the HACS release zip). You can run it directly from a cloned git checkout, or download it standalone via:
+        > ```bash
+        > curl -sLO https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/test_client.py
+        > python3 test_client.py report --ip <YOUR_TV_IP>
+        > ```
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: "Prerequisites & Health Checks"
+      description: "Please confirm the following baseline checks before submitting:"
+      options:
+        - label: "The TV is powered ON and connected to the same local network / subnet as Home Assistant."
+          required: true
+        - label: "Outbound WAN / Internet & DNS resolution are unblocked on the TV (required by VIDAA OS for token handshakes)."
+          required: true
+        - label: "Client certificates or PKCS#12 bundles are valid, unencrypted, and placed in `/config/ssl/` per [docs/certificates.md](https://github.com/stevene1919/hisense_vidaa/blob/main/docs/certificates.md)."
+          required: true
+        - label: "I have reviewed [docs/troubleshooting.md](https://github.com/stevene1919/hisense_vidaa/blob/main/docs/troubleshooting.md) and restarted Home Assistant."
+          required: true
+
+  - type: input
+    id: integration_version
+    attributes:
+      label: "Integration Version"
+      description: "Exact version installed (check in HACS → Hisense VIDAA TV or manifest.json)."
+      placeholder: "e.g. v3.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: "Home Assistant Core Version"
+      description: "Your Home Assistant version (Settings → About)."
+      placeholder: "e.g. 2026.10.4"
+    validations:
+      required: true
+
+  - type: input
+    id: tv_model
+    attributes:
+      label: "TV Model & Firmware Build"
+      description: "Your TV model name and VIDAA firmware build string (Settings → Support → System Info)."
+      placeholder: "e.g. 65U7HQ / VIDAA U6 / Build V0000.09.09U.P1027"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cert_type
+    attributes:
+      label: "Certificate & Connection Setup"
+      description: "What certificates or connection setup are you using?"
+      options:
+        - "Auto-Detect / Default certificates in /config/ssl/"
+        - "Extracted PEM cert/key pair (remotenow_2018, vidaa_2024, etc.)"
+        - "PKCS#12 archive (.p12 / .pfx)"
+        - "Legacy Plaintext MQTT (Port 56669, unencrypted)"
+        - "Other / Custom"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Describe the Bug"
+      description: "A clear and concise description of what the issue is."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to Reproduce"
+      description: "Step-by-step actions that trigger the issue."
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: cli_output
+    attributes:
+      label: "CLI Diagnostic Report Output (Optional but Recommended)"
+      description: "Paste the output from `python3 test_client.py report --ip <TV_IP>` here if available."
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Home Assistant Logs / Tracebacks"
+      description: "Paste relevant log entries or tracebacks from Settings → System → Logs."
+      render: shell
+    validations:
+      required: false
