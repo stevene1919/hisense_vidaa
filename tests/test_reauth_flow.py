@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant
 from custom_components.hisense_vidaa.config_flow import HisenseVidaaConfigFlow
 from custom_components.hisense_vidaa.const import (
     CONF_AUTH_PROFILE,
+    CONF_BRAND,
     CONF_CERTFILE,
     CONF_IP_ADDRESS,
     CONF_KEYFILE,
@@ -371,3 +372,53 @@ async def test_reauth_confirm_disconnects_existing_running_client_before_start_a
     assert result["type"] == "form"
     assert result["step_id"] == "auth"
     assert events == ["disconnect_existing", "start_auth"]
+
+
+@pytest.mark.anyio
+async def test_reauth_preserves_oem_brand(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test reauth flow on an existing OEM Toshiba entry retains brand='tos'."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    mock_entry = MagicMock()
+    mock_entry.entry_id = "test_entry_toshiba"
+    mock_entry.data = {
+        CONF_IP_ADDRESS: "192.168.50.25",
+        CONF_MAC_ADDRESS: "00:11:22:33:44:55",
+        CONF_BRAND: "tos",
+        CONF_AUTH_PROFILE: "modern",
+    }
+    flow = _reauth_flow(hass, mock_entry, "test_entry_toshiba")
+
+    # Start reauth
+    result_init = await flow.async_step_reauth(mock_entry.data)
+    assert result_init["type"] == "form"
+    assert result_init["step_id"] == "reauth_confirm"
+    assert flow.brand == "tos"
+
+    # Confirm reauth
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        AsyncMock(return_value=None),
+    )
+    result_confirm = await flow.async_step_reauth_confirm(user_input={})
+    assert result_confirm["type"] == "form"
+    assert result_confirm["step_id"] == "auth"
+    assert flow.client is not None
+    assert flow.client.brand == "tos"
+
+    # Submit PIN and verify updated entry retains brand='tos'
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.client.HisenseTvClient.async_submit_pin",
+        AsyncMock(return_value=None),
+    )
+    flow.client.access_token = "new_tos_token"
+    flow.client.refresh_token = "new_tos_refresh"
+
+    result_auth = await flow.async_step_auth(user_input={"pin_code": "9876"})
+    assert result_auth["type"] == "abort"
+    assert result_auth["reason"] == "reauth_successful"
+
+    update_call_args = hass.config_entries.async_update_entry.call_args
+    updated_data = update_call_args[1]["data"]
+    assert updated_data[CONF_BRAND] == "tos"

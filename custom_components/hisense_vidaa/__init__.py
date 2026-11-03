@@ -21,6 +21,7 @@ from .const import (
     CONF_ACCESS_TOKEN_DURATION,
     CONF_ACCESS_TOKEN_TIME,
     CONF_AUTH_PROFILE,
+    CONF_BRAND,
     CONF_CERTFILE,
     CONF_CLIENT_ID,
     CONF_ENABLE_NOTIFY,
@@ -36,6 +37,7 @@ from .const import (
     CONF_REFRESH_TOKEN_TIME,
     CONF_USE_SSL,
     CONF_USERNAME,
+    DEFAULT_BRAND,
     DEFAULT_ENABLE_NOTIFY,
     DEFAULT_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
@@ -131,6 +133,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         certfile=certfile,
         keyfile=keyfile,
         use_ssl=use_ssl,
+        brand=data.get(CONF_BRAND, DEFAULT_BRAND),
         session=async_get_clientsession(hass),
     )
     client._loop = hass.loop

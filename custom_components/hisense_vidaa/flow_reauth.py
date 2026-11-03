@@ -14,12 +14,14 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import (
     AUTH_PROFILE_SELECTOR,
     CONF_AUTH_PROFILE,
+    CONF_BRAND,
     CONF_CERTFILE,
     CONF_IP_ADDRESS,
     CONF_KEYFILE,
     CONF_MAC_ADDRESS,
     CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
+    DEFAULT_BRAND,
     DEFAULT_USE_SSL,
     DOMAIN,
 )
@@ -91,6 +93,7 @@ class ReauthFlowMixin:
         # re-authenticating (a legacy/non-TLS entry would otherwise be rewritten
         # as use_ssl=True by _get_client_auth_data on success).
         self.use_ssl = entry_data.get(CONF_USE_SSL, DEFAULT_USE_SSL)
+        self.brand = entry_data.get(CONF_BRAND, DEFAULT_BRAND)
         self.certfile = entry_data.get(CONF_CERTFILE)
         self.keyfile = entry_data.get(CONF_KEYFILE)
         return await self.async_step_reauth_confirm()
@@ -115,6 +118,7 @@ class ReauthFlowMixin:
                 certfile=self.certfile if self.use_ssl else None,
                 keyfile=self.keyfile if self.use_ssl else None,
                 use_ssl=self.use_ssl,
+                brand=self.brand,
                 session=session,
             )
             self.client._loop = self.hass.loop
@@ -147,6 +151,7 @@ class ReauthFlowMixin:
         )
         errors: dict[str, str] = {}
         current_data = self._reauth_entry.data if self._reauth_entry else {}
+        self.brand = current_data.get(CONF_BRAND, DEFAULT_BRAND)
         default_ip = current_data.get(CONF_IP_ADDRESS, "")
         default_profile = current_data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
 

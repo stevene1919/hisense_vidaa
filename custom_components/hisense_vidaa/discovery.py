@@ -57,7 +57,43 @@ BRAND_MAP: dict[str, str] = {
     "vizio": "Vizio",
 }
 
+BRAND_CODE_MAP: dict[str, str] = {
+    "his": "his",
+    "hisense": "his",
+    "tos": "tos",
+    "toshiba": "tos",
+    "loe": "loe",
+    "loewe": "loe",
+    "sch": "sch",
+    "schneider": "sch",
+    "aka": "aka",
+    "akai": "aka",
+    "bek": "bek",
+    "beko": "bek",
+    "tel": "tel",
+    "telefunken": "tel",
+    "bus": "bus",
+    "bush": "bus",
+    "vic": "vic",
+    "vizio": "vic",
+}
+
+
+def normalize_brand_code(brand_or_mfg: str | None) -> str:
+    """Normalize any brand string or manufacturer name to its canonical 3-letter VIDAA cryptographic prefix."""
+    if not brand_or_mfg:
+        return "his"
+    cleaned = brand_or_mfg.strip().lower()
+    if cleaned in BRAND_CODE_MAP:
+        return BRAND_CODE_MAP[cleaned]
+    for key, code in BRAND_CODE_MAP.items():
+        if key in cleaned:
+            return code
+    return "his"
+
+
 __all__ = [
+    "BRAND_CODE_MAP",
     "BRAND_MAP",
     "GENERIC_MANUFACTURERS",
     "UPNP_PORTS",
@@ -66,6 +102,7 @@ __all__ = [
     "get_arp_mac",
     "get_device_fingerprint",
     "get_tv_timestamp",
+    "normalize_brand_code",
     "parse_ssdp_discovery",
     "parse_zeroconf_discovery",
     "ping_tv",
@@ -86,6 +123,7 @@ class DiscoveredTvInfo:
     mac_address: str | None = None
     unique_id: str | None = None
     is_vidaa: bool = True
+    brand: str = "his"
 
 
 def parse_ssdp_discovery(
@@ -135,21 +173,34 @@ def parse_ssdp_discovery(
             mac_address = raw_mac.lower()
 
     model = upnp.get("modelName") or upnp.get("modelNumber") or "VIDAA TV"
-    title = friendly_name if friendly_name and friendly_name != "Renderer" else f"Hisense TV ({host})"
     udn = getattr(discovery_info, "ssdp_udn", None)
     unique_id = mac_address or udn
 
     manufacturer_clean = (manufacturer or "").strip()
+    detected_brand_code: str | None = None
+    for line in model_desc.splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            k, v = k.strip().lower(), v.strip().lower()
+            if k == "brand":
+                detected_brand_code = normalize_brand_code(v)
+                break
+
     if manufacturer_clean.lower() in GENERIC_MANUFACTURERS:
-        detected_brand = None
-        for line in model_desc.splitlines():
-            if "=" in line:
-                k, v = line.split("=", 1)
-                k, v = k.strip().lower(), v.strip().lower()
-                if k == "brand" and v in BRAND_MAP:
-                    detected_brand = BRAND_MAP[v]
-                    break
-        manufacturer = detected_brand or "Hisense"
+        manufacturer = (
+            BRAND_MAP.get(detected_brand_code or "", "Hisense")
+            if detected_brand_code
+            else "Hisense"
+        )
+    elif not detected_brand_code:
+        detected_brand_code = normalize_brand_code(manufacturer_clean)
+
+    brand_code = detected_brand_code or "his"
+    title = (
+        friendly_name
+        if friendly_name and friendly_name != "Renderer"
+        else f"{BRAND_MAP.get(brand_code, 'Hisense')} TV ({host})"
+    )
 
     return DiscoveredTvInfo(
         host=host,
@@ -159,6 +210,7 @@ def parse_ssdp_discovery(
         mac_address=mac_address,
         unique_id=unique_id,
         is_vidaa=True,
+        brand=brand_code,
     )
 
 
@@ -179,4 +231,5 @@ def parse_zeroconf_discovery(
         mac_address=mac_address,
         unique_id=mac_address,
         is_vidaa=True,
+        brand="his",
     )

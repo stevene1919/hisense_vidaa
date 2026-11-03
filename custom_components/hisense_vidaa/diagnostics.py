@@ -80,6 +80,7 @@ async def async_get_config_entry_diagnostics(
         tv_diagnostics = {
             "connected": client.connected,
             "auth_profile": client.auth_profile,
+            "brand": client.brand if isinstance(getattr(client, "brand", None), str) else "his",
             "source": getattr(client, "current_source", None),
             "current_app": getattr(client, "current_app", None),
             "volume": getattr(client, "volume", None),

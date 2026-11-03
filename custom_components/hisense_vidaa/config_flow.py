@@ -18,14 +18,17 @@ from .client import HisenseTvClient
 from .const import (
     AUTH_PROFILE_SELECTOR,
     CONF_AUTH_PROFILE,
+    CONF_BRAND,
     CONF_IP_ADDRESS,
     CONF_MAC_ADDRESS,
     DEFAULT_AUTH_PROFILE,
+    DEFAULT_BRAND,
     DEFAULT_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_SOUND_CONTROLS,
     DEFAULT_USE_SSL,
     DOMAIN,
 )
+from .discovery import BRAND_MAP, GENERIC_MANUFACTURERS, normalize_brand_code
 from .flow_certs import CertsFlowMixin
 from .flow_discovery import DiscoveryFlowMixin
 from .flow_helpers import (
@@ -66,6 +69,7 @@ class HisenseVidaaConfigFlow(
         self.discovered_title: str | None = None
         self.model: str | None = None
         self.manufacturer: str | None = None
+        self.brand: str = DEFAULT_BRAND
         self.sw_version: str | None = None
         self._reauth_entry: config_entries.ConfigEntry | None = None
         self._pairing_error: str | None = None
@@ -88,11 +92,13 @@ class HisenseVidaaConfigFlow(
         """Discovers friendly device name and model info from UPnP/DLNA."""
         details = await async_discover_device_details(self.hass, self.client, self.ip_address)
         self.discovered_title = details["title"]
-        if details["model"]:
+        if details.get("model"):
             self.model = details["model"]
-        if details["manufacturer"]:
+        if details.get("manufacturer"):
             self.manufacturer = details["manufacturer"]
-        if details["sw_version"]:
+        if details.get("brand"):
+            self.brand = details["brand"]
+        if details.get("sw_version"):
             self.sw_version = details["sw_version"]
 
     async def _async_probe_device_capabilities(self) -> None:
@@ -121,6 +127,7 @@ class HisenseVidaaConfigFlow(
             model=self.model,
             manufacturer=self.manufacturer,
             sw_version=self.sw_version,
+            brand=self.brand,
         )
 
     async def _async_init_client_and_auth(
@@ -136,6 +143,29 @@ class HisenseVidaaConfigFlow(
             await self.async_set_unique_id(self.mac_address)
             self._abort_if_unique_id_configured()
 
+        if (
+            self.brand == DEFAULT_BRAND
+            and self.manufacturer is None
+            and self.ip_address
+            and self.hass
+        ):
+            try:
+                from .tv.fingerprint import query_upnp_descriptor
+
+                upnp_desc = await self.hass.async_add_executor_job(
+                    query_upnp_descriptor, self.ip_address, 1.5
+                )
+                detected = upnp_desc.get("brand") or upnp_desc.get("manufacturer")
+                if detected:
+                    self.brand = normalize_brand_code(detected)
+                    raw_mfg = upnp_desc.get("manufacturer")
+                    if raw_mfg and raw_mfg.strip().lower() not in GENERIC_MANUFACTURERS:
+                        self.manufacturer = BRAND_MAP.get(raw_mfg.strip().lower(), raw_mfg.strip())
+                    elif self.brand in BRAND_MAP:
+                        self.manufacturer = BRAND_MAP[self.brand]
+            except Exception:
+                pass
+
         await self._async_disconnect_existing_client()
         session = async_get_clientsession(self.hass) if self.hass else None
         self.client = HisenseTvClient(
@@ -145,6 +175,7 @@ class HisenseVidaaConfigFlow(
             certfile=self.certfile if self.use_ssl else None,
             keyfile=self.keyfile if self.use_ssl else None,
             use_ssl=self.use_ssl,
+            brand=self.brand,
             session=session,
         )
         self.client._loop = self.hass.loop
@@ -251,6 +282,7 @@ class HisenseVidaaConfigFlow(
                 self.ip_address = self._reauth_entry.data.get(CONF_IP_ADDRESS)
                 self.mac_address = self._reauth_entry.data.get(CONF_MAC_ADDRESS)
                 self.auth_profile = self._reauth_entry.data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
+                self.brand = self._reauth_entry.data.get(CONF_BRAND, DEFAULT_BRAND)
 
             if self.ip_address:
                 session = async_get_clientsession(self.hass) if self.hass else None
@@ -258,6 +290,7 @@ class HisenseVidaaConfigFlow(
                     self.ip_address,
                     self.mac_address,
                     auth_profile=self.auth_profile,
+                    brand=self.brand,
                     session=session,
                 )
                 self.client._loop = self.hass.loop
@@ -318,8 +351,9 @@ class HisenseVidaaConfigFlow(
             await self.client.async_disconnect()
             self.client = None
 
+            default_title = f"{BRAND_MAP.get(self.brand, 'Hisense')} TV ({self.ip_address})"
             return self.async_create_entry(
-                title=self.discovered_title or f"Hisense TV ({self.ip_address})",
+                title=self.discovered_title or default_title,
                 data=entry_data,
                 options=build_entry_options(user_input, picture_supported, sound_supported),
             )

@@ -8,6 +8,7 @@ from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
 
 from custom_components.hisense_vidaa.config_flow import HisenseVidaaConfigFlow
 from custom_components.hisense_vidaa.const import (
+    CONF_BRAND,
     CONF_IP_ADDRESS,
     CONF_MAC_ADDRESS,
     CONF_MANUFACTURER,
@@ -49,6 +50,7 @@ async def test_ssdp_discovery_vidaa_tv(monkeypatch):
     assert flow.mac_address == "e8:51:77:ec:98:1c"
     assert flow.model == "65U7G"
     assert flow.manufacturer == "Hisense"
+    assert flow.brand == "his"
 
 
 @pytest.mark.anyio
@@ -123,6 +125,7 @@ async def test_options_step_creates_entry():
     assert result["data"][CONF_MAC_ADDRESS] == "e8:51:77:ec:98:1c"
     assert result["data"][CONF_MODEL] == "65U7G"
     assert result["data"][CONF_MANUFACTURER] == "Hisense"
+    assert result["data"][CONF_BRAND] == "his"
     assert result["data"][CONF_SW_VERSION] == "V1.0"
     assert result["options"]["enable_remote"] is True
     assert result["options"]["enable_picture_controls"] is False
@@ -363,3 +366,107 @@ async def test_certs_step_submission_invalid_pem(monkeypatch):
     assert result["type"] == "form"
     assert result["step_id"] == "certs"
     assert result["errors"]["base"] == "invalid_ssl_cert"
+
+
+@pytest.mark.anyio
+async def test_ssdp_discovery_toshiba_tv(monkeypatch):
+    """Test SSDP discovery and entry creation for OEM Toshiba TV preserves brand code."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    flow.context = {}
+    flow.async_set_unique_id = AsyncMock(return_value=None)
+    flow._abort_if_unique_id_configured = MagicMock()
+
+    discovery_info = SsdpServiceInfo(
+        ssdp_usn="uuid:toshiba-1234::urn:schemas-upnp-org:device:MediaRenderer:1",
+        ssdp_st="urn:schemas-upnp-org:device:MediaRenderer:1",
+        ssdp_location="http://192.168.50.25:38400/MediaServer/rendererdevicedesc.xml",
+        ssdp_headers={"_host": "192.168.50.25"},
+        upnp={
+            "friendlyName": "Toshiba 55C350",
+            "manufacturer": "Toshiba",
+            "modelName": "55C350",
+            "modelDescription": "transport_protocol=3290\nbrand=tos\nmacWifi=00:11:22:33:44:55\n",
+        },
+    )
+
+    result = await flow.async_step_ssdp(discovery_info)
+    assert result["type"] == "form"
+    assert result["step_id"] == "discovery_confirm"
+    assert flow.ip_address == "192.168.50.25"
+    assert flow.brand == "tos"
+    assert flow.manufacturer == "Toshiba"
+
+    mock_client = MagicMock()
+    mock_client.brand = "tos"
+    mock_client.client_id = "test_tos_client"
+    mock_client.username = "tos123"
+    mock_client.password = "pass"
+    mock_client.access_token = "token123"
+    mock_client.access_token_time = 1700000000
+    mock_client.access_token_duration = 3600
+    mock_client.refresh_token = "reftoken123"
+    mock_client.refresh_token_time = 1700000000
+    mock_client.refresh_token_duration = 86400
+    mock_client.async_disconnect = AsyncMock()
+    mock_client.disconnect = MagicMock()
+    flow.client = mock_client
+
+    result_options = await flow.async_step_options(user_input={})
+    assert result_options["type"] == "create_entry"
+    assert result_options["data"][CONF_BRAND] == "tos"
+    assert result_options["data"][CONF_MANUFACTURER] == "Toshiba"
+
+
+@pytest.mark.anyio
+async def test_manual_ip_upnp_brand_autodetect(monkeypatch):
+    """Test manual IP entry auto-detects brand from UPnP descriptor before pairing."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    flow.context = {}
+    flow.async_set_unique_id = AsyncMock(return_value=None)
+    flow._abort_if_unique_id_configured = MagicMock()
+
+    flow.ip_address = "192.168.50.50"
+    flow.auth_profile = "auto"
+    flow.use_ssl = True
+
+    # Mock query_upnp_descriptor returning Loewe TV descriptor
+    mock_upnp = {
+        "brand": "loe",
+        "manufacturer": "Loewe",
+        "model_name": "bild v.65",
+        "friendly_name": "Loewe TV",
+    }
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.tv.fingerprint.query_upnp_descriptor",
+        lambda ip, timeout: mock_upnp,
+    )
+
+    created_clients = []
+
+    def mock_client_factory(*args, **kwargs):
+        client = MagicMock()
+        client.brand = kwargs.get("brand", "his")
+        client.auth_profile = kwargs.get("auth_profile", "auto")
+        client.async_probe_auth_methods = AsyncMock(return_value={})
+        client.async_start_auth = AsyncMock()
+        created_clients.append(client)
+        return client
+
+    monkeypatch.setattr("custom_components.hisense_vidaa.config_flow.HisenseTvClient", mock_client_factory)
+    monkeypatch.setattr(flow, "_async_resolve_ssl_certs", AsyncMock(return_value=True))
+    monkeypatch.setattr(flow, "async_step_auth", AsyncMock(return_value={"type": "form", "step_id": "auth"}))
+
+    await flow._async_init_client_and_auth()
+
+    assert flow.brand == "loe"
+    assert flow.manufacturer == "Loewe"
+    assert len(created_clients) == 1
+    assert created_clients[0].brand == "loe"

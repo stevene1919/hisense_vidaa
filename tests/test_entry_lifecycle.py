@@ -405,3 +405,42 @@ async def test_device_info_update_enriches_device_registry(mock_entry, mock_clie
         manufacturer="Toshiba",
         sw_version="V0000.06.30T",
     )
+
+
+@pytest.mark.anyio
+async def test_async_setup_entry_passes_brand_to_client(mock_entry, monkeypatch):
+    """Test that async_setup_entry reads CONF_BRAND from entry.data and initializes HisenseTvClient with it."""
+    hass = MagicMock()
+    hass.data = {}
+    hass.config_entries = MagicMock()
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    hass.loop = MagicMock()
+    hass.services = FakeServices()
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+
+    mock_entry.data = {
+        "ip_address": "192.168.50.25",
+        "mac_address": "00:11:22:33:44:55",
+        "brand": "tos",
+        "use_ssl": False,
+    }
+    mock_entry.options = {}
+
+    captured_kwargs = {}
+
+    def mock_client_factory(*args, **kwargs):
+        captured_kwargs.update(kwargs)
+        client = MagicMock()
+        client.has_notifications = False
+        client.async_check_and_refresh_token = AsyncMock(return_value=False)
+        client.async_connect_and_run = AsyncMock()
+        return client
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.HisenseTvClient",
+        mock_client_factory,
+    )
+
+    result = await async_setup_entry(hass, mock_entry)
+    assert result is True
+    assert captured_kwargs.get("brand") == "tos"

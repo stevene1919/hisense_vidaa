@@ -8,13 +8,16 @@ from homeassistant.helpers.entity import Entity
 
 from .client import HisenseTvClient
 from .const import (
+    CONF_BRAND,
     CONF_MAC_ADDRESS,
     CONF_MANUFACTURER,
     CONF_MODEL,
     CONF_SW_VERSION,
+    DEFAULT_BRAND,
     DEFAULT_NAME,
     DOMAIN,
 )
+from .discovery import BRAND_MAP
 
 
 class HisenseVidaaEntity(Entity):
@@ -35,7 +38,9 @@ class HisenseVidaaEntity(Entity):
         self._mac = entry.data.get(CONF_MAC_ADDRESS)
         self._name = entry.title or DEFAULT_NAME
         self._model = entry.data.get(CONF_MODEL, "VIDAA TV")
-        self._manufacturer = entry.data.get(CONF_MANUFACTURER, "Hisense")
+        self._brand = entry.data.get(CONF_BRAND, getattr(client, "brand", DEFAULT_BRAND))
+        brand_default_mfg = BRAND_MAP.get(self._brand, "Hisense")
+        self._manufacturer = entry.data.get(CONF_MANUFACTURER) or brand_default_mfg
         self._sw_version = entry.data.get(CONF_SW_VERSION)
         self._options = entry.options
 
@@ -43,7 +48,8 @@ class HisenseVidaaEntity(Entity):
     def device_info(self) -> DeviceInfo:
         """Return Home Assistant DeviceInfo linking to this TV."""
         model = self._client.model_name or self._model
-        manufacturer = self._client.manufacturer or self._manufacturer
+        brand_mfg = BRAND_MAP.get(getattr(self._client, "brand", self._brand), "Hisense")
+        manufacturer = self._client.manufacturer or self._manufacturer or brand_mfg
         sw_version = self._client.firmware_version or self._sw_version
         info = DeviceInfo(
             identifiers={(DOMAIN, self._entry_id)},

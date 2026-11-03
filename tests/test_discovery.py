@@ -112,5 +112,71 @@ def test_parse_ssdp_discovery_generic_manufacturer():
     assert info is not None
     assert info.host == "192.168.50.20"
     assert info.manufacturer == "Toshiba"
+    assert info.brand == "tos"
     assert info.model == "58A53FXVT"
     assert info.mac_address == "e8:51:77:ec:98:1c"
+
+
+def test_normalize_brand_code():
+    """Test brand code normalization for all supported OEM brands and edge cases."""
+    from custom_components.hisense_vidaa.discovery import normalize_brand_code
+
+    assert normalize_brand_code("his") == "his"
+    assert normalize_brand_code("hisense") == "his"
+    assert normalize_brand_code("Hisense") == "his"
+    assert normalize_brand_code("tos") == "tos"
+    assert normalize_brand_code("Toshiba") == "tos"
+    assert normalize_brand_code("loe") == "loe"
+    assert normalize_brand_code("Loewe") == "loe"
+    assert normalize_brand_code("sch") == "sch"
+    assert normalize_brand_code("Schneider") == "sch"
+    assert normalize_brand_code("aka") == "aka"
+    assert normalize_brand_code("Akai") == "aka"
+    assert normalize_brand_code("bek") == "bek"
+    assert normalize_brand_code("Beko") == "bek"
+    assert normalize_brand_code("tel") == "tel"
+    assert normalize_brand_code("Telefunken") == "tel"
+    assert normalize_brand_code("bus") == "bus"
+    assert normalize_brand_code("Bush") == "bus"
+    assert normalize_brand_code("vic") == "vic"
+    assert normalize_brand_code("Vizio") == "vic"
+    assert normalize_brand_code(None) == "his"
+    assert normalize_brand_code("") == "his"
+    assert normalize_brand_code("unrecognized_brand") == "his"
+
+
+def test_parse_ssdp_discovery_oem_brands():
+    """Test parse_ssdp_discovery correctly extracts and infers OEM brands like Loewe and Beko."""
+    from custom_components.hisense_vidaa.discovery import parse_ssdp_discovery
+
+    # Loewe TV with explicit brand=loe in modelDescription
+    loewe_discovery = MagicMock()
+    loewe_discovery.upnp = {
+        "friendlyName": "Loewe bild i",
+        "modelName": "bild i.55 dr+",
+        "manufacturer": "Loewe",
+        "modelDescription": "vidaa_support=1\nbrand=loe\nmacWifi=001122334455",
+    }
+    loewe_discovery.ssdp_headers = {"_host": "192.168.50.30"}
+
+    info_loewe = parse_ssdp_discovery(loewe_discovery)
+    assert info_loewe is not None
+    assert info_loewe.brand == "loe"
+    assert info_loewe.manufacturer == "Loewe"
+    assert info_loewe.title == "Loewe bild i"
+
+    # Beko TV with manufacturer inference and generic Renderer friendly name
+    beko_discovery = MagicMock()
+    beko_discovery.upnp = {
+        "friendlyName": "Renderer",
+        "modelName": "Beko Android/VIDAA",
+        "manufacturer": "Beko",
+        "modelDescription": "transport_protocol=3290\nmacEthernet=aabbccddeeff",
+    }
+    beko_discovery.ssdp_headers = {"_host": "192.168.50.40"}
+
+    info_beko = parse_ssdp_discovery(beko_discovery)
+    assert info_beko is not None
+    assert info_beko.brand == "bek"
+    assert info_beko.manufacturer == "Beko"
+    assert info_beko.title == "Beko TV (192.168.50.40)"

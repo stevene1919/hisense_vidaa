@@ -342,4 +342,23 @@ def test_device_info_telemetry_and_entity_binding():
     assert dev_info["sw_version"] == "U6.1.0"
 
 
+def test_entity_device_info_brand_fallback():
+    """Test HisenseVidaaEntity falls back to BRAND_MAP based on brand code when manufacturer is unset."""
+    from custom_components.hisense_vidaa.entity import HisenseVidaaEntity
+
+    client = HisenseTvClient(ip="192.168.50.25", brand="loe")
+    mock_entry = MagicMock()
+    mock_entry.entry_id = "test_entry_loe"
+    mock_entry.title = "Loewe bild i"
+    mock_entry.data = {
+        "mac_address": "00:11:22:33:44:55",
+        "brand": "loe",
+    }
+    mock_entry.options = {}
+
+    entity = HisenseVidaaEntity(client, mock_entry)
+    dev_info = entity.device_info
+    assert dev_info["manufacturer"] == "Loewe"
+
+
 

@@ -16,6 +16,7 @@ from .const import (
     CONF_ACCESS_TOKEN_DURATION,
     CONF_ACCESS_TOKEN_TIME,
     CONF_AUTH_PROFILE,
+    CONF_BRAND,
     CONF_CERTFILE,
     CONF_CLIENT_ID,
     CONF_ENABLE_AUDIO_ONLY,
@@ -37,6 +38,7 @@ from .const import (
     CONF_SW_VERSION,
     CONF_USE_SSL,
     CONF_USERNAME,
+    DEFAULT_BRAND,
     DEFAULT_ENABLE_AUDIO_ONLY,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
@@ -46,7 +48,7 @@ from .const import (
     DOMAIN,
 )
 from .crypto import check_certs_exist, resolve_certificates
-from .discovery import get_arp_mac
+from .discovery import BRAND_MAP, GENERIC_MANUFACTURERS, get_arp_mac, normalize_brand_code
 
 if TYPE_CHECKING:
     from .client import HisenseTvClient
@@ -109,6 +111,7 @@ async def async_discover_device_details(
         "model": None,
         "manufacturer": None,
         "sw_version": None,
+        "brand": DEFAULT_BRAND,
     }
     if not client:
         return details
@@ -125,9 +128,28 @@ async def async_discover_device_details(
         if fp.get("model_code") or fp.get("model_name"):
             details["model"] = fp.get("model_code") or fp.get("model_name")
         if fp.get("manufacturer") or fp.get("brand"):
-            details["manufacturer"] = fp.get("manufacturer") or fp.get("brand")
+            raw_mfg = fp.get("manufacturer") or fp.get("brand")
+            mfg_clean = (raw_mfg or "").strip()
+            if mfg_clean.lower() in GENERIC_MANUFACTURERS or not mfg_clean:
+                brand_val = fp.get("brand")
+                if brand_val and brand_val.lower() in BRAND_MAP:
+                    details["manufacturer"] = BRAND_MAP[brand_val.lower()]
+                else:
+                    details["manufacturer"] = "Hisense"
+            else:
+                details["manufacturer"] = BRAND_MAP.get(mfg_clean.lower(), mfg_clean)
+        if fp.get("brand") or fp.get("manufacturer"):
+            details["brand"] = normalize_brand_code(fp.get("brand") or fp.get("manufacturer"))
         if fp.get("firmware_version"):
             details["sw_version"] = fp.get("firmware_version")
+        if (
+            not discovered_name
+            or not discovered_name.strip()
+            or discovered_name.strip() == "Renderer"
+        ):
+            brand_code = details["brand"] or DEFAULT_BRAND
+            brand_display = BRAND_MAP.get(brand_code, "Hisense")
+            details["title"] = f"{brand_display} TV ({default_ip})" if default_ip else f"{brand_display} TV"
     except Exception:
         pass
 
@@ -215,6 +237,7 @@ def collect_client_auth_data(
     model: str | None = None,
     manufacturer: str | None = None,
     sw_version: str | None = None,
+    brand: str | None = None,
 ) -> dict[str, Any]:
     """Collect authentication credentials and device attributes dictionary for config entry data."""
     data: dict[str, Any] = {
@@ -246,4 +269,6 @@ def collect_client_auth_data(
         data[CONF_MANUFACTURER] = manufacturer
     if sw_version:
         data[CONF_SW_VERSION] = sw_version
+    resolved_brand = brand or (client.brand if client else None) or DEFAULT_BRAND
+    data[CONF_BRAND] = resolved_brand
     return data

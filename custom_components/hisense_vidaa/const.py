@@ -20,6 +20,7 @@ CONF_REFRESH_TOKEN_TIME = "refresh_token_time"
 CONF_REFRESH_TOKEN_DURATION = "refresh_token_duration"
 CONF_MODEL = "model"
 CONF_MANUFACTURER = "manufacturer"
+CONF_BRAND = "brand"
 CONF_SW_VERSION = "sw_version"
 CONF_SECONDARY_MAC_ADDRESS = "secondary_mac_address"
 
@@ -38,6 +39,7 @@ CONF_REFRESH_IN_STANDBY = "refresh_in_standby"
 
 DEFAULT_PORT = 36669
 DEFAULT_NAME = "Hisense VIDAA TV"
+DEFAULT_BRAND = "his"
 DEFAULT_TIMEOUT = 10
 DEFAULT_WOL_TIMEOUT = 30
 DEFAULT_RECONNECT_INTERVAL = 15
