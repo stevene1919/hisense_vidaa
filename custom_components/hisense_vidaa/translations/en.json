@@ -59,7 +59,8 @@
       "cannot_connect": "Failed to connect to the TV.",
       "invalid_auth": "Invalid PIN code. Please try again.",
       "certs_not_found": "Certificate or private key file was not found at the specified path. Please check the file location and permissions.",
-      "unknown": "An unknown error occurred."
+      "unknown": "An unknown error occurred.",
+      "invalid_ssl_cert": "SSL certificate or private key failed validation. Verify that the files are in valid unencrypted PEM or supported PKCS#12 format and match each other."
     },
     "abort": {
       "reauth_successful": "Re-authentication was successful.",
@@ -130,7 +131,8 @@
       }
     },
     "error": {
-      "certs_not_found": "Certificate or private key file was not found at the specified path. Please check the file location and permissions."
+      "certs_not_found": "Certificate or private key file was not found at the specified path. Please check the file location and permissions.",
+      "invalid_ssl_cert": "SSL certificate or private key failed validation. Verify that the files are in valid unencrypted PEM or supported PKCS#12 format and match each other."
     }
   },
   "entity": {

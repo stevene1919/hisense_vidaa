@@ -227,6 +227,10 @@ async def test_certs_step_submission_valid(monkeypatch):
         lambda c, k: True,
     )
     monkeypatch.setattr(
+        "custom_components.hisense_vidaa.flow_certs.validate_ssl_certs",
+        lambda c, k: (True, None),
+    )
+    monkeypatch.setattr(
         "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
     )
@@ -327,3 +331,35 @@ async def test_config_flow_async_remove_without_hass():
     assert (mock_client.async_disconnect.called or mock_client.disconnect.called)
     assert flow.client is None
 
+
+@pytest.mark.anyio
+async def test_certs_step_submission_invalid_pem(monkeypatch):
+    """Submitting corrupted or invalid cert paths displays invalid_ssl_cert error."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    flow = HisenseVidaaConfigFlow()
+    flow.hass = hass
+    flow.context = {}
+    flow.ip_address = "192.168.50.12"
+    flow.auth_profile = "modern"
+
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.flow_certs.check_certs_exist",
+        lambda c, k: True,
+    )
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.flow_certs.validate_ssl_certs",
+        lambda c, k: (False, "invalid_ssl_cert: PEM lib error"),
+    )
+
+    result = await flow.async_step_certs(
+        user_input={
+            "use_ssl": True,
+            "certfile": "/config/certs/corrupted.pem",
+            "keyfile": "/config/certs/corrupted.key",
+        }
+    )
+    assert result["type"] == "form"
+    assert result["step_id"] == "certs"
+    assert result["errors"]["base"] == "invalid_ssl_cert"

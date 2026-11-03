@@ -59,7 +59,8 @@
       "cannot_connect": "Error al conectar con el televisor.",
       "invalid_auth": "Código PIN no válido. Inténtalo de nuevo.",
       "certs_not_found": "No se encontró el archivo de certificado o de clave privada en la ruta especificada. Comprueba la ubicación del archivo y los permisos.",
-      "unknown": "Ocurrió un error desconocido."
+      "unknown": "Ocurrió un error desconocido.",
+      "invalid_ssl_cert": "Error de validación del certificado SSL o la clave privada. Comprueba que los archivos estén en formato PEM sin cifrar o PKCS#12 válido y coincidan entre sí."
     },
     "abort": {
       "reauth_successful": "Reautenticación completada con éxito.",
@@ -130,7 +131,8 @@
       }
     },
     "error": {
-      "certs_not_found": "No se encontró el archivo de certificado o de clave privada en la ruta especificada. Comprueba la ubicación del archivo y los permisos."
+      "certs_not_found": "No se encontró el archivo de certificado o de clave privada en la ruta especificada. Comprueba la ubicación del archivo y los permisos.",
+      "invalid_ssl_cert": "Error de validación del certificado SSL o la clave privada. Comprueba que los archivos estén en formato PEM sin cifrar o PKCS#12 válido y coincidan entre sí."
     }
   },
   "entity": {

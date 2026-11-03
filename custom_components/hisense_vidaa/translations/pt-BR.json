@@ -59,7 +59,8 @@
       "cannot_connect": "Falha ao conectar à TV.",
       "invalid_auth": "Código PIN inválido. Tente novamente.",
       "certs_not_found": "Arquivo de certificado ou de chave privada não encontrado no caminho especificado. Verifique a localização do arquivo e as permissões.",
-      "unknown": "Ocorreu um erro desconhecido."
+      "unknown": "Ocorreu um erro desconhecido.",
+      "invalid_ssl_cert": "Falha na validação do certificado SSL ou da chave privada. Verifique se os arquivos estão no formato PEM não criptografado ou PKCS#12 válido e correspondem entre si."
     },
     "abort": {
       "reauth_successful": "Reautenticação realizada com sucesso.",
@@ -130,7 +131,8 @@
       }
     },
     "error": {
-      "certs_not_found": "Arquivo de certificado ou de chave privada não encontrado no caminho especificado. Verifique a localização do arquivo e as permissões."
+      "certs_not_found": "Arquivo de certificado ou de chave privada não encontrado no caminho especificado. Verifique a localização do arquivo e as permissões.",
+      "invalid_ssl_cert": "Falha na validação do certificado SSL ou da chave privada. Verifique se os arquivos estão no formato PEM não criptografado ou PKCS#12 válido e correspondem entre si."
     }
   },
   "entity": {

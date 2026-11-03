@@ -354,3 +354,25 @@ def test_generate_initial_credentials_oem_brands():
 
 
 
+
+def test_validate_ssl_certs(tmp_path):
+    """Test validate_ssl_certs with missing, invalid, and empty inputs."""
+    from custom_components.hisense_vidaa.crypto import validate_ssl_certs
+
+    # None inputs
+    assert validate_ssl_certs(None, None) == (True, None)
+
+    # Missing files
+    valid, err = validate_ssl_certs("/nonexistent/cert.pem", "/nonexistent/key.pem")
+    assert valid is False
+    assert err == "certs_not_found"
+
+    # Corrupted / non-PEM files
+    cert_file = tmp_path / "bad_cert.pem"
+    key_file = tmp_path / "bad_key.pem"
+    cert_file.write_text("NOT A VALID CERTIFICATE", encoding="utf-8")
+    key_file.write_text("NOT A VALID KEY", encoding="utf-8")
+
+    valid, err = validate_ssl_certs(str(cert_file), str(key_file))
+    assert valid is False
+    assert err is not None and "invalid_ssl_cert" in err
