@@ -1,6 +1,6 @@
 # Hisense VIDAA TV Integration for Home Assistant
 
-[![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/default)
+[![HACS](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/default)
 [![Documentation](https://img.shields.io/badge/docs-stevene.enuff.com-blue.svg)](https://stevene.enuff.com/hisensevidaa)
 [![GitHub Release](https://img.shields.io/github/v/release/stevene1919/hisense_vidaa)](https://github.com/stevene1919/hisense_vidaa/releases)
 [![Support on Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=flat&logo=ko-fi&logoColor=white)](https://ko-fi.com/stevene_)
@@ -27,13 +27,22 @@ Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using 
 
 ## 🧭 Supported Generations & Models
 
-The integration officially supports all smart TV models manufactured by **Hisense** running VIDAA OS:
+The integration officially supports all smart TV models running VIDAA OS across all generations (pairing via **4-Digit Screen PIN**):
 
-| Brand / Manufacturer | Series & Verified Models | Firmware Builds | Auth Profile | Pairing Method |
-| :--- | :--- | :--- | :--- | :--- |
-| **Hisense (Modern)** | U6G, U7G, U8G, U6K, U7K, U8K, UX, A6G, A6H, A7GQ, A63H, E7HQ, E7K PRO | `Q0704`, `V0000.06`, `U6.1.0`, `U7.0`, `U8.0` | `modern` / `auto` | 4-Digit Screen PIN |
-| **Hisense (Middle / Standard)** | U4G, U5G, H8G, H9G, B7100, B7500, A7100, A7300, A7500 | `V0000.01`–`V0000.05`, `U4.0`, `U5.0` | `middle` / `remotenow` | 4-Digit Screen PIN |
-| **Licensed OEM VIDAA Models** *(Pre-release support)* | Toshiba, Loewe, Schneider, Akai, Beko, Telefunken, Bush (VIDAA OS editions) | Various builds | `auto` | 4-Digit Screen PIN |
+- 📺 **Hisense Modern (2021+)**
+  - **Verified Series**: U6G, U7G, U8G, U6K, U7K, U8K, UX, A6G, A6H, A7GQ, A63H, E7HQ, E7K PRO
+  - **Firmware Builds**: `Q0704`, `V0000.06`, `U6.1.0`, `U7.0`, `U8.0`
+  - **Auth Profile**: `modern` / `auto`
+
+- 📺 **Hisense Standard & Middle (2018–2021)**
+  - **Verified Series**: U4G, U5G, H8G, H9G, B7100, B7500, A7100, A7300, A7500
+  - **Firmware Builds**: `V0000.01`–`V0000.05`, `U4.0`, `U5.0`
+  - **Auth Profile**: `middle` / `remotenow`
+
+- 📺 **Licensed OEM VIDAA Models** *(Pre-release support)*
+  - **Verified Brands**: Toshiba, Loewe, Schneider, Akai, Beko, Telefunken, Bush (VIDAA OS editions)
+  - **Firmware Builds**: Various builds (`transport_protocol` auto-detected)
+  - **Auth Profile**: `auto`
 
 > **Note on Other Brands**: Underlying protocol support, cryptographic derivation, and manufacturer branding normalization for licensed VIDAA OS OEM manufacturers (Toshiba, Loewe, etc.) are implemented and ready in code. Official brand certification, testing, and dedicated documentation will launch with the upcoming universal VIDAA integration rebranding (`hisense_vidaa` → `vidaa`). For complete cryptographic formulas, XOR masks, and OEM brand identifiers, see [Protocol & Cryptographic Architecture](docs/protocol_architecture.md).
 
@@ -47,11 +56,8 @@ The integration officially supports all smart TV models manufactured by **Hisens
 - **Dedicated Remote Platform**: Fast key command dispatching, key aliases (`home`, `menu`, `back`, `ok`, etc.), configurable repeat counts, and inter-key delay options.
 - **Picture & Display Adjustments (`number` & `select`)**: Fine-tune Backlight, Brightness, and Contrast slider entities (0–100) and switch Picture Modes (`Standard`, `Cinema Day`, `Cinema Night`, `Dynamic`, `Sports`, `Game`, `Filmmaker Mode`) dynamically.
 - **Sound Mode Selector (`select`)**: Switch real-time TV sound equalizer modes (`Standard`, `Theatre`, `Music`, `Speech`, `Late Night`, `Sports`) and audio output routing (`select.{tv}_audio_output`).
-- **On-Screen Toast Notifications (`notify`)**: Send customized on-screen toast messages and alert banners directly to the TV screen via `notify.send_message`.
-- **Direct Text Input (`send_text_input` service)**: Inject virtual keyboard text directly into on-screen search bars and input fields across apps.
-- **Rich Diagnostic Sensors & Utility Buttons**: Active source (with dynamic HDMI-CEC device naming), active Smart TV app, audio output mode, MQTT connection state, and session status, along with dedicated diagnostic buttons for forcing reconnection, probing picture/sound capabilities, UPnP clock sync, and triggering manual re-pairing.
-- **Network Resilience**: Subnet-directed Wake-on-LAN with dual-MAC fallback (Ethernet + Wi-Fi) for reliable power-on from deep standby, clock synchronization via UPnP, and automatic 30-day token refresh.
-- **Flexible SSL Handling**: Automatic in-memory extraction for PKCS#12 bundles (`.p12` / `.pfx`) and support for standard PEM pairs (`.pem`, `.crt`, `.key`) stored in `/config/ssl`.
+- **On-Screen Toast Notifications (`notify`)**: Send customized on-screen toast messages to the TV directly from Home Assistant automations.
+- **Subnet Wake-on-LAN**: Reliable, multi-burst WoL magic packet dispatching with configurable subnet broadcasting across dual-NIC and VLAN networks.
 - **Tabbed Options Flow**: Beautiful, categorized options menu (General & Power, Sources & Media, Remote Key Timings, SSL Certificates) for adjusting settings without re-pairing.
 
 ---
@@ -64,17 +70,26 @@ You can install the integration either via **HACS** (easiest) or **Manually** (w
 
 #### Option A: Install via HACS (Recommended)
 
-Click the button below to add this repository directly to your HACS installation:
+This integration is available directly in the official **HACS default repository**!
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
+1. **One-Click Install**: Click the button below to open the integration directly in HACS:
 
-*Or manually in HACS:* **HACS** → **Integrations** → **Custom repositories** → Add `https://github.com/stevene1919/hisense_vidaa` (Category: *Integration*).
+   [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
+
+2. *Or search directly in HACS*:
+   - Open **HACS** from your Home Assistant sidebar.
+   - Search for **Hisense VIDAA TV**.
+   - Select the integration and click **Download** in the bottom right corner.
 
 ---
 
 #### Option B: Manual Installation
 
 Download the latest [release ZIP](https://github.com/stevene1919/hisense_vidaa/releases/latest) and extract `custom_components/hisense_vidaa` into your Home Assistant `/config/custom_components/` directory.
+
+> [!TIP]
+> **Advanced Users & Developers**:
+> Looking to clone via Git, track development/beta branches, use Git submodules, or run standalone diagnostics without Home Assistant? See the **[Advanced Installation & Development Guide](docs/installation_advanced.md)**.
 
 ---
 
@@ -105,52 +120,41 @@ Copy your client certificate / key (or `.p12` bundle) to `/config/ssl/` (or `/ss
 
 For deep technical details, configuration parameters, and dashboard templates, refer to the dedicated documentation library:
 
-| Document | Topic | Description |
-| :--- | :--- | :--- |
-| ⚙️ **[Configuration & Options Parameters](docs/parameters.md)** | **Parameters** | Complete reference for all initial setup fields and Options Flow parameters across all tabs. |
-| ⚡ **[TV Power, Standby & Network Settings](docs/power_and_standby_settings.md)** | **Power & Standby** | Model settings (VIDAA U4–U8, 2024+), two-tier standby architecture, and preventing token loss. |
-| 📱 **[Lovelace Remote Cards & Dashboards](docs/lovelace_cards.md)** | **UI Cards** | Australian EN2G30H 12-app remote, Classic FTA, Button Card, and Android TV Card templates. |
-| 🛠️ **[Services & Automation Examples](docs/services_and_automations.md)** | **Automations** | Ready-to-use YAML automations for movie modes, picture/sound toggling, and keyboard input. |
-| 🔒 **[SSL Certificate Setup](docs/certificates.md)** | **Certificates** | Mutual TLS file placement (`/config/ssl/`), filename matrix, and automatic PKCS#12 extraction. |
-| 🌐 **[Network & Wake-on-LAN Requirements](docs/network_requirements.md)** | **Networking** | 100% local LAN architecture, UPnP LAN control, IoT VLAN rules, and reliable wired WoL setup. |
-| 🧪 **[CLI Testing & Diagnostic Tools](docs/cli_tools.md)** | **CLI Utilities** | Standalone [`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py) command-line tool reference. |
-| 🔬 **[Protocol & Cryptographic Architecture](docs/protocol_architecture.md)** | **Architecture** | Reverse-engineered UPnP LAN control, XOR bitmasks, token lifecycles, and multi-brand ecosystem. |
-| 🩺 **[Troubleshooting & Error Reference](docs/troubleshooting.md)** | **Troubleshooting** | Diagnostic procedures, error recovery, pairing resets, and action error resolutions. |
-| 🗑️ **[Removal & Uninstallation Guide](docs/removal.md)** | **Uninstallation** | Step-by-step device deletion, certificate cleanup, and HACS component uninstallation. |
-| 🖼️ **[Screenshots & UI Gallery](docs/screenshots.md)** | **Showcase** | Full visual tour of device controls, media player dialogs, source dropdowns, and option menus. |
+| Guide | Description |
+| :--- | :--- |
+| ⚙️ **[Configuration & Options Parameters](docs/parameters.md)** | Complete reference for all initial setup fields and Options Flow parameters across all tabs. |
+| ⚡ **[TV Power, Standby & Network Settings](docs/power_and_standby_settings.md)** | Model settings (VIDAA U4–U8, 2024+), two-tier standby architecture, and preventing token loss. |
+| 📱 **[Lovelace Remote Cards & Dashboards](docs/lovelace_cards.md)** | Australian EN2G30H 12-app remote, Classic FTA, Button Card, and Android TV Card templates. |
+| 🛠️ **[Services & Automation Examples](docs/services_and_automations.md)** | Ready-to-use YAML automations for movie modes, picture/sound toggling, and keyboard input. |
+| 🔒 **[SSL Certificate Setup](docs/certificates.md)** | Mutual TLS file placement (`/config/ssl/`), filename matrix, and automatic PKCS#12 extraction. |
+| 🌐 **[Network & Wake-on-LAN Requirements](docs/network_requirements.md)** | 100% local LAN architecture, UPnP LAN control, IoT VLAN rules, and reliable wired WoL setup. |
+| 🧪 **[CLI Testing & Diagnostic Tools](docs/cli_tools.md)** | Standalone [`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py) command-line tool reference. |
+| 🔬 **[Protocol & Cryptographic Architecture](docs/protocol_architecture.md)** | Reverse-engineered UPnP LAN control, XOR bitmasks, token lifecycles, and multi-brand ecosystem. |
+| 🛠️ **[Advanced Installation & Development](docs/installation_advanced.md)** | Git cloning, branch tracking, Git submodules, standalone venv setup, and air-gapped VLAN installs. |
+| 🩺 **[Troubleshooting & Error Reference](docs/troubleshooting.md)** | Diagnostic procedures, error recovery, pairing resets, and action error resolutions. |
+| 🗑️ **[Removal & Uninstallation Guide](docs/removal.md)** | Step-by-step device deletion, certificate cleanup, and HACS component uninstallation. |
+| 🖼️ **[Screenshots & UI Gallery](docs/screenshots.md)** | Full visual tour of device controls, media player dialogs, source dropdowns, and option menus. |
 
 ---
 
 ## 🛠️ Diagnostics & Troubleshooting
 
-The integration includes standalone CLI diagnostic utilities ([`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py)) to test network connectivity, probe dynamic TV capabilities, verify TLS certificates, and generate pre-formatted report blocks for GitHub issues without running Home Assistant.
+Standalone CLI tools ([`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py)) are available to test network reachability, verify TLS certificates, probe TV capabilities, and generate pre-formatted report blocks for GitHub issues without running Home Assistant.
 
-```bash
-# Quick feature and capability probe:
-python3 test_client.py probe --ip <TV_IP>
-
-# Generate a complete sanitized report for GitHub issues:
-python3 test_client.py report --ip <TV_IP> --probe
-```
-
-> For one-line curl runners, live MQTT event streaming, and full command arguments, see the **[CLI Testing & Diagnostic Tools Guide](docs/cli_tools.md)**.
+> For command arguments, one-line curl runners, and live MQTT streaming, see the **[CLI Testing & Diagnostic Tools Guide](docs/cli_tools.md)** and **[Troubleshooting Reference](docs/troubleshooting.md)**.
 
 ---
 
 ## ⚡ Integration Actions & Services
 
-The integration provides custom Home Assistant actions for advanced automation and remote control:
+The integration exposes dedicated Home Assistant actions for automations, scripts, and dashboard buttons:
 
-| Action | Description | Key Parameters |
-| :--- | :--- | :--- |
-| `hisense_vidaa.send_key` | Sends navigation, playback, and numerical remote key commands. | `key`, `repeat`, `delay` |
-| `hisense_vidaa.launch_app` | Launches installed smart TV applications by display name, app ID, and optional video deep-link URL. | `app`, `app_id`, `app_name`, `url` |
-| `hisense_vidaa.set_picture_setting` | Direct hardware adjustment of TV picture mode settings. | `menu_id`, `menu_value` |
-| `hisense_vidaa.set_sound_setting` | Direct hardware adjustment of TV sound and equalizer settings. | `menu_id`, `menu_value` |
-| `hisense_vidaa.send_text_input` | Sends text strings directly to active onscreen search boxes. | `text`, `action` |
+- **Remote Navigation & Playback**: `send_key`, `send_key_sequence` (multi-key sequences with delays), and `change_channel` (direct numeric live TV channel tuning).
+- **App Launching**: `launch_app` (by name, app ID, or video deep-link URL).
+- **Picture & Sound Modes**: `set_picture_setting` and `set_sound_setting` (direct hardware mode changes).
+- **Virtual Keyboard**: `send_text_input` (inject search queries into onscreen inputs).
 
-> For complete YAML examples, input validation, and service schema details, see the **[Services & Automations Guide](docs/services_and_automations.md)**.
-
+> For copy-paste YAML automation recipes, key tables, and service parameters, see the **[Services & Automations Guide](docs/services_and_automations.md)**.
 ---
 
 ## 🗑️ Removal & Uninstallation

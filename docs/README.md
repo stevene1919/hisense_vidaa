@@ -21,6 +21,7 @@ This directory contains in-depth documentation covering installation, networking
 | [**`cli_tools.md`**](cli_tools.md) | **CLI Diagnostics Tool** | Guide for using the standalone `test_client.py` and `debug_tv.py` CLI utilities to test reachability, TLS handshakes, UPnP, and pairing without running Home Assistant. |
 | [**`screenshots.md`**](screenshots.md) | **Visual Showcase** | Gallery of integration screenshots, entity platform views, and categorized options menus. |
 | [**`troubleshooting.md`**](troubleshooting.md) | **Troubleshooting & Error Reference** | Action error resolution table, standby wake issues, pairing/token recovery, and network connectivity diagnostics. |
+| [**`installation_advanced.md`**](installation_advanced.md) | **Advanced Installation & Development** | Direct Git cloning, submodules, tracking beta branches, venv setup, and offline VLAN installations. |
 
 ---
 
