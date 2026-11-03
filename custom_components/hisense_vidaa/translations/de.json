@@ -59,7 +59,8 @@
       "cannot_connect": "Verbindung zum Fernseher fehlgeschlagen.",
       "invalid_auth": "Ungültiger PIN-Code. Bitte versuche es erneut.",
       "certs_not_found": "Zertifikats- oder private Schlüsseldatei wurde am angegebenen Pfad nicht gefunden. Bitte Dateipfad und Berechtigungen prüfen.",
-      "unknown": "Ein unbekannter Fehler ist aufgetreten."
+      "unknown": "Ein unbekannter Fehler ist aufgetreten.",
+      "invalid_ssl_cert": "SSL-Zertifikat oder privater Schlüssel ungültig. Bitte prüfen, ob die Dateien im unverschlüsselten PEM- oder unterstützten PKCS#12-Format vorliegen und zusammenpassen."
     },
     "abort": {
       "reauth_successful": "Neu-Authentifizierung war erfolgreich.",
@@ -130,7 +131,8 @@
       }
     },
     "error": {
-      "certs_not_found": "Zertifikats- oder private Schlüsseldatei wurde am angegebenen Pfad nicht gefunden. Bitte Dateipfad und Berechtigungen prüfen."
+      "certs_not_found": "Zertifikats- oder private Schlüsseldatei wurde am angegebenen Pfad nicht gefunden. Bitte Dateipfad und Berechtigungen prüfen.",
+      "invalid_ssl_cert": "SSL-Zertifikat oder privater Schlüssel ungültig. Bitte prüfen, ob die Dateien im unverschlüsselten PEM- oder unterstützten PKCS#12-Format vorliegen und zusammenpassen."
     }
   },
   "entity": {

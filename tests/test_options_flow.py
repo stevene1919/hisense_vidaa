@@ -126,6 +126,10 @@ async def test_options_flow(monkeypatch: pytest.MonkeyPatch) -> None:
         "custom_components.hisense_vidaa.options_flow.check_certs_exist",
         lambda c, k: True,
     )
+    monkeypatch.setattr(
+        "custom_components.hisense_vidaa.options_flow.validate_ssl_certs",
+        lambda c, k: (True, None),
+    )
     result_sec_submit = await handler.async_step_security(
         user_input={
             "auth_profile": "modern",

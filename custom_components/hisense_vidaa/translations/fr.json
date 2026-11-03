@@ -59,7 +59,8 @@
       "cannot_connect": "Échec de connexion au téléviseur.",
       "invalid_auth": "Code PIN non valide. Veuillez réessayer.",
       "certs_not_found": "Fichier de certificat ou de clé privée introuvable au chemin spécifié. Veuillez vérifier l'emplacement du fichier et ses permissions.",
-      "unknown": "Une erreur inconnue s'est produite."
+      "unknown": "Une erreur inconnue s'est produite.",
+      "invalid_ssl_cert": "Échec de validation du certificat SSL ou de la clé privée. Vérifiez que les fichiers sont au format PEM non chiffré ou PKCS#12 valide et concordent."
     },
     "abort": {
       "reauth_successful": "La réauthentification a réussi.",
@@ -130,7 +131,8 @@
       }
     },
     "error": {
-      "certs_not_found": "Fichier de certificat ou de clé privée introuvable au chemin spécifié. Veuillez vérifier l'emplacement du fichier et ses permissions."
+      "certs_not_found": "Fichier de certificat ou de clé privée introuvable au chemin spécifié. Veuillez vérifier l'emplacement du fichier et ses permissions.",
+      "invalid_ssl_cert": "Échec de validation du certificat SSL ou de la clé privée. Vérifiez que les fichiers sont au format PEM non chiffré ou PKCS#12 valide et concordent."
     }
   },
   "entity": {

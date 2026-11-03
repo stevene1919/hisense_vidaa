@@ -88,6 +88,7 @@ from .protocol.certs import (
     get_profile_default_cert_paths,
     resolve_ca_certificate,
     resolve_certificates,
+    validate_ssl_certs,
 )
 
 __all__ = [
@@ -105,4 +106,5 @@ __all__ = [
     "normalize_mac_address",
     "resolve_ca_certificate",
     "resolve_certificates",
+    "validate_ssl_certs",
 ]

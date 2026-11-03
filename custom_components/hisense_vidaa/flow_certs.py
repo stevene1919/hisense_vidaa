@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import ssl
 from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
@@ -11,7 +12,7 @@ from homeassistant import config_entries
 from homeassistant.data_entry_flow import AbortFlow
 
 from .const import CONF_CERTFILE, CONF_KEYFILE, CONF_USE_SSL, DEFAULT_USE_SSL
-from .crypto import check_certs_exist, get_profile_default_cert_paths
+from .crypto import check_certs_exist, extract_pkcs12_to_pem, get_profile_default_cert_paths, validate_ssl_certs
 from .flow_helpers import resolve_ssl_certs
 
 if TYPE_CHECKING:
@@ -85,6 +86,15 @@ class CertsFlowMixin:
             self.keyfile = user_input.get(CONF_KEYFILE) or default_key_path
 
             if self.use_ssl:
+                if self.certfile and (self.certfile.lower().endswith(".p12") or self.certfile.lower().endswith(".pfx")):
+                    if hasattr(self, "hass") and self.hass:
+                        extracted = await self.hass.async_add_executor_job(extract_pkcs12_to_pem, self.certfile)
+                    else:
+                        loop = asyncio.get_running_loop()
+                        extracted = await loop.run_in_executor(None, extract_pkcs12_to_pem, self.certfile)
+                    if extracted:
+                        self.certfile, self.keyfile = extracted
+
                 async def _check_exist(c: str | None, k: str | None) -> bool:
                     if hasattr(self, "hass") and self.hass:
                         return await self.hass.async_add_executor_job(check_certs_exist, c, k)
@@ -101,6 +111,17 @@ class CertsFlowMixin:
                         errors[CONF_KEYFILE] = "certs_not_found"
                     else:
                         errors["base"] = "certs_not_found"
+                else:
+                    async def _validate(c: str | None, k: str | None) -> tuple[bool, str | None]:
+                        if hasattr(self, "hass") and self.hass:
+                            return await self.hass.async_add_executor_job(validate_ssl_certs, c, k)
+                        loop = asyncio.get_running_loop()
+                        return await loop.run_in_executor(None, validate_ssl_certs, c, k)
+
+                    valid, err_reason = await _validate(self.certfile, self.keyfile)
+                    if not valid:
+                        _LOGGER.warning("[%s] SSL certificate validation failed: %s", self.ip_address, err_reason)
+                        errors["base"] = "invalid_ssl_cert"
 
             if not errors:
                 try:
@@ -109,6 +130,9 @@ class CertsFlowMixin:
                     # HA flow control (e.g. already_configured) must never be
                     # turned into cannot_connect.
                     raise
+                except ssl.SSLError as e:
+                    _LOGGER.warning("[%s] SSL handshake failed: %s", self.ip_address, e)
+                    errors["base"] = "invalid_ssl_cert"
                 except Exception as e:
                     _LOGGER.warning("[%s] Failed to connect or initiate auth: %s", self.ip_address, e)
                     errors["base"] = "cannot_connect"

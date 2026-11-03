@@ -32,8 +32,34 @@ __all__ = [
     "get_profile_default_cert_paths",
     "resolve_ca_certificate",
     "resolve_certificates",
+    "validate_ssl_certs",
 ]
 
+
+
+def validate_ssl_certs(certfile: str | None, keyfile: str | None) -> tuple[bool, str | None]:
+    """Validate that certificate and key files exist and can be loaded into an SSLContext.
+
+    Returns:
+        tuple[is_valid, error_reason_or_None]
+    """
+    if not certfile and not keyfile:
+        return True, None
+
+    if not check_certs_exist(certfile, keyfile):
+        return False, "certs_not_found"
+
+    import ssl
+    try:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+        return True, None
+    except ssl.SSLError as err:
+        return False, f"invalid_ssl_cert: {err}"
+    except Exception as err:
+        return False, f"invalid_ssl_cert: {err}"
 
 def check_certs_exist(certfile: str | None, keyfile: str | None) -> bool:
     """Check if certificate and key files exist and are readable."""

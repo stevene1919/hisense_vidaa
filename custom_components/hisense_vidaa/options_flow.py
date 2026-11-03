@@ -41,7 +41,7 @@ from .const import (
     DEFAULT_REFRESH_IN_STANDBY,
     DEFAULT_USE_SSL,
 )
-from .crypto import check_certs_exist
+from .crypto import check_certs_exist, validate_ssl_certs
 
 
 class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
@@ -248,6 +248,16 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
                         errors[CONF_KEYFILE] = "certs_not_found"
                     else:
                         errors["base"] = "certs_not_found"
+                else:
+                    async def _validate(c: str | None, k: str | None) -> tuple[bool, str | None]:
+                        if hasattr(self, "hass") and self.hass:
+                            return await self.hass.async_add_executor_job(validate_ssl_certs, c, k)
+                        loop = asyncio.get_running_loop()
+                        return await loop.run_in_executor(None, validate_ssl_certs, c, k)
+
+                    valid, _ = await _validate(new_cert, new_key)
+                    if not valid:
+                        errors["base"] = "invalid_ssl_cert"
 
             if not errors:
                 updated_options = {**self.config_entry.options, **user_input}
