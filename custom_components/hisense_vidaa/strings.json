@@ -121,9 +121,10 @@
       },
       "security": {
         "title": "Connection & Security",
-        "description": "Select authentication profile, encryption, and optional client certificates.",
+        "description": "Select TV OEM brand, authentication profile, encryption, and optional client certificates.",
         "data": {
           "auth_profile": "Authentication / Certificate Profile",
+          "brand": "TV OEM Brand",
           "use_ssl": "Use Encrypted SSL/TLS Connection",
           "certfile": "Certificate File Path (.crt / .pem / .p12)",
           "keyfile": "Private Key File Path (.key / .pem)"
@@ -387,6 +388,14 @@
         "middle": "VIDAA 1.5 / Middle (3000–3285)",
         "remotenow": "RemoteNOW / 2018–2023 (standard)",
         "legacy": "Legacy Static (Pre-2022 / Static Credentials)"
+      }
+    },
+    "brand": {
+      "options": {
+        "his": "Hisense",
+        "tos": "Toshiba",
+        "loe": "Loewe",
+        "tpv": "TPV / Philips / AOC"
       }
     }
   },

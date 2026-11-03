@@ -240,9 +240,16 @@ VIDAA OS is not exclusive to Hisense televisions; it is licensed globally to mul
 | OEM Brand | Common Models | Default Brand Code | Client ID Template |
 | :--- | :--- | :--- | :--- |
 | **Hisense** | U6, U7, U8, UX, A6, A7 | `his` | `{mac}$his${hash}_vidaacommon_{suffix}` |
-| **Toshiba** | C350, M550, Z670 (VIDAA editions) | `tos` / `his` | `{mac}$tos${hash}_vidaacommon_{suffix}` |
-| **Loewe** | We. SEE, stellar (VIDAA OS) | `loe` / `his` | `{mac}$loe${hash}_vidaacommon_{suffix}` |
+| **Toshiba** | C350, M550, Z670 (VIDAA editions) | `tos` | `{mac}$tos${hash}_vidaacommon_{suffix}` |
+| **Loewe** | We. SEE, stellar (VIDAA OS) | `loe` | `{mac}$loe${hash}_vidaacommon_{suffix}` |
+| **TPV / Philips / AOC** | OLED708, PUS8808, AOC Smart (VIDAA editions) | `tpv` | `{mac}$tpv${hash}_vidaacommon_{suffix}` |
 | **Schneider / Akai / Bush / Beko / Telefunken** | Regional smart TVs | `his` | Parameterized from discovery XML |
 
-During SSDP / UPnP discovery, the integration extracts manufacturer metadata from `rendererdevicedesc.xml` (`<manufacturer>` and `<modelName>`), automatically applying appropriate brand identifiers across client ID generation, username masks, and topic trees.
+### Dual Brand Resolution Architecture
+1. **UPnP & mDNS Discovery (`<modelDescription>`)**:
+   During SSDP and Zeroconf discovery, the integration extracts manufacturer metadata from `rendererdevicedesc.xml` (`<modelDescription>` and `<manufacturer>`), automatically applying appropriate brand identifiers (`his`, `tos`, `loe`, `tpv`) across client ID generation, username masks, and topic trees.
+2. **Candidate Brand Auth Fallback Cascade**:
+   In isolated VLAN or cross-subnet topologies where UPnP/mDNS multicast is blocked and the TV is added via manual IP, the integration initially attempts pairing with default brand code `his`. If the TV broker rejects the connection with `rc: 5` (Not Authorized), the pairing engine automatically cascades through candidate OEM brands (`tos`, `loe`, `tpv`). When accepted, it dynamically adopts the confirmed brand code and updates Home Assistant's device registry manufacturer.
+3. **Certificate Filename Hinting**:
+   If users place brand-named client certificates in `/config/ssl/` (e.g. `toshiba.crt`/`toshiba.key`, `loewe.crt`/`loewe.key`, `philips.crt`/`philips.key`, `tpv.crt`/`tpv.key`), the integration automatically detects the brand from the file names during setup.
 

@@ -115,3 +115,18 @@ AUTH_PROFILE_SELECTOR = selector.SelectSelector(
         translation_key="auth_profile",
     )
 )
+
+BRAND_OPTIONS = [
+    selector.SelectOptionDict(value="his", label="Hisense"),
+    selector.SelectOptionDict(value="tos", label="Toshiba"),
+    selector.SelectOptionDict(value="loe", label="Loewe"),
+    selector.SelectOptionDict(value="tpv", label="TPV / Philips / AOC"),
+]
+
+BRAND_SELECTOR = selector.SelectSelector(
+    selector.SelectSelectorConfig(
+        options=BRAND_OPTIONS,
+        mode=selector.SelectSelectorMode.DROPDOWN,
+        translation_key="brand",
+    )
+)

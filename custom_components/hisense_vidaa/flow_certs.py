@@ -11,8 +11,15 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import AbortFlow
 
-from .const import CONF_CERTFILE, CONF_KEYFILE, CONF_USE_SSL, DEFAULT_USE_SSL
-from .crypto import check_certs_exist, extract_pkcs12_to_pem, get_profile_default_cert_paths, validate_ssl_certs
+from .const import CONF_CERTFILE, CONF_KEYFILE, CONF_USE_SSL, DEFAULT_BRAND, DEFAULT_USE_SSL
+from .crypto import (
+    check_certs_exist,
+    detect_brand_from_cert_paths,
+    extract_pkcs12_to_pem,
+    get_profile_default_cert_paths,
+    validate_ssl_certs,
+)
+from .discovery import BRAND_MAP
 from .flow_helpers import resolve_ssl_certs
 
 if TYPE_CHECKING:
@@ -39,6 +46,11 @@ class CertsFlowMixin:
             self.certfile = cert
             self.keyfile = key
             self.use_ssl = use_ssl
+            brand_hint = detect_brand_from_cert_paths(cert, key)
+            if brand_hint and getattr(self, "brand", DEFAULT_BRAND) == DEFAULT_BRAND:
+                self.brand = brand_hint
+                if brand_hint in BRAND_MAP:
+                    self.manufacturer = BRAND_MAP[brand_hint]
             return True
         return False
 
@@ -49,6 +61,11 @@ class CertsFlowMixin:
             self.certfile = cert
             self.keyfile = key
             self.use_ssl = use_ssl
+            brand_hint = detect_brand_from_cert_paths(cert, key)
+            if brand_hint and getattr(self, "brand", DEFAULT_BRAND) == DEFAULT_BRAND:
+                self.brand = brand_hint
+                if brand_hint in BRAND_MAP:
+                    self.manufacturer = BRAND_MAP[brand_hint]
             return True
         return False
 
@@ -124,6 +141,11 @@ class CertsFlowMixin:
                         errors["base"] = "invalid_ssl_cert"
 
             if not errors:
+                brand_hint = detect_brand_from_cert_paths(self.certfile, self.keyfile)
+                if brand_hint and getattr(self, "brand", DEFAULT_BRAND) == DEFAULT_BRAND:
+                    self.brand = brand_hint
+                    if brand_hint in BRAND_MAP:
+                        self.manufacturer = BRAND_MAP[brand_hint]
                 try:
                     return await self._async_init_client_and_auth()
                 except AbortFlow:

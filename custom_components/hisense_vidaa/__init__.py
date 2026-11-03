@@ -133,7 +133,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         certfile=certfile,
         keyfile=keyfile,
         use_ssl=use_ssl,
-        brand=data.get(CONF_BRAND, DEFAULT_BRAND),
+        brand=entry.options.get(CONF_BRAND, data.get(CONF_BRAND, DEFAULT_BRAND)),
         session=async_get_clientsession(hass),
     )
     client._loop = hass.loop

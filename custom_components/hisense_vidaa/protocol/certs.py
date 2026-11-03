@@ -28,12 +28,30 @@ __all__ = [
     "HAS_CRYPTOGRAPHY",
     "KNOWN_P12_PASSWORDS",
     "check_certs_exist",
+    "detect_brand_from_cert_paths",
     "extract_pkcs12_to_pem",
     "get_profile_default_cert_paths",
     "resolve_ca_certificate",
     "resolve_certificates",
     "validate_ssl_certs",
 ]
+
+
+def detect_brand_from_cert_paths(certfile: str | None, keyfile: str | None) -> str | None:
+    """Detect OEM brand hint from certificate or private key filenames."""
+    for path in (certfile, keyfile):
+        if not path:
+            continue
+        base = os.path.basename(path).lower()
+        if "toshiba" in base:
+            return "tos"
+        if "loewe" in base:
+            return "loe"
+        if any(token in base for token in ("philips", "tpv", "aoc")):
+            return "tpv"
+        if "hisense" in base:
+            return "his"
+    return None
 
 
 
@@ -204,14 +222,26 @@ def resolve_ca_certificate(
 
 PROFILE_CERT_CANDIDATES: dict[str, tuple[list[str], list[str], list[str]]] = {
     "modern": (
-        ["vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_2024_cert.pem", "vidaa2024_cert.pem", "vidaa_client.pem", "hisense.crt", "client_cert.pem", "cert.pem"],
-        ["vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_2024_key.pem", "vidaa2024_key.pem", "vidaa_client.key", "hisense.key", "client_key.pem", "key.pem"],
-        ["vidaa_2024_client_mobile_android.p12", "client_mobile_android.p12", "El.p12", "el.p12", "3R.p12", "vidaa_cert.p12", "vidaa.p12"],
+        [
+            "vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_2024_cert.pem", "vidaa2024_cert.pem", "vidaa_client.pem", "hisense.crt", "toshiba.crt", "toshiba.pem", "loewe.crt", "loewe.pem", "philips.crt", "philips.pem", "tpv.crt", "tpv.pem", "client_cert.pem", "cert.pem",
+        ],
+        [
+            "vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_2024_key.pem", "vidaa2024_key.pem", "vidaa_client.key", "hisense.key", "toshiba.key", "loewe.key", "philips.key", "tpv.key", "client_key.pem", "key.pem",
+        ],
+        [
+            "vidaa_2024_client_mobile_android.p12", "client_mobile_android.p12", "El.p12", "el.p12", "3R.p12", "vidaa_cert.p12", "vidaa.p12", "toshiba.p12", "loewe.p12", "philips.p12", "tpv.p12",
+        ],
     ),
     "middle": (
-        ["vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_client.pem", "remotenow_2018_cert.pem", "hisense.crt", "client_cert.pem", "cert.pem"],
-        ["vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_client.key", "remotenow_2018_key.pem", "hisense.key", "client_key.pem", "key.pem"],
-        ["client_mobile_android.p12", "vidaa_2024_client_mobile_android.p12", "El.p12", "el.p12", "3R.p12", "rcamobile.p12", "hisense.p12"],
+        [
+            "vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_client.pem", "remotenow_2018_cert.pem", "hisense.crt", "toshiba.crt", "toshiba.pem", "loewe.crt", "loewe.pem", "philips.crt", "philips.pem", "tpv.crt", "tpv.pem", "client_cert.pem", "cert.pem",
+        ],
+        [
+            "vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_client.key", "remotenow_2018_key.pem", "hisense.key", "toshiba.key", "loewe.key", "philips.key", "tpv.key", "client_key.pem", "key.pem",
+        ],
+        [
+            "client_mobile_android.p12", "vidaa_2024_client_mobile_android.p12", "El.p12", "el.p12", "3R.p12", "rcamobile.p12", "hisense.p12", "toshiba.p12", "loewe.p12", "philips.p12", "tpv.p12",
+        ],
     ),
     "remotenow": (
         ["remotenow_2018_cert.pem", "vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client.pem", "hisense.crt", "client_cert.pem", "cert.pem"],
@@ -219,9 +249,15 @@ PROFILE_CERT_CANDIDATES: dict[str, tuple[list[str], list[str], list[str]]] = {
         ["rcamobile.p12", "hisense.p12", "remotenow.p12"],
     ),
     "auto": (
-        ["vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_client.pem", "hisense.crt", "client_cert.pem", "vidaa_2024_cert.pem", "vidaa2024_cert.pem", "remotenow_2018_cert.pem", "cert.pem"],
-        ["vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_client.key", "hisense.key", "client_key.pem", "vidaa_2024_key.pem", "vidaa2024_key.pem", "remotenow_2018_key.pem", "key.pem"],
-        ["client_mobile_android.p12", "vidaa_2024_client_mobile_android.p12", "El.p12", "el.p12", "3R.p12", "vidaa_cert.p12", "vidaa.p12", "rcamobile.p12", "hisense.p12"],
+        [
+            "vidaa_client_v01.pem", "vidaa_client_v01.crt", "vidaa_client_v02.pem", "vidaa_client.pem", "hisense.crt", "toshiba.crt", "toshiba.pem", "loewe.crt", "loewe.pem", "philips.crt", "philips.pem", "tpv.crt", "tpv.pem", "client_cert.pem", "vidaa_2024_cert.pem", "vidaa2024_cert.pem", "remotenow_2018_cert.pem", "cert.pem",
+        ],
+        [
+            "vidaa_client_v01.key", "vidaa_client_v02.key", "vidaa_client.key", "hisense.key", "toshiba.key", "loewe.key", "philips.key", "tpv.key", "client_key.pem", "vidaa_2024_key.pem", "vidaa2024_key.pem", "remotenow_2018_key.pem", "key.pem",
+        ],
+        [
+            "client_mobile_android.p12", "vidaa_2024_client_mobile_android.p12", "El.p12", "el.p12", "3R.p12", "vidaa_cert.p12", "vidaa.p12", "rcamobile.p12", "hisense.p12", "toshiba.p12", "loewe.p12", "philips.p12", "tpv.p12",
+        ],
     ),
 }
 

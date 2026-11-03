@@ -7,7 +7,9 @@ from homeassistant.helpers import selector
 
 from .const import (
     AUTH_PROFILE_SELECTOR,
+    BRAND_SELECTOR,
     CONF_AUTH_PROFILE,
+    CONF_BRAND,
     CONF_CERTFILE,
     CONF_ENABLE_AUDIO_ONLY,
     CONF_ENABLE_CEC_NAMES,
@@ -26,6 +28,7 @@ from .const import (
     CONF_SECONDARY_MAC_ADDRESS,
     CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
+    DEFAULT_BRAND,
     DEFAULT_ENABLE_AUDIO_ONLY,
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
@@ -220,6 +223,9 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
         current_profile = options.get(
             CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
         )
+        current_brand = options.get(
+            CONF_BRAND, data.get(CONF_BRAND, DEFAULT_BRAND)
+        )
         current_use_ssl = options.get(
             CONF_USE_SSL, data.get(CONF_USE_SSL, DEFAULT_USE_SSL)
         )
@@ -270,6 +276,10 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_AUTH_PROFILE,
                     default=current_profile,
                 ): AUTH_PROFILE_SELECTOR,
+                vol.Optional(
+                    CONF_BRAND,
+                    default=current_brand,
+                ): BRAND_SELECTOR,
                 vol.Optional(
                     CONF_USE_SSL,
                     default=current_use_ssl,
