@@ -111,11 +111,45 @@ async def async_start_pairing_handshake(client: HisenseTvClient) -> None:
 
     profile = getattr(client, "auth_profile", "auto")
     if profile in ("modern", "vidaa_2024", "vidaa"):
-        await client._async_start_auth_internal(profile="modern")
+        target_profile = "modern"
     elif profile in ("middle", "vidaa_15", "vidaa_middle"):
-        await client._async_start_auth_internal(profile="middle")
+        target_profile = "middle"
     elif profile in ("remotenow", "remotenow_2018", "standard"):
-        await client._async_start_auth_internal(profile="remotenow")
+        target_profile = "remotenow"
+    else:
+        target_profile = None
+
+    if target_profile:
+        try:
+            await client._async_start_auth_internal(profile=target_profile)
+            return
+        except Exception as error:
+            error_message = str(error)
+            is_auth_reject = any(
+                code in error_message
+                for code in ("code 5", "code 4", "code 134", "code 135", "Not authorized")
+            )
+            if client.brand == "his" and is_auth_reject:
+                _LOGGER.info(
+                    "[%s] Default brand 'his' rejected with auth error (%s); probing candidate OEM brands...",
+                    client.ip,
+                    error,
+                )
+                for candidate_brand in ("tos", "loe", "tpv"):
+                    client.brand = candidate_brand
+                    try:
+                        await client._async_start_auth_internal(profile=target_profile)
+                        _LOGGER.info(
+                            "[%s] Successfully connected! Confirmed TV brand as '%s' (accepted profile: %s)",
+                            client.ip,
+                            candidate_brand,
+                            target_profile,
+                        )
+                        return
+                    except Exception:
+                        continue
+                client.brand = "his"
+            raise
     else:  # auto
         profiles_to_try = ["modern", "middle", "remotenow"]
         if getattr(client, "ip", None):
@@ -160,6 +194,46 @@ async def async_start_pairing_handshake(client: HisenseTvClient) -> None:
                     continue
                 raise
         if last_error:
+            error_message = str(last_error)
+            is_auth_reject = any(
+                code in error_message
+                for code in ("code 5", "code 4", "code 134", "code 135", "Not authorized")
+            )
+            if client.brand == "his" and is_auth_reject:
+                _LOGGER.info(
+                    "[%s] Default brand 'his' rejected with auth error (%s); probing candidate OEM brands...",
+                    client.ip,
+                    last_error,
+                )
+                candidate_profiles = [p for p in profiles_to_try if p != "remotenow"]
+                for candidate_brand in ("tos", "loe", "tpv"):
+                    client.brand = candidate_brand
+                    for candidate_profile in candidate_profiles:
+                        try:
+                            _LOGGER.debug(
+                                "[%s] Probing OEM brand '%s' with profile '%s'...",
+                                client.ip,
+                                candidate_brand,
+                                candidate_profile,
+                            )
+                            await client._async_start_auth_internal(profile=candidate_profile)
+                            client.auth_profile = candidate_profile
+                            _LOGGER.info(
+                                "[%s] Successfully connected! Confirmed TV brand as '%s' (accepted profile: %s)",
+                                client.ip,
+                                candidate_brand,
+                                candidate_profile,
+                            )
+                            return
+                        except Exception as brand_err:
+                            err_msg = str(brand_err)
+                            if any(
+                                code in err_msg
+                                for code in ("code 5", "code 4", "code 134", "code 135", "Not authorized")
+                            ):
+                                continue
+                            break
+                client.brand = "his"
             raise last_error
 
 

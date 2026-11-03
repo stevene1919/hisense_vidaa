@@ -124,6 +124,8 @@ class ReauthFlowMixin:
             self.client._loop = self.hass.loop
             try:
                 await self.client.async_start_auth()
+                if self.client.brand and self.client.brand != self.brand:
+                    self.brand = self.client.brand
 
                 if self.auth_profile in ("legacy", "static"):
                     # The TV may demand a one-off PIN pairing.

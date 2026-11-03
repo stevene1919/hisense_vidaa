@@ -72,6 +72,7 @@ def create_client_from_creds(
     ca_cert: str | None = None,
     verify_ssl: bool = False,
     auth_profile: str = "auto",
+    brand: str | None = None,
 ) -> Any:
     """Create a configured HisenseTvClient from credentials."""
     from ..client import HisenseTvClient
@@ -80,6 +81,7 @@ def create_client_from_creds(
         auth_profile=auth_profile, certfile=certfile, keyfile=keyfile
     )
     resolved_ca = resolve_ca_certificate(ca_cert)
+    tv_brand = brand or creds.get("brand") or "his"
 
     return HisenseTvClient(
         ip=creds.get("ip_address"),
@@ -98,6 +100,7 @@ def create_client_from_creds(
         ca_cert=resolved_ca,
         verify_ssl=verify_ssl,
         auth_profile=auth_profile,
+        brand=tv_brand,
     )
 
 

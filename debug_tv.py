@@ -42,6 +42,7 @@ if "homeassistant" not in sys.modules:
 
 from custom_components.hisense_vidaa.client import HisenseTvClient
 from custom_components.hisense_vidaa.discovery import (
+    BRAND_MAP,
     format_drift_human,
     get_device_fingerprint,
     get_tv_timestamp,
@@ -73,6 +74,7 @@ def main() -> None:
     parser.add_argument("--creds", type=str, default="credentials.json", help="Path to credentials.json")
     parser.add_argument("--cert", type=str, default=None, help="Path to client certificate pem")
     parser.add_argument("--key", type=str, default=None, help="Path to client private key pem")
+    parser.add_argument("--brand", type=str, default=None, choices=["his", "tos", "loe", "tpv"], help="TV OEM brand identifier (default: from credentials.json or his)")
     parser.add_argument("--monitor", action="store_true", help="Continuously monitor and stream live TV MQTT events")
     parser.add_argument("--dump-state", action="store_true", help="Dump all current state, apps, sources, and volume")
     parser.add_argument("--probe", action="store_true", help="Probe picture and sound settings menu trees")
@@ -135,8 +137,9 @@ def main() -> None:
 
     # 4. Initialize Client & Connect
     print_section("2. MQTT Broker & Real-Time Protocol Diagnostics")
-    client = create_client_from_creds(creds, certfile=args.cert, keyfile=args.key) if creds else HisenseTvClient(
-        ip=tv_ip, certfile=args.cert, keyfile=args.key, auth_profile="auto"
+    brand = args.brand or creds.get("brand") or "his"
+    client = create_client_from_creds(creds, certfile=args.cert, keyfile=args.key, brand=brand) if creds else HisenseTvClient(
+        ip=tv_ip, certfile=args.cert, keyfile=args.key, auth_profile="auto", brand=brand
     )
 
     state_cache = {"state": {}, "volume": {}, "sources": [], "apps": []}
@@ -237,6 +240,7 @@ def main() -> None:
         print_section("3. Current TV State Snapshot")
         print(f"MQTT Connected:      {client.connected}")
         print(f"Auth Profile:        {client.auth_profile}")
+        print(f"OEM Brand:           {client.brand.upper()} ({BRAND_MAP.get(client.brand, client.brand)})")
         if client.access_token_time and client.access_token_duration:
             exp_dt = datetime.fromtimestamp(client.access_token_time + client.access_token_duration * 86400, tz=UTC)
             print(f"Access Token Expiry: {exp_dt}")

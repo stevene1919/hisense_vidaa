@@ -203,7 +203,7 @@ async def test_async_start_auth_full_cascade_to_legacy():
          patch.object(client, "_async_start_auth_internal", side_effect=mock_internal):
         with pytest.raises(Exception, match="rejected with code 5"):
             await client.async_start_auth()
-        assert calls == ["modern", "middle", "remotenow"]
+        assert calls[:3] == ["modern", "middle", "remotenow"]
 
 
 
@@ -765,5 +765,39 @@ def test_check_and_refresh_token_respects_clock_offset():
         res = client.check_and_refresh_token(force=False)
         assert res is False
         mock_refresh.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_async_probe_tv_auth_methods_passes_brand():
+    """Verify async_probe_tv_auth_methods accepts brand and generates brand-prefixed credentials."""
+    import sys
+
+    from custom_components.hisense_vidaa.protocol.auth import async_probe_tv_auth_methods
+
+    probed_creds = []
+
+    class MockAsyncClient:
+        def __init__(self, *args, **kwargs):
+            probed_creds.append((kwargs.get("username"), kwargs.get("password")))
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_aiomqtt = MagicMock()
+    mock_aiomqtt.Client = MockAsyncClient
+    mock_aiomqtt.ProtocolVersion = MagicMock()
+
+    with patch.dict(sys.modules, {"aiomqtt": mock_aiomqtt}):
+        results = await async_probe_tv_auth_methods("192.168.50.12", brand="tos")
+
+    assert results["legacy_static"]["supported"] is True
+    assert results["modern_dynamic"]["supported"] is True
+    usernames = [u for u, _ in probed_creds]
+    assert "hisenseservice" in usernames
+    assert any(u and u.startswith("tos$") for u in usernames)
+
 
 

@@ -192,6 +192,10 @@ class HisenseVidaaConfigFlow(
                 self.client.auth_profile = "legacy"
 
         await self.client.async_start_auth()
+        if self.client.brand and self.client.brand != self.brand:
+            self.brand = self.client.brand
+            if self.brand in BRAND_MAP:
+                self.manufacturer = BRAND_MAP[self.brand]
 
         if self.auth_profile in ("legacy", "static"):
             return await self._async_static_pairing_step(is_reauth, reauth_reason)
@@ -296,6 +300,10 @@ class HisenseVidaaConfigFlow(
                 self.client._loop = self.hass.loop
                 try:
                     await self.client.async_start_auth()
+                    if self.client.brand and self.client.brand != self.brand:
+                        self.brand = self.client.brand
+                        if self.brand in BRAND_MAP:
+                            self.manufacturer = BRAND_MAP[self.brand]
                 except Exception as e:
                     _LOGGER.warning("[%s] Failed to connect to TV to show PIN: %s", self.ip_address, e)
                     errors["base"] = "cannot_connect"

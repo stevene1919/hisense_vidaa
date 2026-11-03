@@ -597,3 +597,87 @@ async def test_dynamic_connect_ack_unblocks_retry_wait(monkeypatch):
     assert client._connect_ack_future is None
 
 
+# ---------------------------------------------------------------------------
+# [P5] OEM Brand Cascade: On auth rejection (rc:5), cascade probes candidate brands.
+# ---------------------------------------------------------------------------
+@pytest.mark.anyio
+async def test_pairing_brand_fallback_target_profile():
+    """Verify that when default brand 'his' is rejected with rc: 5, candidate OEM brands are tried."""
+    from custom_components.hisense_vidaa.protocol.pairing import async_start_pairing_handshake
+
+    client = HisenseTvClient(
+        ip="192.168.50.12", mac="e8:51:77:ec:98:1c", auth_profile="modern", brand="his"
+    )
+
+    calls = []
+
+    async def fake_start_auth_internal(profile="modern"):
+        calls.append((client.brand, profile))
+        if client.brand == "his":
+            raise RuntimeError("Connection error: code 5 (Not authorized)")
+        if client.brand == "tos":
+            return
+        raise RuntimeError("Unexpected brand")
+
+    client._async_start_auth_internal = fake_start_auth_internal
+
+    await async_start_pairing_handshake(client)
+
+    assert client.brand == "tos"
+    assert ("his", "modern") in calls
+    assert ("tos", "modern") in calls
+
+
+@pytest.mark.anyio
+async def test_pairing_brand_fallback_auto_profile():
+    """Verify that in 'auto' mode, auth rejection cascades through candidate brands."""
+    from custom_components.hisense_vidaa.protocol.pairing import async_start_pairing_handshake
+
+    client = HisenseTvClient(
+        ip="192.168.50.12", mac="e8:51:77:ec:98:1c", auth_profile="auto", brand="his"
+    )
+
+    calls = []
+
+    async def fake_start_auth_internal(profile="modern"):
+        calls.append((client.brand, profile))
+        if client.brand == "his":
+            raise RuntimeError("Broker rejected connection with code 5")
+        if client.brand == "tos" and profile == "middle":
+            return
+        if client.brand == "tos":
+            raise RuntimeError("Broker rejected connection with code 5")
+        raise RuntimeError("Unexpected brand")
+
+    client._async_start_auth_internal = fake_start_auth_internal
+
+    await async_start_pairing_handshake(client)
+
+    assert client.brand == "tos"
+    assert client.auth_profile == "middle"
+    assert ("his", "modern") in calls
+    assert ("tos", "modern") in calls
+    assert ("tos", "middle") in calls
+
+
+@pytest.mark.anyio
+async def test_pairing_brand_fallback_exhausted_resets_brand():
+    """Verify that when all candidate brands fail with auth rejection, brand is reset to 'his'."""
+    from custom_components.hisense_vidaa.protocol.pairing import async_start_pairing_handshake
+
+    client = HisenseTvClient(
+        ip="192.168.50.12", mac="e8:51:77:ec:98:1c", auth_profile="modern", brand="his"
+    )
+
+    async def fake_start_auth_internal(profile="modern"):
+        raise RuntimeError("Broker rejected connection with code 5")
+
+    client._async_start_auth_internal = fake_start_auth_internal
+
+    with pytest.raises(RuntimeError, match="code 5"):
+        await async_start_pairing_handshake(client)
+
+    assert client.brand == "his"
+
+
+

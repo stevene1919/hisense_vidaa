@@ -35,6 +35,7 @@ async def async_ping_tv(
     mac: str | None = None,
     timeout: float = 3.0,
     upnp: HisenseUpnpClient | None = None,
+    brand: str = "his",
 ) -> dict[str, Any]:
     """Quickly tests if TV broker is listening, accepting TLS, and responding to MQTT packets."""
     results: dict[str, Any] = {
@@ -133,7 +134,12 @@ async def async_ping_tv(
     # 4. Probe auth methods
     with contextlib.suppress(Exception):
         results["auth_probe"] = await async_probe_tv_auth_methods(
-            ip, certfile=valid_cert, keyfile=valid_key, mac=mac, timeout=1.5
+            ip,
+            certfile=valid_cert,
+            keyfile=valid_key,
+            mac=mac,
+            timeout=1.5,
+            brand=brand,
         )
 
     # 5. Device fingerprint

@@ -46,6 +46,7 @@ if "homeassistant" not in sys.modules:
 
 from custom_components.hisense_vidaa.client import HisenseTvClient
 from custom_components.hisense_vidaa.discovery import (
+    BRAND_MAP,
     format_drift_human,
     get_arp_mac,
     get_tv_timestamp,
@@ -62,8 +63,17 @@ from custom_components.hisense_vidaa.tv.probe import (
 DEFAULT_CREDS_FILE = os.path.join(SCRIPT_DIR, "credentials.json")
 
 
-def do_ping(ip: str, creds: dict[str, Any], certfile: str | None, keyfile: str | None, profile: str = "auto", ca_cert: str | None = None, verify_ssl: bool = False) -> None:
-    print(f"\n[PING] Probing TV connectivity and MQTT broker at {ip}:36669 (Profile: {profile})...")
+def do_ping(
+    ip: str,
+    creds: dict[str, Any],
+    certfile: str | None,
+    keyfile: str | None,
+    profile: str = "auto",
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
+    brand: str = "his",
+) -> None:
+    print(f"\n[PING] Probing TV connectivity and MQTT broker at {ip}:36669 (Profile: {profile}, Brand: {brand})...")
 
     access_token = None
     client_id = None
@@ -83,6 +93,7 @@ def do_ping(ip: str, creds: dict[str, Any], certfile: str | None, keyfile: str |
         ca_cert=ca_cert,
         auth_profile=profile,
         verify_ssl=verify_ssl,
+        brand=brand,
     )
 
     try:
@@ -136,13 +147,14 @@ def do_ping(ip: str, creds: dict[str, Any], certfile: str | None, keyfile: str |
                 print("  • Verify the certificate matches your TV's required auth profile, or your TV may use an updated credential signature.")
 
         if dev.get("model_code") or dev.get("model_name") or dev.get("friendly_name"):
-            mfg = dev.get("manufacturer") or dev.get("brand") or "Hisense"
+            mfg = dev.get("manufacturer") or dev.get("brand") or BRAND_MAP.get(client.brand, client.brand.upper())
             model = dev.get("model_code") or dev.get("model_name") or dev.get("friendly_name")
             print(f"\n📺 Discovered TV Profile: {mfg} {model}")
             if dev.get("firmware_version"):
                 print(f"  • Firmware Build:             {dev['firmware_version']}")
             if dev.get("platform"):
                 print(f"  • Platform Indicator:         Platform {dev['platform']}")
+        print(f"  • OEM Brand:                  {client.brand.upper()} ({BRAND_MAP.get(client.brand, client.brand)})")
 
         arp_mac = get_arp_mac(ip)
         if arp_mac:
@@ -176,10 +188,37 @@ def do_ping(ip: str, creds: dict[str, Any], certfile: str | None, keyfile: str |
         sys.exit(1)
 
 
-def do_probe(ip: str, creds: dict[str, Any], certfile: str | None, keyfile: str | None, profile: str = "auto", ca_cert: str | None = None, verify_ssl: bool = False) -> None:
-    print(f"\n🔍 [PROBE] Probing TV features and menu capabilities at {ip}:36669...\n")
-    client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl, auth_profile=profile) if creds else HisenseTvClient(
-        ip=ip, certfile=certfile, keyfile=keyfile, ca_cert=ca_cert, auth_profile=profile, verify_ssl=verify_ssl
+def do_probe(
+    ip: str,
+    creds: dict[str, Any],
+    certfile: str | None,
+    keyfile: str | None,
+    profile: str = "auto",
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
+    brand: str = "his",
+) -> None:
+    print(f"\n🔍 [PROBE] Probing TV features and menu capabilities at {ip}:36669 (Brand: {brand})...\n")
+    client = (
+        create_client_from_creds(
+            creds,
+            certfile,
+            keyfile,
+            ca_cert=ca_cert,
+            verify_ssl=verify_ssl,
+            auth_profile=profile,
+            brand=brand,
+        )
+        if creds
+        else HisenseTvClient(
+            ip=ip,
+            certfile=certfile,
+            keyfile=keyfile,
+            ca_cert=ca_cert,
+            auth_profile=profile,
+            verify_ssl=verify_ssl,
+            brand=brand,
+        )
     )
 
     probe_res = probe_tv_features(client, wait_time=2.5)
@@ -223,8 +262,19 @@ def do_probe(ip: str, creds: dict[str, Any], certfile: str | None, keyfile: str 
     print("\n" + "=" * 70)
 
 
-def do_report(ip: str, mac: str | None, creds: dict[str, Any], certfile: str | None, keyfile: str | None, profile: str = "auto", ca_cert: str | None = None, verify_ssl: bool = False, probe: bool = False) -> None:
-    print(f"\n🔍 [REPORT] Collecting diagnostics and generating GitHub issue report for {ip}...\n")
+def do_report(
+    ip: str,
+    mac: str | None,
+    creds: dict[str, Any],
+    certfile: str | None,
+    keyfile: str | None,
+    profile: str = "auto",
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
+    probe: bool = False,
+    brand: str = "his",
+) -> None:
+    print(f"\n🔍 [REPORT] Collecting diagnostics and generating GitHub issue report for {ip} (Brand: {brand})...\n")
 
     access_token = None
     client_id = None
@@ -245,6 +295,7 @@ def do_report(ip: str, mac: str | None, creds: dict[str, Any], certfile: str | N
         ca_cert=ca_cert,
         auth_profile=profile,
         verify_ssl=verify_ssl,
+        brand=brand,
     )
 
     try:
@@ -260,7 +311,19 @@ def do_report(ip: str, mac: str | None, creds: dict[str, Any], certfile: str | N
 
         probe_res = None
         if probe and ping_res.get("tcp_port_open") and (creds or client.auth_profile == "legacy"):
-            probe_client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl, auth_profile=profile) if creds else client
+            probe_client = (
+                create_client_from_creds(
+                    creds,
+                    certfile,
+                    keyfile,
+                    ca_cert=ca_cert,
+                    verify_ssl=verify_ssl,
+                    auth_profile=profile,
+                    brand=brand,
+                )
+                if creds
+                else client
+            )
             probe_res = probe_tv_features(probe_client, wait_time=2.0)
 
         report_md = generate_markdown_report(
@@ -284,9 +347,26 @@ def do_report(ip: str, mac: str | None, creds: dict[str, Any], certfile: str | N
         sys.exit(1)
 
 
-def do_test_ssl(ip: str, certfile: str | None, keyfile: str | None, profile: str = "auto", ca_cert: str | None = None, verify_ssl: bool = False) -> None:
-    print(f"\n[SSL] Testing raw TLS connection to Hisense TV at {ip}:36669 (Profile: {profile})...")
-    client = HisenseTvClient(ip=ip, certfile=certfile, keyfile=keyfile, ca_cert=ca_cert, auth_profile=profile, verify_ssl=verify_ssl)
+def do_test_ssl(
+    ip: str,
+    certfile: str | None,
+    keyfile: str | None,
+    profile: str = "auto",
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
+    brand: str = "his",
+) -> None:
+    brand_name = BRAND_MAP.get(brand, "Hisense")
+    print(f"\n[SSL] Testing raw TLS connection to {brand_name} TV at {ip}:36669 (Profile: {profile}, Brand: {brand})...")
+    client = HisenseTvClient(
+        ip=ip,
+        certfile=certfile,
+        keyfile=keyfile,
+        ca_cert=ca_cert,
+        auth_profile=profile,
+        verify_ssl=verify_ssl,
+        brand=brand,
+    )
     try:
         res = client.test_ssl_connection()
         print("\n✅ TLS Connection Successful!")
@@ -308,21 +388,44 @@ def do_test_ssl(ip: str, certfile: str | None, keyfile: str | None, profile: str
         sys.exit(1)
 
 
-async def do_auth(ip: str, mac: str | None, certfile: str | None, keyfile: str | None, save_path: str, profile: str = "auto", ca_cert: str | None = None, verify_ssl: bool = False) -> None:
+async def do_auth(
+    ip: str,
+    mac: str | None,
+    certfile: str | None,
+    keyfile: str | None,
+    save_path: str,
+    profile: str = "auto",
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
+    brand: str = "his",
+) -> None:
     if not mac:
         mac = get_arp_mac(ip)
         if mac:
             print(f"🔍 Auto-discovered Hardware MAC via ARP: {mac}")
-    print(f"\n[AUTH] Connecting to Hisense TV at {ip} on port 36669 (TLS, Profile: {profile})...")
-    client = HisenseTvClient(ip=ip, mac=mac, certfile=certfile, keyfile=keyfile, ca_cert=ca_cert, auth_profile=profile, verify_ssl=verify_ssl)
+    brand_name = BRAND_MAP.get(brand, "Hisense")
+    print(f"\n[AUTH] Connecting to {brand_name} TV at {ip} on port 36669 (TLS, Profile: {profile}, Brand: {brand})...")
+    client = HisenseTvClient(
+        ip=ip,
+        mac=mac,
+        certfile=certfile,
+        keyfile=keyfile,
+        ca_cert=ca_cert,
+        auth_profile=profile,
+        verify_ssl=verify_ssl,
+        brand=brand,
+    )
     try:
         await client.async_start_auth()
+        if client.brand != brand:
+            print(f"ℹ️ Auto-detected TV OEM Brand: {client.brand.upper()} ({BRAND_MAP.get(client.brand, client.brand)})")
 
         if profile == "legacy" or client.auth_profile == "legacy":
             print("\n✅ Legacy static credentials active (no PIN required)!")
             creds = {
                 "ip_address": ip,
                 "mac_address": mac,
+                "brand": client.brand,
                 "auth_profile": "legacy",
                 "client_id": client.client_id,
                 "username": client.username,
@@ -347,6 +450,7 @@ async def do_auth(ip: str, mac: str | None, certfile: str | None, keyfile: str |
         creds = {
             "ip_address": ip,
             "mac_address": mac,
+            "brand": client.brand,
             "client_id": client.client_id,
             "username": client.username,
             "password": client.password,
@@ -359,6 +463,7 @@ async def do_auth(ip: str, mac: str | None, certfile: str | None, keyfile: str |
         }
 
         print("\n🎉 Authentication successful!")
+        print(f"  • OEM Brand:     {client.brand.upper()} ({BRAND_MAP.get(client.brand, client.brand)})")
         print(f"  • Client ID:     {client.client_id}")
         print(f"  • Username:      {client.username}")
         print(f"  • Access Token:  *** (valid {client.access_token_duration} days)")
@@ -396,11 +501,19 @@ async def do_auth(ip: str, mac: str | None, certfile: str | None, keyfile: str |
         sys.exit(1)
 
 
-async def do_listen(creds: dict[str, Any], certfile: str | None, keyfile: str | None, save_path: str, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
+async def do_listen(
+    creds: dict[str, Any],
+    certfile: str | None,
+    keyfile: str | None,
+    save_path: str,
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
+    brand: str | None = None,
+) -> None:
     ip = creds.get("ip_address")
     print(f"\n[LISTEN] Connecting to TV at {ip} with stored credentials...")
 
-    client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl)
+    client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl, brand=brand)
 
     def on_token_refreshed(c: HisenseTvClient) -> None:
         print(f"\n🔄 [TOKEN REFRESHED] New access token received (valid {c.access_token_duration} days)")
@@ -431,11 +544,19 @@ async def do_listen(creds: dict[str, Any], certfile: str | None, keyfile: str | 
         await client.async_disconnect()
 
 
-def do_refresh(creds: dict[str, Any], certfile: str | None, keyfile: str | None, save_path: str, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
+def do_refresh(
+    creds: dict[str, Any],
+    certfile: str | None,
+    keyfile: str | None,
+    save_path: str,
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
+    brand: str | None = None,
+) -> None:
     ip = creds.get("ip_address")
     print(f"\n[REFRESH] Testing synchronous token refresh against TV at {ip}...")
 
-    client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl)
+    client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl, brand=brand)
     success = client.check_and_refresh_token(force=True)
     if success:
         print("✅ Token refreshed successfully!")
@@ -450,11 +571,19 @@ def do_refresh(creds: dict[str, Any], certfile: str | None, keyfile: str | None,
         print("❌ Token refresh failed. Check TV connectivity and broker logs.")
 
 
-def do_send_key(creds: dict[str, Any], key_name: str, certfile: str | None, keyfile: str | None, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
+def do_send_key(
+    creds: dict[str, Any],
+    key_name: str,
+    certfile: str | None,
+    keyfile: str | None,
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
+    brand: str | None = None,
+) -> None:
     ip = creds.get("ip_address")
     print(f"\n[KEY] Sending key '{key_name}' to TV at {ip}...")
 
-    client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl)
+    client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl, brand=brand)
     client.connect_and_run()
     for _ in range(30):
         if client.connected:
@@ -471,11 +600,21 @@ def do_send_key(creds: dict[str, Any], key_name: str, certfile: str | None, keyf
     client.disconnect()
 
 
-def do_launch_app(creds: dict[str, Any], app_name: str, app_id: str | None = None, app_url: str | None = None, certfile: str | None = None, keyfile: str | None = None, ca_cert: str | None = None, verify_ssl: bool = False) -> None:
+def do_launch_app(
+    creds: dict[str, Any],
+    app_name: str,
+    app_id: str | None = None,
+    app_url: str | None = None,
+    certfile: str | None = None,
+    keyfile: str | None = None,
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
+    brand: str | None = None,
+) -> None:
     ip = creds.get("ip_address")
     print(f"\n[APP] Launching application '{app_name or app_id}' on TV at {ip}...")
 
-    client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl)
+    client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl, brand=brand)
     client.connect_and_run()
     for _ in range(30):
         if client.connected:
@@ -553,6 +692,12 @@ def main() -> None:
     parser.add_argument("--ip", help="IP address of the TV (required for ping/report/probe/test-ssl/auth/wake if not in config)")
     parser.add_argument("--mac", help="MAC address of the TV")
     parser.add_argument("--profile", choices=["auto", "modern", "middle", "remotenow", "legacy", "vidaa_2024", "remotenow_2018"], default="auto", help="Authentication profile and cert selector (default: auto)")
+    parser.add_argument(
+        "--brand",
+        choices=["his", "tos", "loe", "tpv", "auto"],
+        default="his",
+        help="TV OEM brand identifier for pairing salt/prefix (choices: his, tos, loe, tpv; default: his)",
+    )
     parser.add_argument("--cert", help="Path to custom client certificate file (e.g. cert.pem)")
     parser.add_argument("--key", dest="key_file", help="Path to custom client private key file (e.g. key.pem)")
     parser.add_argument("--p12", help="Path to PKCS#12 certificate archive (e.g. client_mobile_android.p12)")
@@ -590,49 +735,50 @@ def main() -> None:
             key_path = None
 
     creds = load_credentials_file(args.config)
+    brand = creds.get("brand") if (args.brand == "his" and creds.get("brand")) else ("his" if args.brand == "auto" else args.brand)
 
     if args.action == "ping":
         ip = args.ip or (creds.get("ip_address") if creds else None)
         if not ip:
             print("Error: --ip <IP> is required for 'ping' action (or valid credentials.json).")
             sys.exit(1)
-        do_ping(ip, creds, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
+        do_ping(ip, creds, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, brand=brand)
 
     elif args.action in ("probe", "probe-features"):
         ip = args.ip or (creds.get("ip_address") if creds else None)
         if not ip:
             print("Error: --ip <IP> is required for 'probe' action (or valid credentials.json).")
             sys.exit(1)
-        do_probe(ip, creds, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
+        do_probe(ip, creds, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, brand=brand)
 
     elif args.action == "report":
         ip = args.ip or (creds.get("ip_address") if creds else None)
         if not ip:
             print("Error: --ip <IP> is required for 'report' action (or valid credentials.json).")
             sys.exit(1)
-        do_report(ip, args.mac, creds, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, probe=args.probe)
+        do_report(ip, args.mac, creds, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, probe=args.probe, brand=brand)
 
     elif args.action == "test-ssl":
         if not args.ip:
             print("Error: --ip <IP> is required for 'test-ssl' action.")
             sys.exit(1)
-        do_test_ssl(args.ip, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
+        do_test_ssl(args.ip, cert_path, key_path, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, brand=brand)
 
     elif args.action == "auth":
         if not args.ip:
             print("Error: --ip <IP> is required for 'auth' action.")
             sys.exit(1)
-        asyncio.run(do_auth(args.ip, args.mac, cert_path, key_path, args.config, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl))
+        asyncio.run(do_auth(args.ip, args.mac, cert_path, key_path, args.config, profile=args.profile, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, brand=brand))
 
     elif args.action == "listen":
         ip = args.ip or creds.get("ip_address")
         creds["ip_address"] = ip
-        asyncio.run(do_listen(creds, cert_path, key_path, args.config, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl))
+        asyncio.run(do_listen(creds, cert_path, key_path, args.config, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, brand=brand))
 
     elif args.action == "refresh":
         ip = args.ip or creds.get("ip_address")
         creds["ip_address"] = ip
-        do_refresh(creds, cert_path, args.key_file, args.config, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
+        do_refresh(creds, cert_path, args.key_file, args.config, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, brand=brand)
 
     elif args.action == "send-key":
         if not args.key:
@@ -640,7 +786,7 @@ def main() -> None:
             sys.exit(1)
         ip = args.ip or creds.get("ip_address")
         creds["ip_address"] = ip
-        do_send_key(creds, args.key, cert_path, args.key_file, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
+        do_send_key(creds, args.key, cert_path, args.key_file, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, brand=brand)
 
     elif args.action == "launch-app":
         app_name = args.key
@@ -649,7 +795,7 @@ def main() -> None:
             sys.exit(1)
         ip = args.ip or creds.get("ip_address")
         creds["ip_address"] = ip
-        do_launch_app(creds, app_name, app_id=args.app_id, app_url=args.url, certfile=cert_path, keyfile=args.key_file, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl)
+        do_launch_app(creds, app_name, app_id=args.app_id, app_url=args.url, certfile=cert_path, keyfile=args.key_file, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, brand=brand)
 
     elif args.action == "wake":
         ip = args.ip or creds.get("ip_address")
