@@ -40,11 +40,11 @@ The integration officially supports all smart TV models running VIDAA OS across 
   - **Auth Profile**: `middle` / `remotenow`
 
 - 📺 **Licensed OEM Partner Brands (VIDAA OS Editions)**
-  - **Verified Brands**: Toshiba, Loewe / We. by Loewe, TPV Technology / Philips / AOC, Schneider, Akai, Beko, Telefunken, Bush (VIDAA OS editions)
+  - **Popular Brands**: Toshiba, Loewe, Philips / TPV, Sharp, JVC (and other licensed VIDAA OS partner TVs)
   - **Auth Profile**: `auto` (auto-detects OEM salt with candidate auth cascade)
-  - **Brand Detection**: Automatic via UPnP `<modelDescription>`, HomeKit mDNS, certificate filenames (e.g. `toshiba.crt`, `loewe.crt`), or manual selection in Device Options.
+  - **Brand Detection**: Automatic via SSDP/UPnP, certificate filenames (e.g. `toshiba.crt`, `loewe.pem`, `sharp.pem`), or manual selection in setup/options.
 
-> **Universal VIDAA Platform**: All VIDAA OS televisions share the same underlying architecture and root certificate authority (`RemoteCA`). The integration automatically identifies partner brands, applies OEM-specific salts (`his`, `tos`, `loe`, `tpv`), and populates the proper manufacturer in Home Assistant's Device Registry. For complete cryptographic formulas, XOR masks, and OEM brand identifiers, see [Protocol & Cryptographic Architecture](docs/protocol_architecture.md).
+> **Universal VIDAA Platform**: All VIDAA OS televisions share the same internal hardware broker and root certificate authority (`RemoteCA`). The integration automatically identifies partner brands, applies OEM-specific cryptographic salts, and sets the proper manufacturer in Home Assistant's Device Registry. For complete brand lists and cryptographic formulas, see [Protocol & Cryptographic Architecture](docs/protocol_architecture.md).
 
 > [!NOTE]
 > **VIDAA OS vs Android TV (No Android Device Required)**:

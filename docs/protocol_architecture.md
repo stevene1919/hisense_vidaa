@@ -235,21 +235,28 @@ If the Home Assistant host and the TV clock drift by more than **120 seconds**, 
 
 ## 🏷️ Multi-Brand VIDAA OS Ecosystem & OEM Licensing
 
-VIDAA OS is not exclusive to Hisense televisions; it is licensed globally to multiple OEM television manufacturers. The underlying MQTT protocol and UPnP descriptors are identical across all licensed brands, differing primarily in brand identifier prefixes:
+VIDAA OS is not exclusive to Hisense televisions; it is licensed globally to multiple OEM television manufacturers. The underlying MQTT broker (`port 36669`), topic hierarchy (`/remoteapp/...`), and client mutual TLS certificate authority (`RemoteCA`) are identical across all licensed brands, differing primarily in the 3-letter OEM brand code injected into `client_id`, `username`, and `password` salt hashing:
 
-| OEM Brand | Common Models | Default Brand Code | Client ID Template |
+| OEM Brand | Common Models / Partner Info | Brand Code | Client ID Template |
 | :--- | :--- | :--- | :--- |
-| **Hisense** | U6, U7, U8, UX, A6, A7 | `his` | `{mac}$his${hash}_vidaacommon_{suffix}` |
-| **Toshiba** | C350, M550, Z670 (VIDAA editions) | `tos` | `{mac}$tos${hash}_vidaacommon_{suffix}` |
-| **Loewe** | We. SEE, stellar (VIDAA OS) | `loe` | `{mac}$loe${hash}_vidaacommon_{suffix}` |
-| **TPV / Philips / AOC** | OLED708, PUS8808, AOC Smart (VIDAA editions) | `tpv` | `{mac}$tpv${hash}_vidaacommon_{suffix}` |
-| **Schneider / Akai / Bush / Beko / Telefunken** | Regional smart TVs | `his` | Parameterized from discovery XML |
+| **Hisense** | U6, U7, U8, UX, A6, A7 series | `his` | `{mac}$his${hash}_vidaacommon_001` |
+| **Toshiba** | C350, M550, Z670 (VIDAA editions) | `tos` | `{mac}$tos${hash}_vidaacommon_001` |
+| **Loewe** | We. SEE, stellar (VIDAA OS) | `loe` | `{mac}$loe${hash}_vidaacommon_001` |
+| **TPV / Philips / AOC** | OLED708, PUS8808, AOC Smart (VIDAA) | `tpv` | `{mac}$tpv${hash}_vidaacommon_001` |
+| **Sharp** | Aquos VIDAA Smart TVs (North America / EU) | `shp` | `{mac}$shp${hash}_vidaacommon_001` |
+| **JVC** | JVC Smart TV (VIDAA OS editions) | `jvc` | `{mac}$jvc${hash}_vidaacommon_001` |
+| **Schneider / Akai / Beko / Telefunken / Bush / Vizio** | European & North American OEM TVs | `sch`, `aka`, `bek`, `tel`, `bus`, `vic` | Parameterized `{mac}${brand}${hash}_vidaacommon_001` |
+| **Philco / Noblex / Sansei / RCA / Sinotec / Vestel / Brandt / Metz / Leica** | Global & Regional partner TVs | `phi`, `nob`, `san`, `rca`, `sin`, `ves`, `bra`, `met`, `lei` | Parameterized `{mac}${brand}${hash}_vidaacommon_001` |
 
-### Dual Brand Resolution Architecture
+### Multi-Brand Resolution Architecture
 1. **UPnP & mDNS Discovery (`<modelDescription>`)**:
-   During SSDP and Zeroconf discovery, the integration extracts manufacturer metadata from `rendererdevicedesc.xml` (`<modelDescription>` and `<manufacturer>`), automatically applying appropriate brand identifiers (`his`, `tos`, `loe`, `tpv`) across client ID generation, username masks, and topic trees.
-2. **Candidate Brand Auth Fallback Cascade**:
-   In isolated VLAN or cross-subnet topologies where UPnP/mDNS multicast is blocked and the TV is added via manual IP, the integration initially attempts pairing with default brand code `his`. If the TV broker rejects the connection with `rc: 5` (Not Authorized), the pairing engine automatically cascades through candidate OEM brands (`tos`, `loe`, `tpv`). When accepted, it dynamically adopts the confirmed brand code and updates Home Assistant's device registry manufacturer.
-3. **Certificate Filename Hinting**:
-   If users place brand-named client certificates in `/config/ssl/` (e.g. `toshiba.crt`/`toshiba.key`, `loewe.crt`/`loewe.key`, `philips.crt`/`philips.key`, `tpv.crt`/`tpv.key`), the integration automatically detects the brand from the file names during setup.
+   During SSDP and Zeroconf discovery, the integration extracts manufacturer metadata and `brand=` key-value pairs from `rendererdevicedesc.xml` (probing ports `38400` and `18400`). Any explicit 3-letter alphanumeric code (`brand=xyz`) is preserved, even for newly released OEM brands.
+2. **Post-PIN Brand Preservation**:
+   Once an OEM brand is resolved via cascade, certificate hinting, or manual selection, post-PIN device detail queries preserve the active OEM brand, preventing fallback resets to `"his"`.
+3. **Candidate Brand Auth Fallback Cascade**:
+   In isolated VLAN or cross-subnet topologies where UPnP/mDNS multicast is blocked and the TV is added via manual IP, the integration initially attempts pairing with default brand code `his`. If the TV broker rejects the connection with `rc: 5` (Not Authorized), the pairing engine automatically cascades through high-probability candidate OEM brands (`tos`, `loe`, `tpv`, `shp`, `jvc`). When accepted, it dynamically adopts the confirmed brand code and updates Home Assistant's device registry.
+4. **Certificate Filename Hinting**:
+   If users place brand-named client certificates in `/config/ssl/` (e.g. `toshiba.crt`, `loewe.pem`, `philips.crt`, `sharp.pem`, `jvc.key`, `rcamobile.p12`), the integration automatically detects the brand from the file names during setup.
+5. **Runtime Brand Updates**:
+   Changing `CONF_BRAND` in the Security Options menu dynamically regenerates pairing credentials and refreshes MQTT sessions without breaking existing entity registries.
 
