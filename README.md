@@ -46,6 +46,10 @@ The integration officially supports all smart TV models running VIDAA OS across 
 
 > **Universal VIDAA Platform**: All VIDAA OS televisions share the same underlying architecture and root certificate authority (`RemoteCA`). The integration automatically identifies partner brands, applies OEM-specific salts (`his`, `tos`, `loe`, `tpv`), and populates the proper manufacturer in Home Assistant's Device Registry. For complete cryptographic formulas, XOR masks, and OEM brand identifiers, see [Protocol & Cryptographic Architecture](docs/protocol_architecture.md).
 
+> [!NOTE]
+> **VIDAA OS vs Android TV (No Android Device Required)**:
+> This integration is specifically for televisions powered by **VIDAA OS** (a Linux-based embedded OS). It is **not** for Hisense models running Android TV or Google TV (which should use Home Assistant's built-in Android TV Remote integration). **No Android smartphone, tablet, emulator, or running app is required to use this integration.** Home Assistant communicates directly with the TV over your local network.
+
 ---
 
 ## ✨ Features
@@ -97,7 +101,11 @@ Download the latest [release ZIP](https://github.com/stevene1919/hisense_vidaa/r
 
 Copy your client certificate / key (or `.p12` bundle) to `/config/ssl/` (or `/ssl/` / `/config/certs/`).
 
-> For certificate formats, filename matrix, and automatic extraction, see the **[SSL Certificate Guide](docs/certificates.md)**.
+> [!IMPORTANT]
+> **No Android Device or Running Mobile App Required**:
+> The only reason Android is ever referenced is because the vendor packages its mutual TLS client certificate inside the publicly distributed VIDAA remote mobile app archive (`.apk`). An APK file is simply a standard ZIP archive—you can extract the `.p12` certificate file on any Windows, macOS, or Linux machine using `unzip` without ever owning or running Android.
+>
+> For certificate formats, step-by-step extraction commands, filename matrix, and automatic loading, see the **[SSL Certificate Guide](docs/certificates.md)**.
 
 ### Step 3: Pair Your TV
 

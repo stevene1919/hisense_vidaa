@@ -75,6 +75,11 @@ When an automation or manual service call fails, Home Assistant displays an erro
   * In TV Settings, disable **Auto Standby with No Signal**.
   * Keep Home Assistant's client certificates properly configured in `/config/ssl/` as documented in [`certificates.md`](certificates.md) to enable automatic mutual TLS authentication.
 
+### 3. Do I Need an Android Phone or Android TV to Use This?
+* **No.** VIDAA OS is a Linux-based operating system, not Android TV.
+* **No Android Hardware/OS Required:** You do not need an Android phone, tablet, or emulator to set up or run this integration. Home Assistant connects directly to the TV over your local network.
+* **Why the APK is Mentioned:** The vendor pre-signs its client mutual TLS certificate (`.p12` bundle) inside the publicly available VIDAA remote app package (`.apk`). Because an `.apk` is simply an unencrypted ZIP archive, you can open and extract it on any computer (Windows, macOS, Linux) with standard tools like `unzip` or 7-Zip without ever owning an Android device.
+
 ---
 
 ## 📊 Diagnostic Logs & Bug Reporting

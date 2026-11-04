@@ -2,6 +2,13 @@
 
 VIDAA OS smart TVs enforce mutual TLS (mTLS) or client certificate authentication on MQTT port `36669`. To establish a secure connection, Home Assistant must present a valid client certificate and private key.
 
+> [!IMPORTANT]
+> ### 📱 No Android Device or Running Mobile App Required!
+> A common misconception is that this integration requires an Android smartphone, tablet, or running mobile app. **It does not.**
+> - **Direct Local Control**: Home Assistant communicates directly across your local network to the TV's hardware MQTT broker. No mobile device is involved at runtime.
+> - **VIDAA OS is Linux**: VIDAA OS is a proprietary embedded Linux OS (not Android TV).
+> - **Why is the Android APK Mentioned?**: Hisense/VIDAA distributes the pre-signed client mutual TLS certificate bundled inside their official companion app package (`.apk`). An APK file is literally just a standard ZIP archive. You can download and unzip it on any PC, Mac, Linux machine, or directly on your Home Assistant terminal to obtain the `.p12` file. You never need an Android device or emulator.
+
 ---
 
 ## 📁 Recommended Certificate Location
@@ -40,23 +47,27 @@ The integration natively supports both **auto-extracted PKCS#12 archives** (`.p1
 
 If you have extracted the PKCS#12 bundle from the official VIDAA Android / iOS app (`client_mobile_android.p12`, `El.p12`, or `rcamobile.p12`), you do **not** need to manually split it with OpenSSL.
 
-### Extracting `El.p12` from the VIDAA Smart TV App:
-In the official **VIDAA Smart TV** Android APK (`com.universal.remote.multi`), the client keystore is bundled inside the APK zip (commonly at `res/El.p12`, `res/3R.p12`, or `res/raw/client_mobile_android.p12`).
+### How to Extract `El.p12` from the VIDAA APK Archive (Any Computer):
+In the official **VIDAA Smart TV** Android app distribution package (`com.universal.remote.multi` APK), the client keystore is bundled inside the APK zip archive (commonly located at `res/El.p12`, `res/3R.p12`, or `res/raw/client_mobile_android.p12`).
 
-> [!NOTE]
-> **One Universal App for All Brands:**
-> There are no separate remote apps for Toshiba, Loewe, or other VIDAA OS brands. The official **VIDAA Smart TV** app (`com.universal.remote.multi`) is the universal remote app for the entire VIDAA platform. The client certificate bundled inside (`CN=VidaaAppAndroidV01`) is accepted by all VIDAA OS televisions regardless of badging, because all hardware brokers share the same root certificate authority (`RemoteCA`).
+You can extract this file on any computer (no phone needed):
 
-1. Extract the file directly from the APK archive:
-   ```bash
-   unzip -j app.apk res/El.p12
-   # Or in some APK builds:
-   # unzip -j app.apk res/3R.p12
-   # unzip -j app.apk res/raw/client_mobile_android.p12
-   ```
+- **Linux / macOS / HA Terminal**:
+  ```bash
+  unzip -j app.apk res/El.p12 -d /config/ssl/
+  # Or in some APK releases:
+  # unzip -j app.apk res/3R.p12 -d /config/ssl/
+  # unzip -j app.apk res/raw/client_mobile_android.p12 -d /config/ssl/
+  ```
+- **Windows**:
+  Rename `app.apk` to `app.zip`, open it in Windows File Explorer or 7-Zip, locate `res/El.p12`, and copy it to your Home Assistant `/config/ssl/` share.
 2. Place `El.p12` in `/config/ssl/` (or `/ssl/` / `/config/certs/`).
    *(Optional: You may rename it to your TV brand, e.g. `toshiba.p12` or `loewe.p12`, for automatic brand detection).*
 3. The integration automatically discovers `El.p12`, decrypts it using the embedded keystore password, and writes `El_cert.pem` and `El_key.pem`.
+
+> [!NOTE]
+> **One Universal Keystore for All Brands**:
+> There are no separate remote apps or certificate bundles for Toshiba, Loewe, or other VIDAA OS brands. The client certificate bundled inside (`CN=VidaaAppAndroidV01`) is accepted by all VIDAA OS televisions regardless of badging, because all hardware brokers share the same root certificate authority (`RemoteCA`).
 
 > [!NOTE]
 > **Modern Firmware (2024+ / `p20.09...`):** Newer VIDAA firmware builds enforce client certificate subject identity (`CN=VidaaAppAndroidV01`). Using older 2018 RemoteNOW certificates (`rcm_certchain_pem.cer`) on these firmware builds will result in connection rejection (**`rc: 5` - Not Authorized**). Use the modern VIDAA certificate bundle (`El.p12` / `vidaa_2024_cert.pem`) to resolve this.
