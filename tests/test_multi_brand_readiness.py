@@ -10,21 +10,15 @@ Verifies:
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from homeassistant.core import HomeAssistant
 
 from custom_components.hisense_vidaa.client import HisenseTvClient
 from custom_components.hisense_vidaa.config_flow import HisenseVidaaConfigFlow
-from custom_components.hisense_vidaa.const import BRAND_OPTIONS, CONF_BRAND, DEFAULT_BRAND
-from custom_components.hisense_vidaa.discovery import (
-    BRAND_CODE_MAP,
-    BRAND_MAP,
-    normalize_brand_code,
-    parse_ssdp_discovery,
-)
-from custom_components.hisense_vidaa.flow_helpers import async_discover_device_details
+from custom_components.hisense_vidaa.const import BRAND_OPTIONS
+from custom_components.hisense_vidaa.discovery import normalize_brand_code
 from custom_components.hisense_vidaa.protocol.certs import detect_brand_from_cert_paths
 from custom_components.hisense_vidaa.tv.upnp_desc import parse_upnp_renderer_descriptor
 

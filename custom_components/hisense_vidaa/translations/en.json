@@ -6,7 +6,8 @@
         "description": "Enter the IP address of your Hisense TV.",
         "data": {
           "ip_address": "IP Address",
-          "auth_profile": "Authentication / Certificate Profile"
+          "auth_profile": "Authentication / Certificate Profile",
+          "brand": "TV Brand (VIDAA OS Ecosystem)"
         }
       },
       "discovery_confirm": {
@@ -29,7 +30,8 @@
         "description": "Update the connection settings or re-pair with your Hisense TV.",
         "data": {
           "ip_address": "IP Address",
-          "auth_profile": "Authentication / Certificate Profile"
+          "auth_profile": "Authentication / Certificate Profile",
+          "brand": "TV Brand (VIDAA OS Ecosystem)"
         }
       },
       "certs": {
@@ -124,6 +126,7 @@
         "description": "Select authentication profile, encryption, and optional client certificates.",
         "data": {
           "auth_profile": "Authentication / Certificate Profile",
+          "brand": "TV OEM Brand",
           "use_ssl": "Use Encrypted SSL/TLS Connection",
           "certfile": "Certificate File Path (.crt / .pem / .p12)",
           "keyfile": "Private Key File Path (.key / .pem)"

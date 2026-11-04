@@ -92,6 +92,8 @@ if "homeassistant" not in sys.modules:
         loop = None
 
         def async_create_background_task(self, target, name=None):
+            if hasattr(target, "close"):
+                target.close()
             return None
 
         def async_create_task(self, target, name=None):

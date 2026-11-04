@@ -63,6 +63,10 @@ async def test_media_player_play_media(mock_client, mock_entry):
     """Test media player play media with apps, URLs, and direct channel numbers."""
     hass = MagicMock(spec=HomeAssistant)
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
 
     mp = HisenseVidaaMediaPlayer(
         client=mock_client,
@@ -90,6 +94,10 @@ async def test_media_player_sound_mode_and_waking_state(mock_client, mock_entry)
     """Test dynamic sound mode feature registration and fake sleep waking transitions."""
     hass = MagicMock(spec=HomeAssistant)
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
 
     mp = HisenseVidaaMediaPlayer(
         client=mock_client,
@@ -139,6 +147,10 @@ async def test_media_player_cec_source_naming(mock_client, mock_entry):
     """Test dynamic HDMI-CEC source labeling and label stripping on input change."""
     hass = MagicMock(spec=HomeAssistant)
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
 
     mock_entry.options = {"enable_cec_names": True, "include_apps_in_sources": True}
     mp = HisenseVidaaMediaPlayer(
@@ -167,6 +179,10 @@ async def test_remote_and_media_player_idempotent_power_control(mock_client, moc
     """Test idempotent power control on media player and remote."""
     hass = MagicMock(spec=HomeAssistant)
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
 
     rem = HisenseVidaaRemote(
         client=mock_client,
@@ -238,6 +254,10 @@ async def test_media_player_mute_is_idempotent(mock_client, mock_entry):
     """[F7-leg4] KEY_MUTE is only sent when the requested state differs from tracked."""
     hass = MagicMock(spec=HomeAssistant)
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
 
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
     mp.hass = hass
@@ -289,6 +309,10 @@ async def test_media_player_parses_camelcase_source_and_app_payloads(mock_client
     """[F5-leg4] camelCase source/app payloads are keyed like the payload parsers."""
     hass = MagicMock(spec=HomeAssistant)
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
 
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
     mp.hass = hass
@@ -326,6 +350,10 @@ async def test_media_player_play_media_accepts_alternate_app_keys(mock_client, m
     """[F4-leg4] play_media must not raise KeyError on appId/url spelling variants."""
     hass = MagicMock(spec=HomeAssistant)
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
 
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
     mp.hass = hass
@@ -340,6 +368,10 @@ async def test_media_player_string_volume_broadcast(mock_client, mock_entry):
     """[F9-leg4] String volume payloads are coerced like apply_volume_update."""
     hass = MagicMock(spec=HomeAssistant)
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
 
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
     mp.hass = hass
@@ -385,6 +417,7 @@ async def test_media_player_playback_state_debounce(mock_client, mock_entry):
     loop = asyncio.get_running_loop()
     hass.loop = loop
     hass.async_add_executor_job = MagicMock(side_effect=lambda func, *args: func(*args))
+    hass.async_create_background_task = MagicMock(side_effect=lambda coro, *a, **kw: loop.create_task(coro))
 
     mock_entry.options = {"playback_debounce": 0.05}
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
@@ -411,6 +444,10 @@ async def test_media_player_disconnected_and_cold_boot_recovery(mock_client, moc
     """Test powered-off / disconnected states and cold-boot recovery via sourcelist."""
     hass = MagicMock(spec=HomeAssistant)
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
 
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
     mp.hass = hass

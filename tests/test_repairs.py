@@ -1,10 +1,15 @@
 """Tests for Hisense VIDAA repairs platform."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
 
+from custom_components.hisense_vidaa.const import (
+    CONF_AUTH_PROFILE,
+    CONF_CERTFILE,
+    CONF_KEYFILE,
+)
 from custom_components.hisense_vidaa.repairs import (
     AuthTokenInvalidatedRepairFlow,
     CertificateMissingRepairFlow,
@@ -160,3 +165,28 @@ async def test_auth_token_invalidated_repair_flow_without_entry_does_not_raise()
     result = await flow.async_step_confirm(user_input={})
 
     assert result["type"] == "create_entry"
+
+
+@pytest.mark.anyio
+async def test_certificate_missing_repair_flow_reloads_entry_on_fix():
+    """Repair flow verifies certificates with entry options and reloads entry on fix."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry_cert"
+    entry.data = {CONF_AUTH_PROFILE: "modern"}
+    entry.options = {CONF_CERTFILE: "/ssl/custom.crt", CONF_KEYFILE: "/ssl/custom.key"}
+    hass.config_entries.async_get_entry.return_value = entry
+    hass.config_entries.async_reload = AsyncMock()
+
+    flow = await async_create_fix_flow(hass, "certificate_missing_test_entry_cert", {"entry_id": "test_entry_cert"})
+    assert isinstance(flow, CertificateMissingRepairFlow)
+    flow.hass = hass
+
+    with patch("custom_components.hisense_vidaa.repairs.resolve_certificates", return_value=("/ssl/custom.crt", "/ssl/custom.key")), \
+         patch("custom_components.hisense_vidaa.repairs.check_certs_exist", return_value=True):
+        result = await flow.async_step_confirm(user_input={})
+        assert result["type"] == "create_entry"
+        hass.config_entries.async_reload.assert_awaited_once_with("test_entry_cert")
+

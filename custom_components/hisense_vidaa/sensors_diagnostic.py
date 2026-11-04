@@ -90,19 +90,22 @@ class HisenseVidaaSessionStatusSensor(HisenseVidaaBaseSensor):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return diagnostic session details."""
+        raw_cid = self._client.client_id or ""
+        masked_cid = f"{raw_cid[:8]}...{raw_cid[-4:]}" if len(raw_cid) > 12 else raw_cid
         attrs: dict[str, Any] = {
-            "client_id": self._client.client_id,
+            "client_id": masked_cid,
             "auth_profile": self._client.auth_profile,
             "encryption": "TLSv1.2 (Port 36669)" if self._client.use_ssl else "Unencrypted (Port 36669)",
             "local_only": True,
         }
+        offset = getattr(self._client, "clock_offset", 0) or 0
         if self._client.access_token_time:
-            attrs["paired_at"] = datetime.fromtimestamp(self._client.access_token_time, tz=UTC).isoformat()
+            attrs["paired_at"] = datetime.fromtimestamp(self._client.access_token_time - offset, tz=UTC).isoformat()
             if self._client.access_token_duration:
-                exp = self._client.access_token_time + (self._client.access_token_duration * 86400)
+                exp = (self._client.access_token_time + (self._client.access_token_duration * 86400)) - offset
                 attrs["access_token_expires_at"] = datetime.fromtimestamp(exp, tz=UTC).isoformat()
         if self._client.refresh_token_time and self._client.refresh_token_duration:
-            exp = self._client.refresh_token_time + (self._client.refresh_token_duration * 86400)
+            exp = (self._client.refresh_token_time + (self._client.refresh_token_duration * 86400)) - offset
             attrs["refresh_token_expires_at"] = datetime.fromtimestamp(exp, tz=UTC).isoformat()
         return attrs
 

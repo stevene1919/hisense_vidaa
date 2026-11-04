@@ -325,6 +325,7 @@ class ConnectionManagerMixin:
 
         if not self.access_token or not self.client_id or not self.username:
             _LOGGER.error("[%s] Cannot connect to TV: missing credentials (client_id, username, or access_token)", self.ip)
+            self._dispatch_auth_failed()
             return
         async with self._reconnect_lock:
             ssl_ctx = await self._async_build_ssl_context()

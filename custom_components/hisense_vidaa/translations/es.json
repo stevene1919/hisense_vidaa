@@ -6,7 +6,8 @@
         "description": "Introduce la dirección IP de tu televisor Hisense.",
         "data": {
           "ip_address": "Dirección IP",
-          "auth_profile": "Perfil de autenticación / certificado"
+          "auth_profile": "Perfil de autenticación / certificado",
+          "brand": "Marca de TV (ecosistema VIDAA OS)"
         }
       },
       "discovery_confirm": {
@@ -29,7 +30,8 @@
         "description": "Actualiza la configuración de conexión o vuelve a emparejar tu televisor Hisense.",
         "data": {
           "ip_address": "Dirección IP",
-          "auth_profile": "Perfil de autenticación / certificado"
+          "auth_profile": "Perfil de autenticación / certificado",
+          "brand": "Marca de TV (ecosistema VIDAA OS)"
         }
       },
       "certs": {
@@ -126,7 +128,8 @@
           "auth_profile": "Perfil de autenticación / certificado",
           "use_ssl": "Usar conexión cifrada SSL/TLS",
           "certfile": "Ruta del archivo de certificado (.crt / .pem / .p12)",
-          "keyfile": "Ruta del archivo de clave privada (.key / .pem)"
+          "keyfile": "Ruta del archivo de clave privada (.key / .pem)",
+          "brand": "Marca OEM del televisor"
         }
       }
     },
@@ -387,6 +390,31 @@
         "middle": "VIDAA 1.5 / Intermedio (3000–3285)",
         "remotenow": "RemoteNOW / 2018–2023 (estándar)",
         "legacy": "Estático heredado (anterior a 2022 / credenciales estáticas)"
+      }
+    },
+    "brand": {
+      "options": {
+        "his": "Hisense",
+        "tos": "Toshiba",
+        "loe": "Loewe",
+        "tpv": "TPV / Philips / AOC",
+        "shp": "Sharp",
+        "jvc": "JVC",
+        "sch": "Schneider",
+        "aka": "Akai",
+        "bek": "Beko",
+        "tel": "Telefunken",
+        "bus": "Bush",
+        "vic": "Vizio",
+        "phi": "Philco",
+        "nob": "Noblex",
+        "san": "Sansei",
+        "rca": "RCA",
+        "sin": "Sinotec",
+        "ves": "Vestel",
+        "bra": "Brandt",
+        "met": "Metz",
+        "lei": "Leica"
       }
     }
   },

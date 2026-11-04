@@ -1,12 +1,13 @@
 """Unit tests for HisenseTvClient token lifecycle, proactive refresh, and clock drift."""
 
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from custom_components.hisense_vidaa.client import HisenseTvClient
 from custom_components.hisense_vidaa.protocol.auth import is_token_expired
+from custom_components.hisense_vidaa.protocol.auth_lifecycle import TokenLifecycleManager
 
 
 def test_check_and_refresh_token_not_expired():
@@ -352,3 +353,29 @@ def test_check_and_refresh_token_respects_clock_offset():
         res = client.check_and_refresh_token(force=False)
         assert res is False
         mock_refresh.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_token_refresh_failure_honors_clock_offset():
+    """Verify background token refresh failure evaluates refresh token expiry with clock_offset."""
+    client = MagicMock()
+    client.ip = "192.168.50.12"
+    client.refresh_token = "valid_refresh_token"
+    # Hardware clock is 100 days in the past (clock_offset = -8,640,000)
+    client.clock_offset = -8640000
+    tv_now = int(time.time()) + client.clock_offset
+    client.refresh_token_time = tv_now - (5 * 86400)
+    client.refresh_token_duration = 60
+    client.async_check_and_refresh_token = AsyncMock(return_value=False)
+    client._dispatch_auth_failed = MagicMock()
+
+    mgr = TokenLifecycleManager(client)
+    mgr.last_refresh_connect_rc = 5
+    mgr.broker_rejection_failures = 1  # Less than max 3
+
+    await mgr.async_refresh_token_and_update_creds()
+
+    # Even though refresh failed once, the refresh token has 55 days left in TV epoch,
+    # so auth_failed MUST NOT be dispatched if clock_offset is applied properly!
+    client._dispatch_auth_failed.assert_not_called()
+

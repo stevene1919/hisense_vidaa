@@ -11,7 +11,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, issue_registry as ir
+from homeassistant.helpers import config_validation as cv, entity_registry as er, issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
 
@@ -30,11 +30,14 @@ from .const import (
     CONF_IP_ADDRESS,
     CONF_KEYFILE,
     CONF_MAC_ADDRESS,
+    CONF_MANUFACTURER,
+    CONF_MODEL,
     CONF_PASSWORD,
     CONF_REFRESH_IN_STANDBY,
     CONF_REFRESH_TOKEN,
     CONF_REFRESH_TOKEN_DURATION,
     CONF_REFRESH_TOKEN_TIME,
+    CONF_SW_VERSION,
     CONF_USE_SSL,
     CONF_USERNAME,
     DEFAULT_BRAND,
@@ -174,6 +177,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
             is_persistent=True,
             severity=ir.IssueSeverity.ERROR,
             translation_key="certificate_missing",
+            data={"entry_id": entry.entry_id},
         )
     else:
         ir.async_delete_issue(hass, DOMAIN, f"certificate_missing_{entry.entry_id}")
@@ -213,10 +217,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
 
     client.register_auth_failed_callback(_handle_auth_failed)
 
-    # Check and refresh tokens
-    updated = await client.async_check_and_refresh_token()
-    if updated:
-        update_entry_tokens(client)
+    if not client.access_token or not client.client_id or not client.username:
+        _LOGGER.warning(
+            "[%s] Missing credentials or authentication tokens; starting reauthentication",
+            client.ip,
+        )
+        _handle_auth_failed(client)
+    else:
+        # Check and refresh tokens
+        updated = await client.async_check_and_refresh_token()
+        if updated:
+            update_entry_tokens(client)
 
     # Start running background task for MQTT client
     platforms_to_setup = [
@@ -227,17 +238,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         "switch",
         "select",
     ]
+    entity_reg = er.async_get(hass)
     if entry.options.get(
         CONF_ENABLE_PICTURE_CONTROLS, DEFAULT_ENABLE_PICTURE_CONTROLS
     ):
         platforms_to_setup.append("number")
+    else:
+        for suffix in ("backlight", "brightness", "contrast"):
+            unique_id = f"{entry.entry_id}_{suffix}"
+            if entity_id := entity_reg.async_get_entity_id("number", DOMAIN, unique_id):
+                entity_reg.async_remove(entity_id)
+
     if entry.options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE):
         platforms_to_setup.append("remote")
+    else:
+        unique_id = f"{entry.entry_id}_remote"
+        if entity_id := entity_reg.async_get_entity_id("remote", DOMAIN, unique_id):
+            entity_reg.async_remove(entity_id)
+
     if entry.options.get(
         CONF_ENABLE_NOTIFY,
         getattr(client, "has_notifications", DEFAULT_ENABLE_NOTIFY),
     ):
         platforms_to_setup.append("notify")
+    else:
+        unique_id = f"{entry.entry_id}_notify"
+        if entity_id := entity_reg.async_get_entity_id("notify", DOMAIN, unique_id):
+            entity_reg.async_remove(entity_id)
 
     # Connect to MQTT broker
     try:
@@ -309,6 +336,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
                     updates["sw_version"] = client.firmware_version
                 if updates:
                     dev_reg.async_update_device(device.id, **updates)
+                    new_data = dict(entry.data)
+                    data_changed = False
+                    if "model" in updates and updates["model"] != new_data.get(CONF_MODEL):
+                        new_data[CONF_MODEL] = updates["model"]
+                        data_changed = True
+                    if "manufacturer" in updates and updates["manufacturer"] != new_data.get(CONF_MANUFACTURER):
+                        new_data[CONF_MANUFACTURER] = updates["manufacturer"]
+                        data_changed = True
+                    if "sw_version" in updates and updates["sw_version"] != new_data.get(CONF_SW_VERSION):
+                        new_data[CONF_SW_VERSION] = updates["sw_version"]
+                        data_changed = True
+                    if data_changed:
+                        hass.config_entries.async_update_entry(entry, data=new_data)
         except Exception as err:
             _LOGGER.debug("[%s] Dynamic device registry enrichment failed: %s", client.ip, err)
 

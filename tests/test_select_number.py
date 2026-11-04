@@ -12,10 +12,13 @@ from custom_components.hisense_vidaa.number import (
     HisenseVidaaContrastNumber,
 )
 from custom_components.hisense_vidaa.select import (
+    AUDIO_OUTPUT_TV_SPEAKERS,
     HisenseVidaaAudioOutputSelect,
     HisenseVidaaPictureModeSelect,
     HisenseVidaaSoundModeSelect,
 )
+from custom_components.hisense_vidaa.switch import HisenseVidaaAudioOnlySwitch
+from custom_components.hisense_vidaa.tv.settings import SettingMenuItem
 
 
 @pytest.mark.anyio
@@ -294,3 +297,78 @@ async def test_notify_platform_purges_registry_when_disabled(
     await async_setup_notify(hass, mock_entry, lambda e: entities.extend(e))
     mock_reg.async_remove.assert_called_once_with("notify.living_room_tv")
     assert entities == []
+
+
+@pytest.mark.anyio
+async def test_entities_register_connection_callbacks():
+    """Select, number, and switch entities register connect/disconnect callbacks."""
+    client = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "entry123"
+
+    audio_sel = HisenseVidaaAudioOutputSelect(client, entry)
+    pic_sel = HisenseVidaaPictureModeSelect(client, entry)
+    snd_sel = HisenseVidaaSoundModeSelect(client, entry)
+    num_ent = HisenseVidaaBacklightNumber(client, entry)
+    sw_ent = HisenseVidaaAudioOnlySwitch(client, entry)
+
+    # AudioOutputSelect
+    await audio_sel.async_added_to_hass()
+    client.register_connected_callback.assert_called()
+    client.register_disconnected_callback.assert_called()
+    client.reset_mock()
+
+    # PictureModeSelect
+    await pic_sel.async_added_to_hass()
+    client.register_connected_callback.assert_called()
+    client.register_disconnected_callback.assert_called()
+    client.reset_mock()
+
+    # SoundModeSelect
+    await snd_sel.async_added_to_hass()
+    client.register_connected_callback.assert_called()
+    client.register_disconnected_callback.assert_called()
+    client.reset_mock()
+
+    # Number entity
+    await num_ent.async_added_to_hass()
+    client.register_connected_callback.assert_called()
+    client.register_disconnected_callback.assert_called()
+    client.reset_mock()
+
+    # Switch entity
+    await sw_ent.async_added_to_hass()
+    client.register_connected_callback.assert_called()
+    client.register_disconnected_callback.assert_called()
+
+
+@pytest.mark.anyio
+async def test_audio_output_select_dynamic_item_and_no_mute_corruption():
+    """AudioOutputSelect uses sound menu item if available and avoids setting volume_type=2."""
+    client = MagicMock()
+    client.send_key = AsyncMock()
+    client.async_send_key = AsyncMock()
+    client.async_set_setting = AsyncMock()
+    client.sound_settings = {
+        10: SettingMenuItem(
+            menu_id=10,
+            name="Audio Output",
+            value="TV Speakers",
+            options=["TV Speakers", "ARC / eARC", "Bluetooth"],
+        )
+    }
+    entry = MagicMock()
+    entry.entry_id = "entry123"
+
+    sel = HisenseVidaaAudioOutputSelect(client, entry)
+    sel.hass = MagicMock()
+
+    # When dynamic setting is present, async_set_setting is used
+    await sel.async_select_option("Bluetooth")
+    client.async_set_setting.assert_awaited_once_with(10, "Bluetooth")
+
+    # When dynamic setting is absent
+    client.sound_settings = {}
+    await sel.async_select_option(AUDIO_OUTPUT_TV_SPEAKERS)
+    assert sel._volume_type == 0
+

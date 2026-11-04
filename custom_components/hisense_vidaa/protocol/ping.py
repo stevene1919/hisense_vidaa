@@ -36,6 +36,7 @@ async def async_ping_tv(
     timeout: float = 3.0,
     upnp: HisenseUpnpClient | None = None,
     brand: str = "his",
+    use_ssl: bool = True,
 ) -> dict[str, Any]:
     """Quickly tests if TV broker is listening, accepting TLS, and responding to MQTT packets."""
     results: dict[str, Any] = {
@@ -97,7 +98,7 @@ async def async_ping_tv(
         conn_rc: int | None = None
         try:
             ssl_ctx = await loop.run_in_executor(
-                None, build_mqtt_ssl_context, valid_cert, valid_key, ca_cert, verify_ssl, True
+                None, build_mqtt_ssl_context, valid_cert, valid_key, ca_cert, verify_ssl, use_ssl
             )
             try:
                 async with asyncio.timeout(timeout):
@@ -147,9 +148,10 @@ async def async_ping_tv(
         if upnp is not None:
             results["device_info"] = await upnp.async_get_device_fingerprint(timeout=1.5)
         else:
-            from ..tv.fingerprint import get_device_fingerprint
+            from .upnp import HisenseUpnpClient
 
-            results["device_info"] = await loop.run_in_executor(None, get_device_fingerprint, ip, 1.5)
+            upnp_client = HisenseUpnpClient(ip)
+            results["device_info"] = await upnp_client.async_get_device_fingerprint(timeout=1.5)
 
     return results
 

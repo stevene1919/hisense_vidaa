@@ -110,9 +110,10 @@ def apply_device_info_update(client: HisenseTvClient, data: Any) -> None:
     )
     if manufacturer_name and str(manufacturer_name).strip():
         m_str = str(manufacturer_name).strip()
-        from ..discovery import BRAND_MAP
+        from ..const import BRAND_MAP, GENERIC_MANUFACTURERS
 
-        client.manufacturer = BRAND_MAP.get(m_str.lower(), m_str)
+        if m_str.lower() not in GENERIC_MANUFACTURERS:
+            client.manufacturer = BRAND_MAP.get(m_str.lower(), m_str)
 
     firmware_version = (
         data.get("firmware_version")

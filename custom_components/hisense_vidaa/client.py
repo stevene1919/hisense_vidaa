@@ -105,20 +105,20 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
             and self.client_id
             and "$" in self.client_id
             and self.auth_profile not in ("legacy", "static")
+            and f"${self.brand}$" not in self.client_id
         ):
-            if f"${self.brand}$" not in self.client_id:
-                _LOGGER.info(
-                    "[%s] Client ID embedded brand does not match configured brand '%s'; regenerating initial credentials",
-                    self.ip,
-                    self.brand,
-                )
-                self.client_id, self.username, self.password = generate_initial_credentials(
-                    mac=self.mac,
-                    auth_profile=self.auth_profile,
-                    brand=self.brand,
-                )
-                self.access_token = None
-                self.refresh_token = None
+            _LOGGER.info(
+                "[%s] Client ID embedded brand does not match configured brand '%s'; regenerating initial credentials",
+                self.ip,
+                self.brand,
+            )
+            self.client_id, self.username, self.password = generate_initial_credentials(
+                mac=self.mac,
+                auth_profile=self.auth_profile,
+                brand=self.brand,
+            )
+            self.access_token = None
+            self.refresh_token = None
 
         if not name:
             brand_display = BRAND_MAP.get(self.brand, "Hisense")
@@ -522,6 +522,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
             ca_cert=self.ca_cert,
             verify_ssl=self.verify_ssl,
             out_status=refresh_status,
+            use_ssl=self.use_ssl,
         )
         self._last_refresh_connect_rc = refresh_status.get("connect_rc")
 

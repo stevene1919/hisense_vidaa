@@ -107,6 +107,25 @@ class SettingMenuItem:
         """Alias for value."""
         return self.value
 
+    @property
+    def is_select(self) -> bool:
+        """Return True if this menu item represents a select / choice."""
+        return bool(self.options)
+
+    @property
+    def is_slider(self) -> bool:
+        """Return True if this menu item represents a numeric slider."""
+        return self.min_value is not None or self.max_value is not None
+
+    @property
+    def menu_type(self) -> str:
+        """Return the menu type: 'select', 'slider', or 'value'."""
+        if self.is_select:
+            return "select"
+        if self.is_slider:
+            return "slider"
+        return "value"
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SettingMenuItem | None:
         """Parses a menu item from raw TV JSON payload."""

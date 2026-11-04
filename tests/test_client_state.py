@@ -361,4 +361,20 @@ def test_entity_device_info_brand_fallback():
     assert dev_info["manufacturer"] == "Loewe"
 
 
+def test_generic_manufacturer_filtered_in_device_info_update():
+    """Generic manufacturer names are not applied to client.manufacturer."""
+    from custom_components.hisense_vidaa.tv.state import apply_device_info_update
+
+    client = MagicMock()
+    client.manufacturer = "Hisense"
+    client.model_name = "OriginalModel"
+
+    # Broadcast with generic manufacturer "SmartTV"
+    apply_device_info_update(client, {"manufacturer": "SmartTV", "model": "65U7G"})
+
+    assert client.manufacturer == "Hisense"  # Unchanged!
+    assert client.model_name == "65U7G"
+
+
+
 

@@ -6,7 +6,8 @@
         "description": "Inserisci l'indirizzo IP della tua TV Hisense.",
         "data": {
           "ip_address": "Indirizzo IP",
-          "auth_profile": "Profilo di autenticazione / certificato"
+          "auth_profile": "Profilo di autenticazione / certificato",
+          "brand": "Marca TV (ecosistema VIDAA OS)"
         }
       },
       "discovery_confirm": {
@@ -29,7 +30,8 @@
         "description": "Aggiorna le impostazioni di connessione o associa nuovamente la tua Hisense TV.",
         "data": {
           "ip_address": "Indirizzo IP",
-          "auth_profile": "Profilo di autenticazione / certificato"
+          "auth_profile": "Profilo di autenticazione / certificato",
+          "brand": "Marca TV (ecosistema VIDAA OS)"
         }
       },
       "certs": {
@@ -126,7 +128,8 @@
           "auth_profile": "Profilo di autenticazione / certificato",
           "use_ssl": "Usa connessione crittografata SSL/TLS",
           "certfile": "Percorso file certificato (.crt / .pem / .p12)",
-          "keyfile": "Percorso file chiave privata (.key / .pem)"
+          "keyfile": "Percorso file chiave privata (.key / .pem)",
+          "brand": "Marca OEM del televisore"
         }
       }
     },
@@ -387,6 +390,31 @@
         "middle": "VIDAA 1.5 / Intermedio (3000–3285)",
         "remotenow": "RemoteNOW / 2018–2023 (standard)",
         "legacy": "Statico legacy (pre-2022 / credenziali statiche)"
+      }
+    },
+    "brand": {
+      "options": {
+        "his": "Hisense",
+        "tos": "Toshiba",
+        "loe": "Loewe",
+        "tpv": "TPV / Philips / AOC",
+        "shp": "Sharp",
+        "jvc": "JVC",
+        "sch": "Schneider",
+        "aka": "Akai",
+        "bek": "Beko",
+        "tel": "Telefunken",
+        "bus": "Bush",
+        "vic": "Vizio",
+        "phi": "Philco",
+        "nob": "Noblex",
+        "san": "Sansei",
+        "rca": "RCA",
+        "sin": "Sinotec",
+        "ves": "Vestel",
+        "bra": "Brandt",
+        "met": "Metz",
+        "lei": "Leica"
       }
     }
   },

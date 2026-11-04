@@ -50,9 +50,16 @@ class HisenseVidaaBaseNumber(HisenseVidaaEntity, NumberEntity):
 
     async def async_added_to_hass(self) -> None:
         self._client.register_picture_callback(self._handle_picture_update)
+        self._client.register_connected_callback(self._handle_connection_change)
+        self._client.register_disconnected_callback(self._handle_connection_change)
 
     async def async_will_remove_from_hass(self) -> None:
         self._client.unregister_picture_callback(self._handle_picture_update)
+        self._client.unregister_connected_callback(self._handle_connection_change)
+        self._client.unregister_disconnected_callback(self._handle_connection_change)
+
+    def _handle_connection_change(self, *args: Any) -> None:
+        self.schedule_update_ha_state()
 
     def _handle_picture_update(self, data: dict[str, Any]) -> None:
         self._update_value_from_client()

@@ -129,6 +129,7 @@ async def async_perform_token_refresh(
     port: int = 36669,
     timeout: float = 10.0,
     out_status: dict[str, Any] | None = None,
+    use_ssl: bool = True,
 ) -> dict[str, Any] | None:
     """Connects asynchronously using refresh_token to obtain new token credentials from TV."""
     if not refresh_token or not client_id or not username:
@@ -146,7 +147,7 @@ async def async_perform_token_refresh(
         keyfile,
         ca_cert,
         verify_ssl,
-        True,
+        use_ssl,
     )
 
     connect_rc: int | None = None

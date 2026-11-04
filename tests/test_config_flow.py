@@ -297,8 +297,10 @@ async def test_zeroconf_discovery(monkeypatch):
 async def test_config_flow_async_remove_cleans_up_client():
     """Test async_remove disconnects running flow client."""
     hass = MagicMock(spec=HomeAssistant)
-    mock_task = MagicMock()
-    hass.async_create_background_task = MagicMock(return_value=mock_task)
+    import asyncio
+    hass.async_create_background_task = MagicMock(
+        side_effect=lambda coro, *a, **kw: asyncio.get_running_loop().create_task(coro)
+    )
 
     flow = HisenseVidaaConfigFlow()
     flow.hass = hass

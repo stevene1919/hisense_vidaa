@@ -269,3 +269,29 @@ def test_audio_output_sensor_string_volume_type(mock_client, mock_entry):
 
     sensor._handle_volume_update({"volume_type": "0"})
     assert sensor.native_value == "TV Speakers"
+
+
+def test_session_status_sensor_masks_client_id_and_applies_offset():
+    """SessionStatusSensor masks client_id and applies clock_offset."""
+    client = MagicMock()
+    client.connected = True
+    client.use_ssl = True
+    client.auth_profile = "modern"
+    client.client_id = "E85177EC981C$his$123456_vidaacommon_001"
+    client.clock_offset = 3600
+    client.access_token_time = 1700000000
+    client.access_token_duration = 2
+    client.refresh_token_time = 1700000000
+    client.refresh_token_duration = 60
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+
+    sensor = HisenseVidaaSessionStatusSensor(client, entry)
+    attrs = sensor.extra_state_attributes
+
+    # client_id is masked
+    assert attrs["client_id"] == "E85177EC..._001"
+    assert "paired_at" in attrs
+    assert "access_token_expires_at" in attrs
+

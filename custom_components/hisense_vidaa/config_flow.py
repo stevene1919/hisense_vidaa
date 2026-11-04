@@ -20,8 +20,11 @@ from .const import (
     BRAND_SELECTOR,
     CONF_AUTH_PROFILE,
     CONF_BRAND,
+    CONF_CERTFILE,
     CONF_IP_ADDRESS,
+    CONF_KEYFILE,
     CONF_MAC_ADDRESS,
+    CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
     DEFAULT_BRAND,
     DEFAULT_ENABLE_PICTURE_CONTROLS,
@@ -295,10 +298,23 @@ class HisenseVidaaConfigFlow(
 
         if not self.client:
             if not self.ip_address and self._reauth_entry:
-                self.ip_address = self._reauth_entry.data.get(CONF_IP_ADDRESS)
-                self.mac_address = self._reauth_entry.data.get(CONF_MAC_ADDRESS)
-                self.auth_profile = self._reauth_entry.data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
-                self.brand = self._reauth_entry.data.get(CONF_BRAND, DEFAULT_BRAND)
+                opts = (
+                    dict(self._reauth_entry.options)
+                    if isinstance(getattr(self._reauth_entry, "options", None), dict)
+                    else {}
+                )
+                data = (
+                    dict(self._reauth_entry.data)
+                    if isinstance(getattr(self._reauth_entry, "data", None), dict)
+                    else {}
+                )
+                self.ip_address = data.get(CONF_IP_ADDRESS)
+                self.mac_address = data.get(CONF_MAC_ADDRESS)
+                self.auth_profile = opts.get(CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE))
+                self.brand = opts.get(CONF_BRAND, data.get(CONF_BRAND, DEFAULT_BRAND))
+                self.use_ssl = opts.get(CONF_USE_SSL, data.get(CONF_USE_SSL, DEFAULT_USE_SSL))
+                self.certfile = opts.get(CONF_CERTFILE, data.get(CONF_CERTFILE))
+                self.keyfile = opts.get(CONF_KEYFILE, data.get(CONF_KEYFILE))
 
             if self.ip_address:
                 session = async_get_clientsession(self.hass) if self.hass else None
@@ -308,6 +324,9 @@ class HisenseVidaaConfigFlow(
                     auth_profile=self.auth_profile,
                     brand=self.brand,
                     session=session,
+                    certfile=self.certfile,
+                    keyfile=self.keyfile,
+                    use_ssl=self.use_ssl,
                 )
                 self.client._loop = self.hass.loop
                 try:

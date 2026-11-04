@@ -206,3 +206,23 @@ def test_report_warns_on_real_rejection() -> None:
 
     assert "All standard authentication profiles rejected (rc=5)" in report
 
+
+def test_setting_menu_item_menu_type():
+    """SettingMenuItem correctly identifies select, slider, and value menu types."""
+    select_item = SettingMenuItem(menu_id=1, name="Mode", value="A", options=["A", "B"])
+    slider_item = SettingMenuItem(menu_id=2, name="Backlight", value=80, min_value=0, max_value=100)
+    value_item = SettingMenuItem(menu_id=3, name="Version", value="1.0")
+
+    assert select_item.menu_type == "select"
+    assert select_item.is_select is True
+    assert select_item.is_slider is False
+
+    assert slider_item.menu_type == "slider"
+    assert slider_item.is_slider is True
+    assert slider_item.is_select is False
+
+    assert value_item.menu_type == "value"
+    assert value_item.is_slider is False
+    assert value_item.is_select is False
+
+

@@ -254,12 +254,13 @@ async def test_test_tv_ssl_connection_unauthenticated():
 @pytest.mark.anyio
 async def test_ping_tv_client_cert_tracking():
     """Verify async_ping_tv accurately tracks whether client certificates were presented."""
-    from unittest.mock import AsyncMock
+    from unittest.mock import AsyncMock, MagicMock
 
     from custom_components.hisense_vidaa.protocol.ping import async_ping_tv
 
     mock_reader = AsyncMock()
     mock_writer = AsyncMock()
+    mock_writer.close = MagicMock()
     with patch("asyncio.open_connection", return_value=(mock_reader, mock_writer)), \
          patch("custom_components.hisense_vidaa.protocol.ping.async_test_tv_ssl_connection", return_value={
              "connected": True,

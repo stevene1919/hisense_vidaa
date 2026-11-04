@@ -6,7 +6,8 @@
         "description": "Gib die IP-Adresse deines Hisense-Fernsehers ein.",
         "data": {
           "ip_address": "IP-Adresse",
-          "auth_profile": "Authentifizierungs- / Zertifikatsprofil"
+          "auth_profile": "Authentifizierungs- / Zertifikatsprofil",
+          "brand": "TV-Marke (VIDAA OS-Ökosystem)"
         }
       },
       "discovery_confirm": {
@@ -29,7 +30,8 @@
         "description": "Aktualisiere die Verbindungseinstellungen oder kopple deinen Hisense-Fernseher erneut.",
         "data": {
           "ip_address": "IP-Adresse",
-          "auth_profile": "Authentifizierungs- / Zertifikatsprofil"
+          "auth_profile": "Authentifizierungs- / Zertifikatsprofil",
+          "brand": "TV-Marke (VIDAA OS-Ökosystem)"
         }
       },
       "certs": {
@@ -126,7 +128,8 @@
           "auth_profile": "Authentifizierungs- / Zertifikatsprofil",
           "use_ssl": "Verschlüsselte SSL/TLS-Verbindung verwenden",
           "certfile": "Zertifikatsdateipfad (.crt / .pem / .p12)",
-          "keyfile": "Privater Schlüsseldateipfad (.key / .pem)"
+          "keyfile": "Privater Schlüsseldateipfad (.key / .pem)",
+          "brand": "TV-OEM-Marke"
         }
       }
     },
@@ -387,6 +390,31 @@
         "middle": "VIDAA 1.5 / Mittlere Generation (3000–3285)",
         "remotenow": "RemoteNOW / 2018–2023 (Standard)",
         "legacy": "Legacy statisch (Vor-2022 / Statische Zugangsdaten)"
+      }
+    },
+    "brand": {
+      "options": {
+        "his": "Hisense",
+        "tos": "Toshiba",
+        "loe": "Loewe",
+        "tpv": "TPV / Philips / AOC",
+        "shp": "Sharp",
+        "jvc": "JVC",
+        "sch": "Schneider",
+        "aka": "Akai",
+        "bek": "Beko",
+        "tel": "Telefunken",
+        "bus": "Bush",
+        "vic": "Vizio",
+        "phi": "Philco",
+        "nob": "Noblex",
+        "san": "Sansei",
+        "rca": "RCA",
+        "sin": "Sinotec",
+        "ves": "Vestel",
+        "bra": "Brandt",
+        "met": "Metz",
+        "lei": "Leica"
       }
     }
   },

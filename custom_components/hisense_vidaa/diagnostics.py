@@ -25,6 +25,10 @@ TO_REDACT = {
     "mac_address",
     "mac_wifi",
     "mac_ethernet",
+    "secondary_mac_address",
+    "mac",
+    "UDN",
+    "uuid",
     # [F12-leg2/F8-leg6]: the client_id is derived from the MAC and is embedded
     # in every topic basepath, so those keys leak it as well.
     "serial_number",
@@ -64,8 +68,9 @@ async def async_get_config_entry_diagnostics(
         now = int(time.time())
         token_expires_in = None
         if client.access_token_time and client.access_token_duration:
+            offset = client.clock_offset if isinstance(getattr(client, "clock_offset", None), (int, float)) else 0
             expiry = client.access_token_time + (client.access_token_duration * 86400)
-            token_expires_in = expiry - now
+            token_expires_in = expiry - (now + int(offset))
 
         fp = None
         with contextlib.suppress(Exception):

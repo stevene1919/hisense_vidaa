@@ -7,7 +7,7 @@ import pytest
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.const import DOMAIN
+from custom_components.hisense_vidaa.const import CONF_IP_ADDRESS, DOMAIN
 from custom_components.hisense_vidaa.diagnostics import async_get_config_entry_diagnostics
 
 
@@ -166,4 +166,38 @@ async def test_diagnostics_redacts_fingerprint_and_topic_client_id():
     assert diag["client"]["topic_mobile"] == "**REDACTED**"
     # non-sensitive device info is still reported
     assert diag["device_fingerprint"]["model_name"] == "65U7G"
+
+
+@pytest.mark.anyio
+async def test_diagnostics_clock_offset_and_pii_redaction():
+    """Diagnostics applies clock offset and redacts secondary MAC / UUID."""
+    hass = MagicMock(spec=HomeAssistant)
+    entry = MagicMock(spec=ConfigEntry)
+    entry.entry_id = "test_entry"
+    entry.title = "Test TV"
+    entry.data = {
+        CONF_IP_ADDRESS: "192.168.50.12",
+        "secondary_mac_address": "aa:bb:cc:dd:ee:ff",
+        "mac": "11:22:33:44:55:66",
+        "uuid": "urn:uuid:12345-abcde",
+    }
+    entry.options = {}
+
+    client = MagicMock()
+    client.connected = True
+    client.auth_profile = "modern"
+    client.access_token_time = 1700000000
+    client.access_token_duration = 2
+    client.clock_offset = 3600
+    client.async_get_device_fingerprint = AsyncMock(return_value={})
+
+    hass.data = {DOMAIN: {entry.entry_id: {"client": client}}}
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert diag["entry"]["data"]["secondary_mac_address"] == "**REDACTED**"
+    assert diag["entry"]["data"]["mac"] == "**REDACTED**"
+    assert diag["entry"]["data"]["uuid"] == "**REDACTED**"
+
 

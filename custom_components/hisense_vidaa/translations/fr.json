@@ -6,7 +6,8 @@
         "description": "Entrez l'adresse IP de votre téléviseur Hisense.",
         "data": {
           "ip_address": "Adresse IP",
-          "auth_profile": "Profil d'authentification / certificat"
+          "auth_profile": "Profil d'authentification / certificat",
+          "brand": "Marque du téléviseur (écosystème VIDAA OS)"
         }
       },
       "discovery_confirm": {
@@ -29,7 +30,8 @@
         "description": "Mettez à jour les paramètres de connexion ou réassociez votre téléviseur Hisense.",
         "data": {
           "ip_address": "Adresse IP",
-          "auth_profile": "Profil d'authentification / certificat"
+          "auth_profile": "Profil d'authentification / certificat",
+          "brand": "Marque du téléviseur (écosystème VIDAA OS)"
         }
       },
       "certs": {
@@ -126,7 +128,8 @@
           "auth_profile": "Profil d'authentification / certificat",
           "use_ssl": "Utiliser une connexion chiffrée SSL/TLS",
           "certfile": "Chemin du fichier de certificat (.crt / .pem / .p12)",
-          "keyfile": "Chemin du fichier de clé privée (.key / .pem)"
+          "keyfile": "Chemin du fichier de clé privée (.key / .pem)",
+          "brand": "Marque OEM du téléviseur"
         }
       }
     },
@@ -387,6 +390,31 @@
         "middle": "VIDAA 1.5 / Intermédiaire (3000–3285)",
         "remotenow": "RemoteNOW / 2018–2023 (standard)",
         "legacy": "Statique hérité (avant 2022 / identifiants statiques)"
+      }
+    },
+    "brand": {
+      "options": {
+        "his": "Hisense",
+        "tos": "Toshiba",
+        "loe": "Loewe",
+        "tpv": "TPV / Philips / AOC",
+        "shp": "Sharp",
+        "jvc": "JVC",
+        "sch": "Schneider",
+        "aka": "Akai",
+        "bek": "Beko",
+        "tel": "Telefunken",
+        "bus": "Bush",
+        "vic": "Vizio",
+        "phi": "Philco",
+        "nob": "Noblex",
+        "san": "Sansei",
+        "rca": "RCA",
+        "sin": "Sinotec",
+        "ves": "Vestel",
+        "bra": "Brandt",
+        "met": "Metz",
+        "lei": "Leica"
       }
     }
   },

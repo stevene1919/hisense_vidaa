@@ -1,8 +1,10 @@
 """Tests for Hisense VIDAA config entry setup, unload, reauth callbacks, and options update filtering."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from custom_components.hisense_vidaa import (
@@ -13,6 +15,14 @@ from custom_components.hisense_vidaa import (
     update_listener,
 )
 from custom_components.hisense_vidaa.const import (
+    CONF_ACCESS_TOKEN,
+    CONF_BRAND,
+    CONF_CLIENT_ID,
+    CONF_ENABLE_NOTIFY,
+    CONF_ENABLE_PICTURE_CONTROLS,
+    CONF_ENABLE_REMOTE,
+    CONF_IP_ADDRESS,
+    CONF_MAC_ADDRESS,
     SERVICE_CHANGE_CHANNEL,
     SERVICE_LAUNCH_APP,
     SERVICE_SEND_KEY,
@@ -56,6 +66,11 @@ def _setup_hass(mock_entry, mock_client, monkeypatch):
     hass.config_entries = MagicMock()
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
     hass.loop = MagicMock()
+    def _mock_bg_task(coro, *a, **kw):
+        if hasattr(coro, "close"):
+            coro.close()
+        return MagicMock()
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
     hass.services = FakeServices()
     monkeypatch.setattr(
         "custom_components.hisense_vidaa.HisenseTvClient",
@@ -415,6 +430,11 @@ async def test_async_setup_entry_passes_brand_to_client(mock_entry, monkeypatch)
     hass.config_entries = MagicMock()
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
     hass.loop = MagicMock()
+    def _mock_bg_task(coro, *a, **kw):
+        if hasattr(coro, "close"):
+            coro.close()
+        return MagicMock()
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
     hass.services = FakeServices()
     hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
 
@@ -444,3 +464,63 @@ async def test_async_setup_entry_passes_brand_to_client(mock_entry, monkeypatch)
     result = await async_setup_entry(hass, mock_entry)
     assert result is True
     assert captured_kwargs.get("brand") == "tos"
+
+
+@pytest.mark.anyio
+async def test_setup_entry_cleans_up_disabled_platforms():
+    """Test async_setup_entry removes disabled platform entities from Entity Registry."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.data = {}
+    hass.config_entries = MagicMock()
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+    hass.config_entries.async_update_entry = MagicMock()
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    def _mock_bg_task(coro, *a, **kw):
+        if hasattr(coro, "close"):
+            coro.close()
+        return MagicMock()
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
+    hass.services = FakeServices()
+    hass.loop = MagicMock()
+
+    entry = MagicMock(spec=ConfigEntry)
+    entry.entry_id = "test_cleanup_entry"
+    entry.async_on_unload = MagicMock()
+    entry.data = {
+        CONF_IP_ADDRESS: "192.168.50.12",
+        CONF_MAC_ADDRESS: "e8:51:77:ec:98:1c",
+        CONF_CLIENT_ID: "E85177EC981C$his$123456_vidaacommon_001",
+        CONF_ACCESS_TOKEN: "valid_token",
+        CONF_BRAND: "his",
+    }
+    # User disabled remote, notify, and picture controls
+    entry.options = {
+        CONF_ENABLE_REMOTE: False,
+        CONF_ENABLE_NOTIFY: False,
+        CONF_ENABLE_PICTURE_CONTROLS: False,
+    }
+
+    mock_client = MagicMock()
+    mock_client.has_notifications = False
+    mock_client.async_check_and_refresh_token = AsyncMock(return_value=False)
+    mock_client.async_connect_and_run = AsyncMock()
+
+    mock_reg = MagicMock()
+    removed_entities = []
+    mock_reg.async_get_entity_id = MagicMock(side_effect=lambda domain, platform, uid: f"{domain}.{uid}")
+    mock_reg.async_remove = MagicMock(side_effect=lambda eid: removed_entities.append(eid))
+
+    with patch("custom_components.hisense_vidaa.HisenseTvClient", return_value=mock_client), \
+         patch("homeassistant.helpers.entity_registry.async_get", return_value=mock_reg), \
+         patch("homeassistant.helpers.issue_registry.async_create_issue"), \
+         patch("homeassistant.helpers.issue_registry.async_delete_issue"):
+        res = await async_setup_entry(hass, entry)
+        assert res is True
+
+    # Remote, notify, and 3 picture controls must be removed
+    assert "remote.test_cleanup_entry_remote" in removed_entities
+    assert "notify.test_cleanup_entry_notify" in removed_entities
+    assert "number.test_cleanup_entry_backlight" in removed_entities
+    assert "number.test_cleanup_entry_brightness" in removed_entities
+    assert "number.test_cleanup_entry_contrast" in removed_entities
+

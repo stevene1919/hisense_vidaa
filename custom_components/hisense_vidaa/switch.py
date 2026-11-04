@@ -64,12 +64,18 @@ class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
         return self._is_on
 
     async def async_added_to_hass(self) -> None:
+        self._client.register_connected_callback(self._handle_connected)
         self._client.register_disconnected_callback(self._handle_disconnected)
         self._client.register_state_callback(self._handle_state_update)
 
     async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_connected_callback(self._handle_connected)
         self._client.unregister_disconnected_callback(self._handle_disconnected)
         self._client.unregister_state_callback(self._handle_state_update)
+
+    def _handle_connected(self, *args: Any) -> None:
+        if getattr(self, "hass", None) is not None:
+            self.schedule_update_ha_state()
 
     def _handle_disconnected(self, *args: Any) -> None:
         self._is_on = False

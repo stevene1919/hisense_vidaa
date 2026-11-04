@@ -13,6 +13,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     AUTH_PROFILE_SELECTOR,
+    BRAND_SELECTOR,
     CONF_AUTH_PROFILE,
     CONF_BRAND,
     CONF_CERTFILE,
@@ -45,9 +46,23 @@ class ReauthFlowMixin:
             if self.client:
                 await self.client.async_disconnect()
                 self.client = None
+
+            # [CRITICAL-01] Synchronize entry.options so that overridden brand,
+            # auth profile, or SSL settings do not diverge from the newly paired credentials.
+            orig_options = (
+                dict(self._reauth_entry.options)
+                if isinstance(getattr(self._reauth_entry, "options", None), dict)
+                else {}
+            )
+            new_options = dict(orig_options)
+            for opt_key in (CONF_BRAND, CONF_AUTH_PROFILE, CONF_USE_SSL, CONF_CERTFILE, CONF_KEYFILE):
+                if opt_key in orig_options and opt_key in auth_data:
+                    new_options[opt_key] = auth_data[opt_key]
+
             self.hass.config_entries.async_update_entry(
                 self._reauth_entry,
                 data={**self._reauth_entry.data, **auth_data},
+                options=new_options,
             )
             # [F4-leg2/F5-leg6]: the credentials are fresh again, so the
             # persistent "reauthentication required" card must go away.
@@ -84,18 +99,33 @@ class ReauthFlowMixin:
         self._reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
+        current_options = (
+            dict(self._reauth_entry.options)
+            if self._reauth_entry and isinstance(getattr(self._reauth_entry, "options", None), dict)
+            else {}
+        )
         self.ip_address = entry_data[CONF_IP_ADDRESS]
         self.mac_address = entry_data.get(CONF_MAC_ADDRESS)
         if not self.mac_address and self.ip_address:
             self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
-        self.auth_profile = entry_data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
+        self.auth_profile = current_options.get(
+            CONF_AUTH_PROFILE, entry_data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
+        )
         # [F3-leg2]: reauth must keep the transport settings of the entry it is
         # re-authenticating (a legacy/non-TLS entry would otherwise be rewritten
         # as use_ssl=True by _get_client_auth_data on success).
-        self.use_ssl = entry_data.get(CONF_USE_SSL, DEFAULT_USE_SSL)
-        self.brand = entry_data.get(CONF_BRAND, DEFAULT_BRAND)
-        self.certfile = entry_data.get(CONF_CERTFILE)
-        self.keyfile = entry_data.get(CONF_KEYFILE)
+        self.use_ssl = current_options.get(
+            CONF_USE_SSL, entry_data.get(CONF_USE_SSL, DEFAULT_USE_SSL)
+        )
+        self.brand = current_options.get(
+            CONF_BRAND, entry_data.get(CONF_BRAND, DEFAULT_BRAND)
+        )
+        self.certfile = current_options.get(
+            CONF_CERTFILE, entry_data.get(CONF_CERTFILE)
+        )
+        self.keyfile = current_options.get(
+            CONF_KEYFILE, entry_data.get(CONF_KEYFILE)
+        )
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
@@ -152,14 +182,25 @@ class ReauthFlowMixin:
             self.context["entry_id"]
         )
         errors: dict[str, str] = {}
-        current_data = self._reauth_entry.data if self._reauth_entry else {}
-        self.brand = current_data.get(CONF_BRAND, DEFAULT_BRAND)
+        current_data = (
+            dict(self._reauth_entry.data)
+            if self._reauth_entry and isinstance(getattr(self._reauth_entry, "data", None), dict)
+            else {}
+        )
+        current_options = (
+            dict(self._reauth_entry.options)
+            if self._reauth_entry and isinstance(getattr(self._reauth_entry, "options", None), dict)
+            else {}
+        )
+        self.brand = current_options.get(CONF_BRAND, current_data.get(CONF_BRAND, DEFAULT_BRAND))
         default_ip = current_data.get(CONF_IP_ADDRESS, "")
-        default_profile = current_data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
+        default_profile = current_options.get(CONF_AUTH_PROFILE, current_data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE))
+        default_brand = self.brand
 
         if user_input is not None:
             self.ip_address = user_input[CONF_IP_ADDRESS]
             self.auth_profile = user_input.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
+            self.brand = user_input.get(CONF_BRAND, default_brand)
             # [F7-leg6]: the entry may be repointed at a different TV, so the MAC
             # must be resolved for the *new* IP before the target is re-paired.
             self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
@@ -193,6 +234,9 @@ class ReauthFlowMixin:
                 vol.Optional(
                     CONF_AUTH_PROFILE, default=default_profile
                 ): AUTH_PROFILE_SELECTOR,
+                vol.Optional(
+                    CONF_BRAND, default=default_brand
+                ): BRAND_SELECTOR,
             }),
             errors=errors,
         )

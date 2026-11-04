@@ -6,7 +6,8 @@
         "description": "Introduza o endereço IP da sua televisão Hisense.",
         "data": {
           "ip_address": "Endereço IP",
-          "auth_profile": "Perfil de autenticação / certificado"
+          "auth_profile": "Perfil de autenticação / certificado",
+          "brand": "Marca de TV (ecossistema VIDAA OS)"
         }
       },
       "discovery_confirm": {
@@ -29,7 +30,8 @@
         "description": "Atualize as definições de ligação ou emparelhe novamente a sua TV Hisense.",
         "data": {
           "ip_address": "Endereço IP",
-          "auth_profile": "Perfil de autenticação / certificado"
+          "auth_profile": "Perfil de autenticação / certificado",
+          "brand": "Marca de TV (ecossistema VIDAA OS)"
         }
       },
       "certs": {
@@ -126,7 +128,8 @@
           "auth_profile": "Perfil de autenticação / certificado",
           "use_ssl": "Utilizar ligação encriptada SSL/TLS",
           "certfile": "Caminho do ficheiro de certificado (.crt / .pem / .p12)",
-          "keyfile": "Caminho do ficheiro de chave privada (.key / .pem)"
+          "keyfile": "Caminho do ficheiro de chave privada (.key / .pem)",
+          "brand": "Marca OEM de TV"
         }
       }
     },
@@ -387,6 +390,31 @@
         "middle": "VIDAA 1.5 / Intermédio (3000–3285)",
         "remotenow": "RemoteNOW / 2018–2023 (padrão)",
         "legacy": "Legado estático (Anterior a 2022 / Credenciais estáticas)"
+      }
+    },
+    "brand": {
+      "options": {
+        "his": "Hisense",
+        "tos": "Toshiba",
+        "loe": "Loewe",
+        "tpv": "TPV / Philips / AOC",
+        "shp": "Sharp",
+        "jvc": "JVC",
+        "sch": "Schneider",
+        "aka": "Akai",
+        "bek": "Beko",
+        "tel": "Telefunken",
+        "bus": "Bush",
+        "vic": "Vizio",
+        "phi": "Philco",
+        "nob": "Noblex",
+        "san": "Sansei",
+        "rca": "RCA",
+        "sin": "Sinotec",
+        "ves": "Vestel",
+        "bra": "Brandt",
+        "met": "Metz",
+        "lei": "Leica"
       }
     }
   },

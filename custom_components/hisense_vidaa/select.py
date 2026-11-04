@@ -78,9 +78,16 @@ class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
 
     async def async_added_to_hass(self) -> None:
         self._client.register_volume_callback(self._handle_volume_update)
+        self._client.register_connected_callback(self._handle_connection_change)
+        self._client.register_disconnected_callback(self._handle_connection_change)
 
     async def async_will_remove_from_hass(self) -> None:
         self._client.unregister_volume_callback(self._handle_volume_update)
+        self._client.unregister_connected_callback(self._handle_connection_change)
+        self._client.unregister_disconnected_callback(self._handle_connection_change)
+
+    def _handle_connection_change(self, *args: Any) -> None:
+        self.schedule_update_ha_state()
 
     @property
     def current_option(self) -> str:
@@ -94,6 +101,11 @@ class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Change the audio output option."""
+        ao_item = find_menu_item_by_name(self._client.sound_settings, "Audio Output") or find_menu_item_by_name(self._client.sound_settings, "Speaker")
+        if ao_item and ao_item.is_select:
+            await self._client.async_set_setting(ao_item.menu_id, option)
+            return
+
         if option == AUDIO_OUTPUT_TV_SPEAKERS:
             self._volume_type = 0
             await self._client.async_send_key("KEY_AUDIO_ONLY")
@@ -101,7 +113,7 @@ class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
             self._volume_type = 1
             await self._client.async_send_key("KEY_SOUND")
         elif option == AUDIO_OUTPUT_HEADPHONE:
-            self._volume_type = 2
+            # Do not corrupt _volume_type (2 represents Mute in VIDAA volumechange payload)
             await self._client.async_send_key("KEY_HEADPHONE")
         self.async_write_ha_state()
 
@@ -131,9 +143,16 @@ class HisenseVidaaPictureModeSelect(HisenseVidaaEntity, SelectEntity):
 
     async def async_added_to_hass(self) -> None:
         self._client.register_picture_callback(self._handle_picture_update)
+        self._client.register_connected_callback(self._handle_connection_change)
+        self._client.register_disconnected_callback(self._handle_connection_change)
 
     async def async_will_remove_from_hass(self) -> None:
         self._client.unregister_picture_callback(self._handle_picture_update)
+        self._client.unregister_connected_callback(self._handle_connection_change)
+        self._client.unregister_disconnected_callback(self._handle_connection_change)
+
+    def _handle_connection_change(self, *args: Any) -> None:
+        self.schedule_update_ha_state()
 
     @property
     def options(self) -> list[str]:
@@ -186,9 +205,16 @@ class HisenseVidaaSoundModeSelect(HisenseVidaaEntity, SelectEntity):
 
     async def async_added_to_hass(self) -> None:
         self._client.register_sound_callback(self._handle_sound_update)
+        self._client.register_connected_callback(self._handle_connection_change)
+        self._client.register_disconnected_callback(self._handle_connection_change)
 
     async def async_will_remove_from_hass(self) -> None:
         self._client.unregister_sound_callback(self._handle_sound_update)
+        self._client.unregister_connected_callback(self._handle_connection_change)
+        self._client.unregister_disconnected_callback(self._handle_connection_change)
+
+    def _handle_connection_change(self, *args: Any) -> None:
+        self.schedule_update_ha_state()
 
     @property
     def options(self) -> list[str]:

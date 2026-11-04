@@ -9,11 +9,17 @@ from homeassistant import data_entry_flow
 from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
 
+from .const import CONF_AUTH_PROFILE, CONF_CERTFILE, CONF_KEYFILE
 from .crypto import check_certs_exist, resolve_certificates
 
 
 class CertificateMissingRepairFlow(RepairsFlow):
     """Handler for certificate missing repair flow."""
+
+    def __init__(self, entry_id: str | None = None) -> None:
+        """Initialize with config entry id."""
+        super().__init__()
+        self._entry_id = entry_id
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -27,12 +33,36 @@ class CertificateMissingRepairFlow(RepairsFlow):
         """Handle the confirmation step."""
         errors: dict[str, str] = {}
         if user_input is not None:
+            entry = (
+                self.hass.config_entries.async_get_entry(self._entry_id)
+                if self._entry_id
+                else None
+            )
+            auth_profile = "auto"
+            custom_cert = None
+            custom_key = None
+            if entry:
+                opts = entry.options
+                d = entry.data
+                auth_profile = opts.get(CONF_AUTH_PROFILE, d.get(CONF_AUTH_PROFILE, "auto"))
+                custom_cert = opts.get(CONF_CERTFILE, d.get(CONF_CERTFILE))
+                custom_key = opts.get(CONF_KEYFILE, d.get(CONF_KEYFILE))
+
             try:
                 def _verify_resolved_certs() -> bool:
-                    cert, key = resolve_certificates()
+                    try:
+                        cert, key = resolve_certificates(
+                            auth_profile=auth_profile,
+                            certfile=custom_cert,
+                            keyfile=custom_key,
+                        )
+                    except TypeError:
+                        cert, key = resolve_certificates()
                     return bool(cert and key and check_certs_exist(cert, key))
 
                 if await self.hass.async_add_executor_job(_verify_resolved_certs):
+                    if entry is not None:
+                        await self.hass.config_entries.async_reload(entry.entry_id)
                     return self.async_create_entry(data={})
             except Exception:
                 pass
@@ -91,9 +121,9 @@ def _entry_id_for_issue(issue_id: str, data: dict[str, Any] | None) -> str | Non
     """Return the config entry id a persistent issue belongs to."""
     if isinstance(data, dict) and data.get("entry_id"):
         return str(data["entry_id"])
-    prefix = "auth_token_invalidated_"
-    if issue_id.startswith(prefix):
-        return issue_id[len(prefix):] or None
+    for prefix in ("auth_token_invalidated_", "certificate_missing_"):
+        if issue_id.startswith(prefix):
+            return issue_id[len(prefix):] or None
     return None
 
 
@@ -104,10 +134,14 @@ async def async_create_fix_flow(
 ) -> RepairsFlow:
     """Create a repair fix flow for the issue."""
     if issue_id.startswith("certificate_missing"):
-        return CertificateMissingRepairFlow()
+        return CertificateMissingRepairFlow(
+            entry_id=_entry_id_for_issue(issue_id, data)
+        )
     if issue_id.startswith("auth_token_invalidated"):
         return AuthTokenInvalidatedRepairFlow(
             entry_id=_entry_id_for_issue(issue_id, data)
         )
-    return CertificateMissingRepairFlow()
+    return CertificateMissingRepairFlow(
+        entry_id=_entry_id_for_issue(issue_id, data)
+    )
 

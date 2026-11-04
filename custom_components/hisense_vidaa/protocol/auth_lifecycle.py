@@ -278,12 +278,20 @@ class TokenLifecycleManager:
                     )
                     client._dispatch_auth_failed()
                     return
-                if not client.refresh_token or is_token_expired(client.refresh_token_time, client.refresh_token_duration):
+                if not client.refresh_token or is_token_expired(
+                    client.refresh_token_time,
+                    client.refresh_token_duration,
+                    clock_offset=client.clock_offset,
+                ):
                     _LOGGER.warning("[%s] Refresh token is missing or expired. Reauthentication required.", client.ip)
                     client._dispatch_auth_failed()
         except Exception as e:
             _LOGGER.warning("[%s] Background token refresh error: %s", client.ip, e)
-            if not client.refresh_token or is_token_expired(client.refresh_token_time, client.refresh_token_duration):
+            if not client.refresh_token or is_token_expired(
+                client.refresh_token_time,
+                client.refresh_token_duration,
+                clock_offset=client.clock_offset,
+            ):
                 client._dispatch_auth_failed()
         finally:
             async with self.refresh_lock:

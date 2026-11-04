@@ -5,7 +5,20 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 
+from custom_components.hisense_vidaa.const import (
+    CONF_ACCESS_TOKEN,
+    CONF_AUTH_PROFILE,
+    CONF_BRAND,
+    CONF_CERTFILE,
+    CONF_CLIENT_ID,
+    CONF_IP_ADDRESS,
+    CONF_KEYFILE,
+    CONF_MAC_ADDRESS,
+    CONF_USE_SSL,
+)
 from custom_components.hisense_vidaa.options_flow import HisenseVidaaOptionsFlowHandler
 
 
@@ -153,3 +166,40 @@ async def test_options_flow(monkeypatch: pytest.MonkeyPatch) -> None:
     assert alias_keys["step_id"] == "features_remote"
     alias_certs = await handler.async_step_certs()
     assert alias_certs["step_id"] == "security"
+
+
+@pytest.mark.anyio
+async def test_options_flow_brand_change_updates_data_and_triggers_reauth():
+    """Changing brand in options flow updates entry.data to prevent split-brain wipe."""
+    hass = MagicMock(spec=HomeAssistant)
+    entry = MagicMock(spec=ConfigEntry)
+    entry.entry_id = "test_entry"
+    entry.data = {
+        CONF_IP_ADDRESS: "192.168.50.12",
+        CONF_MAC_ADDRESS: "e8:51:77:ec:98:1c",
+        CONF_BRAND: "his",
+        CONF_AUTH_PROFILE: "modern",
+        CONF_CLIENT_ID: "E85177EC981C$his$123456_vidaacommon_001",
+        CONF_ACCESS_TOKEN: "valid_token",
+    }
+    entry.options = {CONF_BRAND: "his"}
+    hass.config_entries.async_get_entry.return_value = entry
+
+    flow = HisenseVidaaOptionsFlowHandler()
+    flow.config_entry = entry
+    flow.hass = hass
+
+    result = await flow.async_step_security(user_input={
+        CONF_AUTH_PROFILE: "modern",
+        CONF_BRAND: "tos",
+        CONF_USE_SSL: True,
+        CONF_CERTFILE: "",
+        CONF_KEYFILE: "",
+    })
+
+    assert result["type"] == "create_entry"
+    # Verify that entry.data was updated with new brand
+    hass.config_entries.async_update_entry.assert_called_once()
+    call_args = hass.config_entries.async_update_entry.call_args
+    assert call_args.kwargs["data"][CONF_BRAND] == "tos"
+

@@ -267,6 +267,10 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
 
             if not errors:
                 updated_options = {**self.config_entry.options, **user_input}
+                new_brand = user_input.get(CONF_BRAND)
+                if new_brand and new_brand != current_brand:
+                    new_data = {**self.config_entry.data, CONF_BRAND: new_brand}
+                    self.hass.config_entries.async_update_entry(self.config_entry, data=new_data)
                 return self.async_create_entry(title="", data=updated_options)
 
         return self.async_show_form(

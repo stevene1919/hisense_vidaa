@@ -33,7 +33,7 @@ if "homeassistant" not in sys.modules:
                 "\nERROR: Home Assistant is not installed and the bundled test stubs "
                 f"could not be loaded ({exc}).\n"
                 "Install the CLI dependencies (pytest is required by the stubs when Home Assistant is absent):\n"
-                "    pip install paho-mqtt defusedxml cryptography pytest\n"
+                "    pip install aiomqtt defusedxml cryptography pytest\n"
                 "Or run this tool from your Home Assistant /config directory so the real "
                 "'homeassistant' package is importable.",
                 file=sys.stderr,
