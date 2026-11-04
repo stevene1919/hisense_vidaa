@@ -51,6 +51,7 @@ When adding a new Hisense VIDAA TV (**Settings → Devices & Services → Add In
 | **`ip_address`** | `string` (IPv4) | **Yes** | None | The local network IP address of the Hisense Smart TV (e.g. `192.168.50.12`). It is strongly recommended to configure a static DHCP reservation on your router. |
 | **`name`** | `string` | Optional | `Hisense TV` | User-friendly display name used to prefix created entity IDs and device registry names. |
 | **`mac_address`** | `string` (MAC) | Optional | Auto-discovered | Hardware Ethernet or Wi-Fi MAC address (e.g. `e8:51:77:ec:98:1c`). Used for Wake-on-LAN packets and unique entity IDs. Discovered automatically via UPnP/ARP. |
+| **`brand`** | `select` | Optional | `his` | TV OEM Brand selector (Hisense, Toshiba, Loewe, Philips, Sharp, JVC, and 15+ others). Auto-detected via UPnP/SSDP or certificate filenames, or selectable manually upfront. |
 | **`auth_profile`** | `select` | **Yes** | `auto` | Authentication and certificate selection tier: <br>• `auto`: Dynamically cascades from modern dynamic auth to middle, standard, and legacy profiles.<br>• `modern`: Modern XOR-masked timestamp dynamic auth (VIDAA U6, U7, U8, 2024+ models).<br>• `middle`: Middle dynamic auth protocol (transport_protocol 3000–3285).<br>• `remotenow`: Legacy RemoteNOW protocol (VIDAA U3 / U4).<br>• `legacy`: Static authentication without timestamp hashing.<br>• `vidaa_2024`: 2024+ firmware profile with strict broker handshakes. |
 | **`pin_code`** | `string` (4 digits) | **Yes** (during pairing) | None | The 4-digit numeric verification code displayed on the physical TV screen during the initial pairing handshake. |
 | **`certfile`** | `string` (file path) | Optional | Auto-resolved | Absolute path to custom client TLS certificate (`.pem` or `.crt`). If omitted, automatically resolves from default bundle or `ssl/` folder. |
@@ -97,6 +98,7 @@ To customize integration behavior for an existing TV, navigate to **Settings →
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | **`auth_profile`** | `select` | `auto` | Authentication handshake profile (`auto`, `modern`, `middle`, `remotenow`, `legacy`). |
+| **`brand`** | `select` | `his` | TV OEM Brand (`his`, `tos`, `loe`, `tpv`, `shp`, `jvc`, `sch`, `aka`, `bek`, `tel`, `bus`, `vic`, `phi`, `nob`, `san`, `rca`, `sin`, `ves`, `bra`, `met`, `lei`). Switching brands automatically derives fresh OEM pairing credentials without resetting entity IDs. |
 | **`use_ssl`** | `boolean` | `true` | Toggle SSL/TLS socket encryption for broker communications. |
 | **`certfile`** | `string` (file path) | Auto-resolved | Custom client certificate path (`.crt`, `.pem`, `.p12`). |
 | **`keyfile`** | `string` (file path) | Auto-resolved | Custom client private key path (`.key`, `.pem`). |

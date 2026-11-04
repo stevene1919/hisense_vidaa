@@ -237,16 +237,32 @@ If the Home Assistant host and the TV clock drift by more than **120 seconds**, 
 
 VIDAA OS is not exclusive to Hisense televisions; it is licensed globally to multiple OEM television manufacturers. The underlying MQTT broker (`port 36669`), topic hierarchy (`/remoteapp/...`), and client mutual TLS certificate authority (`RemoteCA`) are identical across all licensed brands, differing primarily in the 3-letter OEM brand code injected into `client_id`, `username`, and `password` salt hashing:
 
-| OEM Brand | Common Models / Partner Info | Brand Code | Client ID Template |
-| :--- | :--- | :--- | :--- |
-| **Hisense** | U6, U7, U8, UX, A6, A7 series | `his` | `{mac}$his${hash}_vidaacommon_001` |
-| **Toshiba** | C350, M550, Z670 (VIDAA editions) | `tos` | `{mac}$tos${hash}_vidaacommon_001` |
-| **Loewe** | We. SEE, stellar (VIDAA OS) | `loe` | `{mac}$loe${hash}_vidaacommon_001` |
-| **TPV / Philips / AOC** | OLED708, PUS8808, AOC Smart (VIDAA) | `tpv` | `{mac}$tpv${hash}_vidaacommon_001` |
-| **Sharp** | Aquos VIDAA Smart TVs (North America / EU) | `shp` | `{mac}$shp${hash}_vidaacommon_001` |
-| **JVC** | JVC Smart TV (VIDAA OS editions) | `jvc` | `{mac}$jvc${hash}_vidaacommon_001` |
-| **Schneider / Akai / Beko / Telefunken / Bush / Vizio** | European & North American OEM TVs | `sch`, `aka`, `bek`, `tel`, `bus`, `vic` | Parameterized `{mac}${brand}${hash}_vidaacommon_001` |
-| **Philco / Noblex / Sansei / RCA / Sinotec / Vestel / Brandt / Metz / Leica** | Global & Regional partner TVs | `phi`, `nob`, `san`, `rca`, `sin`, `ves`, `bra`, `met`, `lei` | Parameterized `{mac}${brand}${hash}_vidaacommon_001` |
+| OEM Brand | Common Models / Partner Info | Brand Code | Region / Manufacturer | Client ID Template |
+| :--- | :--- | :--- | :--- | :--- |
+| **Hisense** | U6, U7, U8, UX, A6, A7 series | `his` | Global (Hisense Visual Technology) | `{mac}$his${hash}_vidaacommon_001` |
+| **Toshiba** | C350, M550, Z670 (VIDAA editions) | `tos` | Global (TVS REGZA / Hisense partner) | `{mac}$tos${hash}_vidaacommon_001` |
+| **Loewe** | We. SEE, stellar (VIDAA OS) | `loe` | Europe / Germany (Loewe Technology) | `{mac}$loe${hash}_vidaacommon_001` |
+| **TPV / Philips / AOC** | OLED708, PUS8808, AOC Smart (VIDAA) | `tpv` | Europe / Global (TPV Technology) | `{mac}$tpv${hash}_vidaacommon_001` |
+| **Sharp** | Aquos VIDAA Smart TVs | `shp` | North America / Europe (Sharp) | `{mac}$shp${hash}_vidaacommon_001` |
+| **JVC** | JVC Smart TV (VIDAA OS editions) | `jvc` | Global / Regional (JVCKenwood / OEM) | `{mac}$jvc${hash}_vidaacommon_001` |
+| **Schneider** | Schneider Smart TVs | `sch` | Europe (Schneider Consumer) | `{mac}$sch${hash}_vidaacommon_001` |
+| **Akai** | Akai Smart TVs | `aka` | Global / Regional (Akai Electric) | `{mac}$aka${hash}_vidaacommon_001` |
+| **Beko** | Beko Smart TVs | `bek` | Europe / Middle East (Arçelik / Beko) | `{mac}$bek${hash}_vidaacommon_001` |
+| **Telefunken** | Telefunken Smart TVs | `tel` | Europe (Vestel / Telefunken) | `{mac}$tel${hash}_vidaacommon_001` |
+| **Bush** | Bush Smart TVs | `bus` | UK / Ireland (Argos / Sainsbury's) | `{mac}$bus${hash}_vidaacommon_001` |
+| **Vizio** | Vizio Smart TVs (VIDAA builds) | `vic` | North America (Vizio) | `{mac}$vic${hash}_vidaacommon_001` |
+| **Philco** | Philco Smart TVs | `phi` | Latin America / Regional | `{mac}$phi${hash}_vidaacommon_001` |
+| **Noblex** | Noblex Smart TVs | `nob` | South America (Newsan Argentina) | `{mac}$nob${hash}_vidaacommon_001` |
+| **Sansei** | Sansei Smart TVs | `san` | South America (Newsan Argentina) | `{mac}$san${hash}_vidaacommon_001` |
+| **RCA** | RCA Smart TVs (VIDAA editions) | `rca` | North America / Global | `{mac}$rca${hash}_vidaacommon_001` |
+| **Sinotec** | Sinotec Smart TVs | `sin` | South Africa / Regional | `{mac}$sin${hash}_vidaacommon_001` |
+| **Vestel** | Vestel Smart TVs | `ves` | Europe (Vestel Group) | `{mac}$ves${hash}_vidaacommon_001` |
+| **Brandt** | Brandt Smart TVs | `bra` | France / Europe / MENA (Brandt Group) | `{mac}$bra${hash}_vidaacommon_001` |
+| **Metz** | Metz Blue Smart TVs | `met` | Germany / Europe (Metz Consumer) | `{mac}$met${hash}_vidaacommon_001` |
+| **Leica** | Leica Cine 1 Laser TV | `lei` | Global (Leica Camera AG) | `{mac}$lei${hash}_vidaacommon_001` |
+| **Pioneer** | Pioneer Smart TVs | `pio` | Global / Regional | `{mac}$pio${hash}_vidaacommon_001` |
+| **Panasonic** | Regional VIDAA OEM editions | `psc` | Regional partner OEM | `{mac}$psc${hash}_vidaacommon_001` |
+| **Seiki** | Seiki Smart TVs | `sei` | North America / Regional | `{mac}$sei${hash}_vidaacommon_001` |
 
 ### Multi-Brand Resolution Architecture
 1. **UPnP & mDNS Discovery (`<modelDescription>`)**:

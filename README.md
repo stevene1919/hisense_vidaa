@@ -56,7 +56,7 @@ This integration officially supports **any smart TV running VIDAA OS** (pairing 
 - 📺 **Sharp & JVC** (Aquos & Smart TV VIDAA editions)
 - *...and other licensed VIDAA OS partner brands.*
 
-> 💡 **Universal Architecture**: All VIDAA OS TVs share the same internal broker and certificate authority (`RemoteCA`). The integration automatically detects your TV brand, applies the correct internal security salt, and configures the proper manufacturer name in Home Assistant's Device Registry.
+> 💡 **Universal Architecture**: All VIDAA OS TVs share the same internal broker and certificate authority (`RemoteCA`). The integration automatically detects your TV brand, applies the correct internal security salt, and configures the proper manufacturer name in Home Assistant's Device Registry. See the **[Complete OEM Brand Reference Matrix](docs/protocol_architecture.md#%EF%B8%8F-multi-brand-vidaa-os-ecosystem--oem-licensing)** for the full table of all 20+ supported partner brands.
 
 > [!NOTE]
 > **VIDAA OS vs Android TV (No Android Device Required)**:
