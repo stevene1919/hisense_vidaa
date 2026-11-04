@@ -43,27 +43,54 @@ The integration natively supports both **auto-extracted PKCS#12 archives** (`.p1
 
 ---
 
-## 📦 PKCS#12 (.p12 / .pfx) Auto-Extraction
+## 📦 PKCS#12 (.p12 / .pfx) Setup & Auto-Extraction
 
-If you have extracted the PKCS#12 bundle from the official VIDAA Android / iOS app (`client_mobile_android.p12`, `El.p12`, or `rcamobile.p12`), you do **not** need to manually split it with OpenSSL.
+The easiest method to configure SSL is providing the vendor PKCS#12 keystore (`El.p12`). When placed in `/config/ssl/`, Home Assistant automatically extracts the certificate and private key into PEM format on the fly—no OpenSSL commands required.
 
-### How to Extract `El.p12` from the VIDAA APK Archive (Any Computer):
-In the official **VIDAA Smart TV** Android app distribution package (`com.universal.remote.multi` APK), the client keystore is bundled inside the APK zip archive (commonly located at `res/El.p12`, `res/3R.p12`, or `res/raw/client_mobile_android.p12`).
+> [!NOTE]
+> **Zero Distribution & Independent Sourcing Policy**:
+> Proprietary vendor client certificates and application binaries are the intellectual property of Hisense / VIDAA. In accordance with open-source licensing standards and Home Assistant community distribution policies, this integration **never** bundles, distributes, or redistributes proprietary certificates or vendor APK files. Users must independently source the public application package as described below.
 
-You can extract this file on any computer (no phone needed):
+---
+
+### Step 1: Obtain the Official Public APK (Any Computer / Browser)
+
+You do **not** need an Android device or Google Play login to download the APK. An `.apk` is simply a standard zip archive distributed by Hisense.
+
+1. On any desktop computer (Windows, macOS, Linux), open your web browser.
+2. Search for the official companion application:
+   - **Application Name**: **VIDAA Smart TV** (by VIDAA USA, Inc.)
+   - **Package Identifier**: `com.universal.remote.multi`
+   *(For older 2018–2020 TV models using RemoteNOW, the legacy package identifier is `com.hisense.tv.remotenow`).*
+3. Download the free `.apk` package from a reputable public APK mirror (such as [APKMirror](https://www.apkmirror.com) or [APKPure](https://apkpure.com)).
+
+---
+
+### Step 2: Extract `El.p12` from the APK Archive
+
+Once downloaded, extract the client keystore using standard archive tools on your computer:
 
 - **Linux / macOS / HA Terminal**:
   ```bash
-  unzip -j app.apk res/El.p12 -d /config/ssl/
-  # Or in some APK releases:
-  # unzip -j app.apk res/3R.p12 -d /config/ssl/
-  # unzip -j app.apk res/raw/client_mobile_android.p12 -d /config/ssl/
+  unzip -j com.universal.remote.multi.apk res/El.p12 -d /config/ssl/
+  # Or in alternative APK releases:
+  # unzip -j com.universal.remote.multi.apk res/3R.p12 -d /config/ssl/
+  # unzip -j com.universal.remote.multi.apk res/raw/client_mobile_android.p12 -d /config/ssl/
   ```
+
 - **Windows**:
-  Rename `app.apk` to `app.zip`, open it in Windows File Explorer or 7-Zip, locate `res/El.p12`, and copy it to your Home Assistant `/config/ssl/` share.
-2. Place `El.p12` in `/config/ssl/` (or `/ssl/` / `/config/certs/`).
-   *(Optional: You may rename it to your TV brand, e.g. `toshiba.p12` or `loewe.p12`, for automatic brand detection).*
-3. The integration automatically discovers `El.p12`, decrypts it using the embedded keystore password, and writes `El_cert.pem` and `El_key.pem`.
+  1. Rename the downloaded file extension from `.apk` to `.zip` (e.g. `app.zip`).
+  2. Open the `.zip` in Windows File Explorer or 7-Zip.
+  3. Navigate to the `res/` folder and copy `El.p12` (or `3R.p12`).
+  4. Paste `El.p12` into your Home Assistant `/config/ssl/` directory via Samba/SMB or File Editor.
+
+---
+
+### Step 3: Automatic Discovery & Loading in Home Assistant
+
+1. Verify that `El.p12` (or `client_mobile_android.p12`) is placed in `/config/ssl/` (or `/ssl/` / `/config/certs/`).
+   *(Optional: You may rename it to match your TV brand, e.g. `toshiba.p12`, `loewe.p12`, or `philips.p12`, to enable automatic brand hinting).*
+2. The integration automatically discovers `El.p12`, decrypts it using the embedded keystore password, and generates `El_cert.pem` and `El_key.pem`.
 
 > [!NOTE]
 > **One Universal Keystore for All Brands**:
