@@ -41,16 +41,3 @@ Configure Wake-on-LAN, media transport controls, app listing in sources, remote 
 <p align="center">
   <img src="../assets/screenshots/configuration_options.png" alt="Configuration Options" width="60%" />
 </p>
-
----
-
-## 🇦🇺 Lovelace Australian Remote Control (EN2G30H)
-
-Pixel-accurate digital recreation of the physical Australian 12-app remote control using `custom:button-card`:
-
-<p align="center">
-  <img src="../assets/screenshots/ha_australian_remote.png" alt="Hisense Australian Remote Card" width="360" />
-</p>
-
-> [!TIP]
-> To set up the Australian Remote or explore other remote templates (Classic FTA, Android TV Card, etc.), see the **[Lovelace Remote Cards & Dashboard Guide](lovelace_cards.md)**.

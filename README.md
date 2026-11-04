@@ -93,9 +93,8 @@ For deep technical details, configuration parameters, and dashboard templates, r
 | 🌐 **[Network & Wake-on-LAN Requirements](docs/network_requirements.md)** | 100% local LAN architecture, UPnP LAN control, IoT VLAN rules, and reliable wired WoL setup. |
 | 🧪 **[CLI Testing & Diagnostic Tools](docs/cli_tools.md)** | Standalone [`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py) command-line tool reference. |
 | 🔬 **[Protocol & Cryptographic Architecture](docs/protocol_architecture.md)** | Reverse-engineered UPnP LAN control, XOR bitmasks, token lifecycles, and multi-brand ecosystem. |
-| 🛠️ **[Advanced Installation & Development](docs/installation_advanced.md)** | Git cloning, branch tracking, Git submodules, standalone venv setup, and air-gapped VLAN installs. |
+| 🛠️ **[Advanced Installation & Lifecycle](docs/installation_advanced.md)** | Git cloning, submodules, air-gapped VLAN installs, and clean uninstallation. |
 | 🩺 **[Troubleshooting & Error Reference](docs/troubleshooting.md)** | Diagnostic procedures, error recovery, pairing resets, and action error resolutions. |
-| 🗑️ **[Removal & Uninstallation Guide](docs/removal.md)** | Step-by-step device deletion, certificate cleanup, and HACS component uninstallation. |
 | 🖼️ **[Screenshots & UI Gallery](docs/screenshots.md)** | Full visual tour of device controls, media player dialogs, source dropdowns, and option menus. |
 
 ---

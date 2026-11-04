@@ -1,9 +1,9 @@
-# 🛠️ Advanced Installation & Development Guide
+# 🛠️ Advanced Installation, Development & Lifecycle Guide
 
-This guide covers advanced deployment methods for the **Hisense VIDAA TV Integration**, including direct Git cloning, tracking pre-release/beta branches, Git submodule management, air-gapped offline installations, and running standalone diagnostics without Home Assistant.
+This guide covers advanced deployment methods for the **Hisense VIDAA TV Integration**, including direct Git cloning, tracking pre-release/beta branches, Git submodule management, air-gapped offline installations, standalone CLI diagnostics, and clean uninstallation.
 
 > [!NOTE]
-> For standard installations, using **HACS** (Home Assistant Community Store) or extracting the official release archive is recommended. See [Installation & Setup in README](../README.md#step-1-install-the-integration-files).
+> For standard installations, using **HACS** (Home Assistant Community Store) or extracting the official release archive is recommended. See [Beginner's Quick Start Guide](quick_start_beginners.md).
 
 ---
 
@@ -16,6 +16,7 @@ This guide covers advanced deployment methods for the **Hisense VIDAA TV Integra
 | **[3. Git Submodule Integration](#3-git-submodule-integration)** | Infrastructure-as-code users | Manage `/config` as a version-controlled monorepo |
 | **[4. Standalone CLI Diagnostics](#4-standalone-cli-diagnostics-without-home-assistant)** | Network & TV debuggers | Test TLS, pairing, and UPnP without running Home Assistant |
 | **[5. Offline / Air-Gapped Setup](#5-offline--air-gapped-installation)** | Isolated smart home setups | Install on VLANs with blocked WAN / internet access |
+| **[6. Clean Removal & Uninstallation](#6-clean-removal--uninstallation)** | Any user | Completely delete integration, entities, and clean up certs |
 
 ---
 
@@ -175,3 +176,41 @@ For privacy-centric smart homes where Home Assistant and the TV operate on an is
    - Place client certificates in `/config/ssl/` (e.g. `/config/ssl/remotenow_2018_cert.pem` and `key.pem`).
 5. **Restart Home Assistant**:
    - Navigate to **Settings → System → Restart** and proceed with standard UI integration setup.
+
+---
+
+## 6. Clean Removal & Uninstallation
+
+To cleanly remove and uninstall the **Hisense VIDAA TV** integration from Home Assistant:
+
+### 6.1 Delete Config Entry
+1. In Home Assistant, navigate to **Settings → Devices & Services → Integrations**.
+2. Locate the **Hisense VIDAA TV** integration card.
+3. If you have multiple configured TVs, select the specific TV you wish to remove.
+4. Click the three vertical dots (`⋮`) menu in the card header and click **Delete**.
+5. Confirm the deletion when prompted.
+
+> [!NOTE]
+> Deleting the config entry automatically unregisters associated entity devices, unloads custom services (when no other TVs remain configured), and cancels active background MQTT network loops.
+
+### 6.2 Clean Up Certificates (Optional)
+If you placed client certificates or key files in `/config/ssl/hisense_vidaa/` (or `/config/ssl/` / `/ssl/`), and no other tools or TV instances require them:
+1. Open your Home Assistant Terminal, SSH session, or File Editor.
+2. Delete the certificate files from the directory (e.g. `rm -rf /config/ssl/hisense_vidaa` or delete `El.p12`).
+
+### 6.3 Uninstall Component
+- **Via HACS (Recommended)**:
+  1. Navigate to **HACS → Integrations**.
+  2. Find **Hisense VIDAA TV** in the list of installed integrations.
+  3. Click the three vertical dots (`⋮`) on the integration row and select **Remove**.
+  4. Confirm the removal.
+- **Manual Installation**:
+  1. Connect via SSH or Terminal to your Home Assistant host.
+  2. Delete the integration directory:
+     ```bash
+     rm -rf /config/custom_components/hisense_vidaa
+     ```
+
+### 6.4 Restart Home Assistant
+Restart Home Assistant to flush cached Python modules:
+- Navigate to **Settings → System → Restart** (top right) → **Restart Home Assistant**.
