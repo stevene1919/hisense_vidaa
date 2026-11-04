@@ -135,7 +135,7 @@ async def async_start_pairing_handshake(client: HisenseTvClient) -> None:
                     client.ip,
                     error,
                 )
-                for candidate_brand in ("tos", "loe", "tpv"):
+                for candidate_brand in ("tos", "loe", "tpv", "shp", "jvc"):
                     client.brand = candidate_brand
                     try:
                         await client._async_start_auth_internal(profile=target_profile)
@@ -206,7 +206,7 @@ async def async_start_pairing_handshake(client: HisenseTvClient) -> None:
                     last_error,
                 )
                 candidate_profiles = [p for p in profiles_to_try if p != "remotenow"]
-                for candidate_brand in ("tos", "loe", "tpv"):
+                for candidate_brand in ("tos", "loe", "tpv", "shp", "jvc"):
                     client.brand = candidate_brand
                     for candidate_profile in candidate_profiles:
                         try:

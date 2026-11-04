@@ -230,10 +230,11 @@ def generate_markdown_report(
     mid_str = "✅ ACCEPTED (rc=0)" if middle.get("supported") else f"❌ REJECTED (rc={middle.get('rc')})"
     mod_str = "✅ ACCEPTED (rc=0)" if modern.get("supported") else f"❌ REJECTED (rc={modern.get('rc')})"
 
+    brand_tag = dev.get("brand") or "his"
     lines.append(f"- **Legacy Static Auth (`hisenseservice`):** {leg_str}")
-    lines.append(f"- **Standard Dynamic Auth (`his$<timestamp>`):** {std_str}")
-    lines.append(f"- **Middle Dynamic Auth (`his$<timestamp ^ XOR>` / Standard Salt):** {mid_str}")
-    lines.append(f"- **Modern Dynamic Auth (`his$<timestamp ^ XOR>` / Modern Salt):** {mod_str}")
+    lines.append(f"- **Standard Dynamic Auth (`{brand_tag}$<timestamp>`):** {std_str}")
+    lines.append(f"- **Middle Dynamic Auth (`{brand_tag}$<timestamp ^ XOR>` / Standard Salt):** {mid_str}")
+    lines.append(f"- **Modern Dynamic Auth (`{brand_tag}$<timestamp ^ XOR>` / Modern Salt):** {mod_str}")
 
     # Only diagnose "all profiles rejected" when the broker actually rejected a
     # profile (rc=5). When the TV is off/unreachable every tier reports rc=None

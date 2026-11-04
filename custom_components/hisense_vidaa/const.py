@@ -121,6 +121,23 @@ BRAND_OPTIONS = [
     selector.SelectOptionDict(value="tos", label="Toshiba"),
     selector.SelectOptionDict(value="loe", label="Loewe"),
     selector.SelectOptionDict(value="tpv", label="TPV / Philips / AOC"),
+    selector.SelectOptionDict(value="shp", label="Sharp"),
+    selector.SelectOptionDict(value="jvc", label="JVC"),
+    selector.SelectOptionDict(value="sch", label="Schneider"),
+    selector.SelectOptionDict(value="aka", label="Akai"),
+    selector.SelectOptionDict(value="bek", label="Beko"),
+    selector.SelectOptionDict(value="tel", label="Telefunken"),
+    selector.SelectOptionDict(value="bus", label="Bush"),
+    selector.SelectOptionDict(value="vic", label="Vizio"),
+    selector.SelectOptionDict(value="phi", label="Philco"),
+    selector.SelectOptionDict(value="nob", label="Noblex"),
+    selector.SelectOptionDict(value="san", label="Sansei"),
+    selector.SelectOptionDict(value="rca", label="RCA"),
+    selector.SelectOptionDict(value="sin", label="Sinotec"),
+    selector.SelectOptionDict(value="ves", label="Vestel"),
+    selector.SelectOptionDict(value="bra", label="Brandt"),
+    selector.SelectOptionDict(value="met", label="Metz"),
+    selector.SelectOptionDict(value="lei", label="Leica"),
 ]
 
 BRAND_SELECTOR = selector.SelectSelector(

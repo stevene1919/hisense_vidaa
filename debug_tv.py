@@ -74,7 +74,7 @@ def main() -> None:
     parser.add_argument("--creds", type=str, default="credentials.json", help="Path to credentials.json")
     parser.add_argument("--cert", type=str, default=None, help="Path to client certificate pem")
     parser.add_argument("--key", type=str, default=None, help="Path to client private key pem")
-    parser.add_argument("--brand", type=str, default=None, choices=["his", "tos", "loe", "tpv"], help="TV OEM brand identifier (default: from credentials.json or his)")
+    parser.add_argument("--brand", type=str, default=None, help="TV OEM brand identifier (e.g. his, tos, loe, tpv, shp, jvc; default: from credentials.json or his)")
     parser.add_argument("--monitor", action="store_true", help="Continuously monitor and stream live TV MQTT events")
     parser.add_argument("--dump-state", action="store_true", help="Dump all current state, apps, sources, and volume")
     parser.add_argument("--probe", action="store_true", help="Probe picture and sound settings menu trees")

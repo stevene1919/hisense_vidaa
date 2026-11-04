@@ -39,18 +39,41 @@ __all__ = [
 
 def detect_brand_from_cert_paths(certfile: str | None, keyfile: str | None) -> str | None:
     """Detect OEM brand hint from certificate or private key filenames."""
+    brand_keywords: list[tuple[tuple[str, ...], str]] = [
+        (("toshiba", "regza"), "tos"),
+        (("loewe",), "loe"),
+        (("philips", "tpv", "aoc"), "tpv"),
+        (("sharp", "aquos"), "shp"),
+        (("jvc",), "jvc"),
+        (("schneider",), "sch"),
+        (("akai",), "aka"),
+        (("beko",), "bek"),
+        (("telefunken",), "tel"),
+        (("bush",), "bus"),
+        (("vizio",), "vic"),
+        (("philco",), "phi"),
+        (("noblex",), "nob"),
+        (("sansei",), "san"),
+        (("ilo",), "ilo"),
+        (("pioneer",), "pio"),
+        (("seiki",), "sei"),
+        (("tonomac",), "ton"),
+        (("panasonic",), "psc"),
+        (("rca", "rcamobile"), "rca"),
+        (("sinotec",), "sin"),
+        (("vestel",), "ves"),
+        (("brandt",), "bra"),
+        (("metz",), "met"),
+        (("leica",), "lei"),
+        (("hisense",), "his"),
+    ]
     for path in (certfile, keyfile):
         if not path:
             continue
         base = os.path.basename(path).lower()
-        if "toshiba" in base:
-            return "tos"
-        if "loewe" in base:
-            return "loe"
-        if any(token in base for token in ("philips", "tpv", "aoc")):
-            return "tpv"
-        if "hisense" in base:
-            return "his"
+        for keywords, code in brand_keywords:
+            if any(token in base for token in keywords):
+                return code
     return None
 
 

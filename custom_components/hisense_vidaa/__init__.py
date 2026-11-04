@@ -138,6 +138,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
     )
     client._loop = hass.loop
 
+    if client.client_id != data.get(CONF_CLIENT_ID) or client.brand != data.get(CONF_BRAND):
+        new_data = {
+            **data,
+            CONF_BRAND: client.brand,
+            CONF_CLIENT_ID: client.client_id,
+            CONF_USERNAME: client.username,
+            CONF_PASSWORD: client.password,
+            CONF_ACCESS_TOKEN: client.access_token,
+            CONF_REFRESH_TOKEN: client.refresh_token,
+        }
+        hass.config_entries.async_update_entry(entry, data=new_data)
+        data = new_data
+
     # Check for missing certificates off the event loop and manage Repairs issue
     certs_valid = (
         await hass.async_add_executor_job(

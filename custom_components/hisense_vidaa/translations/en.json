@@ -388,6 +388,31 @@
         "remotenow": "RemoteNOW / 2018–2023 (standard)",
         "legacy": "Legacy Static (Pre-2022 / Static Credentials)"
       }
+    },
+    "brand": {
+      "options": {
+        "his": "Hisense",
+        "tos": "Toshiba",
+        "loe": "Loewe",
+        "tpv": "TPV / Philips / AOC",
+        "shp": "Sharp",
+        "jvc": "JVC",
+        "sch": "Schneider",
+        "aka": "Akai",
+        "bek": "Beko",
+        "tel": "Telefunken",
+        "bus": "Bush",
+        "vic": "Vizio",
+        "phi": "Philco",
+        "nob": "Noblex",
+        "san": "Sansei",
+        "rca": "RCA",
+        "sin": "Sinotec",
+        "ves": "Vestel",
+        "bra": "Brandt",
+        "met": "Metz",
+        "lei": "Leica"
+      }
     }
   },
   "issues": {

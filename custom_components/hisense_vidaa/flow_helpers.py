@@ -105,13 +105,15 @@ async def async_discover_device_details(
     hass: HomeAssistant, client: HisenseTvClient | None, default_ip: str | None
 ) -> dict[str, str | None]:
     """Discovers friendly device name, model, manufacturer, and sw_version from UPnP/DLNA."""
-    title = f"Hisense TV ({default_ip})" if default_ip else "Hisense TV"
+    brand_initial = getattr(client, "brand", None) if client else None
+    brand_display_init = BRAND_MAP.get(brand_initial, "Hisense") if brand_initial else "Hisense"
+    title = f"{brand_display_init} TV ({default_ip})" if default_ip else f"{brand_display_init} TV"
     details: dict[str, str | None] = {
         "title": title,
         "model": None,
         "manufacturer": None,
         "sw_version": None,
-        "brand": DEFAULT_BRAND,
+        "brand": None,
     }
     if not client:
         return details
@@ -141,7 +143,7 @@ async def async_discover_device_details(
                 if brand_val and brand_val.lower() in BRAND_MAP:
                     details["manufacturer"] = BRAND_MAP[brand_val.lower()]
                 else:
-                    details["manufacturer"] = "Hisense"
+                    details["manufacturer"] = brand_display_init
             else:
                 details["manufacturer"] = BRAND_MAP.get(mfg_clean.lower(), mfg_clean)
         if fp.get("brand") or fp.get("manufacturer"):
@@ -153,7 +155,7 @@ async def async_discover_device_details(
             or not discovered_name.strip()
             or discovered_name.strip() == "Renderer"
         ):
-            brand_code = details["brand"] or DEFAULT_BRAND
+            brand_code = details["brand"] or getattr(client, "brand", None) or DEFAULT_BRAND
             brand_display = BRAND_MAP.get(brand_code, "Hisense")
             details["title"] = f"{brand_display} TV ({default_ip})" if default_ip else f"{brand_display} TV"
     except Exception:

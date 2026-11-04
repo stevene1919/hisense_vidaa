@@ -96,6 +96,10 @@ def parse_upnp_renderer_descriptor(xml_content: str) -> dict[str, Any]:
                 props = parse_upnp_description_properties(raw_desc)
                 if "macWifi" in props:
                     parsed["mac_wifi"] = props["macWifi"]
+                elif "mac" in props:
+                    parsed["mac_wifi"] = props["mac"]
+                elif "network_device" in props:
+                    parsed["mac_wifi"] = props["network_device"]
                 if "macEthernet" in props:
                     parsed["mac_ethernet"] = props["macEthernet"]
                 if "brand" in props:

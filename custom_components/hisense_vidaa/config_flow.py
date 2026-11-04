@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 from .client import HisenseTvClient
 from .const import (
     AUTH_PROFILE_SELECTOR,
+    BRAND_SELECTOR,
     CONF_AUTH_PROFILE,
     CONF_BRAND,
     CONF_IP_ADDRESS,
@@ -96,8 +97,12 @@ class HisenseVidaaConfigFlow(
             self.model = details["model"]
         if details.get("manufacturer"):
             self.manufacturer = details["manufacturer"]
-        if details.get("brand"):
-            self.brand = details["brand"]
+        discovered_brand = details.get("brand")
+        if discovered_brand:
+            if self.brand == DEFAULT_BRAND or discovered_brand != DEFAULT_BRAND:
+                self.brand = discovered_brand
+        elif self.client and self.client.brand and self.client.brand != DEFAULT_BRAND:
+            self.brand = self.client.brand
         if details.get("sw_version"):
             self.sw_version = details["sw_version"]
 
@@ -242,6 +247,10 @@ class HisenseVidaaConfigFlow(
         if user_input is not None:
             self.ip_address = user_input[CONF_IP_ADDRESS]
             self.auth_profile = user_input.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
+            if CONF_BRAND in user_input:
+                self.brand = user_input[CONF_BRAND]
+                if self.brand in BRAND_MAP:
+                    self.manufacturer = BRAND_MAP[self.brand]
             self.mac_address = await async_resolve_mac(self.hass, self.ip_address)
 
             if self.auth_profile in ("auto", "legacy"):
@@ -264,6 +273,9 @@ class HisenseVidaaConfigFlow(
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required(CONF_IP_ADDRESS): str,
+                vol.Optional(
+                    CONF_BRAND, default=DEFAULT_BRAND
+                ): BRAND_SELECTOR,
                 vol.Optional(
                     CONF_AUTH_PROFILE, default=DEFAULT_AUTH_PROFILE
                 ): AUTH_PROFILE_SELECTOR,
@@ -328,6 +340,8 @@ class HisenseVidaaConfigFlow(
 
                 await self._async_discover_device_name()
                 await self._async_probe_device_capabilities()
+                if self.client and self.client.brand and self.client.brand != DEFAULT_BRAND and self.brand == DEFAULT_BRAND:
+                    self.brand = self.client.brand
                 return await self.async_step_options()
 
         return self.async_show_form(

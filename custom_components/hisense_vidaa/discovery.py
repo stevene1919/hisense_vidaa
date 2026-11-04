@@ -46,6 +46,9 @@ BRAND_MAP: dict[str, str] = {
     "tpv": "TPV",
     "philips": "Philips",
     "aoc": "AOC",
+    "shp": "Sharp",
+    "sharp": "Sharp",
+    "jvc": "JVC",
     "sch": "Schneider",
     "schneider": "Schneider",
     "aka": "Akai",
@@ -58,6 +61,37 @@ BRAND_MAP: dict[str, str] = {
     "bush": "Bush",
     "vic": "Vizio",
     "vizio": "Vizio",
+    "phi": "Philco",
+    "philco": "Philco",
+    "nob": "Noblex",
+    "noblex": "Noblex",
+    "san": "Sansei",
+    "sansei": "Sansei",
+    "ilo": "iLo",
+    "pio": "Pioneer",
+    "pioneer": "Pioneer",
+    "sei": "Seiki",
+    "seiki": "Seiki",
+    "ton": "Tonomac",
+    "tonomac": "Tonomac",
+    "psc": "Panasonic",
+    "panasonic": "Panasonic",
+    "sma": "Smart",
+    "qua": "Quantum",
+    "quantum": "Quantum",
+    "adi": "Admiral",
+    "admiral": "Admiral",
+    "rca": "RCA",
+    "sin": "Sinotec",
+    "sinotec": "Sinotec",
+    "ves": "Vestel",
+    "vestel": "Vestel",
+    "bra": "Brandt",
+    "brandt": "Brandt",
+    "met": "Metz",
+    "metz": "Metz",
+    "lei": "Leica",
+    "leica": "Leica",
 }
 
 BRAND_CODE_MAP: dict[str, str] = {
@@ -70,6 +104,9 @@ BRAND_CODE_MAP: dict[str, str] = {
     "tpv": "tpv",
     "philips": "tpv",
     "aoc": "tpv",
+    "shp": "shp",
+    "sharp": "shp",
+    "jvc": "jvc",
     "sch": "sch",
     "schneider": "sch",
     "aka": "aka",
@@ -82,6 +119,37 @@ BRAND_CODE_MAP: dict[str, str] = {
     "bush": "bus",
     "vic": "vic",
     "vizio": "vic",
+    "phi": "phi",
+    "philco": "phi",
+    "nob": "nob",
+    "noblex": "nob",
+    "san": "san",
+    "sansei": "san",
+    "ilo": "ilo",
+    "pio": "pio",
+    "pioneer": "pio",
+    "sei": "sei",
+    "seiki": "sei",
+    "ton": "ton",
+    "tonomac": "ton",
+    "psc": "psc",
+    "panasonic": "psc",
+    "sma": "sma",
+    "qua": "qua",
+    "quantum": "qua",
+    "adi": "adi",
+    "admiral": "adi",
+    "rca": "rca",
+    "sin": "sin",
+    "sinotec": "sin",
+    "ves": "ves",
+    "vestel": "ves",
+    "bra": "bra",
+    "brandt": "bra",
+    "met": "met",
+    "metz": "met",
+    "lei": "lei",
+    "leica": "lei",
 }
 
 
@@ -92,9 +160,17 @@ def normalize_brand_code(brand_or_mfg: str | None) -> str:
     cleaned = brand_or_mfg.strip().lower()
     if cleaned in BRAND_CODE_MAP:
         return BRAND_CODE_MAP[cleaned]
+    # Check word tokens first to avoid substring false positives (e.g. 'bra' matching 'unrecognized_brand')
+    for token in cleaned.replace("-", " ").replace("_", " ").split():
+        if token in BRAND_CODE_MAP:
+            return BRAND_CODE_MAP[token]
+    # Longer brand names (>= 4 chars) can match as substrings (e.g. 'hisense', 'toshiba', 'schneider')
     for key, code in BRAND_CODE_MAP.items():
-        if key in cleaned:
+        if len(key) >= 4 and key in cleaned:
             return code
+    # Preserve explicit 3-letter alphanumeric brand code from UPnP (e.g. brand=xyz)
+    if len(cleaned) == 3 and cleaned.isalnum():
+        return cleaned
     return "his"
 
 
@@ -142,12 +218,36 @@ def parse_ssdp_discovery(
     manufacturer = upnp.get("manufacturer", "")
 
     # Filter non-VIDAA devices
+    mfg_lower = manufacturer.lower()
+    fname_lower = friendly_name.lower()
     is_vidaa = (
         "vidaa_support" in model_desc
         or "transport_protocol" in model_desc
-        or "hisense" in manufacturer.lower()
-        or "vidaa" in friendly_name.lower()
-        or "hisense" in friendly_name.lower()
+        or "brand=" in model_desc
+        or "hisense" in mfg_lower
+        or "vidaa" in fname_lower
+        or "hisense" in fname_lower
+        or (
+            any(
+                k in mfg_lower
+                for k in (
+                    "toshiba",
+                    "loewe",
+                    "tpv",
+                    "sharp",
+                    "philco",
+                    "noblex",
+                    "vestel",
+                    "schneider",
+                    "sansei",
+                    "sinotec",
+                    "brandt",
+                    "metz",
+                    "leica",
+                )
+            )
+            and any(t in fname_lower for t in ("tv", "renderer", "media", "vidaa"))
+        )
     )
     if not is_vidaa:
         return None
@@ -165,7 +265,7 @@ def parse_ssdp_discovery(
         if "=" in line:
             k, v = line.split("=", 1)
             k, v = k.strip(), v.strip()
-            if k in ("macWifi", "macEthernet") and v:
+            if k.lower() in ("macwifi", "macethernet", "mac", "network_device") and v:
                 mac_clean = v.replace(":", "").replace("-", "").replace(".", "").strip()
                 if len(mac_clean) == 12:
                     mac_address = ":".join(mac_clean[i:i + 2] for i in range(0, 12, 2)).lower()

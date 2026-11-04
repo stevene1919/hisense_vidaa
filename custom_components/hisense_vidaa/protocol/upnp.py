@@ -88,7 +88,7 @@ class HisenseUpnpClient:
                         ns = {"d": "urn:schemas-upnp-org:device-1-0"}
                         fn = root.find(".//d:friendlyName", ns)
                         mn = root.find(".//d:modelName", ns)
-                        friendly = fn.text if fn is not None else "Hisense TV"
+                        friendly = fn.text if fn is not None else "VIDAA TV"
                         model = mn.text if mn is not None else "Renderer"
                         self._active_port = port
                         return {
@@ -198,7 +198,7 @@ class HisenseUpnpClient:
                                             info["voice"] = v_strip
                                         elif k_strip == "transport_protocol":
                                             info["transport_protocol"] = v_strip
-                                        elif k_strip == "macWifi":
+                                        elif k_strip in ("macWifi", "mac", "network_device"):
                                             info["mac_wifi"] = v_strip
                                         elif k_strip == "macEthernet":
                                             info["mac_ethernet"] = v_strip

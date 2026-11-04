@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from .crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
 from .discovery import (
+    BRAND_MAP,
     get_device_fingerprint as discover_device_fingerprint,
     get_tv_timestamp,
 )
@@ -96,7 +97,34 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         self.auth_profile = auth_profile
         # Renew tokens while the TV is in standby (for TVs that keep their MQTT broker up when switched off).
         self.refresh_in_standby = refresh_in_standby
-        self.name = name or f"Hisense TV ({self.ip})"
+
+        # If client_id was provided with an embedded brand tag ($<brand>$), verify it matches self.brand
+        if (
+            self.mac
+            and self.brand
+            and self.client_id
+            and "$" in self.client_id
+            and self.auth_profile not in ("legacy", "static")
+        ):
+            if f"${self.brand}$" not in self.client_id:
+                _LOGGER.info(
+                    "[%s] Client ID embedded brand does not match configured brand '%s'; regenerating initial credentials",
+                    self.ip,
+                    self.brand,
+                )
+                self.client_id, self.username, self.password = generate_initial_credentials(
+                    mac=self.mac,
+                    auth_profile=self.auth_profile,
+                    brand=self.brand,
+                )
+                self.access_token = None
+                self.refresh_token = None
+
+        if not name:
+            brand_display = BRAND_MAP.get(self.brand, "Hisense")
+            self.name = f"{brand_display} TV ({self.ip})"
+        else:
+            self.name = name
 
         self.certfile, self.keyfile = resolve_certificates(auth_profile=auth_profile, certfile=certfile, keyfile=keyfile)
         self.ca_cert = resolve_ca_certificate(ca_cert)

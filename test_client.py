@@ -694,9 +694,8 @@ def main() -> None:
     parser.add_argument("--profile", choices=["auto", "modern", "middle", "remotenow", "legacy", "vidaa_2024", "remotenow_2018"], default="auto", help="Authentication profile and cert selector (default: auto)")
     parser.add_argument(
         "--brand",
-        choices=["his", "tos", "loe", "tpv", "auto"],
         default="his",
-        help="TV OEM brand identifier for pairing salt/prefix (choices: his, tos, loe, tpv; default: his)",
+        help="TV OEM brand identifier for pairing salt/prefix (e.g. his, tos, loe, tpv, shp, jvc; default: his)",
     )
     parser.add_argument("--cert", help="Path to custom client certificate file (e.g. cert.pem)")
     parser.add_argument("--key", dest="key_file", help="Path to custom client private key file (e.g. key.pem)")

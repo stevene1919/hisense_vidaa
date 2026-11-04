@@ -10,7 +10,8 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfTime
 
-from .const import AUTH_PROFILES, CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE
+from .const import AUTH_PROFILES, CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE, DEFAULT_BRAND
+from .discovery import BRAND_MAP
 from .entity import HisenseVidaaEntity
 from .tv.fingerprint import format_drift_human
 
@@ -162,11 +163,13 @@ class HisenseVidaaReportedNameSensor(HisenseVidaaBaseSensor):
         self._handle_update(*args)
 
     def _update_value(self) -> None:
+        brand_code = getattr(self._client, "brand", DEFAULT_BRAND) or DEFAULT_BRAND
+        brand_name = BRAND_MAP.get(brand_code, "VIDAA")
         self._attr_native_value = (
             getattr(self._client, "device_name", None)
             or (self._entry.title if self._entry else None)
             or getattr(self._client, "name", None)
-            or f"Hisense TV ({self._client.ip})"
+            or f"{brand_name} TV ({self._client.ip})"
         )
 
     @property
