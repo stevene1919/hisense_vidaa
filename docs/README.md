@@ -10,6 +10,7 @@ This directory contains in-depth documentation covering installation, networking
 
 | Document | Topic | Description |
 | :--- | :--- | :--- |
+| [**`quick_start_beginners.md`**](quick_start_beginners.md) | **🔰 Beginner's Quick Start** | 3-minute, zero-jargon setup guide for first-time users (extracting `El.p12`, placement, and pairing). |
 | [**`parameters.md`**](parameters.md) | **Configuration, Diagnostics & Debugging** | Complete reference for all Config Flow and Options Flow parameters, built-in diagnostic entities, and Home Assistant debug logging/diagnostics procedures. |
 | [**`power_and_standby_settings.md`**](power_and_standby_settings.md) | **TV Power & Standby** | Optimal TV settings across VIDAA versions (U4–U8, 2024+), two-tier standby architecture, and preventing volatile token wipes with HDMI sources. |
 | [**`protocol_architecture.md`**](protocol_architecture.md) | **Protocol & Cryptography** | Complete technical breakdown of the VIDAA MQTT protocol, UPnP/DLNA LAN control, 64-bit XOR masks, challenge-response pairing, and multi-brand OEM ecosystem. |
@@ -28,9 +29,10 @@ This directory contains in-depth documentation covering installation, networking
 ## 🧭 Recommended Reading Paths
 
 ### 🚀 Getting Started & Setup
-1. [**`certificates.md`**](certificates.md) — Learn where to place client certificates to ensure persistent connections across HACS updates.
-2. [**`network_requirements.md`**](network_requirements.md) — Verify that your Home Assistant instance and TV can communicate across ports and VLANs.
-3. [**`power_and_standby_settings.md`**](power_and_standby_settings.md) — Configure your TV to prevent auto-standby token wipes when HDMI devices sleep.
+1. [**`quick_start_beginners.md`**](quick_start_beginners.md) — 3-minute quick start for beginners (getting `El.p12` and pairing).
+2. [**`certificates.md`**](certificates.md) — Advanced certificate reference for custom PEM keypairs and OpenSSL commands.
+3. [**`network_requirements.md`**](network_requirements.md) — Verify that your Home Assistant instance and TV can communicate across ports and VLANs.
+4. [**`power_and_standby_settings.md`**](power_and_standby_settings.md) — Configure your TV to prevent auto-standby token wipes when HDMI devices sleep.
 
 ### 🎮 Customization & Automations
 1. [**`parameters.md`**](parameters.md) — Fine-tune heartbeat intervals, debounce delays, and WoL bursts in the Options Flow.

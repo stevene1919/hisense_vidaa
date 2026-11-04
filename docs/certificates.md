@@ -1,4 +1,11 @@
-# 🔒 SSL Certificate Setup & Management Guide
+# 🔒 Advanced SSL Certificate Setup & Management Guide
+
+> [!TIP]
+> ### 🔰 Looking for a Simple 3-Minute Setup?
+> If you are a first-time user or beginner, **you do not need to read this technical reference!**  
+> Jump straight to the **[Beginner's Quick Start Guide](quick_start_beginners.md)** for a simple 3-step walk-through (zero OpenSSL, zero terminal commands).
+>
+> *This document is an advanced technical reference for power users needing custom PEM keypairs, OpenSSL conversion commands, Root CA validation, or legacy firmware configurations.*
 
 VIDAA OS smart TVs enforce mutual TLS (mTLS) or client certificate authentication on MQTT port `36669`. To establish a secure connection, Home Assistant must present a valid client certificate and private key.
 
