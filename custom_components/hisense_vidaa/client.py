@@ -126,10 +126,29 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         else:
             self.name = name
 
-        self.certfile, self.keyfile = resolve_certificates(auth_profile=auth_profile, certfile=certfile, keyfile=keyfile)
-        self.ca_cert = resolve_ca_certificate(ca_cert)
         self.use_ssl = use_ssl
         self.verify_ssl = verify_ssl
+
+        if not use_ssl or auth_profile in ("legacy", "static"):
+            self.certfile = certfile
+            self.keyfile = keyfile
+            self.ca_cert = ca_cert
+        elif (
+            certfile
+            and keyfile
+            and not (
+                (isinstance(certfile, str) and certfile.lower().endswith((".p12", ".pfx")))
+                or (isinstance(keyfile, str) and keyfile.lower().endswith((".p12", ".pfx")))
+            )
+        ):
+            self.certfile = certfile
+            self.keyfile = keyfile
+            self.ca_cert = ca_cert
+        else:
+            self.certfile, self.keyfile = resolve_certificates(
+                auth_profile=auth_profile, certfile=certfile, keyfile=keyfile
+            )
+            self.ca_cert = resolve_ca_certificate(ca_cert)
 
         # Runtime State
         self._init_runtime_state()

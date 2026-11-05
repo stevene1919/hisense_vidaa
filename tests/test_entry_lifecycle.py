@@ -16,6 +16,7 @@ from custom_components.hisense_vidaa import (
 )
 from custom_components.hisense_vidaa.const import (
     CONF_ACCESS_TOKEN,
+    CONF_AUTH_PROFILE,
     CONF_BRAND,
     CONF_CLIENT_ID,
     CONF_ENABLE_NOTIFY,
@@ -23,6 +24,7 @@ from custom_components.hisense_vidaa.const import (
     CONF_ENABLE_REMOTE,
     CONF_IP_ADDRESS,
     CONF_MAC_ADDRESS,
+    CONF_USE_SSL,
     SERVICE_CHANGE_CHANNEL,
     SERVICE_LAUNCH_APP,
     SERVICE_SEND_KEY,
@@ -523,4 +525,57 @@ async def test_setup_entry_cleans_up_disabled_platforms():
     assert "number.test_cleanup_entry_backlight" in removed_entities
     assert "number.test_cleanup_entry_brightness" in removed_entities
     assert "number.test_cleanup_entry_contrast" in removed_entities
+
+
+@pytest.mark.anyio
+async def test_async_setup_entry_resolves_certs_in_executor():
+    """Test that async_setup_entry offloads certificate resolution to executor job (Issue #49)."""
+    hass = MagicMock()
+    hass.data = {}
+    hass.config_entries = MagicMock()
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+    hass.config_entries.async_update_entry = MagicMock()
+    executor_calls = []
+
+    def fake_executor_job(func, *args):
+        executor_calls.append(func)
+        return func(*args)
+
+    hass.async_add_executor_job = AsyncMock(side_effect=fake_executor_job)
+    hass.loop = MagicMock()
+    hass.async_create_background_task = MagicMock(side_effect=lambda coro, *a, **kw: coro.close() if hasattr(coro, "close") else MagicMock())
+    hass.services = FakeServices()
+
+    entry = MagicMock()
+    entry.entry_id = "test_executor_certs"
+    entry.unique_id = "e8:51:77:ec:98:1c"
+    entry.data = {
+        CONF_IP_ADDRESS: "192.168.50.12",
+        CONF_MAC_ADDRESS: "e8:51:77:ec:98:1c",
+        CONF_CLIENT_ID: "E85177EC981C$his$123456_vidaacommon_001",
+        CONF_ACCESS_TOKEN: "valid_token",
+        CONF_BRAND: "his",
+        CONF_USE_SSL: True,
+    }
+    entry.options = {
+        CONF_USE_SSL: True,
+        CONF_AUTH_PROFILE: "auto",
+    }
+
+    mock_client = MagicMock()
+    mock_client.has_notifications = False
+    mock_client.async_check_and_refresh_token = AsyncMock(return_value=False)
+    mock_client.async_connect_and_run = AsyncMock()
+    mock_client.certfile = "/ssl/hisense.crt"
+    mock_client.keyfile = "/ssl/hisense.key"
+
+    with patch("custom_components.hisense_vidaa.HisenseTvClient", return_value=mock_client), \
+         patch("custom_components.hisense_vidaa.resolve_certificates", return_value=("/ssl/hisense.crt", "/ssl/hisense.key")) as mock_resolve, \
+         patch("custom_components.hisense_vidaa.resolve_ca_certificate", return_value=None), \
+         patch("homeassistant.helpers.issue_registry.async_create_issue"), \
+         patch("homeassistant.helpers.issue_registry.async_delete_issue"):
+        res = await async_setup_entry(hass, entry)
+        assert res is True
+        # Verify resolve_certificates was passed to executor
+        assert any(call is mock_resolve or getattr(call, "__name__", "") == "resolve_certificates" for call in executor_calls)
 

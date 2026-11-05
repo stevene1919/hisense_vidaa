@@ -29,6 +29,12 @@ If this integration has added value to your smart home setup, consider buying me
   - Validates BEGIN/END headers, Base64 decoding, ASN.1 structure, modulus matching between certificate and private key, and PKCS#8 decryption without hard external cryptography dependencies.
   - Provides clear, actionable error feedback when invalid or mismatched certificates are uploaded during manual certificate setup.
   - Clarified universal app architecture in documentation: the official **VIDAA Smart TV** app (`com.universal.remote.multi`) is universal across all brands and its client certificate (`CN=VidaaAppAndroidV01`) authenticates with any VIDAA OS TV.
+- **EVENT LOOP NON-BLOCKING CERTIFICATE RESOLUTION & PKCS#12 CACHING (`__init__.py`, `client.py`, `protocol/certs.py`, `config_flow.py`, `flow_reauth.py`)**:
+  - Resolves GitHub issue [#49](https://github.com/stevene1919/hisense_vidaa/issues/49) (`Detected blocking call to open with args inside the event loop`).
+  - Offloaded certificate path searches, `resolve_certificates()`, and `resolve_ca_certificate()` in `async_setup_entry` to Home Assistant's threadpool executor via `hass.async_add_executor_job()`.
+  - Hardened `HisenseTvClient.__init__` to skip disk certificate scans and resolution entirely when `use_ssl=False`, for legacy/static auth profiles, or when valid pre-resolved PEM certificate and key paths are supplied.
+  - Added timestamp-based (`mtime`) disk caching in `extract_pkcs12_to_pem()` to reuse existing extracted PEM certificate and key files on subsequent startups without re-reading the `.p12` archive, performing write-access probe checks, or rewriting files.
+  - Ensured `_async_resolve_ssl_certs()` runs in the executor before client initialization in all config flow and re-authentication paths.
 - **ASYNC UPnP `<modelDescription>` CAPABILITY EXTRACTION (`protocol/upnp.py`)**:
   - Enhanced `HisenseUpnpClient.async_get_device_fingerprint()` to parse `<modelDescription>` as key-value pairs, extracting `brand`, `platform`, `vidaa_support`, `voice`, `transport_protocol`, `mac_wifi`, and `mac_ethernet` asynchronously.
 - **ZEROCONF / HOMEKIT mDNS METADATA ENRICHMENT (`discovery.py`)**:

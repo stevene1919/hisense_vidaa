@@ -16,6 +16,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
 
 from .client import HisenseTvClient
+from .crypto import resolve_ca_certificate, resolve_certificates
 from .const import (
     CONF_ACCESS_TOKEN,
     CONF_ACCESS_TOKEN_DURATION,
@@ -118,6 +119,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
     use_ssl = entry.options.get(CONF_USE_SSL, data.get(CONF_USE_SSL, DEFAULT_USE_SSL))
     certfile = entry.options.get(CONF_CERTFILE, data.get(CONF_CERTFILE))
     keyfile = entry.options.get(CONF_KEYFILE, data.get(CONF_KEYFILE))
+    auth_profile = entry.options.get(CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, "auto"))
+
+    ca_cert = None
+    if use_ssl and auth_profile not in ("legacy", "static"):
+        certfile, keyfile = await hass.async_add_executor_job(
+            resolve_certificates, auth_profile, certfile, keyfile
+        )
+        ca_cert = await hass.async_add_executor_job(
+            resolve_ca_certificate, None
+        )
 
     client = HisenseTvClient(
         ip=data[CONF_IP_ADDRESS],
@@ -131,10 +142,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         refresh_token=data.get(CONF_REFRESH_TOKEN),
         refresh_token_time=data.get(CONF_REFRESH_TOKEN_TIME),
         refresh_token_duration=data.get(CONF_REFRESH_TOKEN_DURATION),
-        auth_profile=entry.options.get(CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, "auto")),
+        auth_profile=auth_profile,
         refresh_in_standby=entry.options.get(CONF_REFRESH_IN_STANDBY, DEFAULT_REFRESH_IN_STANDBY),
         certfile=certfile,
         keyfile=keyfile,
+        ca_cert=ca_cert,
         use_ssl=use_ssl,
         brand=entry.options.get(CONF_BRAND, data.get(CONF_BRAND, DEFAULT_BRAND)),
         session=async_get_clientsession(hass),

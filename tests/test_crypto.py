@@ -376,3 +376,67 @@ def test_validate_ssl_certs(tmp_path):
     valid, err = validate_ssl_certs(str(cert_file), str(key_file))
     assert valid is False
     assert err is not None and "invalid_ssl_cert" in err
+
+
+def test_extract_pkcs12_cached_on_second_call(tmp_path):
+    """Test that extract_pkcs12_to_pem reuses cached PEMs without re-reading or rewriting."""
+    key = rsa.generate_private_key(public_exponent=65537, key_size=1024)
+    subject = issuer = x509.Name([x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, "CachedP12")])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.now(UTC) - timedelta(days=1))
+        .not_valid_after(datetime.now(UTC) + timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
+    p12_bytes = pkcs12.serialize_key_and_certificates(
+        b"CachedP12",
+        key,
+        cert,
+        None,
+        serialization.BestAvailableEncryption(b"186e990688070325a1c4b0ce275d2388"),
+    )
+
+    p12_file = tmp_path / "cached.p12"
+    p12_file.write_bytes(p12_bytes)
+
+    # First call extracts PEMs
+    first = extract_pkcs12_to_pem(str(p12_file), dest_dir=str(tmp_path))
+    assert first is not None
+    cert_path, key_path = first
+    initial_mtime = os.path.getmtime(cert_path)
+
+    # Second call uses cache immediately
+    second = extract_pkcs12_to_pem(str(p12_file), dest_dir=str(tmp_path))
+    assert second == (cert_path, key_path)
+    assert os.path.getmtime(cert_path) == initial_mtime
+
+
+def test_client_skips_cert_resolution_when_unneeded():
+    """Test HisenseTvClient skips disk cert resolution when SSL is disabled or certs are pre-resolved."""
+    from unittest.mock import patch
+    from custom_components.hisense_vidaa.client import HisenseTvClient
+
+    with patch("custom_components.hisense_vidaa.client.resolve_certificates") as mock_resolve:
+        # Non-SSL client skips resolve_certificates
+        client1 = HisenseTvClient("192.168.1.50", use_ssl=False)
+        assert client1.use_ssl is False
+        mock_resolve.assert_not_called()
+
+        # Legacy auth profile skips resolve_certificates
+        client2 = HisenseTvClient("192.168.1.50", auth_profile="legacy")
+        mock_resolve.assert_not_called()
+
+        # Pre-resolved PEM paths skip resolve_certificates
+        client3 = HisenseTvClient(
+            "192.168.1.50",
+            use_ssl=True,
+            certfile="/path/to/cert.pem",
+            keyfile="/path/to/key.pem",
+        )
+        mock_resolve.assert_not_called()
+        assert client3.certfile == "/path/to/cert.pem"
+        assert client3.keyfile == "/path/to/key.pem"

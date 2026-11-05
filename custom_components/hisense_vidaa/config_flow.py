@@ -175,6 +175,8 @@ class HisenseVidaaConfigFlow(
                 pass
 
         await self._async_disconnect_existing_client()
+        if self.use_ssl and not (self.certfile and self.keyfile):
+            await self._async_resolve_ssl_certs()
         session = async_get_clientsession(self.hass) if self.hass else None
         self.client = HisenseTvClient(
             self.ip_address,

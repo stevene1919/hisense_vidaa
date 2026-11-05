@@ -127,6 +127,35 @@ def extract_pkcs12_to_pem(
     if not HAS_CRYPTOGRAPHY or not p12_path or not os.path.isfile(p12_path):
         return None
 
+    base_name = os.path.splitext(os.path.basename(p12_path))[0]
+    p12_mtime = os.path.getmtime(p12_path)
+
+    # Check if previously extracted PEM files already exist and are fresh
+    candidate_dirs = []
+    if dest_dir is not None:
+        candidate_dirs.append(dest_dir)
+    else:
+        candidate_dirs.append(os.path.dirname(os.path.abspath(p12_path)))
+        import tempfile
+
+        candidate_dirs.append(os.path.join(tempfile.gettempdir(), "hisense_vidaa_certs"))
+
+    for c_dir in candidate_dirs:
+        c_cert = os.path.join(c_dir, f"{base_name}_cert.pem")
+        c_key = os.path.join(c_dir, f"{base_name}_key.pem")
+        try:
+            if (
+                os.path.isfile(c_cert)
+                and os.path.isfile(c_key)
+                and os.path.getsize(c_cert) > 0
+                and os.path.getsize(c_key) > 0
+                and os.path.getmtime(c_cert) >= p12_mtime
+                and os.path.getmtime(c_key) >= p12_mtime
+            ):
+                return c_cert, c_key
+        except OSError:
+            pass
+
     try:
         with open(p12_path, "rb") as f:
             p12_data = f.read()
