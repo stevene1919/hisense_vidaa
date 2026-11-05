@@ -2,7 +2,7 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
-## [3.2.0] - 2026-11-03 — 🌐 Universal VIDAA OEM Multi-Brand & SSL Certificate Validation Edition
+## [3.2.0] - 2026-11-05 — 🌐 Universal VIDAA OEM Multi-Brand & SSL Certificate Validation Edition
 
 This release expands the integration beyond Hisense-badged hardware to provide comprehensive, end-to-end support for all partner TV brands operating on the VIDAA Smart TV platform (including Toshiba, Loewe, TPV Technology / Philips, Schneider, Akai, Beko, and others). It also introduces robust client SSL certificate semantic and syntactic validation, enriched async UPnP descriptor parsing, and graceful Zeroconf / HomeKit metadata extraction.
 
@@ -51,14 +51,14 @@ If this integration has added value to your smart home setup, consider buying me
 - **ZEROCONF / HOMEKIT mDNS METADATA ENRICHMENT (`discovery.py`)**:
   - Enriched `parse_zeroconf_discovery()` to extract actual model names (`md`/`model`) and manufacturer branding from mDNS TXT properties advertised by Apple HomeKit / AirPlay (`_hap._tcp.local.`, `_airplay._tcp.local.`).
   - Completely decoupled from control: graceful fallback to defaults if HomeKit/AirPlay is disabled or properties are absent.
-- **TEST SUITE MODULARIZATION & EXPANSION (261 PASSING TESTS)**:
+- **TEST SUITE MODULARIZATION & EXPANSION (262 PASSING TESTS)**:
   - Decoupled oversized test suites into modular, single-responsibility modules:
     - Split `test_client_auth.py` into `test_client_tokens.py` (token lifecycle/drift/standby), `test_client_reconnect.py` (reconnect locks/backoff/rejection thresholds), and `test_client_auth.py` (core auth profiles/probing).
     - Split `test_pairing.py` into `test_pairing_guards.py` (abort flow/duplicate guards), `test_pairing_cascade.py` (brand fallback cascade/profile fallback), and `test_pairing.py` (PIN challenge probing/flows).
     - Split `test_services.py` into `test_services_targeting.py` (device/area/floor/label resolution & guards) and `test_services.py` (service executions).
     - Added [`test_multi_brand_readiness.py`](tests/test_multi_brand_readiness.py) covering OEM brand selectors, code preservation, cert hinting, UPnP MAC fallbacks, client ID regeneration, and post-PIN brand preservation.
     - Added comprehensive regression coverage for TOPTRO discovery, brand normalization, and probe rejection diagnostics in `tests/test_client_auth.py` and `tests/test_discovery.py`.
-  - 100% passing test suite across all 261 unit tests with 0 linter errors and 0 Hassfest errors.
+  - 100% passing test suite across all 262 unit tests with 0 linter errors and 0 Hassfest errors.
 
 ## [3.1.0] - 2026-11-01 — ⚡ Native `aiomqtt` Async Engine & Architecture Hardening Edition
 
