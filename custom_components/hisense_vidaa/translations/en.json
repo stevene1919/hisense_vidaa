@@ -146,6 +146,9 @@
       "auth_profile": {
         "name": "Auth Profile"
       },
+      "brand_profile": {
+        "name": "Brand Profile"
+      },
       "active_app": {
         "name": "Active App"
       },
@@ -394,6 +397,7 @@
     },
     "brand": {
       "options": {
+        "auto": "Auto Detect (Recommended)",
         "his": "Hisense",
         "tos": "Toshiba",
         "loe": "Loewe",
@@ -414,7 +418,8 @@
         "ves": "Vestel",
         "bra": "Brandt",
         "met": "Metz",
-        "lei": "Leica"
+        "lei": "Leica",
+        "tpo": "TOPTRO"
       }
     }
   },

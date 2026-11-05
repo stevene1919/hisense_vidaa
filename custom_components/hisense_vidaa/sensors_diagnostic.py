@@ -10,7 +10,15 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfTime
 
-from .const import AUTH_PROFILES, CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE, DEFAULT_BRAND
+from .const import (
+    AUTH_PROFILES,
+    BRAND_PROFILES,
+    CONF_AUTH_PROFILE,
+    CONF_BRAND,
+    DEFAULT_AUTH_PROFILE,
+    DEFAULT_BRAND,
+    DEFAULT_BRAND_OPTION,
+)
 from .discovery import BRAND_MAP
 from .entity import HisenseVidaaEntity
 from .tv.fingerprint import format_drift_human
@@ -124,6 +132,55 @@ class HisenseVidaaAuthProfileSensor(HisenseVidaaBaseSensor):
             entry.data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE),
         )
         self._attr_native_value = AUTH_PROFILES.get(key, key.title())
+
+
+class HisenseVidaaBrandProfileSensor(HisenseVidaaBaseSensor):
+    """Sensor displaying configured brand profile and detected hardware brand."""
+
+    _attr_translation_key = "brand_profile"
+    _attr_icon = "mdi:tag-outline"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+        super().__init__(client, entry)
+        self._attr_unique_id = f"{self._entry_id}_brand_profile"
+        self._update_value()
+
+    async def async_added_to_hass(self) -> None:
+        self._client.register_connected_callback(self._handle_update)
+        self._client.register_device_info_callback(self._handle_update)
+        self._update_value()
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._client.unregister_connected_callback(self._handle_update)
+        self._client.unregister_device_info_callback(self._handle_update)
+
+    def _handle_update(self, *args: Any) -> None:
+        self._update_value()
+        self._schedule_state_update()
+
+    def _update_value(self) -> None:
+        key = self._options.get(
+            CONF_BRAND,
+            self._entry.data.get("brand_profile", self._entry.data.get(CONF_BRAND, DEFAULT_BRAND_OPTION)),
+        )
+        self._attr_native_value = BRAND_PROFILES.get(key, key.title() if key else "Auto")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return diagnostic brand details."""
+        configured = self._options.get(
+            CONF_BRAND,
+            self._entry.data.get("brand_profile", self._entry.data.get(CONF_BRAND, DEFAULT_BRAND_OPTION)),
+        )
+        active_code = getattr(self._client, "brand", None) or self._entry.data.get(CONF_BRAND, DEFAULT_BRAND)
+        if active_code == "auto":
+            active_code = self._entry.data.get("resolved_brand", DEFAULT_BRAND)
+        return {
+            "configured_profile": configured,
+            "active_brand_code": active_code,
+            "active_brand": BRAND_MAP.get(active_code, active_code.upper() if active_code else "Hisense"),
+        }
 
 
 class HisenseVidaaReportedNameSensor(HisenseVidaaBaseSensor):

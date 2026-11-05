@@ -29,6 +29,7 @@ from .const import (
     CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
     DEFAULT_BRAND,
+    DEFAULT_BRAND_OPTION,
     DEFAULT_ENABLE_AUDIO_ONLY,
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
@@ -224,7 +225,7 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
             CONF_AUTH_PROFILE, data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE)
         )
         current_brand = options.get(
-            CONF_BRAND, data.get(CONF_BRAND, DEFAULT_BRAND)
+            CONF_BRAND, data.get(CONF_BRAND, DEFAULT_BRAND_OPTION)
         )
         current_use_ssl = options.get(
             CONF_USE_SSL, data.get(CONF_USE_SSL, DEFAULT_USE_SSL)

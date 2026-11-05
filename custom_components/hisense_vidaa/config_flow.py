@@ -27,6 +27,7 @@ from .const import (
     CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
     DEFAULT_BRAND,
+    DEFAULT_BRAND_OPTION,
     DEFAULT_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_SOUND_CONTROLS,
     DEFAULT_USE_SSL,
@@ -74,6 +75,7 @@ class HisenseVidaaConfigFlow(
         self.model: str | None = None
         self.manufacturer: str | None = None
         self.brand: str = DEFAULT_BRAND
+        self.brand_profile: str = DEFAULT_BRAND_OPTION
         self.sw_version: str | None = None
         self._reauth_entry: config_entries.ConfigEntry | None = None
         self._pairing_error: str | None = None
@@ -136,6 +138,7 @@ class HisenseVidaaConfigFlow(
             manufacturer=self.manufacturer,
             sw_version=self.sw_version,
             brand=self.brand,
+            brand_profile=getattr(self, "brand_profile", None),
         )
 
     async def _async_init_client_and_auth(
@@ -151,8 +154,9 @@ class HisenseVidaaConfigFlow(
             await self.async_set_unique_id(self.mac_address)
             self._abort_if_unique_id_configured()
 
+        detected_brand: str | None = None
         if (
-            self.brand == DEFAULT_BRAND
+            self.brand in (DEFAULT_BRAND, DEFAULT_BRAND_OPTION)
             and self.manufacturer is None
             and self.ip_address
             and self.hass
@@ -165,14 +169,20 @@ class HisenseVidaaConfigFlow(
                 )
                 detected = upnp_desc.get("brand") or upnp_desc.get("manufacturer")
                 if detected:
-                    self.brand = normalize_brand_code(detected)
+                    detected_brand = normalize_brand_code(detected)
                     raw_mfg = upnp_desc.get("manufacturer")
                     if raw_mfg and raw_mfg.strip().lower() not in GENERIC_MANUFACTURERS:
                         self.manufacturer = BRAND_MAP.get(raw_mfg.strip().lower(), raw_mfg.strip())
-                    elif self.brand in BRAND_MAP:
-                        self.manufacturer = BRAND_MAP[self.brand]
+                    elif detected_brand in BRAND_MAP:
+                        self.manufacturer = BRAND_MAP[detected_brand]
             except Exception:
                 pass
+
+        effective_brand = (
+            detected_brand
+            if self.brand == DEFAULT_BRAND_OPTION
+            else (detected_brand or self.brand)
+        ) or DEFAULT_BRAND
 
         await self._async_disconnect_existing_client()
         if self.use_ssl and not (self.certfile and self.keyfile):
@@ -185,7 +195,7 @@ class HisenseVidaaConfigFlow(
             certfile=self.certfile if self.use_ssl else None,
             keyfile=self.keyfile if self.use_ssl else None,
             use_ssl=self.use_ssl,
-            brand=self.brand,
+            brand=effective_brand,
             session=session,
         )
         self.client._loop = self.hass.loop
@@ -202,10 +212,11 @@ class HisenseVidaaConfigFlow(
                 self.client.auth_profile = "legacy"
 
         await self.client.async_start_auth()
-        if self.client.brand and self.client.brand != self.brand:
-            self.brand = self.client.brand
-            if self.brand in BRAND_MAP:
-                self.manufacturer = BRAND_MAP[self.brand]
+        if self.client.brand and self.client.brand != effective_brand:
+            effective_brand = self.client.brand
+            if effective_brand in BRAND_MAP:
+                self.manufacturer = BRAND_MAP[effective_brand]
+        self.brand = effective_brand
 
         if self.auth_profile in ("legacy", "static"):
             return await self._async_static_pairing_step(is_reauth, reauth_reason)
@@ -279,7 +290,7 @@ class HisenseVidaaConfigFlow(
             data_schema=vol.Schema({
                 vol.Required(CONF_IP_ADDRESS): str,
                 vol.Optional(
-                    CONF_BRAND, default=DEFAULT_BRAND
+                    CONF_BRAND, default=DEFAULT_BRAND_OPTION
                 ): BRAND_SELECTOR,
                 vol.Optional(
                     CONF_AUTH_PROFILE, default=DEFAULT_AUTH_PROFILE

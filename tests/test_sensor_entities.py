@@ -22,6 +22,7 @@ from custom_components.hisense_vidaa.sensor import (
 from custom_components.hisense_vidaa.sensors_diagnostic import (
     HisenseVidaaAudioOutputSensor,
     HisenseVidaaAuthProfileSensor,
+    HisenseVidaaBrandProfileSensor,
     HisenseVidaaClockDriftSensor,
     HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
@@ -236,6 +237,30 @@ def test_auth_profile_sensor_prefers_entry_options(mock_client, mock_entry):
     mock_entry.options.pop("auth_profile")
     sensor_fallback = HisenseVidaaAuthProfileSensor(mock_client, mock_entry)
     assert sensor_fallback.native_value == AUTH_PROFILES["modern"]
+
+
+def test_brand_profile_sensor_options_and_attributes(mock_client, mock_entry):
+    """Test the brand-profile sensor displays configured profile and active hardware attributes."""
+    from custom_components.hisense_vidaa.const import BRAND_PROFILES
+
+    # Auto detect profile
+    mock_entry.data = {**mock_entry.data, "brand": "his", "brand_profile": "auto"}
+    mock_entry.options = {}
+    mock_client.brand = "his"
+    sensor = HisenseVidaaBrandProfileSensor(mock_client, mock_entry)
+    assert sensor.native_value == BRAND_PROFILES["auto"]
+    assert sensor.extra_state_attributes["configured_profile"] == "auto"
+    assert sensor.extra_state_attributes["active_brand_code"] == "his"
+    assert sensor.extra_state_attributes["active_brand"] == "Hisense"
+
+    # Options override with explicit brand (e.g. Toshiba or TOPTRO)
+    mock_entry.options = {"brand": "tpo"}
+    mock_client.brand = "tpo"
+    sensor_tpo = HisenseVidaaBrandProfileSensor(mock_client, mock_entry)
+    assert sensor_tpo.native_value == BRAND_PROFILES["tpo"]
+    assert sensor_tpo.extra_state_attributes["configured_profile"] == "tpo"
+    assert sensor_tpo.extra_state_attributes["active_brand_code"] == "tpo"
+    assert sensor_tpo.extra_state_attributes["active_brand"] == "TOPTRO"
 
 
 def test_session_status_latches_reauth_required(mock_client, mock_entry):

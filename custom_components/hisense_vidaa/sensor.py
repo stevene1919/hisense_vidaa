@@ -14,6 +14,7 @@ from .sensors_diagnostic import (
     HisenseVidaaAudioOutputSensor,
     HisenseVidaaAuthProfileSensor,
     HisenseVidaaBaseSensor,
+    HisenseVidaaBrandProfileSensor,
     HisenseVidaaClockDriftSensor,
     HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
@@ -34,6 +35,7 @@ __all__ = [
     "HisenseVidaaAudioOutputSensor",
     "HisenseVidaaAuthProfileSensor",
     "HisenseVidaaBaseSensor",
+    "HisenseVidaaBrandProfileSensor",
     "HisenseVidaaClockDriftSensor",
     "HisenseVidaaMqttTrackingSensor",
     "HisenseVidaaReportedNameSensor",
@@ -52,6 +54,7 @@ async def async_setup_entry(
     async_add_entities([
         HisenseVidaaSessionStatusSensor(client, entry),
         HisenseVidaaAuthProfileSensor(client, entry),
+        HisenseVidaaBrandProfileSensor(client, entry),
         HisenseVidaaReportedNameSensor(client, entry),
         HisenseVidaaActiveAppSensor(client, entry),
         HisenseVidaaActiveSourceSensor(client, entry),

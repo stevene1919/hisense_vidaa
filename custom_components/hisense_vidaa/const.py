@@ -40,6 +40,7 @@ CONF_REFRESH_IN_STANDBY = "refresh_in_standby"
 DEFAULT_PORT = 36669
 DEFAULT_NAME = "Hisense VIDAA TV"
 DEFAULT_BRAND = "his"
+DEFAULT_BRAND_OPTION = "auto"
 DEFAULT_TIMEOUT = 10
 DEFAULT_WOL_TIMEOUT = 30
 DEFAULT_RECONNECT_INTERVAL = 15
@@ -117,6 +118,7 @@ AUTH_PROFILE_SELECTOR = selector.SelectSelector(
 )
 
 BRAND_OPTIONS = [
+    selector.SelectOptionDict(value="auto", label="Auto Detect (Recommended)"),
     selector.SelectOptionDict(value="his", label="Hisense"),
     selector.SelectOptionDict(value="tos", label="Toshiba"),
     selector.SelectOptionDict(value="loe", label="Loewe"),
@@ -140,6 +142,10 @@ BRAND_OPTIONS = [
     selector.SelectOptionDict(value="lei", label="Leica"),
     selector.SelectOptionDict(value="tpo", label="TOPTRO"),
 ]
+
+BRAND_PROFILES: dict[str, str] = {
+    opt["value"]: opt["label"] for opt in BRAND_OPTIONS
+}
 
 BRAND_SELECTOR = selector.SelectSelector(
     selector.SelectSelectorConfig(

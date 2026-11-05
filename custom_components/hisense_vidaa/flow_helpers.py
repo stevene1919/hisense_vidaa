@@ -39,6 +39,7 @@ from .const import (
     CONF_USE_SSL,
     CONF_USERNAME,
     DEFAULT_BRAND,
+    DEFAULT_BRAND_OPTION,
     DEFAULT_ENABLE_AUDIO_ONLY,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
@@ -246,6 +247,7 @@ def collect_client_auth_data(
     manufacturer: str | None = None,
     sw_version: str | None = None,
     brand: str | None = None,
+    brand_profile: str | None = None,
 ) -> dict[str, Any]:
     """Collect authentication credentials and device attributes dictionary for config entry data."""
     data: dict[str, Any] = {
@@ -277,6 +279,7 @@ def collect_client_auth_data(
         data[CONF_MANUFACTURER] = manufacturer
     if sw_version:
         data[CONF_SW_VERSION] = sw_version
-    resolved_brand = brand or (client.brand if client else None) or DEFAULT_BRAND
+    resolved_brand = (brand if brand and brand != "auto" else None) or (client.brand if client and client.brand != "auto" else None) or DEFAULT_BRAND
     data[CONF_BRAND] = resolved_brand
+    data["brand_profile"] = brand_profile or (brand if brand == "auto" else resolved_brand)
     return data

@@ -84,7 +84,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         """Initialize the client."""
         self.ip = ip
         self.mac = mac
-        self.brand = brand or "his"
+        self.brand = "his" if (not brand or brand == "auto") else brand
         self.client_id = client_id or ""
         self.username = username or ""
         self.password = password or ""

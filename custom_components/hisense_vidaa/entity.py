@@ -38,7 +38,10 @@ class HisenseVidaaEntity(Entity):
         self._mac = entry.data.get(CONF_MAC_ADDRESS)
         self._name = entry.title or DEFAULT_NAME
         self._model = entry.data.get(CONF_MODEL, "VIDAA TV")
-        self._brand = entry.data.get(CONF_BRAND, getattr(client, "brand", DEFAULT_BRAND))
+        client_brand = getattr(client, "brand", DEFAULT_BRAND)
+        self._brand = client_brand if client_brand != "auto" else entry.data.get(CONF_BRAND, DEFAULT_BRAND)
+        if self._brand == "auto":
+            self._brand = DEFAULT_BRAND
         brand_default_mfg = BRAND_MAP.get(self._brand, "Hisense")
         self._manufacturer = entry.data.get(CONF_MANUFACTURER) or brand_default_mfg
         self._sw_version = entry.data.get(CONF_SW_VERSION)

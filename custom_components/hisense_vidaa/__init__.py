@@ -42,6 +42,7 @@ from .const import (
     CONF_USE_SSL,
     CONF_USERNAME,
     DEFAULT_BRAND,
+    DEFAULT_BRAND_OPTION,
     DEFAULT_ENABLE_NOTIFY,
     DEFAULT_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
@@ -130,6 +131,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
             resolve_ca_certificate, None
         )
 
+    brand_pref = entry.options.get(CONF_BRAND, data.get(CONF_BRAND, DEFAULT_BRAND_OPTION))
+    if brand_pref == "auto":
+        client_brand = data.get("resolved_brand") or data.get("detected_brand") or DEFAULT_BRAND
+    else:
+        client_brand = brand_pref
+
     client = HisenseTvClient(
         ip=data[CONF_IP_ADDRESS],
         mac=mac,
@@ -148,21 +155,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         keyfile=keyfile,
         ca_cert=ca_cert,
         use_ssl=use_ssl,
-        brand=entry.options.get(CONF_BRAND, data.get(CONF_BRAND, DEFAULT_BRAND)),
+        brand=client_brand,
         session=async_get_clientsession(hass),
     )
     client._loop = hass.loop
 
-    if client.client_id != data.get(CONF_CLIENT_ID) or client.brand != data.get(CONF_BRAND):
+    brand_changed = (
+        (brand_pref != "auto" and client.brand != data.get(CONF_BRAND))
+        or (brand_pref == "auto" and client.brand != data.get("resolved_brand"))
+    )
+    if client.client_id != data.get(CONF_CLIENT_ID) or brand_changed:
         new_data = {
             **data,
-            CONF_BRAND: client.brand,
             CONF_CLIENT_ID: client.client_id,
             CONF_USERNAME: client.username,
             CONF_PASSWORD: client.password,
             CONF_ACCESS_TOKEN: client.access_token,
             CONF_REFRESH_TOKEN: client.refresh_token,
         }
+        if brand_pref == "auto":
+            new_data["resolved_brand"] = client.brand
+        else:
+            new_data[CONF_BRAND] = client.brand
+            new_data["resolved_brand"] = client.brand
         hass.config_entries.async_update_entry(entry, data=new_data)
         data = new_data
 

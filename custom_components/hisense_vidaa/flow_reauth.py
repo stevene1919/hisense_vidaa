@@ -23,6 +23,7 @@ from .const import (
     CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
     DEFAULT_BRAND,
+    DEFAULT_BRAND_OPTION,
     DEFAULT_USE_SSL,
     DOMAIN,
 )
@@ -195,7 +196,7 @@ class ReauthFlowMixin:
             if self._reauth_entry and isinstance(getattr(self._reauth_entry, "options", None), dict)
             else {}
         )
-        self.brand = current_options.get(CONF_BRAND, current_data.get(CONF_BRAND, DEFAULT_BRAND))
+        self.brand = current_options.get(CONF_BRAND, current_data.get(CONF_BRAND, DEFAULT_BRAND_OPTION))
         default_ip = current_data.get(CONF_IP_ADDRESS, "")
         default_profile = current_options.get(CONF_AUTH_PROFILE, current_data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE))
         default_brand = self.brand
