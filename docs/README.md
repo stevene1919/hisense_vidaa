@@ -48,8 +48,10 @@ This directory contains in-depth documentation covering installation, networking
 ## 🏆 Integration Quality Scale (Gold Tier) Reference
 
 ### 📺 Supported Devices & Brands
-The integration officially supports **Hisense Smart TVs** running **VIDAA OS** (U4, U5, U6, U7, U8, and 2024+ builds).
-Underlying multi-brand protocol handling and brand code mapping are also prepared in code for licensed OEM VIDAA manufacturers (Toshiba, Loewe, Schneider, Akai, Beko, Telefunken, Bush) ahead of the scheduled universal VIDAA integration rebranding.
+The integration officially supports **Hisense Smart TVs** running **VIDAA OS** (U4, U5, U6, U7, U8, and 2024+ builds), as well as all licensed **OEM partner smart TVs and projectors** operating on the VIDAA OS platform:
+- **Televisions**: Hisense, Toshiba, Loewe (and We. by Loewe), TPV Technology (Philips & AOC), Sharp, JVC, Schneider, Akai, Beko, Telefunken, Bush, Vizio, Philco, Noblex, Sansei, RCA, Sinotec, Vestel, Brandt, Metz, Leica (Cine 1 Laser TV), Pioneer, Panasonic, and Seiki.
+- **Smart Projectors**: TOPTRO portable smart projectors running VIDAA OS (e.g. FreeStyle series).
+- **Zero-Configuration Auto-Detection**: Brand profiles default to **Auto Detect (Recommended)**, probing UPnP port `38400` / `18400` to automatically extract and resolve OEM branding from device descriptors, or matching certificate file hints without manual user configuration.
 
 ### ⚡ Data Update Model (Local Push)
 This integration operates as a **pure local-push integration** (`should_poll = False`). It establishes a persistent local TLS connection over MQTT (port `36669`) directly to the television's internal broker. All state changes (power, volume, mute, source input, active app, TV channel, picture/sound modes) are received as real-time push events without network polling.

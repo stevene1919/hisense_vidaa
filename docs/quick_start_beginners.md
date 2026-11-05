@@ -4,7 +4,7 @@ Welcome! This guide is designed for **first-time users and beginners**. It skips
 
 > [!NOTE]
 > ### 📺 Works With ALL VIDAA OS Brands
-> Whether your TV is badged as **Hisense, Toshiba, Loewe, Philips, Sharp, or JVC**, if it runs **VIDAA OS**, this exact same setup works for you! All VIDAA TVs share the exact same internal broker and use the exact same certificate file.
+> Whether your TV or smart projector is badged as **Hisense, Toshiba, Loewe, Philips, Sharp, JVC, or TOPTRO**, if it runs **VIDAA OS**, this exact same setup works for you! All VIDAA devices share the exact same internal broker architecture and use the exact same certificate file.
 
 ---
 
@@ -79,7 +79,7 @@ Copy your **`El.p12`** file into your Home Assistant **`/config/ssl/`** folder:
    - Search for **Hisense VIDAA TV** and click it.
 3. **Connect to Your TV**:
    - Enter your TV's IP address (e.g. `192.168.1.50`).
-   - Leave Auth Profile set to **Auto Detect (Recommended)**.
+   - Leave **Auth Profile** and **Brand** set to **Auto Detect (Recommended)**.
    - Click **Submit**.
 4. **Enter the 4-Digit PIN**:
    - Look at your TV screen—a **4-digit PIN code** will appear!
@@ -98,8 +98,8 @@ Copy your **`El.p12`** file into your Home Assistant **`/config/ssl/`** folder:
    - This ensures Home Assistant can still turn the TV back on when it is in standby.
 2. **Close the Phone App When Pairing**:
    - The TV's internal broker only allows one pairing handshake at a time. If you have the VIDAA mobile app open on your phone, close it before pairing in Home Assistant.
-3. **Brand-Specific Names (Optional)**:
-   - Home Assistant automatically detects whether your TV is Hisense, Toshiba, Loewe, Philips, Sharp, or JVC. If you want to rename your certificate, you can rename `El.p12` to `toshiba.p12`, `loewe.p12`, etc., and Home Assistant will pick up the hint automatically!
+3. **Brand-Specific Names & Auto-Detection**:
+   - Home Assistant automatically auto-detects whether your TV or projector is Hisense, Toshiba, Loewe, Philips, Sharp, JVC, TOPTRO, etc., directly from UPnP network descriptors (`<modelDescription>`). If you prefer using certificate filenames, you can rename `El.p12` to `toshiba.p12`, `loewe.p12`, `toptro.p12`, etc., and Home Assistant will pick up the hint automatically!
 
 ---
 

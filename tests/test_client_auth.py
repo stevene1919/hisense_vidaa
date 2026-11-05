@@ -126,6 +126,7 @@ async def test_async_probe_tv_auth_methods_passes_brand():
 async def test_async_probe_tv_auth_methods_toptro_rejection_diagnostics():
     """Verify TOPTRO brand and timestamp propagation and AUTH_REJECTION_CODES classification."""
     import sys
+
     from custom_components.hisense_vidaa.protocol.auth import async_probe_tv_auth_methods
 
     probed_creds = []

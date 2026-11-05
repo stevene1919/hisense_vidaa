@@ -55,7 +55,7 @@ When an automation or manual service call fails, Home Assistant displays an erro
     ```bash
     nc -zv <tv_ip> 36669
     ```
-  * Note: Hisense TVs drop ICMP ping requests by default. Reachability must be verified via TCP port `36669` or port `38400` (UDP), not standard `ping`.
+  * Note: Hisense and VIDAA devices often drop ICMP ping requests by default. Reachability must be verified via TCP port `36669` or UPnP HTTP port `38400` (e.g. `curl -I http://<tv_ip>:38400/MediaServer/rendererdevicedesc.xml`), not standard `ping`.
   * See [`network_requirements.md`](network_requirements.md) for complete port and firewall specifications.
 
 ---
@@ -75,7 +75,15 @@ When an automation or manual service call fails, Home Assistant displays an erro
   * In TV Settings, disable **Auto Standby with No Signal**.
   * Keep Home Assistant's client certificates properly configured in `/config/ssl/` as documented in [`certificates.md`](certificates.md) to enable automatic mutual TLS authentication.
 
-### 3. Do I Need an Android Phone or Android TV to Use This?
+### 3. Broker Rejection or "Not Authorized" Error (`rc: 5` / `rc: 135`)
+* **Cause: OEM Brand Code Mismatch:**
+  * When communicating with licensed partner brands (Toshiba, Loewe, TPV/Philips, Sharp, JVC, TOPTRO, etc.), the TV/projector broker validates client credentials against an OEM brand prefix salt. If generic Hisense credentials (`his`) are sent to a partner device, the broker rejects authentication with `rc: 5` (MQTT 3.1.1) or `rc: 135` (MQTT 5.0).
+* **Fix:**
+  * Keep **Brand Profile** set to **Auto Detect (Recommended)**. When enabled, the integration queries UPnP port `38400` / `18400` to extract `brand=` from `<modelDescription>` or cascades through supported candidate OEM brands (`tos`, `loe`, `tpv`, `shp`, `jvc`, `tpo`).
+  * If adding a device across an isolated VLAN where UPnP is blocked and cascade is exhausted, open **Settings → Devices & Services → Hisense VIDAA TV → Configure → Security** and manually select your device's brand from the dropdown.
+  * Inspect `sensor.<tv_name>_brand_profile` to view the currently configured brand profile and active OEM brand code in real time.
+
+### 4. Do I Need an Android Phone or Android TV to Use This?
 * **No.** VIDAA OS is a Linux-based operating system, not Android TV.
 * **No Android Hardware/OS Required:** You do not need an Android phone, tablet, or emulator to set up or run this integration. Home Assistant connects directly to the TV over your local network.
 * **Why the APK is Mentioned:** The vendor pre-signs its client mutual TLS certificate (`.p12` bundle) inside the publicly available VIDAA remote app package (`.apk`). Because an `.apk` is simply an unencrypted ZIP archive, you can open and extract it on any computer (Windows, macOS, Linux) with standard tools like `unzip` or 7-Zip without ever owning an Android device.

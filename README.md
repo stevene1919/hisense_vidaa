@@ -9,7 +9,7 @@
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
-A native Home Assistant integration for smart TVs running **VIDAA OS** (Hisense, Toshiba, Loewe, Philips, Sharp, JVC, and partner brands).
+A native Home Assistant integration for smart TVs and projectors running **VIDAA OS** (Hisense, Toshiba, Loewe, Philips, Sharp, JVC, TOPTRO, and partner brands).
 
 Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using client certificates, providing instant local push updates, media player controls, app launching, Wake-on-LAN, and virtual remote navigation without external bridges or cloud dependencies.
 
@@ -54,9 +54,10 @@ This integration officially supports **any smart TV running VIDAA OS** (pairing 
 - 📺 **Loewe** (We. SEE, stellar VIDAA OS series)
 - 📺 **Philips / TPV** (OLED, The One, PUS series running VIDAA OS)
 - 📺 **Sharp & JVC** (Aquos & Smart TV VIDAA editions)
+- 📽️ **TOPTRO** (FreeStyle & portable smart projectors running VIDAA OS)
 - *...and other licensed VIDAA OS partner brands.*
 
-> 💡 **Universal Architecture**: All VIDAA OS TVs share the same internal broker and certificate authority (`RemoteCA`). The integration automatically detects your TV brand, applies the correct internal security salt, and configures the proper manufacturer name in Home Assistant's Device Registry. See the **[Complete OEM Brand Reference Matrix](docs/protocol_architecture.md#%EF%B8%8F-multi-brand-vidaa-os-ecosystem--oem-licensing)** for the full table of all 20+ supported partner brands.
+> 💡 **Universal Architecture**: All VIDAA OS devices share the same internal broker and certificate authority (`RemoteCA`). The integration features **zero-configuration auto-detection** (querying UPnP `<modelDescription>` on port 38400 or certificate filename hints) to resolve your TV or projector brand, apply the correct security salt, and configure the proper manufacturer in Home Assistant's Device Registry. See the **[Complete OEM Brand Reference Matrix](docs/protocol_architecture.md#%EF%B8%8F-multi-brand-vidaa-os-ecosystem--oem-licensing)** for the full table of all 22+ supported partner brands.
 
 > [!NOTE]
 > **VIDAA OS vs Android TV (No Android Device Required)**:

@@ -129,11 +129,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         self.use_ssl = use_ssl
         self.verify_ssl = verify_ssl
 
-        if not use_ssl or auth_profile in ("legacy", "static"):
-            self.certfile = certfile
-            self.keyfile = keyfile
-            self.ca_cert = ca_cert
-        elif (
+        if not use_ssl or auth_profile in ("legacy", "static") or (
             certfile
             and keyfile
             and not (

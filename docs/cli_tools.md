@@ -64,9 +64,10 @@ python3 test_client.py ping --ip <TV_IP>
 python3 test_client.py ping --ip <TV_IP> --profile modern
 python3 test_client.py ping --ip <TV_IP> --profile middle
 
-# Test specific OEM partner brand (his / tos / loe / tpv):
+# Test specific OEM partner brand (his / tos / loe / tpv / tpo / etc.):
 python3 test_client.py ping --ip <TV_IP> --brand toshiba
 python3 test_client.py ping --ip <TV_IP> --brand loewe
+python3 test_client.py ping --ip <TV_IP> --brand toptro
 ```
 
 > [!NOTE]
@@ -88,6 +89,7 @@ Initiates the challenge handshake, displays the on-screen 4-digit PIN on the TV,
 python3 test_client.py auth --ip <TV_IP>
 python3 test_client.py auth --ip <TV_IP> --profile modern
 python3 test_client.py auth --ip <TV_IP> --brand toshiba
+python3 test_client.py auth --ip <TV_IP> --brand toptro
 ```
 
 ### 6. Test Token Renewal (`refresh`)

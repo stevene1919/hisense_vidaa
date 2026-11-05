@@ -260,19 +260,28 @@ VIDAA OS is not exclusive to Hisense televisions; it is licensed globally to mul
 | **Brandt** | Brandt Smart TVs | `bra` | France / Europe / MENA (Brandt Group) | `{mac}$bra${hash}_vidaacommon_001` |
 | **Metz** | Metz Blue Smart TVs | `met` | Germany / Europe (Metz Consumer) | `{mac}$met${hash}_vidaacommon_001` |
 | **Leica** | Leica Cine 1 Laser TV | `lei` | Global (Leica Camera AG) | `{mac}$lei${hash}_vidaacommon_001` |
+| **TOPTRO** | FreeStyle / Smart Projectors (VIDAA OS) | `tpo` | Global / Regional (TOPTRO) | `{mac}$tpo${hash}_vidaacommon_001` |
 | **Pioneer** | Pioneer Smart TVs | `pio` | Global / Regional | `{mac}$pio${hash}_vidaacommon_001` |
 | **Panasonic** | Regional VIDAA OEM editions | `psc` | Regional partner OEM | `{mac}$psc${hash}_vidaacommon_001` |
 | **Seiki** | Seiki Smart TVs | `sei` | North America / Regional | `{mac}$sei${hash}_vidaacommon_001` |
+| **iLo** | iLo Smart TVs | `ilo` | North America / Regional (Walmart OEM) | `{mac}$ilo${hash}_vidaacommon_001` |
+| **Tonomac** | Tonomac Smart TVs | `ton` | Latin America / Argentina | `{mac}$ton${hash}_vidaacommon_001` |
+| **Admiral** | Admiral Smart TVs | `adi` | Latin America / Regional | `{mac}$adi${hash}_vidaacommon_001` |
+| **Quantum** | Quantum Smart TVs | `qua` | Regional OEM | `{mac}$qua${hash}_vidaacommon_001` |
 
 ### Multi-Brand Resolution Architecture
 1. **UPnP & mDNS Discovery (`<modelDescription>`)**:
-   During SSDP and Zeroconf discovery, the integration extracts manufacturer metadata and `brand=` key-value pairs from `rendererdevicedesc.xml` (probing ports `38400` and `18400`). Any explicit 3-letter alphanumeric code (`brand=xyz`) is preserved, even for newly released OEM brands.
-2. **Post-PIN Brand Preservation**:
-   Once an OEM brand is resolved via cascade, certificate hinting, or manual selection, post-PIN device detail queries preserve the active OEM brand, preventing fallback resets to `"his"`.
+   VIDAA devices advertise a generic UPnP manufacturer tag (`<manufacturer>SmartTV</manufacturer>`). The integration specifically queries the device description XML (`rendererdevicedesc.xml` on ports `38400` and `18400`) and parses the multi-line `#CAP#` properties inside `<modelDescription>`, extracting `brand=` (e.g. `brand=his`, `brand=tos`, `brand=tpo`), `platform=`, `voice=`, and hardware MAC addresses. Any explicit 3-letter alphanumeric code is canonicalized and mapped to its OEM profile.
+2. **Zero-Configuration Brand Auto-Detection (`auto`)**:
+   The Brand Profile defaults to **Auto Detect (Recommended)**. During initial manual IP setup, Home Assistant probes UPnP port `38400` / `18400` to auto-detect the brand before PIN pairing, eliminating manual brand selection for 99% of installations.
 3. **Candidate Brand Auth Fallback Cascade**:
-   In isolated VLAN or cross-subnet topologies where UPnP/mDNS multicast is blocked and the TV is added via manual IP, the integration initially attempts pairing with default brand code `his`. If the TV broker rejects the connection with `rc: 5` (Not Authorized), the pairing engine automatically cascades through high-probability candidate OEM brands (`tos`, `loe`, `tpv`, `shp`, `jvc`). When accepted, it dynamically adopts the confirmed brand code and updates Home Assistant's device registry.
-4. **Certificate Filename Hinting**:
-   If users place brand-named client certificates in `/config/ssl/` (e.g. `toshiba.crt`, `loewe.pem`, `philips.crt`, `sharp.pem`, `jvc.key`, `rcamobile.p12`), the integration automatically detects the brand from the file names during setup.
-5. **Runtime Brand Updates**:
+   In isolated VLAN or cross-subnet topologies where UPnP/mDNS multicast is blocked and the TV is added via manual IP, the integration initially attempts pairing with default brand code `his`. If the TV broker rejects the connection with `rc: 5` (Not Authorized), the pairing engine automatically cascades through high-probability candidate OEM brands (`tos`, `loe`, `tpv`, `shp`, `jvc`, `tpo`). When accepted, it dynamically adopts the confirmed brand code and updates Home Assistant's device registry.
+4. **Post-PIN Brand Preservation**:
+   Once an OEM brand is resolved via cascade, certificate hinting, UPnP auto-detection, or manual selection, post-PIN device detail queries preserve the active OEM brand, preventing fallback resets to `"his"`.
+5. **Certificate Filename Hinting**:
+   If users place brand-named client certificates in `/config/ssl/` (e.g. `toshiba.crt`, `loewe.pem`, `philips.crt`, `sharp.pem`, `jvc.key`, `toptro.crt`, `rcamobile.p12`), the integration automatically detects the brand from the file names during setup.
+6. **Dedicated Brand Profile Diagnostic Telemetry**:
+   Exposes `sensor.<device>_brand_profile` under Home Assistant's **Diagnostic** category. This displays the configured brand profile (`Auto Detect (Recommended)`, `Hisense`, `Toshiba`, etc.) and exposes diagnostic attributes (`configured_profile`, `active_brand_code`, `active_brand`), making it trivial to inspect which OEM salt is active in runtime.
+7. **Runtime Brand Updates**:
    Changing `CONF_BRAND` in the Security Options menu dynamically regenerates pairing credentials and refreshes MQTT sessions without breaking existing entity registries.
 

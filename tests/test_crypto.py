@@ -418,6 +418,7 @@ def test_extract_pkcs12_cached_on_second_call(tmp_path):
 def test_client_skips_cert_resolution_when_unneeded():
     """Test HisenseTvClient skips disk cert resolution when SSL is disabled or certs are pre-resolved."""
     from unittest.mock import patch
+
     from custom_components.hisense_vidaa.client import HisenseTvClient
 
     with patch("custom_components.hisense_vidaa.client.resolve_certificates") as mock_resolve:
@@ -428,6 +429,7 @@ def test_client_skips_cert_resolution_when_unneeded():
 
         # Legacy auth profile skips resolve_certificates
         client2 = HisenseTvClient("192.168.1.50", auth_profile="legacy")
+        assert client2.auth_profile == "legacy"
         mock_resolve.assert_not_called()
 
         # Pre-resolved PEM paths skip resolve_certificates

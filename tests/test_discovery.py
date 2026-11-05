@@ -233,8 +233,8 @@ def test_parse_zeroconf_discovery_fallback_when_properties_absent():
 
 def test_parse_ssdp_discovery_toptro_projector():
     """Test parse_ssdp_discovery detects TOPTRO brand from modelDescription."""
-    from custom_components.hisense_vidaa.discovery import parse_ssdp_discovery, normalize_brand_code
-    from custom_components.hisense_vidaa.const import BRAND_MAP, BRAND_CODE_MAP
+    from custom_components.hisense_vidaa.const import BRAND_CODE_MAP, BRAND_MAP
+    from custom_components.hisense_vidaa.discovery import normalize_brand_code, parse_ssdp_discovery
 
     assert normalize_brand_code("toptro") == "tpo"
     assert normalize_brand_code("TPO") == "tpo"

@@ -37,16 +37,16 @@ The integration natively supports both **auto-extracted PKCS#12 archives** (`.p1
 
 | Format / Profile | Firmware / Model Generation | Certificate / Bundle Filename | Private Key Filename |
 | :--- | :--- | :--- | :--- |
-| **PKCS#12 Bundle (Auto-Extracted)** | Any Modern VIDAA / RemoteNOW | `client_mobile_android.p12`, `El.p12`, `rcamobile.p12`, `toshiba.p12`, `loewe.p12`, or `philips.p12` | *(Bundled in .p12 archive)* |
+| **PKCS#12 Bundle (Auto-Extracted)** | Any Modern VIDAA / RemoteNOW | `client_mobile_android.p12`, `El.p12`, `rcamobile.p12`, `toshiba.p12`, `loewe.p12`, `philips.p12`, or `toptro.p12` | *(Bundled in .p12 archive)* |
 | **Modern VIDAA 2.0 (PEM)** | VIDAA U6+ / U7 (2024+) | `vidaa_client_v01.pem`, `vidaa_client_v02.pem`, `vidaa_2024_cert.pem`, or `vidaa_client.pem` | `vidaa_client_v01.key`, `vidaa_client_v02.key`, `vidaa_2024_key.pem`, or `vidaa_client.key` |
-| **Brand-Specific PEM** | Toshiba, Loewe, Philips / TPV, Hisense | `toshiba.crt`, `loewe.crt`, `philips.crt`, `tpv.crt`, or `hisense.crt` | `toshiba.key`, `loewe.key`, `philips.key`, `tpv.key`, or `hisense.key` |
+| **Brand-Specific PEM** | Toshiba, Loewe, Philips / TPV, Sharp, JVC, TOPTRO, Hisense | `toshiba.crt`, `loewe.crt`, `philips.crt`, `tpv.crt`, `sharp.crt`, `jvc.crt`, `toptro.crt`, or `hisense.crt` | `toshiba.key`, `loewe.key`, `philips.key`, `tpv.key`, `sharp.key`, `jvc.key`, `toptro.key`, or `hisense.key` |
 | **RemoteNOW Standard (PEM)** | VIDAA U4 / U5 / U6 (2018–2023) | `vidaa_client_v01.pem`, `remotenow_2018_cert.pem`, or `hisense.crt` | `vidaa_client_v01.key`, `remotenow_2018_key.pem`, or `hisense.key` |
 | **Generic / Custom PEM** | Standard fallback for any profile | `cert.pem` | `key.pem` |
 | **Optional Root CA** | Optional TLS server verification | `remote_ca.pem` or `RemoteCA.crt` | *(Public root CA)* |
 
 > [!TIP]
 > **Automatic Brand & Model Hinting from Certificate Filenames:**
-> When you name your certificate files with your TV's brand (e.g. `toshiba.crt` / `toshiba.key`, `loewe.crt` / `loewe.key`, `philips.crt` / `philips.key`, or `tpv.crt` / `tpv.key`), Home Assistant automatically detects your TV brand from the filename during setup. This automatically pre-configures the correct OEM brand salt and device manufacturer without requiring manual selection.
+> When you name your certificate files with your TV's brand (e.g. `toshiba.crt` / `toshiba.key`, `loewe.crt` / `loewe.key`, `philips.crt` / `philips.key`, `sharp.crt` / `sharp.key`, or `toptro.crt` / `toptro.key`), Home Assistant automatically detects your TV brand from the filename during setup. This automatically pre-configures the correct OEM brand salt and device manufacturer without requiring manual selection.
 
 ---
 
@@ -96,7 +96,7 @@ Once downloaded, extract the client keystore using standard archive tools on you
 ### Step 3: Automatic Discovery & Loading in Home Assistant
 
 1. Verify that `El.p12` (or `client_mobile_android.p12`) is placed in `/config/ssl/` (or `/ssl/` / `/config/certs/`).
-   *(Optional: You may rename it to match your TV brand, e.g. `toshiba.p12`, `loewe.p12`, or `philips.p12`, to enable automatic brand hinting).*
+   *(Optional: You may rename it to match your TV or projector brand, e.g. `toshiba.p12`, `loewe.p12`, `philips.p12`, or `toptro.p12`, to enable automatic brand hinting).*
 2. The integration automatically discovers `El.p12`, decrypts it using the embedded keystore password, and generates `El_cert.pem` and `El_key.pem`.
 
 > [!NOTE]

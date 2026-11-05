@@ -51,7 +51,7 @@ When adding a new Hisense VIDAA TV (**Settings → Devices & Services → Add In
 | **`ip_address`** | `string` (IPv4) | **Yes** | None | The local network IP address of the Hisense Smart TV (e.g. `192.168.50.12`). It is strongly recommended to configure a static DHCP reservation on your router. |
 | **`name`** | `string` | Optional | `Hisense TV` | User-friendly display name used to prefix created entity IDs and device registry names. |
 | **`mac_address`** | `string` (MAC) | Optional | Auto-discovered | Hardware Ethernet or Wi-Fi MAC address (e.g. `e8:51:77:ec:98:1c`). Used for Wake-on-LAN packets and unique entity IDs. Discovered automatically via UPnP/ARP. |
-| **`brand`** | `select` | Optional | `his` | TV OEM Brand selector (Hisense, Toshiba, Loewe, Philips, Sharp, JVC, and 15+ others). Auto-detected via UPnP/SSDP or certificate filenames, or selectable manually upfront. |
+| **`brand`** | `select` | Optional | `auto` | TV / Projector OEM Brand profile selector. Defaults to `Auto Detect (Recommended)`, which automatically queries UPnP port `38400` / `18400` to extract `<modelDescription>` brand metadata, or matches certificate filenames. Can be manually overridden to any of 22+ OEM partners (Hisense, Toshiba, Loewe, TPV / Philips / AOC, Sharp, JVC, TOPTRO, Schneider, Akai, Beko, Telefunken, Bush, Vizio, Philco, Noblex, Sansei, RCA, Sinotec, Vestel, Brandt, Metz, Leica). |
 | **`auth_profile`** | `select` | **Yes** | `auto` | Authentication and certificate selection tier: <br>• `auto`: Dynamically cascades from modern dynamic auth to middle, standard, and legacy profiles.<br>• `modern`: Modern XOR-masked timestamp dynamic auth (VIDAA U6, U7, U8, 2024+ models).<br>• `middle`: Middle dynamic auth protocol (transport_protocol 3000–3285).<br>• `remotenow`: Legacy RemoteNOW protocol (VIDAA U3 / U4).<br>• `legacy`: Static authentication without timestamp hashing.<br>• `vidaa_2024`: 2024+ firmware profile with strict broker handshakes. |
 | **`pin_code`** | `string` (4 digits) | **Yes** (during pairing) | None | The 4-digit numeric verification code displayed on the physical TV screen during the initial pairing handshake. |
 | **`certfile`** | `string` (file path) | Optional | Auto-resolved | Absolute path to custom client TLS certificate (`.pem` or `.crt`). If omitted, automatically resolves from default bundle or `ssl/` folder. |
@@ -98,7 +98,7 @@ To customize integration behavior for an existing TV, navigate to **Settings →
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | **`auth_profile`** | `select` | `auto` | Authentication handshake profile (`auto`, `modern`, `middle`, `remotenow`, `legacy`). |
-| **`brand`** | `select` | `his` | TV OEM Brand (`his`, `tos`, `loe`, `tpv`, `shp`, `jvc`, `sch`, `aka`, `bek`, `tel`, `bus`, `vic`, `phi`, `nob`, `san`, `rca`, `sin`, `ves`, `bra`, `met`, `lei`). Switching brands automatically derives fresh OEM pairing credentials without resetting entity IDs. |
+| **`brand`** | `select` | `auto` | TV / Projector OEM Brand profile (`auto`, `his`, `tos`, `loe`, `tpv`, `shp`, `jvc`, `sch`, `aka`, `bek`, `tel`, `bus`, `vic`, `phi`, `nob`, `san`, `rca`, `sin`, `ves`, `bra`, `met`, `lei`, `tpo`). Switching brands automatically derives fresh OEM pairing credentials without resetting entity IDs. |
 | **`use_ssl`** | `boolean` | `true` | Toggle SSL/TLS socket encryption for broker communications. |
 | **`certfile`** | `string` (file path) | Auto-resolved | Custom client certificate path (`.crt`, `.pem`, `.p12`). |
 | **`keyfile`** | `string` (file path) | Auto-resolved | Custom client private key path (`.key`, `.pem`). |
@@ -114,7 +114,7 @@ If your TV's local IP address changes (for example, if DHCP assigns a new lease)
 1. Go to **Settings → Devices & Services**.
 2. Locate your **Hisense VIDAA TV** integration entry.
 3. Click the three-dots menu (`⋮`) and select **Reconfigure**.
-4. Update the **IP Address** and/or **Authentication Profile**.
+4. Update the **IP Address**, **Brand Profile**, and/or **Authentication Profile**.
 5. Home Assistant verifies the connection to the new IP and updates the existing configuration entry in place.
 
 > [!TIP]
@@ -141,6 +141,7 @@ To facilitate real-time monitoring and troubleshooting directly from the Home As
 | **`sensor.<tv>_clock_drift`** | **Clock Drift** | Reports TV hardware clock drift in seconds relative to the Home Assistant host. Automatically synchronized every 2 hours and on wake transition from standby. Changes icon between `mdi:clock-check-outline` (synced, $< 60\text{s}$) and `mdi:clock-alert-outline` ($> 60\text{s}$). Attributes: `synchronized` (bool), `drift_human` (e.g. `+15s`, `-5d 14h`), `tv_time`, `host_time`, `last_synced`. |
 | **`sensor.<tv>_session_status`** | **Session Status** | Indicates active session state (`Active`, `Standby`, `Reauth Required`). Attributes: `encryption` (TLS version/port), `local_only` (bool), `paired_at`, `access_token_expires_at`, `refresh_token_expires_at`. |
 | **`sensor.<tv>_auth_profile`** | **Auth Profile** | Displays the active authentication tier negotiated with the TV (e.g. `VIDAA 2.0 (Newer Firmware / 2024+)`). |
+| **`sensor.<tv>_brand_profile`** | **Brand Profile** | Reports the configured brand selection profile (e.g. `Auto Detect (Recommended)`, `Hisense`, `Toshiba`, `TOPTRO`) and active runtime OEM branding. Attributes: `configured_profile` (e.g. `auto`, `his`), `active_brand_code` (e.g. `his`, `tos`, `tpo`), `active_brand` (human-readable resolved brand name). |
 | **`sensor.<tv>_audio_output`** | **Audio Output** | Displays whether sound is currently output through `TV Speakers` or `ARC / eARC`. |
 | **`sensor.<tv>_active_source`** | **Active Source** | Current input source name with `connected_device` HDMI-CEC display names. |
 | **`sensor.<tv>_active_app`** | **Active App** | Currently running Smart TV application name. |
