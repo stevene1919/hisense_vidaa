@@ -138,6 +138,7 @@ BRAND_OPTIONS = [
     selector.SelectOptionDict(value="bra", label="Brandt"),
     selector.SelectOptionDict(value="met", label="Metz"),
     selector.SelectOptionDict(value="lei", label="Leica"),
+    selector.SelectOptionDict(value="tpo", label="TOPTRO"),
 ]
 
 BRAND_SELECTOR = selector.SelectSelector(
@@ -214,6 +215,8 @@ BRAND_MAP: dict[str, str] = {
     "metz": "Metz",
     "lei": "Leica",
     "leica": "Leica",
+    "tpo": "TOPTRO",
+    "toptro": "TOPTRO",
 }
 
 BRAND_CODE_MAP: dict[str, str] = {
@@ -272,4 +275,6 @@ BRAND_CODE_MAP: dict[str, str] = {
     "metz": "met",
     "lei": "lei",
     "leica": "lei",
+    "tpo": "tpo",
+    "toptro": "tpo",
 }

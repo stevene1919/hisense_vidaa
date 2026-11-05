@@ -353,6 +353,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
             mac=self.mac,
             timeout=timeout,
             brand=self.brand,
+            timestamp=int(time.time()) + self.clock_offset,
         )
 
     def probe_auth_methods(self, timeout: float = 2.0) -> dict[str, Any]:

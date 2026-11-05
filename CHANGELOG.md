@@ -24,6 +24,12 @@ If this integration has added value to your smart home setup, consider buying me
   - **UPnP Descriptor MAC Fallbacks (`tv/upnp_desc.py`, `protocol/upnp.py`)**: Supported `mac` and `network_device` as fallback MAC keys in UPnP XML descriptors alongside `macWifi`.
   - **Brand-Aware Diagnostics & Sensor Fallbacks (`sensors_diagnostic.py`, `tv/probe.py`, `client.py`)**: Diagnostic sensors, default friendly names, and probe Markdown reports now dynamically reflect the resolved TV OEM brand rather than hardcoding `"Hisense"`.
   - **CLI Diagnostics Multi-Brand Support**: Added `--brand` parameter to [`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py) with open brand support.
+- **TOPTRO SMART PROJECTOR SUPPORT & OEM BRAND PROPAGATION (`const.py`, `discovery.py`, `protocol/auth.py`, `protocol/pairing.py`, `client.py`)**:
+  - Added official OEM brand support for **TOPTRO** portable smart projectors running VIDAA OS (e.g. FreeStyle series), mapping `tpo` and `toptro` across `BRAND_OPTIONS`, `BRAND_MAP`, and `BRAND_CODE_MAP`.
+  - Expanded the pairing cascade fallback candidate list to automatically probe `tpo` alongside `tos`, `loe`, `tpv`, `shp`, and `jvc` when initial connections to projector brokers fail.
+  - Enhanced `async_probe_tv_auth_methods()` and `HisenseTvClient.async_probe_auth_methods()` to propagate synchronized device clock timestamps (`timestamp=int(time.time()) + self.clock_offset`) and active OEM brand prefixes.
+  - Hardened MQTT diagnostic classification across both MQTT 3.1.1 (`rc: 4`, `rc: 5`) and MQTT 5.0 (`rc: 134`, `rc: 135`) using `AUTH_REJECTION_CODES`, ensuring bad credentials and permission rejections are cleanly reported as `"not_authorized"` rather than generic network connection errors.
+  - Dynamic brand refresh in pairing handshake: auto-detects and updates `client.brand` from UPnP descriptor fingerprints before pairing if `client.brand` is still at default (`"his"`), safeguarding manual brand overrides.
 - **SSL CLIENT CERTIFICATE INTEGRITY VALIDATION (`protocol/certs.py`)**:
   - Implemented strict PEM certificate and private key validation via `validate_ssl_certs()`.
   - Validates BEGIN/END headers, Base64 decoding, ASN.1 structure, modulus matching between certificate and private key, and PKCS#8 decryption without hard external cryptography dependencies.
@@ -40,13 +46,14 @@ If this integration has added value to your smart home setup, consider buying me
 - **ZEROCONF / HOMEKIT mDNS METADATA ENRICHMENT (`discovery.py`)**:
   - Enriched `parse_zeroconf_discovery()` to extract actual model names (`md`/`model`) and manufacturer branding from mDNS TXT properties advertised by Apple HomeKit / AirPlay (`_hap._tcp.local.`, `_airplay._tcp.local.`).
   - Completely decoupled from control: graceful fallback to defaults if HomeKit/AirPlay is disabled or properties are absent.
-- **TEST SUITE MODULARIZATION & EXPANSION (246 PASSING TESTS)**:
+- **TEST SUITE MODULARIZATION & EXPANSION (261 PASSING TESTS)**:
   - Decoupled oversized test suites into modular, single-responsibility modules:
     - Split `test_client_auth.py` into `test_client_tokens.py` (token lifecycle/drift/standby), `test_client_reconnect.py` (reconnect locks/backoff/rejection thresholds), and `test_client_auth.py` (core auth profiles/probing).
     - Split `test_pairing.py` into `test_pairing_guards.py` (abort flow/duplicate guards), `test_pairing_cascade.py` (brand fallback cascade/profile fallback), and `test_pairing.py` (PIN challenge probing/flows).
     - Split `test_services.py` into `test_services_targeting.py` (device/area/floor/label resolution & guards) and `test_services.py` (service executions).
     - Added [`test_multi_brand_readiness.py`](tests/test_multi_brand_readiness.py) covering OEM brand selectors, code preservation, cert hinting, UPnP MAC fallbacks, client ID regeneration, and post-PIN brand preservation.
-  - 100% passing test suite across all 246 unit tests with 0 linter errors and 0 Hassfest errors.
+    - Added comprehensive regression coverage for TOPTRO discovery, brand normalization, and probe rejection diagnostics in `tests/test_client_auth.py` and `tests/test_discovery.py`.
+  - 100% passing test suite across all 261 unit tests with 0 linter errors and 0 Hassfest errors.
 
 ## [3.1.0] - 2026-11-01 — ⚡ Native `aiomqtt` Async Engine & Architecture Hardening Edition
 

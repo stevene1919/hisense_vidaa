@@ -230,3 +230,40 @@ def test_parse_zeroconf_discovery_fallback_when_properties_absent():
     assert info.brand == "his"
     assert info.mac_address == "aa:bb:cc:dd:ee:ff"
 
+
+def test_parse_ssdp_discovery_toptro_projector():
+    """Test parse_ssdp_discovery detects TOPTRO brand from modelDescription."""
+    from custom_components.hisense_vidaa.discovery import parse_ssdp_discovery, normalize_brand_code
+    from custom_components.hisense_vidaa.const import BRAND_MAP, BRAND_CODE_MAP
+
+    assert normalize_brand_code("toptro") == "tpo"
+    assert normalize_brand_code("TPO") == "tpo"
+    assert BRAND_MAP["tpo"] == "TOPTRO"
+    assert BRAND_CODE_MAP["tpo"] == "tpo"
+
+    ssdp_info = MagicMock()
+    ssdp_info.ssdp_headers = {"_host": "192.168.50.88"}
+    ssdp_info.ssdp_udn = "uuid:toptro-projector-12345"
+    ssdp_info.upnp = {
+        "friendlyName": "TOPTRO Smart Projector",
+        "manufacturer": "smarttv.com",
+        "modelName": "X7",
+        "modelDescription": (
+            "vidaa_support=1\n"
+            "transport_protocol=3290\n"
+            "brand=tpo\n"
+            "macwifi=00:11:22:33:44:55\n"
+            "model=X7\n"
+        ),
+    }
+
+    info = parse_ssdp_discovery(ssdp_info)
+    assert info is not None
+    assert info.host == "192.168.50.88"
+    assert info.title == "TOPTRO Smart Projector"
+    assert info.model == "X7"
+    assert info.manufacturer == "TOPTRO"
+    assert info.brand == "tpo"
+    assert info.mac_address == "00:11:22:33:44:55"
+
+

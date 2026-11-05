@@ -283,11 +283,16 @@ async def async_probe_tv_auth_methods(
     mac: str | None = None,
     timeout: float = 2.0,
     brand: str = "his",
+    timestamp: int | None = None,
 ) -> dict[str, Any]:
     """Probes TV MQTT broker with various auth algorithms to diagnose compatibility."""
     from aiomqtt import Client, ProtocolVersion
     from aiomqtt.exceptions import MqttConnectError, MqttError
 
+    from .connection import AUTH_REJECTION_CODES
+
+    brand = (brand or "his").strip().lower() or "his"
+    probe_timestamp = int(time.time()) if timestamp is None else timestamp
     has_cert = bool(certfile and keyfile and os.path.isfile(certfile) and os.path.isfile(keyfile))
     results: dict[str, Any] = {
         "legacy_static": {"rc": None, "supported": False},
@@ -295,6 +300,8 @@ async def async_probe_tv_auth_methods(
         "middle_dynamic": {"rc": None, "supported": False},
         "modern_dynamic": {"rc": None, "supported": False},
         "client_cert_presented": has_cert,
+        "brand": brand,
+        "timestamp": probe_timestamp,
     }
 
     loop = asyncio.get_running_loop()
@@ -325,6 +332,12 @@ async def async_probe_tv_auth_methods(
                     return 0, True
         except MqttConnectError as err:
             rc = extract_connect_rc(err)
+            if rc in AUTH_REJECTION_CODES:
+                _LOGGER.debug(
+                    "MQTT authentication probe rejected: not authorized or bad credentials (rc=%d, brand=%s)",
+                    rc,
+                    brand,
+                )
             return rc, False
         except TimeoutError:
             return None, False
@@ -339,22 +352,34 @@ async def async_probe_tv_auth_methods(
     results["legacy_static"]["supported"] = ok
 
     # 2. Standard dynamic pairing (brand$<timestamp> / standard salt)
-    cid, u, p = generate_initial_credentials(mac_address=mac, auth_profile="remotenow", brand=brand)
+    cid, u, p = generate_initial_credentials(mac_address=mac, auth_profile="remotenow", brand=brand, timestamp=probe_timestamp)
     rc, ok = await _probe_single(cid, u, p)
     results["standard_dynamic"]["rc"] = rc
     results["standard_dynamic"]["supported"] = ok
 
     # 3. Middle XOR dynamic pairing (brand$<timestamp ^ XOR> / standard salt)
-    cid, u, p = generate_initial_credentials(mac_address=mac, auth_profile="middle", brand=brand)
+    cid, u, p = generate_initial_credentials(mac_address=mac, auth_profile="middle", brand=brand, timestamp=probe_timestamp)
     rc, ok = await _probe_single(cid, u, p)
     results["middle_dynamic"]["rc"] = rc
     results["middle_dynamic"]["supported"] = ok
 
     # 4. Modern XOR dynamic pairing (brand$<timestamp ^ XOR> / modern salt)
-    cid, u, p = generate_initial_credentials(mac_address=mac, auth_profile="modern", brand=brand)
+    cid, u, p = generate_initial_credentials(mac_address=mac, auth_profile="modern", brand=brand, timestamp=probe_timestamp)
     rc, ok = await _probe_single(cid, u, p)
     results["modern_dynamic"]["rc"] = rc
     results["modern_dynamic"]["supported"] = ok
+
+    for profile in ("legacy_static", "standard_dynamic", "middle_dynamic", "modern_dynamic"):
+        result = results[profile]
+        result["diagnostic"] = (
+            "not_authorized"
+            if result["rc"] in AUTH_REJECTION_CODES
+            else "accepted"
+            if result["supported"]
+            else "no_connack"
+            if result["rc"] is None
+            else "connection_rejected"
+        )
 
     return results
 

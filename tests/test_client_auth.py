@@ -115,6 +115,51 @@ async def test_async_probe_tv_auth_methods_passes_brand():
 
     assert results["legacy_static"]["supported"] is True
     assert results["modern_dynamic"]["supported"] is True
+    assert "diagnostic" in results["modern_dynamic"]
+    assert results["modern_dynamic"]["diagnostic"] == "accepted"
     usernames = [u for u, _ in probed_creds]
     assert "hisenseservice" in usernames
     assert any(u and u.startswith("tos$") for u in usernames)
+
+
+@pytest.mark.anyio
+async def test_async_probe_tv_auth_methods_toptro_rejection_diagnostics():
+    """Verify TOPTRO brand and timestamp propagation and AUTH_REJECTION_CODES classification."""
+    import sys
+    from custom_components.hisense_vidaa.protocol.auth import async_probe_tv_auth_methods
+
+    probed_creds = []
+
+    class MockRejectionError(Exception):
+        rc = 135
+
+    class MockRejectingClient:
+        def __init__(self, *args, **kwargs):
+            probed_creds.append(kwargs)
+
+        async def __aenter__(self):
+            raise MockRejectionError()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_aiomqtt = MagicMock()
+    mock_aiomqtt.Client = MockRejectingClient
+    mock_aiomqtt.ProtocolVersion = MagicMock()
+    mock_aiomqtt_exc = MagicMock()
+    mock_aiomqtt_exc.MqttConnectError = MockRejectionError
+
+    with patch.dict(sys.modules, {"aiomqtt": mock_aiomqtt, "aiomqtt.exceptions": mock_aiomqtt_exc}):
+        results = await async_probe_tv_auth_methods("192.168.50.15", brand="tpo", timestamp=1700000000)
+
+    assert results["brand"] == "tpo"
+    assert results["timestamp"] == 1700000000
+    assert results["standard_dynamic"]["diagnostic"] == "not_authorized"
+    assert results["middle_dynamic"]["diagnostic"] == "not_authorized"
+    assert results["modern_dynamic"]["diagnostic"] == "not_authorized"
+    assert results["modern_dynamic"]["rc"] == 135
+
+    # Verify brand prefix and timestamp on probed credentials
+    usernames = [call_kw.get("username") for call_kw in probed_creds]
+    assert any(u and u.startswith("tpo$") for u in usernames)
+
