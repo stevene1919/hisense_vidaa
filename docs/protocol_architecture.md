@@ -26,14 +26,14 @@ sequenceDiagram
     TV-->>HA: CONNACK (rc: 0)
     
     Note over HA,TV: 2. Challenge-Response PIN Handshake
-    HA->>TV: Subscribe: /remoteapp/mobile/<client_id>/ui_service/data/#
+    HA->>TV: Subscribe: /remoteapp/mobile/{client_id}/ui_service/data/#
     HA->>TV: Publish: .../actions/vidaa_app_connect
     TV-->>HA: Display 4-digit PIN on screen & publish authentication challenge
-    HA->>TV: Publish: .../actions/authenticationcode {"authNum": <PIN>}
+    HA->>TV: Publish: .../actions/authenticationcode {"authNum": {PIN}}
     TV-->>HA: Publish: {"result": 1} (PIN Accepted)
     
     Note over HA,TV: 3. Session Token Issuance
-    HA->>TV: Publish: .../platform_service/<client_id>/data/gettoken
+    HA->>TV: Publish: .../platform_service/{client_id}/data/gettoken
     TV-->>HA: Publish: Token Payload (Access Token [2 days], Refresh Token [30 days])
     
     Note over HA,TV: 4. Normal Runtime Operations
