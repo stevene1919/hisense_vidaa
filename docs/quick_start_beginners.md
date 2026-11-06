@@ -24,7 +24,7 @@ Welcome! This guide is designed for **first-time users and beginners**. It skips
 
 ```mermaid
 flowchart LR
-    Step1["1️⃣ Grab File<br/>(Download & Unzip)"] --> Step2["2️⃣ Drop into HA<br/>(/config/ssl/)"] --> Step3["3️⃣ Pair with PIN<br/>(4-Digit TV Code)"]
+    Step1["Step 1: Grab File<br/>(Download & Unzip)"] --> Step2["Step 2: Drop into HA<br/>(/config/ssl/)"] --> Step3["Step 3: Pair with PIN<br/>(4-Digit TV Code)"]
 ```
 
 ---
