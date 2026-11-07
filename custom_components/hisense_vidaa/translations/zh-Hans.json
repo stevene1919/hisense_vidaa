@@ -1,0 +1,448 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "配置海信 VIDAA 电视",
+        "description": "请输入海信电视的 IP 地址。",
+        "data": {
+          "ip_address": "IP 地址",
+          "auth_profile": "认证与证书配置文件",
+          "brand": "电视品牌 (VIDAA OS 生态)"
+        }
+      },
+      "discovery_confirm": {
+        "title": "发现海信 VIDAA 电视",
+        "description": "是否要设置位于 {ip_address} 的 {name}？"
+      },
+      "auth": {
+        "title": "输入电视屏幕上的 PIN 码",
+        "description": "您的电视屏幕上现在应该显示一个 4 位数 PIN 码。请在下方输入。",
+        "data": {
+          "pin_code": "PIN 码"
+        }
+      },
+      "reauth_confirm": {
+        "title": "重新认证海信电视",
+        "description": "Home Assistant 需要重新与您的海信电视 ({ip_address}) 配对。点击“提交”在电视屏幕上显示 PIN 码。"
+      },
+      "reconfigure": {
+        "title": "重新配置海信 VIDAA 电视",
+        "description": "更新连接设置或重新配对您的海信电视。",
+        "data": {
+          "ip_address": "IP 地址",
+          "auth_profile": "认证与证书配置文件",
+          "brand": "电视品牌 (VIDAA OS 生态)"
+        }
+      },
+      "certs": {
+        "title": "客户端证书",
+        "description": "配置与海信 VIDAA 电视通信所需的 TLS/SSL 客户端证书。请将证书放置在 {cert_dir} ({cert_file} 和 {key_file}) 中。",
+        "data": {
+          "use_ssl": "使用加密的 SSL/TLS 连接",
+          "certfile": "证书文件路径 (.crt / .pem)",
+          "keyfile": "私钥文件路径 (.key / .pem)"
+        }
+      },
+      "options": {
+        "title": "设备功能与选项",
+        "description": "自定义您的海信 VIDAA 电视功能。",
+        "data": {
+          "enable_remote": "启用独立的遥控器 (Remote) 实体",
+          "enable_wol": "启用局域网唤醒 (WoL) 开机",
+          "include_apps_in_sources": "在播放器输入源列表中包含智能电视应用",
+          "enable_media_controls": "启用媒体播放控制 (播放/暂停、停止、跳过)",
+          "enable_picture_controls": "启用图像模式选择与校准滑块 (背光、亮度、对比度)",
+          "enable_sound_controls": "启用声音模式均衡器预设选择器",
+          "enable_audio_only": "启用“仅音频/关闭屏幕”切换开关"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "连接到电视失败。",
+      "invalid_auth": "PIN 码无效，请重试。",
+      "certs_not_found": "在指定路径未找到证书或私钥文件。请检查文件位置和权限。",
+      "unknown": "发生未知错误。",
+      "invalid_ssl_cert": "SSL 证书或私钥验证失败。请确认文件为有效的未加密 PEM 或支持的 PKCS#12 格式并相互匹配。"
+    },
+    "abort": {
+      "reauth_successful": "重新认证成功。",
+      "reconfigure_successful": "重新配置成功。",
+      "already_configured": "该设备已配置过。",
+      "not_vidaa_tv": "发现的设备不是兼容的海信 VIDAA 电视。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "海信 VIDAA 电视选项",
+        "description": "选择要配置的选项分类：",
+        "menu_options": {
+          "power_network": "⚡ 电源与网络",
+          "playback_sources": "📺 播放与输入源",
+          "features_remote": "🎛️ 实体与遥控控制",
+          "security": "🔒 连接与安全性"
+        }
+      },
+      "power_network": {
+        "title": "电源与网络选项",
+        "description": "配置局域网唤醒 (Wake-on-LAN)、辅助网络接口以及待机状态下的令牌自动续订。",
+        "data": {
+          "enable_wol": "启用局域网唤醒 (WoL) 开机",
+          "secondary_mac_address": "辅助 MAC 地址 (Wi-Fi 或以太网)",
+          "refresh_in_standby": "电视待机时自动续订访问令牌"
+        },
+        "data_description": {
+          "refresh_in_standby": "如果电视在关机时保持网络连接（例如开启了“快速开机/快速启动”），请启用此选项。这样即使电视未开机，为期 2 天的访问令牌也会自动刷新，确保在 Home Assistant 重启后配对凭据依然有效。对于待机时完全断电的电视，请保持关闭。"
+        }
+      },
+      "playback_sources": {
+        "title": "播放与输入源",
+        "description": "配置输入源、应用列表以及媒体传输控制。",
+        "data": {
+          "include_apps_in_sources": "在播放器输入源列表中包含智能电视应用",
+          "sources": "已启用的输入源和应用 (留空表示全部)",
+          "enable_media_controls": "启用媒体播放控制 (播放/暂停、停止、跳过)",
+          "enable_cec_names": "在输入源中显示已连接的 HDMI-CEC 设备名称 (例如 'HDMI 2 (PlayStation 5)')",
+          "playback_debounce": "播放状态稳定防抖窗口时间 (秒)"
+        },
+        "data_description": {
+          "playback_debounce": "流媒体应用启动或缓冲时用于过滤快速瞬态闪烁的秒数。"
+        }
+      },
+      "features_remote": {
+        "title": "实体与遥控控制",
+        "description": "配置实体开关、图像校准、声音预设以及遥控按键延迟。",
+        "data": {
+          "enable_remote": "启用独立的遥控器 (Remote) 实体",
+          "enable_notify": "启用屏幕弹窗通知 (仅支持的机型)",
+          "enable_picture_controls": "启用图像模式选择与校准滑块 (背光、亮度、对比度)",
+          "enable_sound_controls": "启用声音模式均衡器预设选择器",
+          "enable_audio_only": "启用“仅音频/关闭屏幕”切换开关",
+          "key_delay": "默认按键延迟时间 (秒)",
+          "key_repeat": "默认按键重复次数"
+        }
+      },
+      "security": {
+        "title": "连接与安全性",
+        "description": "选择认证配置方案、加密模式以及可选的客户端证书。",
+        "data": {
+          "auth_profile": "认证与证书配置文件",
+          "brand": "电视 OEM 品牌",
+          "use_ssl": "使用加密的 SSL/TLS 连接",
+          "certfile": "证书文件路径 (.crt / .pem / .p12)",
+          "keyfile": "私钥文件路径 (.key / .pem)"
+        }
+      }
+    },
+    "error": {
+      "certs_not_found": "在指定路径未找到证书或密钥文件。请检查文件位置和权限。",
+      "invalid_ssl_cert": "SSL 证书或私钥验证失败。"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "session_status": {
+        "name": "会话状态"
+      },
+      "auth_profile": {
+        "name": "认证配置"
+      },
+      "brand_profile": {
+        "name": "品牌配置"
+      },
+      "active_app": {
+        "name": "当前应用"
+      },
+      "active_source": {
+        "name": "当前输入源"
+      },
+      "audio_output": {
+        "name": "音频输出"
+      },
+      "reported_name": {
+        "name": "上报电视名称"
+      },
+      "clock_drift": {
+        "name": "时钟漂移"
+      }
+    },
+    "binary_sensor": {
+      "mqtt_connected": {
+        "name": "MQTT 已连接"
+      },
+      "in_use": {
+        "name": "使用中"
+      }
+    },
+    "button": {
+      "force_reconnect": {
+        "name": "强制重新连接"
+      },
+      "sync_clock": {
+        "name": "同步时钟"
+      },
+      "probe_capabilities": {
+        "name": "探测功能支持"
+      },
+      "trigger_reauth": {
+        "name": "触发重新配对"
+      }
+    },
+    "notify": {
+      "notifications": {
+        "name": "通知"
+      }
+    },
+    "select": {
+      "audio_output": {
+        "name": "音频输出模式"
+      },
+      "picture_mode": {
+        "name": "图像模式"
+      },
+      "sound_mode": {
+        "name": "声音模式"
+      }
+    },
+    "number": {
+      "backlight": {
+        "name": "背光"
+      },
+      "brightness": {
+        "name": "亮度"
+      },
+      "contrast": {
+        "name": "对比度"
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "遥控器"
+      }
+    },
+    "switch": {
+      "audio_only": {
+        "name": "仅音频"
+      },
+      "debug_logging": {
+        "name": "调试日志"
+      }
+    }
+  },
+  "services": {
+    "send_key": {
+      "name": "发送遥控按键",
+      "description": "向电视发送单个遥控按键或按键序列。",
+      "fields": {
+        "key": {
+          "name": "按键",
+          "description": "要发送的按键代码 (例如 KEY_POWER, KEY_HOME, KEY_VOLUMEUP)。"
+        },
+        "repeat": {
+          "name": "重复次数",
+          "description": "重复按键的次数。"
+        },
+        "delay": {
+          "name": "延迟",
+          "description": "连续重复按键之间的延迟秒数。"
+        }
+      }
+    },
+    "send_key_sequence": {
+      "name": "发送按键序列",
+      "description": "发送一串遥控按键指令，可在按键之间配置自定义延迟。",
+      "fields": {
+        "sequence": {
+          "name": "按键序列",
+          "description": "按顺序发送的按键列表或逗号分隔的键名 (例如 [\"home\", \"down\", \"ok\"])。"
+        },
+        "delay": {
+          "name": "延迟",
+          "description": "每个连续按键之间的延迟秒数。"
+        }
+      }
+    },
+    "change_channel": {
+      "name": "切换频道",
+      "description": "通过依序发送数字按键直接调谐至数字电视频道。",
+      "fields": {
+        "channel": {
+          "name": "频道号",
+          "description": "要调谐的频道号 (例如 701, 10, 7)。"
+        },
+        "confirm": {
+          "name": "确认",
+          "description": "在发送完数字后立即发送 OK/Enter，无需等待电视超时。"
+        },
+        "delay": {
+          "name": "延迟",
+          "description": "数字按键之间的延迟秒数。"
+        }
+      }
+    },
+    "launch_app": {
+      "name": "启动应用",
+      "description": "按应用名称或直接 URL 启动智能电视应用。",
+      "fields": {
+        "app": {
+          "name": "应用名称或 URL",
+          "description": "应用名称或深度链接 URL。当提供了应用 ID 时可选。"
+        },
+        "app_id": {
+          "name": "应用 ID",
+          "description": "可选的电视应用 ID，用于替代应用列表中的 ID。"
+        },
+        "app_name": {
+          "name": "应用名称覆盖",
+          "description": "可选的应用显示名称，包含在启动请求中。"
+        },
+        "url": {
+          "name": "启动 URL",
+          "description": "传递给应用程序的可选 URL 或深层链接。"
+        }
+      }
+    },
+    "set_picture_setting": {
+      "name": "设置图像参数",
+      "description": "更改特定的电视图像菜单设置或校准参数。",
+      "fields": {
+        "menu_id": {
+          "name": "菜单 ID",
+          "description": "数值菜单 ID (例如 91 为图像模式，92 为背光，93 为亮度，94 为对比度)。"
+        },
+        "menu_value": {
+          "name": "菜单值",
+          "description": "设置数值或预设模式名称。"
+        }
+      }
+    },
+    "set_sound_setting": {
+      "name": "设置声音参数",
+      "description": "更改特定的电视声音菜单设置或均衡器预设。",
+      "fields": {
+        "menu_id": {
+          "name": "菜单 ID",
+          "description": "数值菜单 ID (例如 1 为声音模式)。"
+        },
+        "menu_value": {
+          "name": "菜单值",
+          "description": "声音模式名称或数值。"
+        }
+      }
+    },
+    "send_text_input": {
+      "name": "发送文本输入",
+      "description": "向屏幕上的活动输入框或浏览器搜索栏发送虚拟键盘文本。",
+      "fields": {
+        "text": {
+          "name": "文本",
+          "description": "要输入的文本字符串。"
+        },
+        "action": {
+          "name": "操作",
+          "description": "输入操作类型 (insert, replace, clear)。"
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "device_config_entry_not_loaded": {
+      "message": "设备 {device_id} 的海信 VIDAA 集成未加载。"
+    },
+    "device_not_valid": {
+      "message": "设备 {device_id} 不是有效的海信 VIDAA 设备。"
+    },
+    "invalid_entity_id": {
+      "message": "实体 {entity_id} 不是有效的海信 VIDAA 实体。"
+    },
+    "unhandled_trigger_type": {
+      "message": "不支持触发器类型 {trigger_type}。"
+    }
+  },
+  "selector": {
+    "auth_profile": {
+      "options": {
+        "auto": "自动检测 (推荐)",
+        "modern": "VIDAA 2.0 / 2024+ (vidaa_2024)",
+        "middle": "VIDAA 1.5 / 中期版本 (3000–3285)",
+        "remotenow": "RemoteNOW / 2018–2023 (标准)",
+        "legacy": "传统静态认证 (2022 年前 / 静态凭据)"
+      }
+    },
+    "brand": {
+      "options": {
+        "auto": "自动检测 (推荐)",
+        "his": "海信 (Hisense)",
+        "tos": "东芝 (Toshiba)",
+        "loe": "Loewe",
+        "tpv": "TPV / 飞利浦 (Philips) / AOC",
+        "shp": "夏普 (Sharp)",
+        "jvc": "JVC",
+        "sch": "施耐德 (Schneider)",
+        "aka": "赤井 (Akai)",
+        "bek": "倍科 (Beko)",
+        "tel": "德律风根 (Telefunken)",
+        "bus": "Bush",
+        "vic": "唯瑞 (Vizio)",
+        "phi": "飞歌 (Philco)",
+        "nob": "Noblex",
+        "san": "三圣 (Sansei)",
+        "rca": "RCA",
+        "sin": "创诺 (Sinotec)",
+        "ves": "伟视达 (Vestel)",
+        "bra": "白朗 (Brandt)",
+        "met": "梅茨 (Metz)",
+        "lei": "徕卡 (Leica)",
+        "tpo": "TOPTRO"
+      }
+    }
+  },
+  "issues": {
+    "certificate_missing": {
+      "title": "缺少 VIDAA 客户端证书",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "验证客户端证书",
+            "description": "将 hisense.crt 和 hisense.key 复制到 /config/ssl 或 /ssl 目录后，提交此表单进行验证。"
+          }
+        },
+        "error": {
+          "certificates_still_missing": "仍未检测到证书。请确认 hisense.crt 和 hisense.key 已正确放置。"
+        }
+      }
+    },
+    "auth_token_invalidated": {
+      "title": "海信电视：需要重新认证",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "重新与海信电视配对",
+            "description": "Home Assistant 无法再对您的海信电视 ({ip_address}) 进行身份验证。电视代理已拒绝存储的访问和刷新令牌（通常发生在固件更新或强制重新通电后）。\n\n点击**提交**开始配对流程。请确保电视处于**开机**状态（非待机）— 屏幕上将显示 PIN 码。"
+          }
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hisense_vidaa.turn_on": "请求打开设备"
+    }
+  },
+  "triggers": {
+    "turn_on": {
+      "name": "请求开启",
+      "description": "当请求打开一台或多台海信 VIDAA 电视时触发。",
+      "fields": {
+        "device_id": {
+          "description": "要监听的电视。至少需要选择一个设备或实体。",
+          "name": "设备"
+        },
+        "entity_id": {
+          "description": "要监听的电视媒体播放器。至少需要选择一个实体或设备。",
+          "name": "实体"
+        }
+      }
+    }
+  }
+}
