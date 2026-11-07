@@ -557,5 +557,19 @@ def test_media_player_extra_state_attributes(mock_client, mock_entry):
     assert "brand_profile" in attrs
 
 
+def test_media_player_mro_precedence():
+    """Ensure MediaPlayerControlsMixin overrides Home Assistant MediaPlayerEntity stubs."""
+    from custom_components.hisense_vidaa.media_player.controls import MediaPlayerControlsMixin
+
+    # Check that async control methods resolve to MediaPlayerControlsMixin
+    assert HisenseVidaaMediaPlayer.async_turn_on == MediaPlayerControlsMixin.async_turn_on
+    assert HisenseVidaaMediaPlayer.async_turn_off == MediaPlayerControlsMixin.async_turn_off
+    assert HisenseVidaaMediaPlayer.async_set_volume_level == MediaPlayerControlsMixin.async_set_volume_level
+    assert HisenseVidaaMediaPlayer.async_mute_volume == MediaPlayerControlsMixin.async_mute_volume
+    assert HisenseVidaaMediaPlayer.async_select_source == MediaPlayerControlsMixin.async_select_source
+    assert HisenseVidaaMediaPlayer.async_play_media == MediaPlayerControlsMixin.async_play_media
+
+
+
 
 

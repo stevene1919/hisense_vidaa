@@ -57,10 +57,10 @@ __all__ = ["HisenseVidaaMediaPlayer", "async_setup_entry"]
 
 
 class HisenseVidaaMediaPlayer(
-    HisenseVidaaEntity,
-    MediaPlayerEntity,
     MediaPlayerControlsMixin,
     MediaPlayerStateHandlerMixin,
+    HisenseVidaaEntity,
+    MediaPlayerEntity,
 ):
     """Media player entity representing a Hisense VIDAA smart TV."""
 
