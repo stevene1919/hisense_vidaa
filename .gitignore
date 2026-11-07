@@ -29,6 +29,8 @@ wheels/
 .coverage
 htmlcov/
 .mypy_cache/
+.venv/
+uv.lock
 
 # Private Keys, Certificates, and Local Pairing Credentials
 certs/

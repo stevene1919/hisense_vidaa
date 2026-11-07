@@ -1,0 +1,55 @@
+"""Tests for standalone CLI tools (debug_tv.py and test_client.py).
+
+Validates module imports, argument parser definitions, and help formatting
+to guard against regressions in developer CLI utilities.
+"""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def test_debug_tv_help_invocable() -> None:
+    """Test that debug_tv.py runs --help without import or syntax errors."""
+    result = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "debug_tv.py"), "--help"],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert "Hisense VIDAA TV Diagnostic and Live Debugging Tool" in result.stdout
+    assert "--notify" in result.stdout
+    assert "--probe" in result.stdout
+
+
+def test_test_client_help_invocable() -> None:
+    """Test that test_client.py runs --help without import or syntax errors."""
+    result = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "test_client.py"), "--help"],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert "Hisense VIDAA Integration CLI Test Tool" in result.stdout
+    assert "notify" in result.stdout
+    assert "report" in result.stdout
+    assert "probe" in result.stdout
+    assert "--verify-ssl" in result.stdout
+    assert "--probe" in result.stdout
+
+
+def test_cli_tools_syntax_and_import() -> None:
+    """Test importing debug_tv and test_client modules directly."""
+    import debug_tv
+    import test_client
+
+    assert callable(debug_tv.main)
+    assert callable(test_client.main)
