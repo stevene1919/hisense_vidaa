@@ -375,3 +375,31 @@ action:
     data:
       option: "Late Night"
 ```
+
+### Recipe 5: Custom Turn-On Trigger (Smart Plug / Relay / IR Blaster)
+```yaml
+alias: "Power: Custom TV Turn-On Action"
+description: "Intercepts media_player.turn_on to switch on an external smart plug before sending network wake."
+trigger:
+  - platform: device
+    domain: hisense_vidaa
+    device_id: <DEVICE_ID>
+    type: hisense_vidaa.turn_on
+action:
+  - action: switch.turn_on
+    target:
+      entity_id: switch.living_room_tv_smart_plug
+```
+
+### Recipe 6: Direct Live TV Channel Tuning by Name or Number
+```yaml
+alias: "Media: Tune directly to ABC TV"
+description: "Switches TV to Live TV tuner and inputs the channel digits matching 'ABC TV'."
+action:
+  - action: media_player.play_media
+    target:
+      entity_id: media_player.living_room_hisense_vidaa_tv
+    data:
+      media_content_type: channel
+      media_content_id: "ABC TV"
+```

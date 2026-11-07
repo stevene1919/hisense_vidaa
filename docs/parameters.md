@@ -76,9 +76,10 @@ To customize integration behavior for an existing TV, navigate to **Settings →
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
+| **`sources`** | `list` (multi-select) | `All` | Select which input sources and Smart TV applications appear in the `media_player` source dropdown. The active source is always preserved even if unselected. |
 | **`include_apps_in_sources`** | `boolean` | `true` | Merges installed Smart TV apps (Netflix, YouTube, Prime Video, etc.) directly into the `media_player` source selector dropdown. |
 | **`enable_cec_names`** | `boolean` | `true` | Automatically replaces generic input names (`HDMI1`, `HDMI2`) with discovered HDMI-CEC device names (e.g. `Apple TV`, `PlayStation 5`, `Chromecast`). |
-| **`enable_media_controls`** | `boolean` | `true` | Enables Play, Pause, Stop, Next, and Previous track controls on the media player entity. |
+| **`enable_media_controls`** | `boolean` | `true` | Enables Play, Pause, Stop, Next, and Previous track controls on the media player entity. When enabled, Next/Previous track controls are **context-aware**: they step channels (`KEY_CHANNELUP`/`KEY_CHANNELDOWN`) while on Live TV, and step tracks (`KEY_FORWARDS`/`KEY_BACK`) when on streaming apps or external HDMI inputs. |
 | **`playback_debounce`** | `float` (slider, seconds) | `0.5` | Settle window duration to filter out transient rapid state flickers (e.g., buffering transitions) from re-triggering automations. |
 
 ### 2.3 Entities & Remote Controls (`features_remote`)
