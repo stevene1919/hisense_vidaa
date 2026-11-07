@@ -45,7 +45,7 @@ This directory contains in-depth documentation covering installation, networking
 
 ---
 
-## 🏆 Integration Quality Scale (Gold Tier) Reference
+## 🏆 Integration Quality Scale
 
 ### 📺 Supported Devices & Brands
 The integration officially supports **Hisense Smart TVs** running **VIDAA OS** (U4, U5, U6, U7, U8, and 2024+ builds), as well as all licensed **OEM partner smart TVs and projectors** operating on the VIDAA OS platform:
