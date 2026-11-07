@@ -8,6 +8,7 @@ from homeassistant.helpers.entity import Entity
 
 from .client import HisenseTvClient
 from .const import (
+    BRAND_MAP,
     CONF_BRAND,
     CONF_MAC_ADDRESS,
     CONF_MANUFACTURER,
@@ -17,7 +18,6 @@ from .const import (
     DEFAULT_NAME,
     DOMAIN,
 )
-from .discovery import BRAND_MAP
 
 
 class HisenseVidaaEntity(Entity):

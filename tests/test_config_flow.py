@@ -268,7 +268,7 @@ async def test_zeroconf_discovery(monkeypatch):
         lambda host: "e8:51:77:ec:98:1c",
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.discovery.get_arp_mac",
+        "custom_components.hisense_vidaa.protocol.discovery.get_arp_mac",
         lambda host: "e8:51:77:ec:98:1c",
     )
     monkeypatch.setattr(

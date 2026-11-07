@@ -11,7 +11,7 @@ from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from ..const import CONF_IP_ADDRESS
-from ..discovery import DiscoveredTvInfo, parse_ssdp_discovery, parse_zeroconf_discovery
+from ..protocol import DiscoveredTvInfo, parse_ssdp_discovery, parse_zeroconf_discovery
 from .helpers import async_resolve_mac
 
 if TYPE_CHECKING:

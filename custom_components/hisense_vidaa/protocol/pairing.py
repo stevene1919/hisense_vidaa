@@ -158,7 +158,7 @@ async def async_start_pairing_handshake(client: HisenseTvClient) -> None:
                 if getattr(client, "brand", "his") == "his":
                     discovered_brand = fingerprint.get("brand")
                     if isinstance(discovered_brand, str) and discovered_brand.strip():
-                        from ..discovery import normalize_brand_code
+                        from .discovery import normalize_brand_code
 
                         client.brand = normalize_brand_code(discovered_brand)
                         _LOGGER.debug(

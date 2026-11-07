@@ -102,7 +102,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         try:
             from homeassistant.helpers.device_registry import format_mac
 
-            from .discovery import get_arp_mac
+            from .tv.fingerprint import get_arp_mac
 
             raw_mac = await hass.async_add_executor_job(
                 get_arp_mac, data[CONF_IP_ADDRESS]

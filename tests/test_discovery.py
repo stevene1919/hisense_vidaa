@@ -3,7 +3,7 @@
 import email.utils
 from unittest.mock import MagicMock, mock_open, patch
 
-from custom_components.hisense_vidaa.discovery import (
+from custom_components.hisense_vidaa.tv.fingerprint import (
     get_arp_mac,
     get_device_fingerprint,
     get_tv_timestamp,
@@ -97,7 +97,7 @@ def test_query_mdns_fingerprint_no_zeroconf():
 
 def test_parse_ssdp_discovery_generic_manufacturer():
     """Test parse_ssdp_discovery sanitizes generic SmartTV manufacturer placeholders using brand codes."""
-    from custom_components.hisense_vidaa.discovery import parse_ssdp_discovery
+    from custom_components.hisense_vidaa.protocol.discovery import parse_ssdp_discovery
 
     discovery_info = MagicMock()
     discovery_info.upnp = {
@@ -119,7 +119,7 @@ def test_parse_ssdp_discovery_generic_manufacturer():
 
 def test_normalize_brand_code():
     """Test brand code normalization for all supported OEM brands and edge cases."""
-    from custom_components.hisense_vidaa.discovery import normalize_brand_code
+    from custom_components.hisense_vidaa.protocol.discovery import normalize_brand_code
 
     assert normalize_brand_code("his") == "his"
     assert normalize_brand_code("hisense") == "his"
@@ -151,7 +151,7 @@ def test_normalize_brand_code():
 
 def test_parse_ssdp_discovery_oem_brands():
     """Test parse_ssdp_discovery correctly extracts and infers OEM brands like Loewe and Beko."""
-    from custom_components.hisense_vidaa.discovery import parse_ssdp_discovery
+    from custom_components.hisense_vidaa.protocol.discovery import parse_ssdp_discovery
 
     # Loewe TV with explicit brand=loe in modelDescription
     loewe_discovery = MagicMock()
@@ -188,7 +188,7 @@ def test_parse_ssdp_discovery_oem_brands():
 
 def test_parse_zeroconf_discovery_with_homekit_properties():
     """Test parse_zeroconf_discovery enriches metadata from HomeKit/AirPlay mDNS properties."""
-    from custom_components.hisense_vidaa.discovery import parse_zeroconf_discovery
+    from custom_components.hisense_vidaa.protocol.discovery import parse_zeroconf_discovery
 
     zc_info = MagicMock()
     zc_info.host = "192.168.50.55"
@@ -198,7 +198,7 @@ def test_parse_zeroconf_discovery_with_homekit_properties():
         b"company": b"Toshiba",
     }
 
-    with patch("custom_components.hisense_vidaa.discovery.get_arp_mac", return_value="11:22:33:44:55:66"):
+    with patch("custom_components.hisense_vidaa.protocol.discovery.get_arp_mac", return_value="11:22:33:44:55:66"):
         info = parse_zeroconf_discovery(zc_info)
 
     assert info is not None
@@ -212,14 +212,14 @@ def test_parse_zeroconf_discovery_with_homekit_properties():
 
 def test_parse_zeroconf_discovery_fallback_when_properties_absent():
     """Test parse_zeroconf_discovery gracefully falls back when HomeKit is disabled or properties are empty."""
-    from custom_components.hisense_vidaa.discovery import parse_zeroconf_discovery
+    from custom_components.hisense_vidaa.protocol.discovery import parse_zeroconf_discovery
 
     zc_info = MagicMock()
     zc_info.host = "192.168.50.60"
     zc_info.name = "Smart TV._airplay._tcp.local."
     zc_info.properties = {}
 
-    with patch("custom_components.hisense_vidaa.discovery.get_arp_mac", return_value="aa:bb:cc:dd:ee:ff"):
+    with patch("custom_components.hisense_vidaa.protocol.discovery.get_arp_mac", return_value="aa:bb:cc:dd:ee:ff"):
         info = parse_zeroconf_discovery(zc_info)
 
     assert info is not None
@@ -234,7 +234,7 @@ def test_parse_zeroconf_discovery_fallback_when_properties_absent():
 def test_parse_ssdp_discovery_toptro_projector():
     """Test parse_ssdp_discovery detects TOPTRO brand from modelDescription."""
     from custom_components.hisense_vidaa.const import BRAND_CODE_MAP, BRAND_MAP
-    from custom_components.hisense_vidaa.discovery import normalize_brand_code, parse_ssdp_discovery
+    from custom_components.hisense_vidaa.protocol.discovery import normalize_brand_code, parse_ssdp_discovery
 
     assert normalize_brand_code("toptro") == "tpo"
     assert normalize_brand_code("TPO") == "tpo"

@@ -12,6 +12,7 @@ from homeassistant.const import EntityCategory, UnitOfTime
 
 from ..const import (
     AUTH_PROFILES,
+    BRAND_MAP,
     BRAND_PROFILES,
     CONF_AUTH_PROFILE,
     CONF_BRAND,
@@ -19,7 +20,6 @@ from ..const import (
     DEFAULT_BRAND,
     DEFAULT_BRAND_OPTION,
 )
-from ..discovery import BRAND_MAP
 from ..entity import HisenseVidaaEntity
 from ..tv.fingerprint import format_drift_human
 

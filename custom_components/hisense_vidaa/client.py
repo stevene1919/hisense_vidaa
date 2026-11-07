@@ -7,11 +7,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-from .discovery import (
-    BRAND_MAP,
-    get_device_fingerprint as discover_device_fingerprint,
-    get_tv_timestamp,
-)
+from .const import BRAND_MAP
 from .protocol import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
 from .protocol.auth import (
     async_perform_token_refresh,
@@ -32,6 +28,10 @@ from .protocol.upnp import HisenseUpnpClient
 from .protocol.wol import send_wake_on_lan
 from .tv.actions import TvActionsMixin
 from .tv.callbacks import CallbackRegistryMixin
+from .tv.fingerprint import (
+    get_device_fingerprint as discover_device_fingerprint,
+    get_tv_timestamp,
+)
 from .tv.state import TvStateMixin
 
 if TYPE_CHECKING:

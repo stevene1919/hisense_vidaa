@@ -12,9 +12,8 @@ if TYPE_CHECKING:
     from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
     from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
-from .const import BRAND_CODE_MAP, BRAND_MAP, GENERIC_MANUFACTURERS
-from .protocol.ping import ping_tv
-from .tv.fingerprint import (
+from ..const import BRAND_CODE_MAP, BRAND_MAP, GENERIC_MANUFACTURERS
+from ..tv.fingerprint import (
     UPNP_PORTS,
     format_drift_human,
     get_arp_mac,
@@ -24,6 +23,7 @@ from .tv.fingerprint import (
     query_mdns_fingerprint,
     query_upnp_descriptor,
 )
+from .ping import ping_tv
 
 _LOGGER = logging.getLogger(__name__)
 

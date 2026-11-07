@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 from .client import HisenseTvClient
 from .const import (
     AUTH_PROFILE_SELECTOR,
+    BRAND_MAP,
     BRAND_SELECTOR,
     CONF_AUTH_PROFILE,
     CONF_BRAND,
@@ -32,8 +33,8 @@ from .const import (
     DEFAULT_ENABLE_SOUND_CONTROLS,
     DEFAULT_USE_SSL,
     DOMAIN,
+    GENERIC_MANUFACTURERS,
 )
-from .discovery import BRAND_MAP, GENERIC_MANUFACTURERS, normalize_brand_code
 from .flow import (
     CertsFlowMixin,
     DiscoveryFlowMixin,
@@ -47,6 +48,7 @@ from .flow import (
     build_options_schema,
     collect_client_auth_data,
 )
+from .protocol import normalize_brand_code
 from .protocol.pairing import PairingStatusError, async_probe_pairing_challenge
 
 _LOGGER = logging.getLogger(__name__)

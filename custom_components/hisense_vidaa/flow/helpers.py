@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import format_mac
 
 from ..const import (
+    BRAND_MAP,
     CONF_ACCESS_TOKEN,
     CONF_ACCESS_TOKEN_DURATION,
     CONF_ACCESS_TOKEN_TIME,
@@ -46,9 +47,10 @@ from ..const import (
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
     DEFAULT_USE_SSL,
     DOMAIN,
+    GENERIC_MANUFACTURERS,
 )
-from ..discovery import BRAND_MAP, GENERIC_MANUFACTURERS, get_arp_mac, normalize_brand_code
-from ..protocol import check_certs_exist, resolve_certificates
+from ..protocol import check_certs_exist, normalize_brand_code, resolve_certificates
+from ..tv.fingerprint import get_arp_mac
 
 if TYPE_CHECKING:
     from ..client import HisenseTvClient

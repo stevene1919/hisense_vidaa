@@ -19,6 +19,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .client import HisenseTvClient
 from .const import (
     AUTH_PROFILES,
+    BRAND_MAP,
     BRAND_PROFILES,
     CONF_AUTH_PROFILE,
     CONF_BRAND,
@@ -37,7 +38,6 @@ from .const import (
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
     DEFAULT_PLAYBACK_DEBOUNCE,
 )
-from .discovery import BRAND_MAP
 from .entity import HisenseVidaaEntity
 
 if TYPE_CHECKING:

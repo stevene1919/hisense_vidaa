@@ -37,6 +37,12 @@ from .crypto import (
     generate_initial_credentials,
     normalize_mac_address,
 )
+from .discovery import (
+    DiscoveredTvInfo,
+    normalize_brand_code,
+    parse_ssdp_discovery,
+    parse_zeroconf_discovery,
+)
 from .dispatcher import (
     SENSITIVE_KEYS,
     dispatch_incoming_mqtt_message,
@@ -57,6 +63,7 @@ __all__ = [
     "TOPIC_BROADCAST_BASEPATH",
     "XOR_TIMESTAMP_MASK",
     "ConnectionManagerMixin",
+    "DiscoveredTvInfo",
     "HisenseUpnpClient",
     "MqttSessionAdapter",
     "TopicPaths",
@@ -80,7 +87,10 @@ __all__ = [
     "is_token_expired",
     "mask_sensitive_data",
     "mask_sensitive_payload",
+    "normalize_brand_code",
     "normalize_mac_address",
+    "parse_ssdp_discovery",
+    "parse_zeroconf_discovery",
     "perform_token_refresh",
     "ping_tv",
     "probe_tv_auth_methods",

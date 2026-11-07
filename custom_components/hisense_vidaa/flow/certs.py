@@ -11,8 +11,14 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import AbortFlow
 
-from ..const import CONF_CERTFILE, CONF_KEYFILE, CONF_USE_SSL, DEFAULT_BRAND, DEFAULT_USE_SSL
-from ..discovery import BRAND_MAP
+from ..const import (
+    BRAND_MAP,
+    CONF_CERTFILE,
+    CONF_KEYFILE,
+    CONF_USE_SSL,
+    DEFAULT_BRAND,
+    DEFAULT_USE_SSL,
+)
 from ..protocol import (
     check_certs_exist,
     detect_brand_from_cert_paths,
