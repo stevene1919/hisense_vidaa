@@ -28,6 +28,11 @@ except ImportError:
             self.schema = schema
         def __call__(self, val):
             return val
+        def extend(self, schema):
+            new_schema = dict(self.schema) if isinstance(self.schema, dict) else {}
+            if isinstance(schema, dict):
+                new_schema.update(schema)
+            return Schema(new_schema)
     class Invalid(Exception):
         pass
     class All:
