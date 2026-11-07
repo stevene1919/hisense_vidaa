@@ -139,7 +139,7 @@ def apply_volume_update(client: HisenseTvClient, data: Any) -> None:
         return
 
     volume_type = data.get("volume_type")
-    # Volume level updates on master (0), ARC/eARC (1), or unspecifed volume broadcasts
+    # Volume level updates on master (0), ARC/eARC (1), or unspecified volume broadcasts
     if volume_type in (0, "0", 1, "1", None):
         if "volume_value" in data:
             with contextlib.suppress(ValueError, TypeError):

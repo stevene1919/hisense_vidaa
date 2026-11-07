@@ -49,7 +49,7 @@ combine-as-imports = true
 
 [tool.codespell]
 quiet-level = 2
-skip = "./.git/*,./.pytest_cache/*,./.ruff_cache/*,*.png,*.p12,*.pem,*.key,credentials.json"
+skip = "./.git/*,./.pytest_cache/*,./.ruff_cache/*,*.png,*.p12,*.pem,*.key,credentials.json,./custom_components/hisense_vidaa/translations/*"
 ignore-words-list = "hass,vidaa,remotenow"
 
 [tool.mypy]
@@ -61,4 +61,8 @@ warn_unused_ignores = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+include = ["custom_components*"]
+
 
