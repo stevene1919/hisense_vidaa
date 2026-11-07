@@ -319,6 +319,7 @@ def test_query_initial_state_requests_capability() -> None:
 def test_show_message_publishes_all_candidate_topics() -> None:
     """Test show_message publishes to showmessage, toast, and notification topics with title/text payload."""
     import json
+
     from custom_components.hisense_vidaa.tv.actions_media import show_message
 
     client = HisenseTvClient(ip="192.168.50.12", client_id="cid")

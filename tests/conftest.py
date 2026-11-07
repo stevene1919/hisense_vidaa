@@ -122,6 +122,8 @@ if "homeassistant" not in sys.modules:
     core.ServiceCall = ServiceCall
     core.SupportsResponse = SupportsResponse
     core.callback = callback
+    core.CALLBACK_TYPE = MagicMock
+    core.Context = MagicMock
     ha.core = core
     sys.modules["homeassistant.core"] = core
 
@@ -130,6 +132,13 @@ if "homeassistant" not in sys.modules:
     const = types.ModuleType("homeassistant.const")
     const.STATE_OFF = "off"
     const.STATE_ON = "on"
+    const.ATTR_DEVICE_ID = "device_id"
+    const.ATTR_ENTITY_ID = "entity_id"
+    const.CONF_DEVICE_ID = "device_id"
+    const.CONF_DOMAIN = "domain"
+    const.CONF_OPTIONS = "options"
+    const.CONF_PLATFORM = "platform"
+    const.CONF_TYPE = "type"
     class EntityCategory:
         DIAGNOSTIC = "diagnostic"
         CONFIG = "config"
@@ -145,6 +154,10 @@ if "homeassistant" not in sys.modules:
 
     # config_entries
     config_entries = types.ModuleType("homeassistant.config_entries")
+    class ConfigEntryState:
+        LOADED = "loaded"
+        SETUP_ERROR = "setup_error"
+        NOT_LOADED = "not_loaded"
     class ConfigEntry:
         def async_on_unload(self, func):
             pass
@@ -174,6 +187,7 @@ if "homeassistant" not in sys.modules:
         def async_create_entry(self, *, title="", data=None):
             return {"type": "create_entry", "title": title, "data": data or {}}
     ConfigFlowResult = dict
+    config_entries.ConfigEntryState = ConfigEntryState
     config_entries.ConfigEntry = ConfigEntry
     config_entries.ConfigFlow = ConfigFlow
     config_entries.OptionsFlow = OptionsFlow
@@ -244,6 +258,14 @@ if "homeassistant" not in sys.modules:
         STOP = 4096
         PLAY = 16384
         SELECT_SOUND_MODE = 65536
+    class MediaType:
+        CHANNEL = "channel"
+        APP = "app"
+        URL = "url"
+        MUSIC = "music"
+        VIDEO = "video"
+        TVSHOW = "tvshow"
+    media_player.MediaType = MediaType
     media_player.MediaPlayerEntity = MediaPlayerEntity
     media_player.MediaPlayerDeviceClass = MediaPlayerDeviceClass
     media_player.MediaPlayerEntityFeature = MediaPlayerEntityFeature
@@ -407,6 +429,22 @@ if "homeassistant" not in sys.modules:
     components.number = number
     sys.modules["homeassistant.components.number"] = number
 
+    # device_automation
+    device_automation = types.ModuleType("homeassistant.components.device_automation")
+    class InvalidDeviceAutomationConfig(Exception):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args)
+            self.kwargs = kwargs
+    DEVICE_TRIGGER_BASE_SCHEMA = vol.Schema({
+        vol.Required("platform"): "device",
+        vol.Required("domain"): str,
+        vol.Required("device_id"): str,
+    })
+    device_automation.InvalidDeviceAutomationConfig = InvalidDeviceAutomationConfig
+    device_automation.DEVICE_TRIGGER_BASE_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA
+    components.device_automation = device_automation
+    sys.modules["homeassistant.components.device_automation"] = device_automation
+
     ha.components = components
     sys.modules["homeassistant.components"] = components
 
@@ -420,6 +458,7 @@ if "homeassistant" not in sys.modules:
         _attr_should_poll = False
         def schedule_update_ha_state(self): pass
         def async_write_ha_state(self): pass
+        def async_on_remove(self, func): pass
         @property
         def unique_id(self):
             return getattr(self, "_attr_unique_id", None)
@@ -468,6 +507,13 @@ if "homeassistant" not in sys.modules:
         clean = mac.replace("-", ":").lower()
         parts = clean.split(":")
         return ":".join(f"{p:>02}" for p in parts)
+    class DeviceEntry:
+        def __init__(self, id="test_device_id", name="Hisense TV", name_by_user=None, config_entries=None):
+            self.id = id
+            self.name = name
+            self.name_by_user = name_by_user
+            self.config_entries = config_entries or []
+    device_registry.DeviceEntry = DeviceEntry
     device_registry.DeviceInfo = DeviceInfo
     device_registry.CONNECTION_NETWORK_MAC = "mac"
     device_registry.format_mac = format_mac
@@ -516,10 +562,112 @@ if "homeassistant" not in sys.modules:
         return lambda val: val
     def empty_config_schema(domain):
         return lambda val: val
+    def ensure_list(val):
+        return val if isinstance(val, list) else [val]
     cv.config_entry_only_config_schema = config_entry_only_config_schema
     cv.empty_config_schema = empty_config_schema
+    cv.ensure_list = ensure_list
+    cv.entity_ids = lambda val: val
+    cv.string = lambda val: str(val)
     helpers.config_validation = cv
     sys.modules["homeassistant.helpers.config_validation"] = cv
+
+    # helpers.typing
+    typing_mod = types.ModuleType("homeassistant.helpers.typing")
+    typing_mod.ConfigType = dict
+    helpers.typing = typing_mod
+    sys.modules["homeassistant.helpers.typing"] = typing_mod
+
+    # helpers.automation
+    automation_mod = types.ModuleType("homeassistant.helpers.automation")
+    def move_top_level_schema_fields_to_options(complete_config, schema_dict):
+        return complete_config
+    automation_mod.move_top_level_schema_fields_to_options = move_top_level_schema_fields_to_options
+    helpers.automation = automation_mod
+    sys.modules["homeassistant.helpers.automation"] = automation_mod
+
+    # helpers.trigger
+    trigger_mod = types.ModuleType("homeassistant.helpers.trigger")
+    DATA_PLUGGABLE_ACTIONS = "pluggable_actions"
+    class Trigger:
+        def __init__(self, hass, config):
+            self._hass = hass
+            self._config = config
+        @classmethod
+        async def async_validate_complete_config(cls, hass, config):
+            return config
+        @classmethod
+        async def async_validate_config(cls, hass, config):
+            return config
+        async def async_attach_runner(self, run_action, did_not_trigger=None):
+            return lambda: None
+
+    class TriggerConfig:
+        def __init__(self, options=None):
+            self.options = options or {}
+
+    class PluggableAction:
+        def __init__(self, update=None):
+            self._update = update
+            self._registered_key = None
+            self._hass = None
+
+        def __bool__(self):
+            if not self._hass or not self._registered_key:
+                return False
+            reg = self._hass.data.get(DATA_PLUGGABLE_ACTIONS, {})
+            entry = reg.get(self._registered_key)
+            return bool(entry and entry.get("actions"))
+
+        def async_run_update(self):
+            if self._update:
+                self._update()
+
+        @staticmethod
+        def async_attach_trigger(hass, trigger, action, variables):
+            reg = hass.data.setdefault(DATA_PLUGGABLE_ACTIONS, {})
+            key = tuple(sorted(trigger.items()))
+            entry = reg.setdefault(key, {"actions": []})
+            action_item = (action, variables)
+            entry["actions"].append(action_item)
+            def _remove():
+                if action_item in entry["actions"]:
+                    entry["actions"].remove(action_item)
+            return _remove
+
+        def async_register(self, hass, trigger):
+            self._hass = hass
+            self._registered_key = tuple(sorted(trigger.items()))
+            reg = hass.data.setdefault(DATA_PLUGGABLE_ACTIONS, {})
+            reg.setdefault(self._registered_key, {"actions": []})
+            def _remove():
+                self._registered_key = None
+            return _remove
+
+        async def async_run(self, hass, context=None):
+            if not self._registered_key:
+                return
+            reg = hass.data.get(DATA_PLUGGABLE_ACTIONS, {})
+            entry = reg.get(self._registered_key)
+            if entry and entry.get("actions"):
+                import asyncio
+                for action, variables in list(entry["actions"]):
+                    try:
+                        res = action(variables, context)
+                    except TypeError:
+                        res = action(variables)
+                    if asyncio.iscoroutine(res):
+                        await res
+
+    trigger_mod.Trigger = Trigger
+    trigger_mod.TriggerConfig = TriggerConfig
+    trigger_mod.TriggerActionRunner = MagicMock
+    trigger_mod.TriggerNotTriggeredReporter = MagicMock
+    trigger_mod.TriggerActionType = MagicMock
+    trigger_mod.TriggerInfo = MagicMock
+    trigger_mod.PluggableAction = PluggableAction
+    helpers.trigger = trigger_mod
+    sys.modules["homeassistant.helpers.trigger"] = trigger_mod
 
     # helpers.service_info.ssdp
     service_info = types.ModuleType("homeassistant.helpers.service_info")

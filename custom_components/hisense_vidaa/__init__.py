@@ -14,6 +14,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv, entity_registry as er, issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.trigger import PluggableAction
 
 from .client import HisenseTvClient
 from .const import (
@@ -77,6 +78,7 @@ class HisenseVidaaData:
     client: HisenseTvClient
     platforms: list[str]
     options: dict[str, Any]
+    turn_on: PluggableAction | None = None
 
 
 type HisenseVidaaConfigEntry = ConfigEntry[HisenseVidaaData]
@@ -311,6 +313,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         client=client,
         platforms=platforms_to_setup,
         options=dict(entry.options),
+        turn_on=PluggableAction(),
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, platforms_to_setup)

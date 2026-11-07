@@ -19,6 +19,7 @@ __all__ = [
     "clean_source_label",
     "execute_play_media",
     "execute_select_source",
+    "is_live_tv_source",
     "parse_applist_data",
     "parse_applist_payload",
     "parse_media_state_broadcast",
@@ -113,6 +114,32 @@ def build_media_channel_label(channel_name: str | None, channel_num: str | None)
     return channel_name or channel_num
 
 
+def is_live_tv_source(
+    source_name: str | None,
+    statetype: str | None = None,
+    source_id: str | None = None,
+) -> bool:
+    """Return True if and only if the TV is actively tuned to Live TV / Broadcast Tuner.
+
+    Note: On Hisense VIDAA firmware, HDMI and external inputs (e.g. HDMI1, HDMI2) often report
+    appname='TV Input' or 'TV' as the underlying system container. If the active source is an
+    HDMI port or external input, it is NOT Live TV.
+    """
+    clean_src = str(source_name or "").strip().lower()
+    if "hdmi" in clean_src or clean_src.startswith("av"):
+        return False
+
+    clean_source_id = str(source_id or "").strip().upper()
+    if clean_source_id and clean_source_id != "TV" and clean_source_id.isdigit():
+        return False
+
+    if clean_src in ("tv", "live tv", "livetv", "dtv", "atv", "antenna", "cable", "tuner"):
+        return True
+
+    clean_statetype = str(statetype or "").strip().lower()
+    return clean_statetype in ("livetv", "live_tv") and clean_src in ("tv", "")
+
+
 def build_media_player_current_source(
     source: str | None,
     connected_device: str | None,
@@ -131,6 +158,7 @@ def build_media_player_source_list(
     connected_device: str | None = None,
     enable_cec: bool = True,
     include_apps: bool = True,
+    configured_sources: list[str] | None = None,
 ) -> list[str]:
     """Builds the full sorted list of selectable inputs and smart TV apps."""
     sources: list[str] = []
@@ -142,10 +170,15 @@ def build_media_player_source_list(
                 sources.append(source_name)
 
     if include_apps and app_dict:
-        app_names = sorted(app_dict.keys())
-        return sorted(sources) + app_names
+        full_list = sorted(sources) + sorted(app_dict.keys())
+    else:
+        full_list = sorted(sources)
 
-    return sorted(sources)
+    if configured_sources:
+        filtered = [s for s in full_list if s in configured_sources or (current_source and s == current_source)]
+        return filtered if filtered else full_list
+
+    return full_list
 
 
 def execute_play_media(
@@ -183,7 +216,20 @@ def execute_play_media(
             return
 
     if type_lower in ("channel", "tvshow"):
-        for char in str(media_id):
+        clean_id = str(media_id).strip()
+        channels = getattr(client, "channels", []) or []
+        for ch in channels:
+            if isinstance(ch, dict):
+                ch_name = str(ch.get("channel_name") or ch.get("name") or "").strip().lower()
+                if (
+                    ch_name
+                    and ch_name == clean_id.lower()
+                    and (ch_num := (ch.get("channel_num") or ch.get("num")))
+                ):
+                    clean_id = str(ch_num)
+                    break
+
+        for char in clean_id:
             if char.isdigit():
                 client.send_key(f"KEY_{char}")
                 time.sleep(0.1)
@@ -230,7 +276,20 @@ async def async_execute_play_media(
             return
 
     if type_lower in ("channel", "tvshow"):
-        for char in str(media_id):
+        clean_id = str(media_id).strip()
+        channels = getattr(client, "channels", []) or []
+        for ch in channels:
+            if isinstance(ch, dict):
+                ch_name = str(ch.get("channel_name") or ch.get("name") or "").strip().lower()
+                if (
+                    ch_name
+                    and ch_name == clean_id.lower()
+                    and (ch_num := (ch.get("channel_num") or ch.get("num")))
+                ):
+                    clean_id = str(ch_num)
+                    break
+
+        for char in clean_id:
             if char.isdigit():
                 await client.async_send_key(f"KEY_{char}")
                 await asyncio.sleep(0.1)

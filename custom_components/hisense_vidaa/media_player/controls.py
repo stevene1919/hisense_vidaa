@@ -23,6 +23,12 @@ class MediaPlayerControlsMixin:
 
     async def async_turn_on(self: HisenseVidaaMediaPlayer) -> None:
         """Turn on or wake the TV."""
+        runtime_data = getattr(self._entry, "runtime_data", None)
+        if runtime_data and getattr(runtime_data, "turn_on", None):
+            await runtime_data.turn_on.async_run(self.hass, getattr(self, "_context", None))
+            self.async_write_ha_state()
+            return
+
         mac_targets = []
         if self._options.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL):
             if self._mac:
@@ -73,12 +79,18 @@ class MediaPlayerControlsMixin:
         await self._client.async_send_key("KEY_STOP")
 
     async def async_media_next_track(self: HisenseVidaaMediaPlayer) -> None:
-        """Send next track command."""
-        await self._client.async_send_key("KEY_FORWARDS")
+        """Send next track command: Channel Up on Live TV, fast-forward/skip in media apps."""
+        if hasattr(self, "is_live_tv") and self.is_live_tv():
+            await self._client.async_send_key("KEY_CHANNELUP")
+        else:
+            await self._client.async_send_key("KEY_FORWARDS")
 
     async def async_media_previous_track(self: HisenseVidaaMediaPlayer) -> None:
-        """Send previous track command."""
-        await self._client.async_send_key("KEY_BACK")
+        """Send previous track command: Channel Down on Live TV, rewind/skip in media apps."""
+        if hasattr(self, "is_live_tv") and self.is_live_tv():
+            await self._client.async_send_key("KEY_CHANNELDOWN")
+        else:
+            await self._client.async_send_key("KEY_BACK")
 
     async def async_play_media(
         self: HisenseVidaaMediaPlayer, media_type: str, media_id: str, **kwargs: Any

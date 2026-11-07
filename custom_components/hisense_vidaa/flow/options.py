@@ -30,6 +30,7 @@ from ..const import (
     CONF_PLAYBACK_DEBOUNCE,
     CONF_REFRESH_IN_STANDBY,
     CONF_SECONDARY_MAC_ADDRESS,
+    CONF_SOURCES,
     CONF_USE_SSL,
     DEFAULT_AUTH_PROFILE,
     DEFAULT_BRAND_OPTION,
@@ -106,46 +107,85 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
 
         options = self.config_entry.options
 
+        client = (
+            getattr(self.config_entry.runtime_data, "client", None)
+            if hasattr(self.config_entry, "runtime_data")
+            else None
+        )
+        discovered_sources: list[str] = []
+        if client:
+            sources_dict = getattr(client, "source_dict", {}) or {}
+            apps_dict = getattr(client, "app_dict", {}) or {}
+            from ..tv.media import build_media_player_source_list
+
+            discovered_sources = build_media_player_source_list(
+                source_dict=sources_dict,
+                app_dict=apps_dict,
+                include_apps=True,
+            )
+
+        schema_dict: dict[Any, Any] = {
+            vol.Optional(
+                CONF_INCLUDE_APPS_IN_SOURCES,
+                default=options.get(
+                    CONF_INCLUDE_APPS_IN_SOURCES,
+                    DEFAULT_INCLUDE_APPS_IN_SOURCES,
+                ),
+            ): bool,
+        }
+
+        if discovered_sources:
+            selected_sources = options.get(CONF_SOURCES)
+            if not selected_sources:
+                selected_sources = discovered_sources
+            schema_dict[
+                vol.Optional(
+                    CONF_SOURCES,
+                    default=selected_sources,
+                )
+            ] = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=discovered_sources,
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            )
+
+        schema_dict.update({
+            vol.Optional(
+                CONF_ENABLE_MEDIA_CONTROLS,
+                default=options.get(
+                    CONF_ENABLE_MEDIA_CONTROLS,
+                    DEFAULT_ENABLE_MEDIA_CONTROLS,
+                ),
+            ): bool,
+            vol.Optional(
+                CONF_ENABLE_CEC_NAMES,
+                default=options.get(
+                    CONF_ENABLE_CEC_NAMES,
+                    DEFAULT_ENABLE_CEC_NAMES,
+                ),
+            ): bool,
+            vol.Optional(
+                CONF_PLAYBACK_DEBOUNCE,
+                default=options.get(
+                    CONF_PLAYBACK_DEBOUNCE,
+                    DEFAULT_PLAYBACK_DEBOUNCE,
+                ),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0.0,
+                    max=5.0,
+                    step=0.05,
+                    unit_of_measurement="s",
+                    mode=selector.NumberSelectorMode.SLIDER,
+                )
+            ),
+        })
+
         return self.async_show_form(
             step_id="playback_sources",
-            data_schema=vol.Schema({
-                vol.Optional(
-                    CONF_INCLUDE_APPS_IN_SOURCES,
-                    default=options.get(
-                        CONF_INCLUDE_APPS_IN_SOURCES,
-                        DEFAULT_INCLUDE_APPS_IN_SOURCES,
-                    ),
-                ): bool,
-                vol.Optional(
-                    CONF_ENABLE_MEDIA_CONTROLS,
-                    default=options.get(
-                        CONF_ENABLE_MEDIA_CONTROLS,
-                        DEFAULT_ENABLE_MEDIA_CONTROLS,
-                    ),
-                ): bool,
-                vol.Optional(
-                    CONF_ENABLE_CEC_NAMES,
-                    default=options.get(
-                        CONF_ENABLE_CEC_NAMES,
-                        DEFAULT_ENABLE_CEC_NAMES,
-                    ),
-                ): bool,
-                vol.Optional(
-                    CONF_PLAYBACK_DEBOUNCE,
-                    default=options.get(
-                        CONF_PLAYBACK_DEBOUNCE,
-                        DEFAULT_PLAYBACK_DEBOUNCE,
-                    ),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=0.0,
-                        max=5.0,
-                        step=0.05,
-                        unit_of_measurement="s",
-                        mode=selector.NumberSelectorMode.SLIDER,
-                    )
-                ),
-            }),
+            data_schema=vol.Schema(schema_dict),
         )
 
     async def async_step_features_remote(

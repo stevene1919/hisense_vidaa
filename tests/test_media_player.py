@@ -570,6 +570,110 @@ def test_media_player_mro_precedence():
     assert HisenseVidaaMediaPlayer.async_play_media == MediaPlayerControlsMixin.async_play_media
 
 
+@pytest.mark.anyio
+async def test_media_player_context_aware_track_controls(mock_client, mock_entry):
+    """Test next/prev track context switching between Live TV channels and media fast-forward/rewind."""
+    from homeassistant.components.media_player import MediaType
+
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp._state = "on"
+
+    # 1. On Live TV
+    mp._source = "TV"
+    mock_client.current_source = "TV"
+    mock_client.current_source_id = "TV"
+    mock_client.statetype = "livetv"
+
+    assert mp.is_live_tv() is True
+    assert mp.media_content_type == MediaType.CHANNEL
+
+    await mp.async_media_next_track()
+    mock_client.async_send_key.assert_called_with("KEY_CHANNELUP")
+
+    await mp.async_media_previous_track()
+    mock_client.async_send_key.assert_called_with("KEY_CHANNELDOWN")
+
+    # 2. On HDMI (e.g. HDMI2 where current_app might report 'TV Input' but source is HDMI)
+    mock_client.async_send_key.reset_mock()
+    mp._source = "HDMI2"
+    mock_client.current_source = "HDMI2"
+    mock_client.current_source_id = "2"
+    mock_client.current_app = "TV Input"
+    mock_client.statetype = "app"
+
+    assert mp.is_live_tv() is False
+    assert mp.media_content_type != MediaType.CHANNEL
+
+    await mp.async_media_next_track()
+    mock_client.async_send_key.assert_called_with("KEY_FORWARDS")
+
+    await mp.async_media_previous_track()
+    mock_client.async_send_key.assert_called_with("KEY_BACK")
+
+    # 3. In Streaming App (e.g. Netflix)
+    mock_client.async_send_key.reset_mock()
+    mp._source = "Netflix"
+    mp._app_dict = {"Netflix": {"appId": "1", "name": "Netflix"}}
+    mock_client.current_source = "Netflix"
+    mock_client.statetype = "app"
+
+    assert mp.is_live_tv() is False
+    assert mp.media_content_type == MediaType.APP
+
+    await mp.async_media_next_track()
+    mock_client.async_send_key.assert_called_with("KEY_FORWARDS")
+
+    await mp.async_media_previous_track()
+    mock_client.async_send_key.assert_called_with("KEY_BACK")
+
+
+@pytest.mark.anyio
+async def test_media_player_source_filtering_option(mock_client, mock_entry):
+    """Test user-configured source filtering via CONF_SOURCES option."""
+    from custom_components.hisense_vidaa.const import CONF_SOURCES
+
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp._source_dict = {"HDMI1": {}, "HDMI2": {}, "TV": {}, "AV": {}}
+    mp._app_dict = {"Netflix": {}, "YouTube": {}, "Plex": {}, "Prime Video": {}}
+
+    # Default: all sources and apps
+    full_sources = mp.source_list
+    assert "HDMI1" in full_sources
+    assert "Netflix" in full_sources
+    assert "YouTube" in full_sources
+    assert "Plex" in full_sources
+
+    # Filtered: only select HDMI1, TV, and Netflix
+    mock_entry.options[CONF_SOURCES] = ["HDMI1", "TV", "Netflix"]
+    filtered_sources = mp.source_list
+    assert filtered_sources == ["HDMI1", "TV", "Netflix"]
+    assert "YouTube" not in filtered_sources
+    assert "Plex" not in filtered_sources
+
+    # If TV is currently on an unselected source (e.g. HDMI2), it must be preserved
+    mp._source = "HDMI2"
+    preserved_sources = mp.source_list
+    assert "HDMI2" in preserved_sources
+
+
+@pytest.mark.anyio
+async def test_play_media_channel_by_name(mock_client, mock_entry):
+    """Test play_media tunes channel by resolving name to channel number."""
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mock_client.channels = [
+        {"channel_name": "ABC HD", "channel_num": "20"},
+        {"channel_name": "SBS ONE", "channel_num": "3"},
+    ]
+    mock_client.async_send_key.reset_mock()
+
+    await mp.async_play_media("channel", "ABC HD")
+
+    # Should have sent KEY_2 and KEY_0
+    calls = [call.args[0] for call in mock_client.async_send_key.call_args_list]
+    assert "KEY_2" in calls
+    assert "KEY_0" in calls
+
+
 
 
 

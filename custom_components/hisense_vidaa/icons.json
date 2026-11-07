@@ -112,5 +112,10 @@
     "send_text_input": {
       "service": "mdi:keyboard-outline"
     }
+  },
+  "triggers": {
+    "turn_on": {
+      "trigger": "mdi:television-play"
+    }
   }
 }

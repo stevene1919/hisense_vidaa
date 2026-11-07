@@ -100,6 +100,7 @@
         "description": "Configure input sources, app list, and media playback controls.",
         "data": {
           "include_apps_in_sources": "Include Smart TV Apps in Media Player source list",
+          "sources": "Enabled sources and applications (empty for all)",
           "enable_media_controls": "Enable media transport controls (play/pause, stop, skip)",
           "enable_cec_names": "Show connected HDMI-CEC device names in sources (e.g. 'HDMI 2 (PlayStation 5)')",
           "playback_debounce": "Playback state settle window / debounce (seconds)"
@@ -448,6 +449,41 @@
           }
         }
       }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hisense_vidaa.turn_on": "Device is requested to turn on"
+    }
+  },
+  "exceptions": {
+    "device_config_entry_not_loaded": {
+      "message": "The Hisense VIDAA integration for device {device_id} is not loaded."
+    },
+    "device_not_valid": {
+      "message": "Device {device_id} is not a valid Hisense VIDAA device."
+    },
+    "invalid_entity_id": {
+      "message": "Entity {entity_id} is not a valid Hisense VIDAA entity."
+    },
+    "unhandled_trigger_type": {
+      "message": "Trigger type {trigger_type} is not handled."
+    }
+  },
+  "triggers": {
+    "turn_on": {
+      "description": "Triggers when one or more Hisense VIDAA TVs are requested to turn on.",
+      "fields": {
+        "device_id": {
+          "description": "The TVs to listen to. At least one device or entity is required.",
+          "name": "Devices"
+        },
+        "entity_id": {
+          "description": "The TV media players to listen to. At least one device or entity is required.",
+          "name": "Entities"
+        }
+      },
+      "name": "Turn on"
     }
   }
 }

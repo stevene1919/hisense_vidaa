@@ -10,6 +10,7 @@ from homeassistant.components.media_player import (
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
+    MediaType,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF, STATE_ON
@@ -26,6 +27,7 @@ from ..const import (
     CONF_ENABLE_CEC_NAMES,
     CONF_ENABLE_MEDIA_CONTROLS,
     CONF_INCLUDE_APPS_IN_SOURCES,
+    CONF_SOURCES,
     DEFAULT_AUTH_PROFILE,
     DEFAULT_BRAND,
     DEFAULT_BRAND_OPTION,
@@ -38,6 +40,7 @@ from ..tv.media import (
     build_media_channel_label,
     build_media_player_current_source,
     build_media_player_source_list,
+    is_live_tv_source,
 )
 from ..tv.settings import (
     DEFAULT_MENU_ID_SOUND_MODE,
@@ -106,6 +109,17 @@ class HisenseVidaaMediaPlayer(
             self._state = STATE_ON if self._client.is_on else STATE_OFF
             if not self._source_dict or not self._app_dict:
                 await self._client.async_query_initial_state()
+
+        if (entry := getattr(self, "registry_entry", None)) and getattr(entry, "device_id", None):
+            runtime_data = getattr(self._entry, "runtime_data", None)
+            if runtime_data and getattr(runtime_data, "turn_on", None):
+                from ..triggers.turn_on import async_get_turn_on_trigger
+
+                self.async_on_remove(
+                    runtime_data.turn_on.async_register(
+                        self.hass, async_get_turn_on_trigger(entry.device_id)
+                    )
+                )
 
     async def async_will_remove_from_hass(self) -> None:
         """Unregister callbacks when entity is removed."""
@@ -238,6 +252,25 @@ class HisenseVidaaMediaPlayer(
                 return "http" + icon.split("http", 1)[1]
         return None
 
+    def is_live_tv(self) -> bool:
+        """Return True if the TV is actively tuned to Live TV / Broadcast Tuner."""
+        return is_live_tv_source(
+            source_name=self._source,
+            statetype=getattr(self._client, "statetype", None),
+            source_id=getattr(self._client, "current_source_id", None),
+        )
+
+    @property
+    def media_content_type(self) -> MediaType | None:
+        """Return the content type of currently playing media."""
+        if self._state == STATE_OFF:
+            return None
+        if self.is_live_tv():
+            return MediaType.CHANNEL
+        if self._source and self._source in self._app_dict:
+            return MediaType.APP
+        return None
+
     @property
     def source_list(self) -> list[str]:
         """Return list of available input sources and apps."""
@@ -245,6 +278,7 @@ class HisenseVidaaMediaPlayer(
         include_apps = self._options.get(
             CONF_INCLUDE_APPS_IN_SOURCES, DEFAULT_INCLUDE_APPS_IN_SOURCES
         )
+        configured_sources = self._options.get(CONF_SOURCES)
         return build_media_player_source_list(
             source_dict=self._source_dict,
             app_dict=self._app_dict,
@@ -252,6 +286,7 @@ class HisenseVidaaMediaPlayer(
             connected_device=self._connected_device,
             enable_cec=enable_cec,
             include_apps=include_apps,
+            configured_sources=configured_sources,
         )
 
     @property
