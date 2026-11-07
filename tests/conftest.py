@@ -179,6 +179,10 @@ if "homeassistant" not in sys.modules:
             return {"type": "create_entry", "title": title, "data": data, "options": options}
         def async_abort(self, *, reason, description_placeholders=None):
             return {"type": "abort", "reason": reason, "description_placeholders": description_placeholders}
+        async def async_step_user(self, user_input=None):
+            return self.async_abort(reason="not_implemented")
+        async def async_step_reconfigure(self, user_input=None):
+            return self.async_abort(reason="not_implemented")
     class OptionsFlow:
         def async_show_menu(self, *, step_id, menu_options):
             return {"type": "menu", "step_id": step_id, "menu_options": menu_options}

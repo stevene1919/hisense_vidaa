@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from homeassistant import config_entries
 from homeassistant.core import callback
@@ -31,11 +31,11 @@ __all__ = ["HisenseTvClient", "HisenseVidaaConfigFlow", "async_probe_pairing_cha
 
 
 class HisenseVidaaConfigFlow(
-    config_entries.ConfigFlow,
     DiscoveryFlowMixin,
     ReauthFlowMixin,
     CertsFlowMixin,
     UserFlowMixin,
+    config_entries.ConfigFlow,
     domain=DOMAIN,
 ):
     """Handle a config flow for Hisense VIDAA TV."""
@@ -67,9 +67,3 @@ class HisenseVidaaConfigFlow(
     ) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
         return HisenseVidaaOptionsFlowHandler()
-
-    async def async_step_reconfigure(
-        self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Handle reconfigure initiated from 3-dots menu in HA UI."""
-        return await super().async_step_reconfigure(user_input)
