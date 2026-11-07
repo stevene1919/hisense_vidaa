@@ -36,7 +36,7 @@ select = [
 ]
 ignore = [
     "E501",   # line too long
-    "E402",   # module import not at top of file (test_client.py)
+    "E402",   # module import not at top of file (scripts/test_client.py)
     "SIM108", # use ternary operator
     "SIM118", # use key in dict
     "RUF001", # ambiguous unicode characters in string

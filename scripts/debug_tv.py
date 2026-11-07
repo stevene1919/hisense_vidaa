@@ -14,13 +14,13 @@ import sys
 import time
 from datetime import UTC, datetime
 
-# Setup module import path
+# Setup module import path (repo root, script dir, or HA config)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(SCRIPT_DIR)
 HA_CONFIG_DIR = "/config"
-if SCRIPT_DIR not in sys.path:
-    sys.path.insert(0, SCRIPT_DIR)
-if os.path.isdir(HA_CONFIG_DIR) and HA_CONFIG_DIR not in sys.path:
-    sys.path.insert(0, HA_CONFIG_DIR)
+for p in (REPO_ROOT, SCRIPT_DIR, HA_CONFIG_DIR):
+    if os.path.isdir(p) and p not in sys.path:
+        sys.path.insert(0, p)
 
 if "homeassistant" not in sys.modules:
     try:

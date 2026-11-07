@@ -17,14 +17,14 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
-# Ensure script directory or HA config is in Python path for package resolution
+# Ensure script directory, repo root, or HA config is in Python path for package resolution
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-COMP_DIR = os.path.join(SCRIPT_DIR, "custom_components", "hisense_vidaa")
+REPO_ROOT = os.path.dirname(SCRIPT_DIR)
+COMP_DIR = os.path.join(REPO_ROOT, "custom_components", "hisense_vidaa")
 HA_CONFIG_DIR = "/config"
-if SCRIPT_DIR not in sys.path:
-    sys.path.insert(0, SCRIPT_DIR)
-if os.path.isdir(HA_CONFIG_DIR) and HA_CONFIG_DIR not in sys.path:
-    sys.path.insert(0, HA_CONFIG_DIR)
+for p in (REPO_ROOT, SCRIPT_DIR, HA_CONFIG_DIR):
+    if os.path.isdir(p) and p not in sys.path:
+        sys.path.insert(0, p)
 
 if "homeassistant" not in sys.modules:
     try:

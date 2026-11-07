@@ -128,7 +128,7 @@ If you wish to enforce strict root CA verification against the TV's TLS broker:
 
 ## 🛠️ Testing SSL Connectivity via CLI
 
-You can verify your certificates and validate the mutual TLS handshake with your TV before configuring Home Assistant using the [`test_client.py`](../test_client.py) utility.
+You can verify your certificates and validate the mutual TLS handshake with your TV before configuring Home Assistant using the [`scripts/test_client.py`](../scripts/test_client.py) utility.
 
 > For setup prerequisites, one-line curl runners, and complete diagnostic commands, see the **[Standalone CLI Testing & Diagnostic Tools Guide](cli_tools.md)**.
 

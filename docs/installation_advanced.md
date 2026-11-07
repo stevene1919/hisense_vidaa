@@ -115,7 +115,7 @@ git submodule update --remote custom_components/hisense_vidaa_submodule
 
 ## 4. Standalone CLI Diagnostics (Without Home Assistant)
 
-The repository includes standalone diagnostic utilities ([`test_client.py`](../test_client.py) and [`debug_tv.py`](../debug_tv.py)) that can run from **any machine** on your local network (Linux, macOS, or Windows WSL). You do not need Home Assistant running to inspect TV telemetry, verify SSL certificates, or test PIN pairing.
+The repository includes standalone diagnostic utilities ([`scripts/test_client.py`](../scripts/test_client.py) and [`scripts/debug_tv.py`](../scripts/debug_tv.py)) that can run from **any machine** on your local network (Linux, macOS, or Windows WSL). You do not need Home Assistant running to inspect TV telemetry, verify SSL certificates, or test PIN pairing.
 
 ### Setting Up a Virtual Environment
 
@@ -136,19 +136,19 @@ pip install aiomqtt cryptography defusedxml
 
 ```bash
 # Full diagnostic report (ping, TLS cipher, UPnP, clock drift, and auth probe)
-python3 test_client.py report --ip 192.168.50.12 --probe
+python3 scripts/test_client.py report --ip 192.168.50.12 --probe
 
 # Quick 3-tier connectivity ping
-python3 test_client.py ping --ip 192.168.50.12
+python3 scripts/test_client.py ping --ip 192.168.50.12
 
 # Inspect UPnP / DLNA device services & clock drift
-python3 test_client.py upnp --ip 192.168.50.12
+python3 scripts/test_client.py upnp --ip 192.168.50.12
 
 # Test raw SSL/TLS certificate negotiation
-python3 test_client.py test-ssl --ip 192.168.50.12 --cert certs/cert.pem --key certs/key.pem
+python3 scripts/test_client.py test-ssl --ip 192.168.50.12 --cert certs/cert.pem --key certs/key.pem
 
 # Interactive PIN pairing test
-python3 test_client.py pair --ip 192.168.50.12 --profile auto
+python3 scripts/test_client.py auth --ip 192.168.50.12 --profile auto
 ```
 
 > For full CLI command arguments and streaming options, see the **[CLI Testing & Diagnostic Tools Guide](cli_tools.md)**.

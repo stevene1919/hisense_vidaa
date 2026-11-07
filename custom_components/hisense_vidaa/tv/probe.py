@@ -264,7 +264,7 @@ def generate_markdown_report(
                 ">    openssl pkcs12 -legacy -in client_mobile_android.p12 -passin pass:186e990688070325a1c4b0ce275d2388 -clcerts -nokeys -out hisense.crt\n"
                 ">    openssl pkcs12 -legacy -in client_mobile_android.p12 -passin pass:186e990688070325a1c4b0ce275d2388 -nocerts -nodes -out hisense.key\n"
                 ">    ```\n"
-                "> 3. Re-run `test_client.py ping --cert hisense.crt --key hisense.key` to verify if Modern XOR Dynamic Auth is accepted."
+                "> 3. Re-run `python3 scripts/test_client.py ping --cert hisense.crt --key hisense.key` to verify if Modern XOR Dynamic Auth is accepted."
             )
         else:
             lines.append(

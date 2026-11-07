@@ -93,7 +93,7 @@ For deep technical details, configuration parameters, and dashboard templates, r
 | 🛠️ **[Services & Automation Examples](docs/services_and_automations.md)** | Ready-to-use YAML automations for movie modes, picture/sound toggling, and keyboard input. |
 | 🔒 **[Advanced SSL Certificate Setup](docs/certificates.md)** | Mutual TLS file placement, filename matrix, custom PEM keypairs, and OpenSSL reference. |
 | 🌐 **[Network & Wake-on-LAN Requirements](docs/network_requirements.md)** | 100% local LAN architecture, UPnP LAN control, IoT VLAN rules, and reliable wired WoL setup. |
-| 🧪 **[CLI Testing & Diagnostic Tools](docs/cli_tools.md)** | Standalone [`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py) command-line tool reference. |
+| 🧪 **[CLI Testing & Diagnostic Tools](docs/cli_tools.md)** | Standalone [`scripts/test_client.py`](scripts/test_client.py) and [`scripts/debug_tv.py`](scripts/debug_tv.py) command-line tool reference. |
 | 🔬 **[Protocol & Cryptographic Architecture](docs/protocol_architecture.md)** | Reverse-engineered UPnP LAN control, XOR bitmasks, token lifecycles, and multi-brand ecosystem. |
 | 🛠️ **[Advanced Installation & Lifecycle](docs/installation_advanced.md)** | Git cloning, submodules, air-gapped VLAN installs, and clean uninstallation. |
 | 🩺 **[Troubleshooting & Error Reference](docs/troubleshooting.md)** | Diagnostic procedures, error recovery, pairing resets, and action error resolutions. |
@@ -115,7 +115,7 @@ The integration exposes dedicated Home Assistant actions for automations, script
 
 ## 🛠️ Diagnostics & CLI Utilities
 
-Standalone CLI tools ([`test_client.py`](test_client.py) and [`debug_tv.py`](debug_tv.py)) are available to test network reachability, verify TLS certificates, probe TV capabilities, and generate pre-formatted report blocks for GitHub issues without running Home Assistant. See the **[CLI Testing & Diagnostic Tools Guide](docs/cli_tools.md)**.
+Standalone CLI tools ([`scripts/test_client.py`](scripts/test_client.py) and [`scripts/debug_tv.py`](scripts/debug_tv.py)) are available to test network reachability, verify TLS certificates, probe TV capabilities, and generate pre-formatted report blocks for GitHub issues without running Home Assistant. See the **[CLI Testing & Diagnostic Tools Guide](docs/cli_tools.md)**.
 
 ---
 

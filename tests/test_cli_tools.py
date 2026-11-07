@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 def test_debug_tv_help_invocable() -> None:
     """Test that debug_tv.py runs --help without import or syntax errors."""
     result = subprocess.run(
-        [sys.executable, str(REPO_ROOT / "debug_tv.py"), "--help"],
+        [sys.executable, str(REPO_ROOT / "scripts" / "debug_tv.py"), "--help"],
         capture_output=True,
         text=True,
         cwd=REPO_ROOT,
@@ -31,7 +31,7 @@ def test_debug_tv_help_invocable() -> None:
 def test_test_client_help_invocable() -> None:
     """Test that test_client.py runs --help without import or syntax errors."""
     result = subprocess.run(
-        [sys.executable, str(REPO_ROOT / "test_client.py"), "--help"],
+        [sys.executable, str(REPO_ROOT / "scripts" / "test_client.py"), "--help"],
         capture_output=True,
         text=True,
         cwd=REPO_ROOT,
@@ -47,7 +47,11 @@ def test_test_client_help_invocable() -> None:
 
 
 def test_cli_tools_syntax_and_import() -> None:
-    """Test importing debug_tv and test_client modules directly."""
+    """Test importing debug_tv and test_client modules directly from scripts/."""
+    scripts_dir = str(REPO_ROOT / "scripts")
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+
     import debug_tv
     import test_client
 
