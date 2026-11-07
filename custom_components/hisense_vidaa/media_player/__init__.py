@@ -16,8 +16,8 @@ from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .client import HisenseTvClient
-from .const import (
+from ..client import HisenseTvClient
+from ..const import (
     AUTH_PROFILES,
     BRAND_MAP,
     BRAND_PROFILES,
@@ -25,46 +25,45 @@ from .const import (
     CONF_BRAND,
     CONF_ENABLE_CEC_NAMES,
     CONF_ENABLE_MEDIA_CONTROLS,
-    CONF_ENABLE_WOL,
     CONF_INCLUDE_APPS_IN_SOURCES,
-    CONF_PLAYBACK_DEBOUNCE,
-    CONF_SECONDARY_MAC_ADDRESS,
     DEFAULT_AUTH_PROFILE,
     DEFAULT_BRAND,
     DEFAULT_BRAND_OPTION,
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
-    DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
-    DEFAULT_PLAYBACK_DEBOUNCE,
 )
-from .entity import HisenseVidaaEntity
-
-if TYPE_CHECKING:
-    from . import HisenseVidaaConfigEntry
-from .tv.media import (
-    async_execute_play_media,
-    async_execute_select_source,
+from ..entity import HisenseVidaaEntity
+from ..tv.media import (
     build_media_channel_label,
     build_media_player_current_source,
     build_media_player_source_list,
-    parse_applist_data,
-    parse_media_state_broadcast,
-    parse_sourcelist_data,
-    parse_sourcelist_payload,
-    parse_volume_broadcast,
 )
-from .tv.settings import (
+from ..tv.settings import (
     DEFAULT_MENU_ID_SOUND_MODE,
     find_menu_item_by_name,
 )
+from .controls import MediaPlayerControlsMixin
+from .state_handler import MediaPlayerStateHandlerMixin
+
+if TYPE_CHECKING:
+    from .. import HisenseVidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 0
 
+__all__ = ["HisenseVidaaMediaPlayer", "async_setup_entry"]
 
-class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
+
+class HisenseVidaaMediaPlayer(
+    HisenseVidaaEntity,
+    MediaPlayerEntity,
+    MediaPlayerControlsMixin,
+    MediaPlayerStateHandlerMixin,
+):
+    """Media player entity representing a Hisense VIDAA smart TV."""
+
     _attr_name = None
     _attr_device_class = MediaPlayerDeviceClass.TV
 
@@ -73,6 +72,7 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         client: HisenseTvClient,
         entry: ConfigEntry,
     ) -> None:
+        """Initialize the media player entity."""
         super().__init__(client=client, entry=entry)
         self._attr_unique_id = f"{self._entry_id}_media_player"
         self._volume = 0
@@ -127,12 +127,14 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
 
     @property
     def state(self) -> str:
+        """Return the current playback state."""
         if not self._client.connected or not self._client.is_on:
             return STATE_OFF
         return STATE_ON
 
     @property
     def available(self) -> bool:
+        """Return entity availability."""
         return bool(self._entry_id and (self._client.access_token or self._mac))
 
     @property
@@ -158,21 +160,13 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         }
         if self._client and self._client.device_name:
             attributes["reported_name"] = self._client.device_name
-        if self._mac:
-            attributes["mac_address"] = self._mac
-        if self._connected_device:
-            attributes["connected_device"] = self._connected_device
-        channel_name = self._channel_name or (self._client.current_channel if self._client else None)
-        if channel_name:
-            attributes["channel_name"] = channel_name
-        channel_number = self._channel_num or (self._client.channel_number if self._client else None)
-        if channel_number:
-            attributes["channel_num"] = channel_number
-            attributes["channel_number"] = channel_number
-        if self._client and self._client.current_program:
-            attributes["program_title"] = self._client.current_program
-        if self._volume_type is not None:
-            attributes["audio_output"] = "ARC / eARC" if self._volume_type == 1 else "TV Speakers"
+        if self._client and self._client.device_info:
+            for k in ("model", "software_version", "chipset", "display_resolution"):
+                val = self._client.device_info.get(k)
+                if val:
+                    attributes[k] = val
+        if self._channel_infos:
+            attributes["channel_infos"] = self._channel_infos
         return attributes
 
     @property
@@ -212,16 +206,17 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
 
     @property
     def volume_level(self) -> float | None:
-        if self._volume is not None:
-            return self._volume / 100.0
-        return None
+        """Volume level of the media player (0..1)."""
+        return self._volume / 100.0 if self._volume is not None else None
 
     @property
-    def is_volume_muted(self) -> bool:
+    def is_volume_muted(self) -> bool | None:
+        """Boolean if volume is currently muted."""
         return self._muted
 
     @property
     def source(self) -> str | None:
+        """Return the current input source or active app."""
         enable_cec = self._options.get(CONF_ENABLE_CEC_NAMES, DEFAULT_ENABLE_CEC_NAMES)
         return build_media_player_current_source(
             source=self._source,
@@ -241,6 +236,7 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
 
     @property
     def source_list(self) -> list[str]:
+        """Return list of available input sources and apps."""
         enable_cec = self._options.get(CONF_ENABLE_CEC_NAMES, DEFAULT_ENABLE_CEC_NAMES)
         include_apps = self._options.get(
             CONF_INCLUDE_APPS_IN_SOURCES, DEFAULT_INCLUDE_APPS_IN_SOURCES
@@ -295,6 +291,7 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
 
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
+        """Flag media player features that are supported."""
         base = (
             MediaPlayerEntityFeature.TURN_ON
             | MediaPlayerEntityFeature.TURN_OFF
@@ -319,176 +316,12 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
             )
         return base
 
-    async def async_turn_on(self) -> None:
-        """Turn on or wake the TV."""
-        mac_targets = []
-        if self._options.get(CONF_ENABLE_WOL, DEFAULT_ENABLE_WOL):
-            if self._mac:
-                mac_targets.append(self._mac)
-            sec_mac = self._options.get(CONF_SECONDARY_MAC_ADDRESS)
-            if sec_mac and sec_mac not in mac_targets:
-                mac_targets.append(sec_mac)
-
-        await self._client.async_turn_on(mac_targets if mac_targets else None)
-        self.async_write_ha_state()
-
-    async def async_turn_off(self) -> None:
-        """Turn off the TV."""
-        await self._client.async_turn_off()
-        self.async_write_ha_state()
-
-    async def async_set_volume_level(self, volume: float) -> None:
-        await self._client.async_set_volume(int(volume * 100))
-
-    async def async_volume_up(self) -> None:
-        await self._client.async_send_key("KEY_VOLUMEUP")
-
-    async def async_volume_down(self) -> None:
-        await self._client.async_send_key("KEY_VOLUMEDOWN")
-
-    async def async_mute_volume(self, mute: bool) -> None:
-        # KEY_MUTE is a toggle: only send it when the requested state differs from
-        # the state tracked from TV broadcasts, so idempotent automations don't flip
-        # the TV on every run.
-        if bool(mute) == bool(self._muted):
-            return
-        await self._client.async_send_key("KEY_MUTE")
-
-    async def async_media_play(self) -> None:
-        await self._client.async_send_key("KEY_PLAY")
-
-    async def async_media_pause(self) -> None:
-        await self._client.async_send_key("KEY_PAUSE")
-
-    async def async_media_stop(self) -> None:
-        await self._client.async_send_key("KEY_STOP")
-
-    async def async_media_next_track(self) -> None:
-        await self._client.async_send_key("KEY_FORWARDS")
-
-    async def async_media_previous_track(self) -> None:
-        await self._client.async_send_key("KEY_BACK")
-
-    async def async_play_media(self, media_type: str, media_id: str, **kwargs: Any) -> None:
-        """Launch an app, tune to channel, open URL/deep-link, or execute key command."""
-        await async_execute_play_media(
-            self._client, self._app_dict, media_type, media_id
-        )
-
-    async def async_select_source(self, source: str) -> None:
-        """Select input source or smart application."""
-        await async_execute_select_source(
-            self._client, self._source_dict, self._app_dict, source
-        )
-
-    async def async_select_sound_mode(self, sound_mode: str) -> None:
-        """Select sound mode."""
-        await self._client.async_set_sound_mode(sound_mode)
-        self.async_write_ha_state()
-
-    def _handle_sound_update(self, data: dict[str, Any]) -> None:
-        """Handle sound setting updates from TV."""
-        self.schedule_update_ha_state()
-
-    def _apply_state_payload(self, parsed: dict[str, Any]) -> None:
-        """Applies parsed state broadcast payload."""
-        statetype = parsed["statetype"]
-        was_off = (self._state == STATE_OFF)
-        self._state = STATE_ON if parsed["is_on"] else STATE_OFF
-
-        if parsed["is_on"] and statetype not in ("fake_sleep_0", "fake_sleep_1"):
-            if statetype in ("sourceswitch", "app", "livetv"):
-                self._source = parsed["source"]
-                self._connected_device = parsed["connected_device"]
-                self._channel_name = parsed["channel_name"]
-                self._channel_num = parsed["channel_num"]
-        elif not parsed["is_on"]:
-            self._connected_device = None
-            self._channel_name = None
-            self._channel_num = None
-
-        if (
-            parsed["is_on"]
-            and (was_off or not self._source_dict or not self._app_dict)
-            and self.hass
-        ):
-            self.hass.async_create_background_task(
-                self._client.async_query_initial_state(),
-                "hisense_vidaa_media_player_initial_state",
-            )
-
-        self.schedule_update_ha_state()
-
-    def _handle_state_update(self, data: dict[str, Any]) -> None:
-        if not isinstance(data, dict):
-            return
-
-        parsed = parse_media_state_broadcast(data)
-        if self._client:
-            self._client.is_on = parsed["is_on"]
-
-        # Cancel any pending debounce timer
-        if self._debounce_handle:
-            self._debounce_handle.cancel()
-            self._debounce_handle = None
-
-        # Power off or waking from sleep transitions apply immediately
-        debounce = float(self._options.get(CONF_PLAYBACK_DEBOUNCE, DEFAULT_PLAYBACK_DEBOUNCE))
-        loop = getattr(self.hass, "loop", None)
-        if not parsed["is_on"] or debounce <= 0 or not self.hass or not loop:
-            self._apply_state_payload(parsed)
-            return
-
-        def _timed_apply() -> None:
-            self._debounce_handle = None
-            self._apply_state_payload(parsed)
-
-        self._debounce_handle = loop.call_later(debounce, _timed_apply)
-
-    def _handle_volume_update(self, data: dict[str, Any]) -> None:
-        if not isinstance(data, dict):
-            return
-        self._volume, self._volume_type, self._muted = parse_volume_broadcast(
-            data, self._volume, self._volume_type, self._muted
-        )
-        self.schedule_update_ha_state()
-
-    def _handle_sourcelist_update(self, data: list[dict[str, Any]]) -> None:
-        if not data:
-            return
-        self._source_dict = parse_sourcelist_data(data)
-        _, _, _, active_source = parse_sourcelist_payload(data)
-        if active_source and self._client and self._client.connected:
-            if not self._client.current_source:
-                self._client.current_source = active_source
-            if not self._source:
-                self._source = active_source
-            if self._client.is_on:
-                self._state = STATE_ON
-        self.schedule_update_ha_state()
-
-    def _handle_applist_update(self, data: list[dict[str, Any]]) -> None:
-        if not data:
-            return
-        self._app_list, self._app_dict = parse_applist_data(data)
-        self.schedule_update_ha_state()
-
-    def _handle_connected(self) -> None:
-        # Power state is set by the retained state broadcast that follows the connect.
-        self._state = STATE_ON if (self._client and self._client.is_on) else STATE_OFF
-        self.schedule_update_ha_state()
-
-    def _handle_disconnected(self) -> None:
-        if self._client:
-            self._client.is_on = False
-        self._state = STATE_OFF
-        self.schedule_update_ha_state()
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: HisenseVidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Set up Hisense VIDAA media player from a config entry."""
     client: HisenseTvClient = config_entry.runtime_data.client
     async_add_entities([HisenseVidaaMediaPlayer(client=client, entry=config_entry)])
