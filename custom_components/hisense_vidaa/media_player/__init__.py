@@ -147,6 +147,14 @@ class HisenseVidaaMediaPlayer(
         return STATE_ON
 
     @property
+    def assumed_state(self) -> bool:
+        """Return True when TV is on so frontend displays playback and channel controls."""
+        enable_controls = self._options.get(
+            CONF_ENABLE_MEDIA_CONTROLS, DEFAULT_ENABLE_MEDIA_CONTROLS
+        )
+        return bool(enable_controls and self._client and self._client.is_on)
+
+    @property
     def available(self) -> bool:
         """Return entity availability."""
         return bool(self._entry_id and (self._client.access_token or self._mac))

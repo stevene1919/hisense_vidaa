@@ -37,6 +37,17 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
     assert rem_info["model"] == "65U7G"
 
 
+def test_media_player_assumed_state(mock_client, mock_entry):
+    """Test media player assumed_state returns True when on and False when off."""
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mock_client.is_on = True
+    mock_client.connected = True
+    assert mp.assumed_state is True
+
+    mock_client.is_on = False
+    assert mp.assumed_state is False
+
+
 @pytest.mark.anyio
 async def test_remote_send_command(mock_client, mock_entry):
     """Test remote entity send command handling and burst/hold timings."""

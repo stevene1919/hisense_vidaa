@@ -2,6 +2,15 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [3.3.2-beta.1] - 2026-11-08 — 📺 Media Player UI Controls Fix (Assumed State)
+
+This beta pre-release advertises `assumed_state: True` when the TV is powered on, resolving an issue where the Home Assistant frontend (`more-info-media_player`) would hide the Previous and Next track/channel buttons for TVs reporting generic `state: "on"`.
+
+### 🌟 What's New & Fixed in v3.3.2-beta.1
+- **MEDIA PLAYER UI BUTTONS (#55)**:
+  - Added `assumed_state` property to `HisenseVidaaMediaPlayer` returning `True` while powered on.
+  - Fixes Home Assistant frontend hiding Previous/Next track controls on TV devices reporting generic `state: "on"`.
+
 ## [3.3.1] - 2026-11-08 — 🚀 Wake-on-LAN Broadcast Fix, UI Setup Fix & Internationalization Edition
 
 This release resolves a critical Wake-on-LAN broadcast regression across subnets and relays, fixes a UI setup error (`not_implemented`) during initial device pairing, expands regional smart TV streaming app aliases for top analytics countries, adds full native translations for Russian, Ukrainian, and Simplified Chinese, and introduces multilingual documentation with dark-mode badges.
