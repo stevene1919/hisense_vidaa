@@ -16,12 +16,14 @@ from .helpers import (
 )
 from .options import HisenseVidaaOptionsFlowHandler
 from .reauth import ReauthFlowMixin
+from .user import UserFlowMixin
 
 __all__ = [
     "CertsFlowMixin",
     "DiscoveryFlowMixin",
     "HisenseVidaaOptionsFlowHandler",
     "ReauthFlowMixin",
+    "UserFlowMixin",
     "async_disconnect_existing_client",
     "async_discover_device_details",
     "async_probe_device_capabilities",
