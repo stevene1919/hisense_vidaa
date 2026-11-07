@@ -423,6 +423,9 @@ if "homeassistant" not in sys.modules:
         @property
         def unique_id(self):
             return getattr(self, "_attr_unique_id", None)
+        @property
+        def entity_registry_enabled_default(self):
+            return getattr(self, "_attr_entity_registry_enabled_default", True)
     entity_module.Entity = Entity
     helpers.entity = entity_module
     sys.modules["homeassistant.helpers.entity"] = entity_module

@@ -64,14 +64,16 @@ def get_app_icon(app_name: str | None) -> str:
 def get_source_icon(source_name: str | None) -> str:
     """Returns dynamic MDI icon based on active input source name."""
     val = (source_name or "").lower()
+    if "standby" in val:
+        return "mdi:power-sleep"
+    if "off" in val:
+        return "mdi:television-off"
     if "hdmi" in val:
         return "mdi:video-input-hdmi"
     if "tv" in val:
         return "mdi:television-classic"
     if "av" in val:
         return "mdi:video-input-component"
-    if "off" in val:
-        return "mdi:power-plug-off"
     return "mdi:video-input-hdmi"
 
 

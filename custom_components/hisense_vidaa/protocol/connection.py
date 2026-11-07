@@ -24,9 +24,11 @@ MQTT_PORT = 36669
 AUTH_REJECTION_CODES = (4, 5, 134, 135)
 RECONNECT_MIN_DELAY = 2.0
 RECONNECT_MAX_DELAY = 30.0
+DISCONNECT_DEBOUNCE = 2.0
 
 __all__ = [
     "AUTH_REJECTION_CODES",
+    "DISCONNECT_DEBOUNCE",
     "ConnectionManagerMixin",
     "MqttSessionAdapter",
     "standard_tv_topics",
@@ -177,6 +179,12 @@ class ConnectionManagerMixin:
     def _handle_connected(
         self: HisenseTvClient, adapter: Any = None, standard: bool = True
     ) -> None:
+        debounce_handle = getattr(self, "_disconnect_debounce_handle", None)
+        if debounce_handle is not None:
+            debounce_handle.cancel()
+            self._disconnect_debounce_handle = None
+            _LOGGER.debug("[%s] Reconnected within debounce window; cancelled pending disconnect dispatch", self.ip)
+
         self.connected = True
         _LOGGER.info("[%s] Connected to TV MQTT broker", self.ip)
         self._dispatch_connected()
@@ -194,11 +202,32 @@ class ConnectionManagerMixin:
         await asyncio.sleep(0.5)
         await self.async_query_initial_state()
 
-    def _handle_disconnected(self: HisenseTvClient) -> None:
+    def _handle_disconnected(self: HisenseTvClient, *, debounce: bool = True) -> None:
         was_connected = self.connected
         self.connected = False
         self._last_initial_query_time = 0.0
-        if was_connected:
+
+        debounce_handle = getattr(self, "_disconnect_debounce_handle", None)
+        if debounce_handle is not None:
+            debounce_handle.cancel()
+            self._disconnect_debounce_handle = None
+
+        if not was_connected:
+            return
+
+        def _fire_disconnect() -> None:
+            self._disconnect_debounce_handle = None
+            _LOGGER.debug("[%s] Disconnected from TV MQTT broker (debounce elapsed)", self.ip)
+            self._dispatch_disconnected()
+
+        loop = getattr(self, "_loop", None)
+        if not loop:
+            with contextlib.suppress(RuntimeError):
+                loop = asyncio.get_running_loop()
+
+        if debounce and loop and loop.is_running() and DISCONNECT_DEBOUNCE > 0:
+            self._disconnect_debounce_handle = loop.call_later(DISCONNECT_DEBOUNCE, _fire_disconnect)
+        else:
             _LOGGER.debug("[%s] Disconnected from TV MQTT broker", self.ip)
             self._dispatch_disconnected()
 
@@ -296,6 +325,10 @@ class ConnectionManagerMixin:
 
     async def _async_stop_session(self: HisenseTvClient) -> None:
         """Cancels the running MQTT supervisor task and waits for teardown."""
+        debounce_handle = getattr(self, "_disconnect_debounce_handle", None)
+        if debounce_handle is not None:
+            debounce_handle.cancel()
+            self._disconnect_debounce_handle = None
         task, self._mqtt_task = self._mqtt_task, None
         query_task, self._query_task = self._query_task, None
         if query_task is not None:

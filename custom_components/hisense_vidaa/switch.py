@@ -113,6 +113,7 @@ class HisenseVidaaDebugLoggingSwitch(HisenseVidaaEntity, SwitchEntity):
 
     _attr_translation_key = "debug_logging"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
 
 
     def __init__(

@@ -18,18 +18,26 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .client import HisenseTvClient
 from .const import (
+    AUTH_PROFILES,
+    BRAND_PROFILES,
+    CONF_AUTH_PROFILE,
+    CONF_BRAND,
     CONF_ENABLE_CEC_NAMES,
     CONF_ENABLE_MEDIA_CONTROLS,
     CONF_ENABLE_WOL,
     CONF_INCLUDE_APPS_IN_SOURCES,
     CONF_PLAYBACK_DEBOUNCE,
     CONF_SECONDARY_MAC_ADDRESS,
+    DEFAULT_AUTH_PROFILE,
+    DEFAULT_BRAND,
+    DEFAULT_BRAND_OPTION,
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_ENABLE_WOL,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
     DEFAULT_PLAYBACK_DEBOUNCE,
 )
+from .discovery import BRAND_MAP
 from .entity import HisenseVidaaEntity
 
 if TYPE_CHECKING:
@@ -129,11 +137,27 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return device-specific and Live TV metadata attributes."""
+        """Return device-specific, Live TV, and configuration metadata attributes."""
+        auth_key = self._options.get(
+            CONF_AUTH_PROFILE,
+            self._entry.data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE),
+        )
+        brand_key = self._options.get(
+            CONF_BRAND,
+            self._entry.data.get("brand_profile", self._entry.data.get(CONF_BRAND, DEFAULT_BRAND_OPTION)),
+        )
+        active_code = getattr(self._client, "brand", None) or self._entry.data.get(CONF_BRAND, DEFAULT_BRAND)
+        if active_code == "auto":
+            active_code = self._entry.data.get("resolved_brand", DEFAULT_BRAND)
+
         attributes: dict[str, Any] = {
             "mqtt_connected": self._client.connected,
-            "auth_profile": self._client.auth_profile,
+            "auth_profile": AUTH_PROFILES.get(auth_key, str(auth_key).title() if auth_key else "Auto"),
+            "brand_profile": BRAND_PROFILES.get(brand_key, str(brand_key).title() if brand_key else "Auto"),
+            "active_brand": BRAND_MAP.get(active_code, str(active_code).upper() if active_code else "Hisense"),
         }
+        if self._client and self._client.device_name:
+            attributes["reported_name"] = self._client.device_name
         if self._mac:
             attributes["mac_address"] = self._mac
         if self._connected_device:
@@ -435,12 +459,12 @@ class HisenseVidaaMediaPlayer(HisenseVidaaEntity, MediaPlayerEntity):
         self._source_dict = parse_sourcelist_data(data)
         _, _, _, active_source = parse_sourcelist_payload(data)
         if active_source and self._client and self._client.connected:
-            self._client.is_on = True
             if not self._client.current_source:
                 self._client.current_source = active_source
             if not self._source:
                 self._source = active_source
-            self._state = STATE_ON
+            if self._client.is_on:
+                self._state = STATE_ON
         self.schedule_update_ha_state()
 
     def _handle_applist_update(self, data: list[dict[str, Any]]) -> None:

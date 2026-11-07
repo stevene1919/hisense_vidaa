@@ -153,6 +153,7 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         self._loop: asyncio.AbstractEventLoop | None = None
         self._mqtt_task: asyncio.Task | None = None
         self._query_task: asyncio.Task | None = None
+        self._disconnect_debounce_handle: asyncio.TimerHandle | None = None
         self._background_tasks: set[asyncio.Task] = set()
         self._pending_queries: dict[str, list[asyncio.Future]] = {}
         self._auth_future: asyncio.Future | None = None

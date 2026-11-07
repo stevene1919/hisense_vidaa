@@ -189,6 +189,7 @@ class HisenseVidaaReportedNameSensor(HisenseVidaaBaseSensor):
     _attr_translation_key = "reported_name"
     _attr_icon = "mdi:television-guide"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
@@ -306,6 +307,7 @@ class HisenseVidaaClockDriftSensor(HisenseVidaaBaseSensor):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
     _attr_device_class = SensorDeviceClass.DURATION
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)

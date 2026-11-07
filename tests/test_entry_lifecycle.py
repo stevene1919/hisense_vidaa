@@ -579,3 +579,49 @@ async def test_async_setup_entry_resolves_certs_in_executor():
         # Verify resolve_certificates was passed to executor
         assert any(call is mock_resolve or getattr(call, "__name__", "") == "resolve_certificates" for call in executor_calls)
 
+
+@pytest.mark.anyio
+async def test_setup_entry_prunes_retired_diagnostic_sensors():
+    """Verify setup entry automatically removes orphaned brand_profile and auth_profile entities."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.data = {}
+    hass.loop = MagicMock()
+    hass.config_entries = MagicMock()
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+    hass.async_create_background_task = MagicMock(side_effect=lambda coro, *a, **kw: coro.close() if hasattr(coro, "close") else MagicMock())
+    hass.services = FakeServices()
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+
+    entry = MagicMock()
+    entry.entry_id = "test_prune_entry"
+    entry.unique_id = "e8:51:77:ec:98:1c"
+    entry.data = {
+        CONF_IP_ADDRESS: "192.168.50.12",
+        CONF_MAC_ADDRESS: "e8:51:77:ec:98:1c",
+        CONF_CLIENT_ID: "client_1",
+        CONF_ACCESS_TOKEN: "token_1",
+        CONF_BRAND: "his",
+        CONF_USE_SSL: False,
+    }
+    entry.options = {}
+
+    mock_ent_reg = MagicMock()
+    def _mock_get_entity_id(domain, platform, unique_id):
+        if unique_id in ("test_prune_entry_brand_profile", "test_prune_entry_auth_profile"):
+            return f"sensor.{unique_id}"
+        return None
+    mock_ent_reg.async_get_entity_id.side_effect = _mock_get_entity_id
+
+    mock_client = MagicMock()
+    mock_client.has_notifications = False
+    mock_client.async_check_and_refresh_token = AsyncMock(return_value=False)
+    mock_client.async_connect_and_run = AsyncMock()
+
+    with patch("custom_components.hisense_vidaa.HisenseTvClient", return_value=mock_client), \
+         patch("homeassistant.helpers.entity_registry.async_get", return_value=mock_ent_reg), \
+         patch("homeassistant.helpers.issue_registry.async_delete_issue"):
+        res = await async_setup_entry(hass, entry)
+        assert res is True
+        mock_ent_reg.async_remove.assert_any_call("sensor.test_prune_entry_brand_profile")
+        mock_ent_reg.async_remove.assert_any_call("sensor.test_prune_entry_auth_profile")
+

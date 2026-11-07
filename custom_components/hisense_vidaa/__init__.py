@@ -266,6 +266,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         "select",
     ]
     entity_reg = er.async_get(hass)
+
+    # Prune retired diagnostic sensors (Brand Profile and Auth Profile are consolidated into media_player attributes)
+    for suffix in ("brand_profile", "auth_profile"):
+        unique_id = f"{entry.entry_id}_{suffix}"
+        if entity_id := entity_reg.async_get_entity_id("sensor", DOMAIN, unique_id):
+            entity_reg.async_remove(entity_id)
     if entry.options.get(
         CONF_ENABLE_PICTURE_CONTROLS, DEFAULT_ENABLE_PICTURE_CONTROLS
     ):

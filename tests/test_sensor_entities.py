@@ -320,3 +320,125 @@ def test_session_status_sensor_masks_client_id_and_applies_offset():
     assert "paired_at" in attrs
     assert "access_token_expires_at" in attrs
 
+
+@pytest.mark.anyio
+async def test_sensor_setup_entry_excludes_retired_sensors(mock_client, mock_entry):
+    """Verify async_setup_entry for sensor platform does not add retired diagnostic entities."""
+    from custom_components.hisense_vidaa.sensor import async_setup_entry as async_setup_sensors
+
+    hass = MagicMock(spec=HomeAssistant)
+    added_sensors = []
+    await async_setup_sensors(hass, mock_entry, lambda entities: added_sensors.extend(entities))
+
+    assert len(added_sensors) == 6
+    unique_ids = [s.unique_id for s in added_sensors]
+    assert f"{mock_entry.entry_id}_brand_profile" not in unique_ids
+    assert f"{mock_entry.entry_id}_auth_profile" not in unique_ids
+    assert any(isinstance(s, HisenseVidaaActiveSourceSensor) for s in added_sensors)
+    assert any(isinstance(s, HisenseVidaaActiveAppSensor) for s in added_sensors)
+
+
+def test_active_source_standby_and_last_known_source(mock_client, mock_entry):
+    """Test active source transitions to Standby when asleep and preserves last_known_source."""
+    mock_client.connected = True
+    mock_client.is_on = True
+    sensor = HisenseVidaaActiveSourceSensor(mock_client, mock_entry)
+
+    # Active HDMI input while on
+    sensor._handle_sourcelist_update([{"sourceName": "HDMI 2", "is_active": True}])
+    assert sensor.native_value == "HDMI 2"
+    assert sensor.extra_state_attributes["last_known_source"] == "HDMI 2"
+
+    # TV enters standby (fake_sleep_0 or is_on=False)
+    mock_client.is_on = False
+    sensor._handle_state_update({"statetype": "fake_sleep_0"})
+    assert sensor.native_value == "Standby"
+    assert sensor.extra_state_attributes["last_known_source"] == "HDMI 2"
+
+    # Sourcelist arrives while in standby: updates last_known_source but does NOT wake sensor
+    sensor._handle_sourcelist_update([{"sourceName": "HDMI 1", "is_active": True}])
+    assert sensor.native_value == "Standby"
+    assert sensor.extra_state_attributes["last_known_source"] == "HDMI 1"
+
+    # Disconnected
+    mock_client.connected = False
+    sensor._handle_disconnected()
+    assert sensor.native_value == "Off"
+    assert sensor.extra_state_attributes["last_known_source"] == "HDMI 1"
+
+
+def test_active_app_standby_and_last_known_app(mock_client, mock_entry):
+    """Test active app transitions to Standby/Off and preserves last_known_app."""
+    mock_client.connected = True
+    mock_client.is_on = True
+    sensor = HisenseVidaaActiveAppSensor(mock_client, mock_entry)
+
+    sensor._handle_applist_update([{"appId": "netflix_app", "appName": "Netflix"}])
+    sensor._handle_state_update({"statetype": "app", "appId": "netflix_app"})
+    assert sensor.native_value == "Netflix"
+    assert sensor.extra_state_attributes["last_known_app"] == "Netflix"
+
+    # Standby
+    mock_client.is_on = False
+    sensor._handle_state_update({"statetype": "fake_sleep_0"})
+    assert sensor.native_value == "Standby"
+    assert sensor.extra_state_attributes["last_known_app"] == "Netflix"
+
+    # Disconnected
+    mock_client.connected = False
+    sensor._handle_disconnected()
+    assert sensor.native_value == "Off"
+    assert sensor.extra_state_attributes["last_known_app"] == "Netflix"
+
+
+def test_in_use_binary_sensor_dormant_and_hdmi_states(mock_client, mock_entry):
+    """Test in_use binary sensor accounts for HDMI display, dormant modes, and power."""
+    sensor = HisenseVidaaInUseBinarySensor(mock_client, mock_entry)
+
+    # 1. Connected and awake on HDMI (current_app is None): in_use must be True
+    mock_client.connected = True
+    mock_client.is_on = True
+    mock_client.state = "on"
+    mock_client.current_app = None
+    assert sensor.is_on is True
+
+    # 2. In standby: in_use must be False
+    mock_client.is_on = False
+    mock_client.state = "off"
+    assert sensor.is_on is False
+
+    # 3. TV awake but reporting dormant sleep/standby mode
+    mock_client.is_on = True
+    mock_client.state = "on"
+    mock_client.current_app = "Standby"
+    assert sensor.is_on is False
+
+    mock_client.current_app = "sleep"
+    assert sensor.is_on is False
+
+    # 4. TV awake running an app
+    mock_client.current_app = "Netflix"
+    assert sensor.is_on is True
+
+
+def test_disabled_by_default_entities(mock_client, mock_entry):
+    """Verify specialized diagnostic entities are disabled by default."""
+    from custom_components.hisense_vidaa.button import HisenseVidaaProbeCapabilitiesButton
+    from custom_components.hisense_vidaa.sensors_diagnostic import (
+        HisenseVidaaClockDriftSensor,
+        HisenseVidaaReportedNameSensor,
+    )
+    from custom_components.hisense_vidaa.switch import HisenseVidaaDebugLoggingSwitch
+
+    s_drift = HisenseVidaaClockDriftSensor(mock_client, mock_entry)
+    assert s_drift.entity_registry_enabled_default is False
+
+    s_name = HisenseVidaaReportedNameSensor(mock_client, mock_entry)
+    assert s_name.entity_registry_enabled_default is False
+
+    b_probe = HisenseVidaaProbeCapabilitiesButton(mock_client, mock_entry)
+    assert b_probe.entity_registry_enabled_default is False
+
+    sw_debug = HisenseVidaaDebugLoggingSwitch(mock_client, mock_entry)
+    assert sw_debug.entity_registry_enabled_default is False
+

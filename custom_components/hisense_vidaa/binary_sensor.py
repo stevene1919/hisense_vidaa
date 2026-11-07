@@ -91,8 +91,13 @@ class HisenseVidaaInUseBinarySensor(HisenseVidaaEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        """Return True when TV is active and not in standby."""
-        return bool(self._client and self._client.connected and self._client.state not in ("off", ""))
+        """Return True when TV display is actively in use and not dormant/standby."""
+        if not (self._client and self._client.connected and self._client.is_on):
+            return False
+        if self._client.state in ("off", "standby", ""):
+            return False
+        app = (self._client.current_app or "").strip().lower()
+        return app not in ("off", "standby", "sleep")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

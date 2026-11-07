@@ -96,6 +96,7 @@ class HisenseVidaaProbeCapabilitiesButton(HisenseVidaaBaseButton):
 
     _attr_translation_key = "probe_capabilities"
     _attr_icon = "mdi:television-guide"
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)

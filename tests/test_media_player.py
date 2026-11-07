@@ -468,7 +468,7 @@ async def test_media_player_disconnected_and_cold_boot_recovery(mock_client, moc
     assert mock_client.is_on is False
     assert mp.state == STATE_OFF
 
-    # 2. Cold-boot recovery: TV boots cold with is_on=False and sends sourcelist with active signal
+    # 2. Standby / cold-boot query: TV is in standby (is_on=False) and sends sourcelist
     mock_client.connected = True
     mock_client.is_on = False
     mock_client.current_source = None
@@ -480,9 +480,15 @@ async def test_media_player_disconnected_and_cold_boot_recovery(mock_client, moc
     ]
     mp._handle_sourcelist_update(sourcelist_data)
 
-    assert mock_client.is_on is True
+    # Sourcelist updates cached sources, but must NOT falsely wake the TV while in standby
+    assert mock_client.is_on is False
     assert mock_client.current_source == "HDMI 1"
     assert mp.source == "HDMI 1"
+    assert mp.state == STATE_OFF
+
+    # State update broadcast wakes the TV
+    mp._handle_state_update({"statetype": "sourceswitch", "sourcename": "HDMI 1"})
+    assert mock_client.is_on is True
     assert mp.state == STATE_ON
 
 

@@ -307,3 +307,35 @@ async def test_refresh_tokens_unbinds_callbacks_before_teardown():
 
     old_session.close.assert_called_once()
     await client.async_disconnect()
+
+
+@pytest.mark.anyio
+async def test_disconnect_debounce_cancels_on_quick_reconnect():
+    """Verify disconnect debounce delays dispatch and cancels if reconnected within window."""
+    client = HisenseTvClient(ip="192.168.50.12", client_id="cid", username="u", access_token="at")
+    client.connected = True
+    loop = asyncio.get_running_loop()
+    client._loop = loop
+
+    disconnected_events = []
+    client.register_disconnected_callback(lambda: disconnected_events.append(True))
+
+    # Trigger disconnect with debounce
+    client._handle_disconnected(debounce=True)
+    assert client.connected is False
+    assert client._disconnect_debounce_handle is not None
+    # Callback has NOT fired yet
+    assert len(disconnected_events) == 0
+
+    # Quick reconnect before timer fires
+    mock_adapter = MagicMock()
+    client._handle_connected(mock_adapter, standard=False)
+    assert client.connected is True
+    assert client._disconnect_debounce_handle is None
+
+    # Wait a bit past what would have been debounce
+    await asyncio.sleep(0.05)
+    # Callback was cancelled, so never fired
+    assert len(disconnected_events) == 0
+
+    await client.async_disconnect()

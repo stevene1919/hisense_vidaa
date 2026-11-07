@@ -53,8 +53,6 @@ async def async_setup_entry(
     client: HisenseTvClient = entry.runtime_data.client
     async_add_entities([
         HisenseVidaaSessionStatusSensor(client, entry),
-        HisenseVidaaAuthProfileSensor(client, entry),
-        HisenseVidaaBrandProfileSensor(client, entry),
         HisenseVidaaReportedNameSensor(client, entry),
         HisenseVidaaActiveAppSensor(client, entry),
         HisenseVidaaActiveSourceSensor(client, entry),
@@ -70,7 +68,12 @@ class HisenseVidaaMqttTrackingSensor(HisenseVidaaBaseSensor):
         super().__init__(client, entry)
         self._default_on = default_on
         self._default_off = default_off
-        self._attr_native_value = default_off if not client.connected else default_on
+        if not client.connected:
+            self._attr_native_value = default_off
+        elif not client.is_on and default_on != "Standby":
+            self._attr_native_value = "Standby"
+        else:
+            self._attr_native_value = default_on
 
     async def async_added_to_hass(self) -> None:
         self._client.register_connected_callback(self._handle_connected)
@@ -92,7 +95,10 @@ class HisenseVidaaMqttTrackingSensor(HisenseVidaaBaseSensor):
 
     def _handle_connected(self) -> None:
         if self._attr_native_value == self._default_off:
-            self._attr_native_value = self._default_on
+            if not self._client.is_on and self._default_on != "Standby":
+                self._attr_native_value = "Standby"
+            else:
+                self._attr_native_value = self._default_on
         self._schedule_state_update()
 
     def _handle_disconnected(self) -> None:
@@ -115,6 +121,7 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaMqttTrackingSensor):
         self._app_dict: dict[str, str] = {}
         self._app_icons: dict[str, str] = {}
         self._favorite_apps: list[str] = []
+        self._last_known_app: str | None = None
 
     def _register_custom_callbacks(self) -> None:
         self._client.register_applist_callback(self._handle_applist_update)
@@ -131,28 +138,36 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaMqttTrackingSensor):
         if not isinstance(state, dict):
             return
         statetype = state.get("statetype")
-        if statetype == "fake_sleep_0" or not self._client.connected:
+        if not self._client.connected:
             self._attr_native_value = "Off"
+        elif statetype == "fake_sleep_0" or not self._client.is_on:
+            self._attr_native_value = "Standby"
         elif statetype == "app":
             name = state.get("name") or state.get("appName")
             app_id = str(state.get("appId") or state.get("activeAppId") or "")
             self._attr_native_value = name or self._app_dict.get(app_id, "App")
+            self._last_known_app = self._attr_native_value
         elif statetype == "livetv":
             self._attr_native_value = "Live TV"
+            self._last_known_app = "Live TV"
         elif statetype == "sourceswitch":
             self._attr_native_value = "TV Input"
         elif statetype == "launcher":
             self._attr_native_value = "Home Launcher"
+            self._last_known_app = "Home Launcher"
         else:
             app_id = str(state.get("appId") or state.get("activeAppId") or "")
             if app_id:
                 self._attr_native_value = self._app_dict.get(app_id, app_id)
+                self._last_known_app = self._attr_native_value
         self._schedule_state_update()
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return sensor attributes."""
         attrs: dict[str, Any] = {"total_installed_apps": len(self._app_dict)}
+        if self._last_known_app:
+            attrs["last_known_app"] = self._last_known_app
         if self._favorite_apps:
             attrs["favorite_apps"] = self._favorite_apps
         if self._attr_native_value and self._attr_native_value in self._app_icons:
@@ -177,7 +192,7 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
     _attr_icon = "mdi:video-input-hdmi"
 
     def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
-        super().__init__(client, entry, default_on="None", default_off="Off")
+        super().__init__(client, entry, default_on="Standby", default_off="Off")
         self._attr_unique_id = f"{self._entry_id}_active_source"
         self._available_sources: list[str] = []
         self._connected_inputs: list[str] = []
@@ -185,6 +200,7 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
         self._connected_device: str | None = None
         self._channel_name: str | None = None
         self._channel_num: str | None = None
+        self._last_known_source: str | None = None
 
     def _register_custom_callbacks(self) -> None:
         self._client.register_sourcelist_callback(self._handle_sourcelist_update)
@@ -194,15 +210,20 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
 
     def _handle_state_update(self, state: dict[str, Any]) -> None:
         statetype = state.get("statetype")
-        if statetype == "fake_sleep_0" or not self._client.connected:
+        if not self._client.connected:
             self._attr_native_value = "Off"
+            self._connected_device = self._channel_name = self._channel_num = None
+        elif statetype == "fake_sleep_0" or not self._client.is_on:
+            self._attr_native_value = "Standby"
             self._connected_device = self._channel_name = self._channel_num = None
         elif statetype == "sourceswitch":
             self._attr_native_value = state.get("sourcename") or state.get("sourceName") or state.get("displayname") or "HDMI"
+            self._last_known_source = self._attr_native_value
             self._connected_device = state.get("displayname2") or state.get("source_detail")
             self._channel_name = self._channel_num = None
         elif statetype == "livetv":
             self._attr_native_value = "TV"
+            self._last_known_source = "TV"
             self._connected_device = None
             self._channel_name = state.get("channel_name")
             self._channel_num = state.get("channel_num")
@@ -211,6 +232,7 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
             self._connected_device = self._channel_name = self._channel_num = None
         elif state.get("sourcename") or state.get("sourceName"):
             self._attr_native_value = state.get("sourcename") or state.get("sourceName")
+            self._last_known_source = self._attr_native_value
             self._connected_device = state.get("displayname2") or state.get("source_detail")
         self._schedule_state_update()
 
@@ -218,13 +240,17 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
         if sources:
             self._available_sources, self._connected_inputs, self._custom_labels, active_src = parse_sourcelist_payload(sources)
             if active_src:
-                self._attr_native_value = active_src
+                self._last_known_source = active_src
+                if self._client.connected and self._client.is_on:
+                    self._attr_native_value = active_src
             self._schedule_state_update()
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return sensor attributes."""
         attrs: dict[str, Any] = {}
+        if self._last_known_source:
+            attrs["last_known_source"] = self._last_known_source
         for key, val in (
             ("available_sources", self._available_sources),
             ("connected_inputs", self._connected_inputs),
