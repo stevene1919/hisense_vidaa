@@ -24,11 +24,13 @@ def show_message(
         "message": message,
         "title": title or "",
         "duration": duration,
+        "text": message,
         "type": "notify",
     }
     payload = json.dumps(payload_dict)
     client.mqtt_client.publish(f"{client.topics.ui}actions/showmessage", payload)
     client.mqtt_client.publish(f"{client.topics.ui}actions/toast", payload)
+    client.mqtt_client.publish(f"{client.topics.ui}actions/notification", payload)
     return True
 
 
@@ -44,11 +46,13 @@ async def async_show_message(
         "message": message,
         "title": title or "",
         "duration": duration,
+        "text": message,
         "type": "notify",
     }
     payload = json.dumps(payload_dict)
     await client.async_publish(f"{client.topics.ui}actions/showmessage", payload)
     await client.async_publish(f"{client.topics.ui}actions/toast", payload)
+    await client.async_publish(f"{client.topics.ui}actions/notification", payload)
     return True
 
 

@@ -314,3 +314,29 @@ def test_query_initial_state_requests_capability() -> None:
     published = {c.args[0]: c.args[1] for c in mqtt_mock.publish.call_args_list}
     assert capability_topic in published
     assert published[capability_topic] == ""
+
+
+def test_show_message_publishes_all_candidate_topics() -> None:
+    """Test show_message publishes to showmessage, toast, and notification topics with title/text payload."""
+    import json
+    from custom_components.hisense_vidaa.tv.actions_media import show_message
+
+    client = HisenseTvClient(ip="192.168.50.12", client_id="cid")
+    mqtt_mock = MagicMock()
+    client.mqtt_client = mqtt_mock
+    client.connected = True
+
+    result = show_message(client, message="Front Door", title="Alert", duration=10)
+    assert result is True
+
+    published = {c.args[0]: c.args[1] for c in mqtt_mock.publish.call_args_list}
+    assert f"{client.topics.ui}actions/showmessage" in published
+    assert f"{client.topics.ui}actions/toast" in published
+    assert f"{client.topics.ui}actions/notification" in published
+
+    payload = json.loads(published[f"{client.topics.ui}actions/showmessage"])
+    assert payload["message"] == "Front Door"
+    assert payload["text"] == "Front Door"
+    assert payload["title"] == "Alert"
+    assert payload["duration"] == 10
+    assert payload["type"] == "notify"
