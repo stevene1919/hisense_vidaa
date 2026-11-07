@@ -539,4 +539,23 @@ def test_media_player_dynamic_source_icons(mock_client, mock_entry):
     assert mp.icon == "mdi:television"
 
 
+def test_media_player_extra_state_attributes(mock_client, mock_entry):
+    """Test extra_state_attributes reporting client info and profiles safely."""
+    mock_client.device_name = "Hisense Bedroom TV"
+    mock_client.model_name = "58A53FXVT"
+    mock_client.firmware_version = "V0000.06.30T.N0921"
+    mock_client.connected = True
+    mock_client.brand = "his"
+
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    attrs = mp.extra_state_attributes
+    assert attrs["reported_name"] == "Hisense Bedroom TV"
+    assert attrs["model"] == "58A53FXVT"
+    assert attrs["software_version"] == "V0000.06.30T.N0921"
+    assert attrs["mqtt_connected"] is True
+    assert "auth_profile" in attrs
+    assert "brand_profile" in attrs
+
+
+
 

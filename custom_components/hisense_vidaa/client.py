@@ -39,6 +39,13 @@ from .tv.upnp_mixin import TvUpnpMixin
 if TYPE_CHECKING:
     import aiohttp
 
+__all__ = [
+    "HisenseTvClient",
+    "async_perform_token_refresh",
+    "get_tv_timestamp",
+    "is_token_expired",
+]
+
 _LOGGER = logging.getLogger(__name__)
 
 

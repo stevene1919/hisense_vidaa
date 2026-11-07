@@ -25,9 +25,14 @@ _LOGGER = logging.getLogger(__name__)
 class MediaPlayerStateHandlerMixin:
     """Telemetry and broadcast handling mixin for HisenseVidaaMediaPlayer."""
 
+    def _schedule_ha_update(self: HisenseVidaaMediaPlayer) -> None:
+        """Schedules a Home Assistant state update if the entity is added to hass."""
+        if getattr(self, "hass", None):
+            self.schedule_update_ha_state()
+
     def _handle_sound_update(self: HisenseVidaaMediaPlayer, data: dict[str, Any]) -> None:
         """Handle sound setting updates from TV."""
-        self.schedule_update_ha_state()
+        self._schedule_ha_update()
 
     def _apply_state_payload(self: HisenseVidaaMediaPlayer, parsed: dict[str, Any]) -> None:
         """Applies parsed state broadcast payload."""
@@ -56,7 +61,7 @@ class MediaPlayerStateHandlerMixin:
                 "hisense_vidaa_media_player_initial_state",
             )
 
-        self.schedule_update_ha_state()
+        self._schedule_ha_update()
 
     def _handle_state_update(self: HisenseVidaaMediaPlayer, data: dict[str, Any]) -> None:
         if not isinstance(data, dict):
@@ -90,7 +95,7 @@ class MediaPlayerStateHandlerMixin:
         self._volume, self._volume_type, self._muted = parse_volume_broadcast(
             data, self._volume, self._volume_type, self._muted
         )
-        self.schedule_update_ha_state()
+        self._schedule_ha_update()
 
     def _handle_sourcelist_update(self: HisenseVidaaMediaPlayer, data: list[dict[str, Any]]) -> None:
         if not data:
@@ -104,21 +109,21 @@ class MediaPlayerStateHandlerMixin:
                 self._source = active_source
             if self._client.is_on:
                 self._state = STATE_ON
-        self.schedule_update_ha_state()
+        self._schedule_ha_update()
 
     def _handle_applist_update(self: HisenseVidaaMediaPlayer, data: list[dict[str, Any]]) -> None:
         if not data:
             return
         self._app_list, self._app_dict = parse_applist_data(data)
-        self.schedule_update_ha_state()
+        self._schedule_ha_update()
 
     def _handle_connected(self: HisenseVidaaMediaPlayer) -> None:
         # Power state is set by the retained state broadcast that follows the connect.
         self._state = STATE_ON if (self._client and self._client.is_on) else STATE_OFF
-        self.schedule_update_ha_state()
+        self._schedule_ha_update()
 
     def _handle_disconnected(self: HisenseVidaaMediaPlayer) -> None:
         if self._client:
             self._client.is_on = False
         self._state = STATE_OFF
-        self.schedule_update_ha_state()
+        self._schedule_ha_update()

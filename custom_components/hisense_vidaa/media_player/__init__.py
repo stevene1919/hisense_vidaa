@@ -158,13 +158,17 @@ class HisenseVidaaMediaPlayer(
             "brand_profile": BRAND_PROFILES.get(brand_key, str(brand_key).title() if brand_key else "Auto"),
             "active_brand": BRAND_MAP.get(active_code, str(active_code).upper() if active_code else "Hisense"),
         }
-        if self._client and self._client.device_name:
-            attributes["reported_name"] = self._client.device_name
-        if self._client and self._client.device_info:
-            for k in ("model", "software_version", "chipset", "display_resolution"):
-                val = self._client.device_info.get(k)
-                if val:
-                    attributes[k] = val
+        if self._client:
+            if getattr(self._client, "device_name", None):
+                attributes["reported_name"] = self._client.device_name
+            if getattr(self._client, "model_name", None):
+                attributes["model"] = self._client.model_name
+            if getattr(self._client, "firmware_version", None):
+                attributes["software_version"] = self._client.firmware_version
+        if self._mac:
+            attributes["mac_address"] = self._mac
+        if self._connected_device:
+            attributes["connected_device"] = self._connected_device
         if self._channel_infos:
             attributes["channel_infos"] = self._channel_infos
         return attributes
