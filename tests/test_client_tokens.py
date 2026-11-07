@@ -320,7 +320,7 @@ def test_sync_clock_and_clock_drift_callback():
     drift_records = []
     client.register_clock_drift_callback(lambda offset: drift_records.append(offset))
 
-    with patch("custom_components.hisense_vidaa.client.get_tv_timestamp", return_value=mock_tv_ts):
+    with patch.object(client.upnp, "async_get_tv_timestamp", AsyncMock(return_value=mock_tv_ts)):
         offset = client.sync_clock()
 
     assert offset == mock_tv_ts - host_now

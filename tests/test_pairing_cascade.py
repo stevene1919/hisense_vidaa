@@ -94,6 +94,7 @@ async def test_pairing_brand_fallback_auto_profile():
     client = HisenseTvClient(
         ip="192.168.50.12", mac="e8:51:77:ec:98:1c", auth_profile="auto", brand="his"
     )
+    client.get_device_fingerprint = MagicMock(return_value={})
 
     calls = []
 

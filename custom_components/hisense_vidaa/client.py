@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import time
 from typing import TYPE_CHECKING, Any
@@ -244,6 +245,12 @@ class HisenseTvClient(
 
     async def async_get_device_fingerprint(self, timeout: float = 2.0) -> dict[str, Any]:
         """Fetches the UPnP renderer description via the shared aiohttp session."""
+        sync_fn = self.__dict__.get("get_device_fingerprint")
+        if sync_fn is not None and callable(sync_fn):
+            res = sync_fn(timeout=timeout)
+            if inspect.isawaitable(res):
+                return await res
+            return res or {}
         return await self.upnp.async_get_device_fingerprint(timeout=timeout)
 
     def get_device_fingerprint(self, timeout: float = 2.0) -> dict[str, Any]:

@@ -34,10 +34,10 @@ def test_on_connect_rc5_no_refresh_token():
     mock_auth_failed = MagicMock()
     client.register_auth_failed_callback(mock_auth_failed)
 
-    with patch("threading.Thread") as mock_thread:
+    with patch.object(client._token_manager, "async_refresh_token_and_update_creds") as mock_refresh:
         client._on_connect(mock_mqtt, None, None, rc=5)
         mock_mqtt.loop_stop.assert_called_once()
-        mock_thread.assert_not_called()
+        mock_refresh.assert_not_called()
         mock_auth_failed.assert_called_once()
 
 
