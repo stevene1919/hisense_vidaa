@@ -2,6 +2,34 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [3.3.1] - 2026-11-08 — 🚀 Wake-on-LAN Broadcast Fix, UI Setup Fix & Internationalization Edition
+
+This release resolves a critical Wake-on-LAN broadcast regression across subnets and relays, fixes a UI setup error (`not_implemented`) during initial device pairing, expands regional smart TV streaming app aliases for top analytics countries, adds full native translations for Russian, Ukrainian, and Simplified Chinese, and introduces multilingual documentation with dark-mode badges.
+
+### ☕ Support the Project
+
+If this integration has added value to your smart home setup, consider buying me a coffee to support continued development and maintenance:
+
+[![Support on Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/stevene_)
+
+### 🌟 What's New & Fixed in v3.3.1
+- **WAKE-ON-LAN BROADCAST DISPATCH (#52)**:
+  - **Keyword Argument Preservation**: Switched executor dispatch in `tv/actions.py` to use `functools.partial(client.send_wake_on_lan, mac_targets, ip=getattr(client, "ip", None))` instead of passing IP positionally.
+  - **Dual Broadcast Recovery**: Restored broadcast packet delivery to both standard `255.255.255.255:9` and subnet-directed `<subnet>.255:9` alongside direct unicast, resolving power-on failures from deep standby across subnets and UDP relays (verified on Hisense PX3-Pro).
+- **STANDBY & SIGNAL GUARDING (#53)**:
+  - Guarded `KEY_POWER` toggling and active signal detection during TV fake sleep/standby transitions.
+- **CONFIG FLOW MRO INHERITANCE BUG FIX**:
+  - Reordered class inheritance in `HisenseVidaaConfigFlow` (`DiscoveryFlowMixin, ReauthFlowMixin, CertsFlowMixin, UserFlowMixin, config_entries.ConfigFlow`) so custom mixin implementations precede Home Assistant core stubs.
+  - Eliminates the `not_implemented` error dialog when adding or reconfiguring TVs in the UI.
+- **INTERNATIONALIZATION & NEW TRANSLATIONS**:
+  - Added complete 100% key-parity translations for **Russian** (`ru.json`), **Ukrainian** (`uk.json`), and **Simplified Chinese** (`zh-Hans.json`).
+  - Added dark-mode friendly SVG language switcher badges in `README.md` and created localized README guides in `docs/i18n/` for German, Italian, French, Russian, Ukrainian, and Simplified Chinese.
+- **REGIONAL SMART TV APP ALIASES**:
+  - Added streaming app aliases for France (France.tv, TF1+, 6play, Canal+), Germany & Austria (WOW, MagentaTV, Zattoo, ServusTV), Italy (TIMVISION), Eastern Europe & Ukraine (MEGOGO, Sweet.tv, Kyivstar TV), Russia (Kinopoisk, IVI, Okko, Wink, KION), China (iQIYI, Tencent Video, Youku, Bilibili, Mango TV), and Canada (TSN, Sportsnet, ICI TOU.TV).
+- **DEVELOPER TOOLING & REPOSITORY HYGIENE**:
+  - Relocated CLI utilities (`test_client.py`, `debug_tv.py`) to repository root `scripts/` to ensure they are excluded from HACS production zip releases.
+  - Hardened unit tests and CI workflow with hermetic mocks and `voluptuous` installation across Python 3.12 and 3.13.
+
 ## [3.3.0] - 2026-11-07 — 📺 Context-Aware Channel Track Controls, Pluggable Turn-On Triggers & Source Filtering Edition
 
 This release introduces context-aware media player track stepping (channel surfing on Live TV vs. media skipping on apps/HDMI), channel name resolution in `play_media`, user-configurable source filtering in Options Flow, Home Assistant `PluggableAction` turn-on device automations, enhanced toast notification probes, and full Serbian translations.
