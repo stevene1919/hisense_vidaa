@@ -10,7 +10,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfTime
 
-from .const import (
+from ..const import (
     AUTH_PROFILES,
     BRAND_PROFILES,
     CONF_AUTH_PROFILE,
@@ -19,12 +19,12 @@ from .const import (
     DEFAULT_BRAND,
     DEFAULT_BRAND_OPTION,
 )
-from .discovery import BRAND_MAP
-from .entity import HisenseVidaaEntity
-from .tv.fingerprint import format_drift_human
+from ..discovery import BRAND_MAP
+from ..entity import HisenseVidaaEntity
+from ..tv.fingerprint import format_drift_human
 
 if TYPE_CHECKING:
-    from .client import HisenseTvClient
+    from ..client import HisenseTvClient
 
 _LOGGER = logging.getLogger(__name__)
 

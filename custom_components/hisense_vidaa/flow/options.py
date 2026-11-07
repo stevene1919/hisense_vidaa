@@ -48,7 +48,7 @@ from ..const import (
     DEFAULT_REFRESH_IN_STANDBY,
     DEFAULT_USE_SSL,
 )
-from ..crypto import check_certs_exist, validate_ssl_certs
+from ..protocol import check_certs_exist, validate_ssl_certs
 
 
 class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):

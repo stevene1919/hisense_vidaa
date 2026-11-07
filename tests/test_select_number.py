@@ -220,8 +220,7 @@ async def test_entity_availability_matrix(mock_client, mock_entry):
     )
     from custom_components.hisense_vidaa.number import HisenseVidaaBacklightNumber
     from custom_components.hisense_vidaa.select import HisenseVidaaPictureModeSelect
-    from custom_components.hisense_vidaa.sensor import HisenseVidaaActiveSourceSensor
-    from custom_components.hisense_vidaa.sensors_diagnostic import HisenseVidaaSessionStatusSensor
+    from custom_components.hisense_vidaa.sensor import HisenseVidaaActiveSourceSensor, HisenseVidaaSessionStatusSensor
     from custom_components.hisense_vidaa.switch import (
         HisenseVidaaAudioOnlySwitch,
         HisenseVidaaDebugLoggingSwitch,

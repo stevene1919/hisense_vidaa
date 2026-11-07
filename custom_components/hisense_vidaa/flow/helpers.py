@@ -47,8 +47,8 @@ from ..const import (
     DEFAULT_USE_SSL,
     DOMAIN,
 )
-from ..crypto import check_certs_exist, resolve_certificates
 from ..discovery import BRAND_MAP, GENERIC_MANUFACTURERS, get_arp_mac, normalize_brand_code
+from ..protocol import check_certs_exist, resolve_certificates
 
 if TYPE_CHECKING:
     from ..client import HisenseTvClient

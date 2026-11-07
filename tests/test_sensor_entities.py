@@ -18,8 +18,6 @@ from custom_components.hisense_vidaa.button import (
 from custom_components.hisense_vidaa.sensor import (
     HisenseVidaaActiveAppSensor,
     HisenseVidaaActiveSourceSensor,
-)
-from custom_components.hisense_vidaa.sensors_diagnostic import (
     HisenseVidaaAudioOutputSensor,
     HisenseVidaaAuthProfileSensor,
     HisenseVidaaBrandProfileSensor,
@@ -424,7 +422,7 @@ def test_in_use_binary_sensor_dormant_and_hdmi_states(mock_client, mock_entry):
 def test_disabled_by_default_entities(mock_client, mock_entry):
     """Verify specialized diagnostic entities are disabled by default."""
     from custom_components.hisense_vidaa.button import HisenseVidaaProbeCapabilitiesButton
-    from custom_components.hisense_vidaa.sensors_diagnostic import (
+    from custom_components.hisense_vidaa.sensor import (
         HisenseVidaaClockDriftSensor,
         HisenseVidaaReportedNameSensor,
     )

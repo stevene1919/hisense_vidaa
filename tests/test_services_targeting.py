@@ -229,7 +229,7 @@ def test_multi_tv_ambiguous_target_guard() -> None:
     """Test single-TV auto targeting, multi-TV ambiguous target exception, and 'all' broadcast."""
     from types import SimpleNamespace
 
-    from custom_components.hisense_vidaa.services_target import (
+    from custom_components.hisense_vidaa.services import (
         _get_target_clients,
         _resolve_service_targets,
     )

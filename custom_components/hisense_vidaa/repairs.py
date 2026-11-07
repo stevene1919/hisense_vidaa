@@ -10,7 +10,7 @@ from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
 
 from .const import CONF_AUTH_PROFILE, CONF_CERTFILE, CONF_KEYFILE
-from .crypto import check_certs_exist, resolve_certificates
+from .protocol import check_certs_exist, resolve_certificates
 
 
 class CertificateMissingRepairFlow(RepairsFlow):

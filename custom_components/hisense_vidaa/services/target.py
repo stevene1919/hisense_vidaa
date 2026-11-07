@@ -10,7 +10,7 @@ import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 
-from .const import ATTR_APP, ATTR_APP_ID, DOMAIN
+from ..const import ATTR_APP, ATTR_APP_ID, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,11 +48,7 @@ def _as_id_set(value: Any) -> set[str]:
 def _async_target_entry_ids_from_registries(
     hass: HomeAssistant, call_data: dict[str, Any]
 ) -> set[str]:
-    """Resolve area/floor/label targets to config entry ids via the HA registries.
-
-    Target selector offers area, floor, and label targeting. These reside in their
-    own keys of the service call data.
-    """
+    """Resolve area/floor/label targets to config entry ids via the HA registries."""
     area_ids = _as_id_set(call_data.get("area_id"))
     floor_ids = _as_id_set(call_data.get("floor_id"))
     label_ids = _as_id_set(call_data.get("label_id"))
@@ -177,8 +173,6 @@ def _get_target_clients(hass: HomeAssistant, call: ServiceCall) -> list[Any]:
                 clients.append(client)
         return clients
 
-    # ip/mac/entry_id are explicit targets, so the broadcast fallback must never fire
-    # once anything targets the call.
     selector_given = bool(
         target_entry_ids or target_ip or target_mac or registry_ids_given
     )
@@ -190,8 +184,6 @@ def _get_target_clients(hass: HomeAssistant, call: ServiceCall) -> list[Any]:
                 continue
             if target_entry_ids and entry.entry_id not in target_entry_ids:
                 continue
-            # A registry-backed target (entity/device/area/floor/label) that resolves
-            # to no entry matches nothing - it must not degrade into a broadcast.
             if registry_ids_given and not target_entry_ids:
                 continue
             if target_ip and getattr(client, "ip", None) != target_ip:

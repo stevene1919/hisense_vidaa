@@ -179,7 +179,7 @@ async def test_user_step_auto_certs_missing_routes_to_certs(monkeypatch):
     flow.context = {}
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.crypto.check_certs_exist",
+        "custom_components.hisense_vidaa.protocol.check_certs_exist",
         lambda c, k: False,
     )
 
@@ -222,7 +222,7 @@ async def test_certs_step_submission_valid(monkeypatch):
     flow._abort_if_unique_id_configured = MagicMock()
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.crypto.check_certs_exist",
+        "custom_components.hisense_vidaa.protocol.check_certs_exist",
         lambda c, k: True,
     )
     monkeypatch.setattr(

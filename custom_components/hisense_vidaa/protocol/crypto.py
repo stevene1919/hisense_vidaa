@@ -14,6 +14,16 @@ STANDARD_SALT = "h*i&s%e!r^v0i1c9"
 CLIENT_ID_PATTERN = "38D65DC30F45109A369A86FCE866A85B"
 XOR_TIMESTAMP_MASK = 6239759785777146216
 
+__all__ = [
+    "CLIENT_ID_PATTERN",
+    "MODERN_SALT",
+    "STANDARD_SALT",
+    "XOR_TIMESTAMP_MASK",
+    "clean_mac",
+    "generate_initial_credentials",
+    "normalize_mac_address",
+]
+
 
 def normalize_mac_address(mac_address: str | None) -> str:
     """Normalize a MAC address's separators (caller's case preserved), or generate a random MAC.
@@ -78,35 +88,3 @@ def generate_initial_credentials(
     password = hashlib.md5(f"{current_timestamp}${salt_hash[:6]}".encode()).hexdigest().upper()
 
     return client_id, username, password
-
-
-from .protocol.certs import (
-    HAS_CRYPTOGRAPHY,
-    KNOWN_P12_PASSWORDS,
-    check_certs_exist,
-    detect_brand_from_cert_paths,
-    extract_pkcs12_to_pem,
-    get_profile_default_cert_paths,
-    resolve_ca_certificate,
-    resolve_certificates,
-    validate_ssl_certs,
-)
-
-__all__ = [
-    "CLIENT_ID_PATTERN",
-    "HAS_CRYPTOGRAPHY",
-    "KNOWN_P12_PASSWORDS",
-    "MODERN_SALT",
-    "STANDARD_SALT",
-    "XOR_TIMESTAMP_MASK",
-    "check_certs_exist",
-    "clean_mac",
-    "detect_brand_from_cert_paths",
-    "extract_pkcs12_to_pem",
-    "generate_initial_credentials",
-    "get_profile_default_cert_paths",
-    "normalize_mac_address",
-    "resolve_ca_certificate",
-    "resolve_certificates",
-    "validate_ssl_certs",
-]

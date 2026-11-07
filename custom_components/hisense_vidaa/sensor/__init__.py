@@ -9,8 +9,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .client import HisenseTvClient
-from .sensors_diagnostic import (
+from ..client import HisenseTvClient
+from ..tv.media import parse_applist_payload, parse_sourcelist_payload
+from ..tv.navigation import get_app_icon, get_source_icon
+from .diagnostic import (
     HisenseVidaaAudioOutputSensor,
     HisenseVidaaAuthProfileSensor,
     HisenseVidaaBaseSensor,
@@ -19,11 +21,9 @@ from .sensors_diagnostic import (
     HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
 )
-from .tv.media import parse_applist_payload, parse_sourcelist_payload
-from .tv.navigation import get_app_icon, get_source_icon
 
 if TYPE_CHECKING:
-    from . import HisenseVidaaConfigEntry
+    from .. import HisenseVidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 

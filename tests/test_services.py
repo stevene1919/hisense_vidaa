@@ -507,7 +507,7 @@ async def test_change_channel_service():
 
 def test_services_helpers() -> None:
     """Test service helper functions."""
-    from custom_components.hisense_vidaa.services_target import (
+    from custom_components.hisense_vidaa.services import (
         _as_id_set,
         parse_key_sequence,
     )

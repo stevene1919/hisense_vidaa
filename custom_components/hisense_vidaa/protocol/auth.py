@@ -11,7 +11,7 @@ import ssl
 import time
 from typing import Any
 
-from ..crypto import generate_initial_credentials
+from .crypto import generate_initial_credentials
 from .dispatcher import mask_sensitive_payload
 from .topics import TopicPaths, build_topic_paths
 

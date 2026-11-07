@@ -49,7 +49,7 @@ from .const import (
     DEFAULT_USE_SSL,
     DOMAIN,
 )
-from .crypto import resolve_ca_certificate, resolve_certificates
+from .protocol import resolve_ca_certificate, resolve_certificates
 from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)

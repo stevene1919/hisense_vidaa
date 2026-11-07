@@ -7,12 +7,12 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-from .crypto import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
 from .discovery import (
     BRAND_MAP,
     get_device_fingerprint as discover_device_fingerprint,
     get_tv_timestamp,
 )
+from .protocol import generate_initial_credentials, resolve_ca_certificate, resolve_certificates
 from .protocol.auth import (
     async_perform_token_refresh,
     async_probe_tv_auth_methods,

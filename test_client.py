@@ -717,7 +717,7 @@ def main() -> None:
     key_path = args.key_file
 
     if cert_path and (cert_path.lower().endswith(".p12") or cert_path.lower().endswith(".pfx")):
-        from custom_components.hisense_vidaa.crypto import extract_pkcs12_to_pem
+        from custom_components.hisense_vidaa.protocol import extract_pkcs12_to_pem
 
         extracted = extract_pkcs12_to_pem(cert_path)
         if extracted:
