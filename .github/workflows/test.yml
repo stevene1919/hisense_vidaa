@@ -7,7 +7,7 @@ on:
     paths:
       - "custom_components/hisense_vidaa/**"
       - "tests/**"
-      - "test_client.py"
+      - "scripts/**"
       - "pyproject.toml"
       - ".github/workflows/test.yml"
   pull_request:
