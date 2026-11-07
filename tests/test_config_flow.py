@@ -226,11 +226,11 @@ async def test_certs_step_submission_valid(monkeypatch):
         lambda c, k: True,
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow_certs.check_certs_exist",
+        "custom_components.hisense_vidaa.flow.certs.check_certs_exist",
         lambda c, k: True,
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow_certs.validate_ssl_certs",
+        "custom_components.hisense_vidaa.flow.certs.validate_ssl_certs",
         lambda c, k: (True, None),
     )
     monkeypatch.setattr(
@@ -264,7 +264,7 @@ async def test_zeroconf_discovery(monkeypatch):
     flow._abort_if_unique_id_configured = MagicMock()
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow_helpers.get_arp_mac",
+        "custom_components.hisense_vidaa.flow.helpers.get_arp_mac",
         lambda host: "e8:51:77:ec:98:1c",
     )
     monkeypatch.setattr(
@@ -350,11 +350,11 @@ async def test_certs_step_submission_invalid_pem(monkeypatch):
     flow.auth_profile = "modern"
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow_certs.check_certs_exist",
+        "custom_components.hisense_vidaa.flow.certs.check_certs_exist",
         lambda c, k: True,
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow_certs.validate_ssl_certs",
+        "custom_components.hisense_vidaa.flow.certs.validate_ssl_certs",
         lambda c, k: (False, "invalid_ssl_cert: PEM lib error"),
     )
 

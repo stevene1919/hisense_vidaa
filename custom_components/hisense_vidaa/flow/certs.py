@@ -11,19 +11,19 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import AbortFlow
 
-from .const import CONF_CERTFILE, CONF_KEYFILE, CONF_USE_SSL, DEFAULT_BRAND, DEFAULT_USE_SSL
-from .crypto import (
+from ..const import CONF_CERTFILE, CONF_KEYFILE, CONF_USE_SSL, DEFAULT_BRAND, DEFAULT_USE_SSL
+from ..crypto import (
     check_certs_exist,
     detect_brand_from_cert_paths,
     extract_pkcs12_to_pem,
     get_profile_default_cert_paths,
     validate_ssl_certs,
 )
-from .discovery import BRAND_MAP
-from .flow_helpers import resolve_ssl_certs
+from ..discovery import BRAND_MAP
+from .helpers import resolve_ssl_certs
 
 if TYPE_CHECKING:
-    from .config_flow import HisenseVidaaConfigFlow
+    from ..config_flow import HisenseVidaaConfigFlow
 
 _LOGGER = logging.getLogger(__name__)
 

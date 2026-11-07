@@ -273,7 +273,7 @@ async def test_reauth_success_deletes_auth_token_issue(monkeypatch: pytest.Monke
 
     deleted = []
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow_reauth.ir.async_delete_issue",
+        "custom_components.hisense_vidaa.flow.reauth.ir.async_delete_issue",
         lambda hass_arg, domain, issue_id: deleted.append((domain, issue_id)),
     )
 
@@ -303,7 +303,7 @@ async def test_reconfigure_aborts_when_new_ip_belongs_to_another_tv(
     flow = _reauth_flow(hass, own_entry, "own_entry")
     hass.config_entries.async_entries = MagicMock(return_value=[own_entry, other_entry])
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow_reauth.async_resolve_mac",
+        "custom_components.hisense_vidaa.flow.reauth.async_resolve_mac",
         AsyncMock(return_value="e8:51:77:ec:98:2d"),
     )
     monkeypatch.setattr(
@@ -311,7 +311,7 @@ async def test_reconfigure_aborts_when_new_ip_belongs_to_another_tv(
         AsyncMock(return_value=None),
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow_reauth.ReauthFlowMixin._async_finish_reauth",
+        "custom_components.hisense_vidaa.flow.reauth.ReauthFlowMixin._async_finish_reauth",
         AsyncMock(return_value={"type": "abort", "reason": "reconfigure_successful"}),
     )
 

@@ -10,12 +10,12 @@ from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
-from .const import CONF_IP_ADDRESS
-from .discovery import DiscoveredTvInfo, parse_ssdp_discovery, parse_zeroconf_discovery
-from .flow_helpers import async_resolve_mac
+from ..const import CONF_IP_ADDRESS
+from ..discovery import DiscoveredTvInfo, parse_ssdp_discovery, parse_zeroconf_discovery
+from .helpers import async_resolve_mac
 
 if TYPE_CHECKING:
-    from .config_flow import HisenseVidaaConfigFlow
+    from ..config_flow import HisenseVidaaConfigFlow
 
 _LOGGER = logging.getLogger(__name__)
 

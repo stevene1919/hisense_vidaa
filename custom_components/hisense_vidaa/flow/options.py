@@ -1,3 +1,7 @@
+"""Options flow handler for Hisense VIDAA TV."""
+
+from __future__ import annotations
+
 import asyncio
 from typing import Any
 
@@ -5,7 +9,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import selector
 
-from .const import (
+from ..const import (
     AUTH_PROFILE_SELECTOR,
     BRAND_SELECTOR,
     CONF_AUTH_PROFILE,
@@ -44,7 +48,7 @@ from .const import (
     DEFAULT_REFRESH_IN_STANDBY,
     DEFAULT_USE_SSL,
 )
-from .crypto import check_certs_exist, validate_ssl_certs
+from ..crypto import check_certs_exist, validate_ssl_certs
 
 
 class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):

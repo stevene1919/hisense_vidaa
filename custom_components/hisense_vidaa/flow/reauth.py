@@ -11,7 +11,7 @@ from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import (
+from ..const import (
     AUTH_PROFILE_SELECTOR,
     BRAND_SELECTOR,
     CONF_AUTH_PROFILE,
@@ -27,10 +27,10 @@ from .const import (
     DEFAULT_USE_SSL,
     DOMAIN,
 )
-from .flow_helpers import async_resolve_mac
+from .helpers import async_resolve_mac
 
 if TYPE_CHECKING:
-    from .config_flow import HisenseVidaaConfigFlow
+    from ..config_flow import HisenseVidaaConfigFlow
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -135,8 +135,6 @@ class ReauthFlowMixin:
         """Dialog to confirm reauth and trigger PIN."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            from .client import HisenseTvClient
-
             # Disconnect any existing running client for this entry to prevent
             # duplicate MQTT Client ID collisions during the reauth flow.
             await self._async_disconnect_existing_client()
@@ -145,6 +143,8 @@ class ReauthFlowMixin:
                 await self._async_resolve_ssl_certs()
 
             session = async_get_clientsession(self.hass) if self.hass else None
+            from ..client import HisenseTvClient
+
             self.client = HisenseTvClient(
                 self.ip_address,
                 self.mac_address,

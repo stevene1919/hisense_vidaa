@@ -34,9 +34,11 @@ from .const import (
     DOMAIN,
 )
 from .discovery import BRAND_MAP, GENERIC_MANUFACTURERS, normalize_brand_code
-from .flow_certs import CertsFlowMixin
-from .flow_discovery import DiscoveryFlowMixin
-from .flow_helpers import (
+from .flow import (
+    CertsFlowMixin,
+    DiscoveryFlowMixin,
+    HisenseVidaaOptionsFlowHandler,
+    ReauthFlowMixin,
     async_disconnect_existing_client,
     async_discover_device_details,
     async_probe_device_capabilities,
@@ -45,8 +47,6 @@ from .flow_helpers import (
     build_options_schema,
     collect_client_auth_data,
 )
-from .flow_reauth import ReauthFlowMixin
-from .options_flow import HisenseVidaaOptionsFlowHandler
 from .protocol.pairing import PairingStatusError, async_probe_pairing_challenge
 
 _LOGGER = logging.getLogger(__name__)

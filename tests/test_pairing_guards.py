@@ -67,7 +67,7 @@ async def test_duplicate_tv_aborts_with_already_configured(monkeypatch, no_netwo
     flow = _flow(hass, profile="legacy")
     flow._abort_if_unique_id_configured = MagicMock(side_effect=AbortFlow("already_configured"))
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow_helpers.get_arp_mac",
+        "custom_components.hisense_vidaa.flow.helpers.get_arp_mac",
         lambda host: "e8:51:77:ec:98:1c",
     )
 
@@ -94,7 +94,7 @@ async def test_certs_step_does_not_swallow_abort_flow(monkeypatch, no_network_st
     flow = _flow(hass, profile="modern")
     flow._abort_if_unique_id_configured = MagicMock(side_effect=AbortFlow("already_configured"))
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow_certs.check_certs_exist", lambda c, k: True
+        "custom_components.hisense_vidaa.flow.certs.check_certs_exist", lambda c, k: True
     )
 
     with pytest.raises(AbortFlow):
