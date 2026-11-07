@@ -33,6 +33,8 @@ from .tv.fingerprint import (
     get_tv_timestamp,
 )
 from .tv.state import TvStateMixin
+from .tv.tokens import TvTokenLifecycleMixin, _run_sync
+from .tv.upnp_mixin import TvUpnpMixin
 
 if TYPE_CHECKING:
     import aiohttp
@@ -40,17 +42,14 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-def _run_sync(coro: Any) -> Any:
-    """Runs a coroutine to completion from synchronous (CLI) code."""
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-    coro.close()
-    raise RuntimeError("Synchronous client API called from a running event loop; use the async_* variant")
-
-
-class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixin, TvActionsMixin):
+class HisenseTvClient(
+    CallbackRegistryMixin,
+    TvStateMixin,
+    ConnectionManagerMixin,
+    TvActionsMixin,
+    TvTokenLifecycleMixin,
+    TvUpnpMixin,
+):
     """Client communicating with Hisense VIDAA TV over local TLS/MQTT broker."""
 
     TOKEN_WATCH_INTERVAL = TokenLifecycleManager.TOKEN_WATCH_INTERVAL
@@ -172,100 +171,6 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         # UPnP Client for zero-cert fast reachability, volume, and playback state
         # (shares Home Assistant's aiohttp session when injected)
         self.upnp = HisenseUpnpClient(self.ip, session=session)
-
-    # --------------------------------------------------------------------------
-    # Backward compatibility properties for TokenLifecycleManager
-    # --------------------------------------------------------------------------
-    @property
-    def _refresh_lock(self) -> asyncio.Lock:
-        return self._token_manager.refresh_lock
-
-    @property
-    def _refreshing_token(self) -> bool:
-        return self._token_manager.refreshing_token
-
-    @_refreshing_token.setter
-    def _refreshing_token(self, value: bool) -> None:
-        self._token_manager.refreshing_token = value
-
-    @property
-    def _last_refresh_attempt(self) -> float:
-        return self._token_manager.last_refresh_attempt
-
-    @_last_refresh_attempt.setter
-    def _last_refresh_attempt(self, value: float) -> None:
-        self._token_manager.last_refresh_attempt = value
-
-    @property
-    def _last_awake_refresh_attempt(self) -> float:
-        return self._token_manager.last_awake_refresh_attempt
-
-    @_last_awake_refresh_attempt.setter
-    def _last_awake_refresh_attempt(self, value: float) -> None:
-        self._token_manager.last_awake_refresh_attempt = value
-
-    @property
-    def _rejected_refresh_failures(self) -> int:
-        return self._token_manager.rejected_refresh_failures
-
-    @_rejected_refresh_failures.setter
-    def _rejected_refresh_failures(self, value: int) -> None:
-        self._token_manager.rejected_refresh_failures = value
-
-    @property
-    def _broker_rejection_failures(self) -> int:
-        return self._token_manager.broker_rejection_failures
-
-    @_broker_rejection_failures.setter
-    def _broker_rejection_failures(self, value: int) -> None:
-        self._token_manager.broker_rejection_failures = value
-
-    @property
-    def _last_refresh_connect_rc(self) -> int | None:
-        return self._token_manager.last_refresh_connect_rc
-
-    @_last_refresh_connect_rc.setter
-    def _last_refresh_connect_rc(self, value: int | None) -> None:
-        self._token_manager.last_refresh_connect_rc = value
-
-    @property
-    def _token_watch(self) -> asyncio.Task | None:
-        return self._token_manager.token_watch_task
-
-    @property
-    def _token_watch_closed(self) -> bool:
-        return self._token_manager.token_watch_closed
-
-    @_token_watch_closed.setter
-    def _token_watch_closed(self, value: bool) -> None:
-        self._token_manager.token_watch_closed = value
-
-    def _start_token_watch(self) -> None:
-        self._token_manager.start_token_watch()
-
-    def _stop_token_watch(self) -> None:
-        self._token_manager.stop_token_watch()
-
-    def _token_watch_tick(self) -> None:
-        self._token_manager._token_watch_tick()
-
-    def _maybe_refresh_while_awake(self) -> None:
-        self._token_manager.maybe_refresh_while_awake()
-
-    def _proactive_token_refresh(self) -> None:
-        self._token_manager.proactive_token_refresh()
-
-    def _schedule_rejected_retry(self, delay: float) -> None:
-        self._token_manager.schedule_rejected_retry(delay)
-
-    def _rejected_retry_fire(self) -> None:
-        self._token_manager._rejected_retry_fire()
-
-    def _cancel_rejected_retry(self) -> None:
-        self._token_manager.cancel_rejected_retry()
-
-    def _refresh_token_and_update_creds(self) -> None:
-        self._token_manager.refresh_token_and_update_creds()
 
     @property
     def _query_timer(self) -> Any:
@@ -431,149 +336,6 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
         """Submits the PIN code entered by the user and retrieves token pair."""
         return await async_submit_pin_code(self, pin_code)
 
-    async def async_sync_clock(self, timeout: float = 2.0) -> int | None:
-        """Queries TV UPnP Date header, updates clock_offset, and triggers callbacks."""
-        sync_fn = self.__dict__.get("sync_clock")
-        if sync_fn is not None and callable(sync_fn):
-            res = sync_fn(timeout=timeout)
-            if asyncio.iscoroutine(res):
-                return await res
-            return res
-
-        tv_timestamp = await self.upnp.async_get_tv_timestamp(timeout=timeout)
-        if tv_timestamp is None:
-            try:
-                tv_timestamp = get_tv_timestamp(self.ip, timeout=timeout)
-            except Exception:
-                tv_timestamp = None
-        if tv_timestamp:
-            self.tv_timestamp = tv_timestamp
-            self.clock_offset = tv_timestamp - int(time.time())
-            self.last_clock_sync = time.time()
-            _LOGGER.debug(
-                "[%s] Synchronized TV clock: %d (offset: %d s)",
-                self.ip,
-                tv_timestamp,
-                self.clock_offset,
-            )
-            self._dispatch_clock_drift_update(self.clock_offset)
-            return self.clock_offset
-        return None
-
-    def sync_clock(self, timeout: float = 2.0) -> int | None:
-        """Synchronous (CLI) wrapper for async_sync_clock."""
-        return _run_sync(self.async_sync_clock(timeout))
-
-    async def async_check_and_refresh_token(
-        self,
-        force: bool = False,
-        margin_seconds: int = 0,
-        clock_offset: int | None = None,
-    ) -> bool:
-        """Checks access token expiration and triggers refresh via refresh token if necessary."""
-        sync_fn = self.__dict__.get("check_and_refresh_token")
-        if sync_fn is not None and callable(sync_fn):
-            res = sync_fn(force=force, margin_seconds=margin_seconds, clock_offset=clock_offset)
-            if asyncio.iscoroutine(res):
-                return await res
-            return bool(res)
-
-        if not self.refresh_token:
-            return False
-
-        effective_offset = self.clock_offset if clock_offset is None else clock_offset
-
-        if not force and self.access_token:
-            if not is_token_expired(
-                self.access_token_time,
-                self.access_token_duration,
-                margin_seconds=margin_seconds,
-                clock_offset=effective_offset,
-            ):
-                return False
-            _LOGGER.debug(
-                "[%s] Access token expired or within margin (clock_offset=%d), initiating refresh",
-                self.ip,
-                effective_offset,
-            )
-
-        return await self.async_refresh_tokens()
-
-    def check_and_refresh_token(
-        self,
-        force: bool = False,
-        margin_seconds: int = 0,
-        clock_offset: int | None = None,
-    ) -> bool:
-        """Synchronous (CLI) wrapper for async_check_and_refresh_token."""
-        if not self.refresh_token:
-            return False
-        return _run_sync(self.async_check_and_refresh_token(force, margin_seconds, clock_offset))
-
-    async def async_refresh_tokens(self) -> bool:
-        """Connects with the refresh token to obtain a fresh access token."""
-        sync_fn = self.__dict__.get("refresh_tokens")
-        if sync_fn is not None and callable(sync_fn):
-            res = sync_fn()
-            if asyncio.iscoroutine(res):
-                return await res
-            return bool(res)
-
-        # Query TV UPnP clock before refreshing to ensure credentials and expiration match TV epoch
-        await self.async_sync_clock(timeout=2.0)
-
-        had_session = self._mqtt_task is not None or self.mqtt_client is not None
-        if had_session:
-            # The TV only allows one session per client id: stop the main session
-            # (and its reconnect loop) while the refresh session runs.
-            await self._async_stop_session()
-
-        refresh_status: dict[str, Any] = {}
-        updated_data = await async_perform_token_refresh(
-            ip=self.ip,
-            client_id=self.client_id,
-            username=self.username,
-            refresh_token=self.refresh_token or "",
-            certfile=self.certfile,
-            keyfile=self.keyfile,
-            ca_cert=self.ca_cert,
-            verify_ssl=self.verify_ssl,
-            out_status=refresh_status,
-            use_ssl=self.use_ssl,
-        )
-        self._last_refresh_connect_rc = refresh_status.get("connect_rc")
-
-        if updated_data:
-            self.access_token = updated_data["accesstoken"]
-            self.access_token_time = int(
-                updated_data.get("accesstoken_time", int(time.time()) + self.clock_offset)
-            )
-            self.access_token_duration = int(updated_data.get("accesstoken_duration_day", 2))
-            self.refresh_token = updated_data.get("refreshtoken", self.refresh_token)
-            self.refresh_token_time = int(
-                updated_data.get("refreshtoken_time", int(time.time()) + self.clock_offset)
-            )
-            self.refresh_token_duration = int(
-                updated_data.get("refreshtoken_duration_day")
-                or updated_data.get("refresh_token_duration_day", 30)
-            )
-            self._dispatch_token_refreshed()
-            if had_session:
-                await self.async_connect_and_run()
-            return True
-
-        if had_session:
-            _LOGGER.warning(
-                "[%s] Token refresh failed (TV in standby or unreachable); restoring MQTT connection with the current access token",
-                self.ip,
-            )
-            await self.async_connect_and_run()
-        return False
-
-    def refresh_tokens(self) -> bool:
-        """Synchronous (CLI) wrapper for async_refresh_tokens."""
-        return _run_sync(self.async_refresh_tokens())
-
     @staticmethod
     def send_wake_on_lan(
         mac: str | list[str] | tuple[str, ...],
@@ -583,30 +345,3 @@ class HisenseTvClient(CallbackRegistryMixin, TvStateMixin, ConnectionManagerMixi
     ) -> bool:
         """Sends standard Wake-on-LAN magic packet UDP broadcasts for one or multiple MACs."""
         return send_wake_on_lan(mac=mac, broadcast_ip=broadcast_ip, port=port, ip=ip)
-
-    # --------------------------------------------------------------------------
-    # UPnP / DLNA LAN Control Integration
-    # --------------------------------------------------------------------------
-    async def async_upnp_get_volume(self) -> int | None:
-        """Retrieves master volume level (0-100) via UPnP RenderingControl."""
-        return await self.upnp.async_get_volume()
-
-    async def async_upnp_set_volume(self, volume: int) -> bool:
-        """Sets master volume level (0-100) via UPnP RenderingControl."""
-        return await self.upnp.async_set_volume(volume)
-
-    async def async_upnp_get_mute(self) -> bool | None:
-        """Retrieves master mute status via UPnP RenderingControl."""
-        return await self.upnp.async_get_mute()
-
-    async def async_upnp_set_mute(self, mute: bool) -> bool:
-        """Sets master mute status (True/False) via UPnP RenderingControl."""
-        return await self.upnp.async_set_mute(mute)
-
-    async def async_upnp_get_transport_info(self) -> dict[str, str] | None:
-        """Retrieves playback transport info (PLAYING, STOPPED, etc.) via UPnP AVTransport."""
-        return await self.upnp.async_get_transport_info()
-
-    async def async_upnp_probe(self) -> dict[str, Any] | None:
-        """Probes UPnP endpoint for fast sub-second reachability and status."""
-        return await self.upnp.async_probe()
