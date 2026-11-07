@@ -341,3 +341,75 @@ def test_show_message_publishes_all_candidate_topics() -> None:
     assert payload["title"] == "Alert"
     assert payload["duration"] == 10
     assert payload["type"] == "notify"
+
+
+@pytest.mark.anyio
+async def test_async_show_message_publishes_all_candidate_topics() -> None:
+    """Test async_show_message publishes to showmessage, toast, and notification topics."""
+    import json
+    from unittest.mock import AsyncMock
+
+    from custom_components.hisense_vidaa.tv.actions_media import async_show_message
+
+    client = HisenseTvClient(ip="192.168.50.12", client_id="cid")
+    client.connected = True
+    client.mqtt_client = MagicMock()
+    client.async_publish = AsyncMock()
+
+    result = await async_show_message(client, message="Ding Dong", title="Doorbell", duration=7)
+    assert result is True
+
+    assert client.async_publish.call_count == 3
+    topics = [c.args[0] for c in client.async_publish.call_args_list]
+    assert f"{client.topics.ui}actions/showmessage" in topics
+    assert f"{client.topics.ui}actions/toast" in topics
+    assert f"{client.topics.ui}actions/notification" in topics
+
+    payload = json.loads(client.async_publish.call_args_list[0].args[1])
+    assert payload["message"] == "Ding Dong"
+    assert payload["title"] == "Doorbell"
+    assert payload["duration"] == 7
+
+
+@pytest.mark.anyio
+async def test_show_message_not_connected() -> None:
+    """Test show_message returns False when client is disconnected."""
+    from custom_components.hisense_vidaa.tv.actions_media import async_show_message, show_message
+
+    client = HisenseTvClient(ip="192.168.50.12", client_id="cid")
+    client.connected = False
+    client.mqtt_client = None
+
+    assert show_message(client, message="Hello") is False
+    assert await async_show_message(client, message="Hello") is False
+
+
+@pytest.mark.anyio
+async def test_set_volume_and_async_set_volume() -> None:
+    """Test set_volume and async_set_volume publish changevolume action."""
+    from unittest.mock import AsyncMock
+
+    from custom_components.hisense_vidaa.tv.actions_media import async_set_volume, set_volume
+
+    client = HisenseTvClient(ip="192.168.50.12", client_id="cid")
+    client.connected = True
+    mqtt_mock = MagicMock()
+    client.mqtt_client = mqtt_mock
+    client.async_publish = AsyncMock()
+
+    set_volume(client, 25)
+    mqtt_mock.publish.assert_called_once_with(
+        f"{client.topics.platform}actions/changevolume", "25"
+    )
+
+    await async_set_volume(client, 30)
+    client.async_publish.assert_called_once_with(
+        f"{client.topics.platform}actions/changevolume", "30"
+    )
+
+    # Test mixin methods on client
+    client.set_volume(35)
+    assert mqtt_mock.publish.call_count == 2
+    await client.async_set_volume(40)
+    assert client.async_publish.call_count == 2
+

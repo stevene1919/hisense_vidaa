@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant.components.device_automation import InvalidDeviceAutomationConfig
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import ATTR_DEVICE_ID, CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
+from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.trigger import PluggableAction, TriggerConfig
 
@@ -308,3 +308,116 @@ async def test_media_player_turn_on_with_pluggable_action(mock_hass):
     assert len(action_ran) == 1
     # Client WoL should NOT have been called because pluggable action intercepted
     mock_client.async_turn_on.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_validate_trigger_config_device_not_found(mock_hass):
+    """Test validating trigger config raises when device entry does not exist."""
+    config = {
+        CONF_PLATFORM: "device",
+        CONF_DOMAIN: DOMAIN,
+        CONF_DEVICE_ID: "missing_device",
+        CONF_TYPE: PLATFORM_TYPE,
+    }
+
+    with patch("custom_components.hisense_vidaa.helpers.dr.async_get") as mock_dr_get:
+        dev_reg = MagicMock()
+        dev_reg.async_get.return_value = None
+        mock_dr_get.return_value = dev_reg
+
+        with pytest.raises(InvalidDeviceAutomationConfig):
+            await async_validate_trigger_config(mock_hass, config)
+
+
+@pytest.mark.anyio
+async def test_validate_trigger_config_no_config_entry(mock_hass, mock_device_entry):
+    """Test validating trigger config raises when no config entry matches DOMAIN."""
+    config = {
+        CONF_PLATFORM: "device",
+        CONF_DOMAIN: DOMAIN,
+        CONF_DEVICE_ID: "test_device_123",
+        CONF_TYPE: PLATFORM_TYPE,
+    }
+
+    mock_hass.config_entries.async_get_entry.return_value = None
+
+    with patch("custom_components.hisense_vidaa.helpers.dr.async_get") as mock_dr_get:
+        dev_reg = MagicMock()
+        dev_reg.async_get.return_value = mock_device_entry
+        mock_dr_get.return_value = dev_reg
+
+        with pytest.raises(InvalidDeviceAutomationConfig):
+            await async_validate_trigger_config(mock_hass, config)
+
+
+@pytest.mark.anyio
+async def test_attach_trigger_unhandled_type(mock_hass):
+    """Test async_attach_trigger raises HomeAssistantError on unknown trigger type."""
+    config = {
+        CONF_PLATFORM: "device",
+        CONF_DOMAIN: DOMAIN,
+        CONF_DEVICE_ID: "test_device_123",
+        CONF_TYPE: "hisense_vidaa.unknown_trigger",
+    }
+
+    with pytest.raises(HomeAssistantError):
+        await async_attach_trigger(mock_hass, config, MagicMock(), {})
+
+
+@pytest.mark.anyio
+async def test_turn_on_trigger_schema_validation(mock_hass):
+    """Test TurnOnTrigger schema validation methods."""
+    config = {
+        "options": {
+            ATTR_DEVICE_ID: ["dev_1"],
+        }
+    }
+    validated = await TurnOnTrigger.async_validate_config(mock_hass, config)
+    assert validated == config
+
+    completed = await TurnOnTrigger.async_validate_complete_config(mock_hass, config)
+    assert completed == config
+
+
+@pytest.mark.anyio
+async def test_turn_on_trigger_with_entity_id(mock_hass, mock_device_entry):
+    """Test TurnOnTrigger attachment with entity_id resolution."""
+    action_called = []
+
+    async def mock_runner(variables, description, context=None):
+        action_called.append(True)
+
+    config = TriggerConfig(
+        options={
+            ATTR_ENTITY_ID: ["media_player.hisense_tv"],
+        }
+    )
+    trigger = TurnOnTrigger(mock_hass, config)
+
+    with (
+        patch("custom_components.hisense_vidaa.helpers.dr.async_get") as mock_dr_get,
+        patch("custom_components.hisense_vidaa.helpers.er.async_get") as mock_er_get,
+    ):
+        dev_reg = MagicMock()
+        dev_reg.async_get.return_value = mock_device_entry
+        mock_dr_get.return_value = dev_reg
+
+        ent_reg = MagicMock()
+        ent = MagicMock()
+        ent.device_id = "test_device_123"
+        ent.platform = DOMAIN
+        ent_reg.async_get.return_value = ent
+        mock_er_get.return_value = ent_reg
+
+        unsub = await trigger.async_attach_runner(mock_runner)
+
+        pluggable = PluggableAction()
+        pluggable.async_register(mock_hass, async_get_turn_on_trigger("test_device_123"))
+        assert bool(pluggable) is True
+
+        await pluggable.async_run(mock_hass)
+        assert len(action_called) == 1
+
+        unsub()
+        assert bool(pluggable) is False
+
