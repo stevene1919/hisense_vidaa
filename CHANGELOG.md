@@ -2,6 +2,35 @@
 
 All notable changes to the Hisense VIDAA TV integration will be documented in this file.
 
+## [3.3.0] - 2026-11-07 — 📺 Context-Aware Channel Track Controls, Pluggable Turn-On Triggers & Source Filtering Edition
+
+This release introduces context-aware media player track stepping (channel surfing on Live TV vs. media skipping on apps/HDMI), channel name resolution in `play_media`, user-configurable source filtering in Options Flow, Home Assistant `PluggableAction` turn-on device automations, enhanced toast notification probes, and full Serbian translations.
+
+### ☕ Support the Project
+
+If this integration has added value to your smart home setup, consider buying me a coffee to support continued development and maintenance:
+
+[![Support on Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/stevene_)
+
+### 🌟 What's New in v3.3.0
+- **CONTEXT-AWARE CHANNEL SURFING & TRACK CONTROLS (#55)**:
+  - **Dynamic Next/Previous Track Stepping**: `media_previous_track` and `media_next_track` dynamically send `KEY_CHANNELDOWN` and `KEY_CHANNELUP` when actively watching Live TV, and `KEY_BACK` / `KEY_FORWARDS` when on media apps or external inputs.
+  - **HDMI 'TV Input' False Positive Guard**: Implemented `is_live_tv_source()` to ensure external inputs (HDMI1–3, AV) reporting system container `appname='TV Input'` or `'TV'` are strictly treated as external sources and never trigger channel stepping.
+  - **Dynamic `media_content_type`**: Exposes `MediaType.CHANNEL` when tuned to Live TV, and `MediaType.APP` when running streaming apps.
+- **CHANNEL NAME MATCHING IN `play_media` (#55)**:
+  - `media_player.play_media` with `media_content_type: channel` now matches against TV channel names (e.g. `"ABC TV"`, `"Nine"`) in addition to numeric channel digits.
+- **USER-CONFIGURABLE SOURCE FILTERING (`CONF_SOURCES`) (#55)**:
+  - Added a multi-select source picker in Options Flow allowing users to customize and filter the inputs and apps shown on the media player card while preserving active source visibility.
+- **TURN-ON DEVICE AUTOMATION TRIGGER (`PluggableAction`) (#55)**:
+  - Added `device_trigger.py`, `triggers/turn_on.py`, and `triggers.yaml` supporting the `"Device is requested to turn on"` trigger. Users can attach custom actions (smart plugs, IR blasters, custom WoL) to turn on the TV, cleanly falling back to native Wake-on-LAN and `KEY_POWER` if unconfigured.
+- **NOTIFICATION PROBING & CANDIDATE TOPICS (#54)**:
+  - Updated notification dispatcher to publish across `actions/showmessage`, `actions/toast`, and `actions/notification` with dual `message` and `text` payload fields.
+  - Added `notify` command and `--probe` option to `test_client.py` for troubleshooting firmware toast compositor listeners.
+- **TRANSLATIONS (PR #50)**:
+  - Added official Serbian Cyrillic (`sr.json`) and Serbian Latin (`sr-Latn.json`) translations contributed by @cpmarexel2f.
+- **TEST SUITE & HARDENING**:
+  - Expanded test suite to 294 passing unit tests covering all trigger validations, media actions, and context guards.
+
 ## [3.2.0] - 2026-11-05 — 🌐 Universal VIDAA OEM Multi-Brand & SSL Certificate Validation Edition
 
 This release expands the integration beyond Hisense-badged hardware to provide comprehensive, end-to-end support for all partner TV brands operating on the VIDAA Smart TV platform (including Toshiba, Loewe, TPV Technology / Philips, Schneider, Akai, Beko, and others). It also introduces robust client SSL certificate semantic and syntactic validation, enriched async UPnP descriptor parsing, and graceful Zeroconf / HomeKit metadata extraction.

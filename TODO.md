@@ -43,6 +43,7 @@ This document tracks active pending tasks, investigations, and future roadmap it
 
 For complete details on completed features and technical improvements, refer to the [Changelog](CHANGELOG.md):
 
+* **v3.3.0**: Context-aware channel track controls (Previous/Next track steps channels on Live TV, skips tracks on Apps/HDMI), HDMI container false-positive guard (`is_live_tv_source`), channel name matching in `play_media`, user-configurable source filtering in Options Flow (`CONF_SOURCES`), `PluggableAction` turn-on device automations, candidate toast notification probing, and full Serbian translations (294 unit tests).
 * **v3.2.0**: Universal VIDAA OEM Multi-Brand Support (Hisense, Toshiba, Loewe, Philips/TPV, Sharp, JVC, and regional partners), candidate OEM brand handshake cascade on `rc: 5`, certificate filename brand detection, post-PIN brand preservation fix, automatic credential regeneration on brand changes, Device Options & Manual IP brand selector, UPnP MAC fallback support, and comprehensive modular test suite (246 unit tests).
 * **v3.1.0**: Full architectural migration to native `aiomqtt>=2.3.0` async transport engine, shared `aiohttp.ClientSession` injection, multi-device service ambiguity guards, and 100% IQS rule compliance (`quality_scale.yaml`).
 * **v3.0.0**: Live MQTT device registry enrichment, generic UPnP placeholder sanitization, dynamic MDI app/source icons, UPnP LAN control, zero-cost HTTP Date header clock drift detection, and diagnostic sensors.
