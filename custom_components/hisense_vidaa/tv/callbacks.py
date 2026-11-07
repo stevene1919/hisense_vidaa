@@ -165,6 +165,7 @@ class CallbackRegistryMixin:
                     )
                     if src_name and not self.current_source:
                         self.current_source = src_name
+                    self.is_on = True
                     break
         self._dispatch("sourcelist", self.sources)
 

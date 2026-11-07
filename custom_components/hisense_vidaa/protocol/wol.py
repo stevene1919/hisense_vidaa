@@ -14,6 +14,7 @@ def send_wake_on_lan(
     broadcast_ip: str | None = None,
     port: int = 9,
     ip: str | None = None,
+    num_packets: int = 3,
 ) -> bool:
     """Sends standard Wake-on-LAN magic packet UDP broadcasts for one or multiple MACs."""
     if not mac:
@@ -21,6 +22,7 @@ def send_wake_on_lan(
 
     mac_list = [mac] if isinstance(mac, str) else list(mac)
     success = False
+    ports = (port, 7) if port == 9 else (port,)
 
     for single_mac in mac_list:
         if not single_mac or not isinstance(single_mac, str):
@@ -43,18 +45,22 @@ def send_wake_on_lan(
                         if isinstance(ip_obj, ipaddress.IPv4Address):
                             subnet_broadcast = f"{ip.rsplit('.', 1)[0]}.255"
                             broadcast_targets.add(subnet_broadcast)
+                            broadcast_targets.add(ip)
                     except ValueError:
                         pass
 
-            for target in broadcast_targets:
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                    sock.sendto(magic_packet, (target, port))
+            for p in ports:
+                for target in broadcast_targets:
+                    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                        for _ in range(num_packets):
+                            sock.sendto(magic_packet, (target, p))
                     _LOGGER.debug(
-                        "Sent Wake-on-LAN packet for MAC %s to %s:%d",
+                        "Sent Wake-on-LAN packet burst (%dx) for MAC %s to %s:%d",
+                        num_packets,
                         cleaned_mac,
                         target,
-                        port,
+                        p,
                     )
             success = True
         except Exception as e:

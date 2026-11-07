@@ -21,6 +21,13 @@ def apply_state_update(client: HisenseTvClient, data: Any) -> None:
     # followed by remote_launcher) and must be reported ON, not off.
     if "off" in statetype or statetype == "fake_sleep_0":
         client.state = "off"
+        if isinstance(getattr(client, "sources", None), list):
+            for s in client.sources:
+                if isinstance(s, dict):
+                    s["is_signal"] = "0"
+                    s["is_active"] = False
+                    s["isactive"] = False
+                    s["active"] = False
     elif statetype in ("screen_saver", "screensaver"):
         client.state = "screensaver"
     elif statetype or data.get("is_power_on") in (1, "1", True):

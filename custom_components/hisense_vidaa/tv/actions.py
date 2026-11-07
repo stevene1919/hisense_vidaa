@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import json
 import logging
 import time
@@ -255,13 +256,14 @@ def turn_on_tv(
         client.send_wake_on_lan(mac_targets, ip=getattr(client, "ip", None))
 
     if client.connected:
-        if not client.is_on:
+        if not client.is_on and getattr(client, "has_active_signal", False) is not True:
             _LOGGER.debug(
                 "[%s] TV connected in standby/fake_sleep. Sending KEY_POWER to wake screen",
                 getattr(client, "ip", "unknown"),
             )
             client.send_key("KEY_POWER")
         else:
+            client.is_on = True
             _LOGGER.debug(
                 "[%s] TV already connected and running. Skipping KEY_POWER to prevent powering down",
                 getattr(client, "ip", "unknown"),
@@ -500,16 +502,19 @@ async def async_turn_on_tv(
     """Powers on or wakes the TV safely and idempotently asynchronously."""
     if mac_targets:
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, client.send_wake_on_lan, mac_targets, getattr(client, "ip", None))
+        await loop.run_in_executor(
+            None, functools.partial(client.send_wake_on_lan, mac_targets, ip=getattr(client, "ip", None))
+        )
 
     if client.connected:
-        if not client.is_on:
+        if not client.is_on and getattr(client, "has_active_signal", False) is not True:
             _LOGGER.debug(
                 "[%s] TV connected in standby/fake_sleep. Sending KEY_POWER to wake screen",
                 getattr(client, "ip", "unknown"),
             )
             await client.async_send_key("KEY_POWER")
         else:
+            client.is_on = True
             _LOGGER.debug(
                 "[%s] TV already connected and running. Skipping KEY_POWER to prevent powering down",
                 getattr(client, "ip", "unknown"),
