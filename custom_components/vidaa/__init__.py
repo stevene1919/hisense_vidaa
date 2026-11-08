@@ -11,7 +11,12 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv, entity_registry as er, issue_registry as ir
+from homeassistant.helpers import (
+    config_validation as cv,
+    device_registry as dr,
+    entity_registry as er,
+    issue_registry as ir,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.trigger import PluggableAction
@@ -49,6 +54,7 @@ from .const import (
     DEFAULT_REFRESH_IN_STANDBY,
     DEFAULT_USE_SSL,
     DOMAIN,
+    LEGACY_DOMAIN,
 )
 from .protocol import resolve_ca_certificate, resolve_certificates
 from .services import async_setup_services, async_unload_services
@@ -88,14 +94,81 @@ type VidaaConfigEntry = ConfigEntry[VidaaData]
 type HisenseVidaaConfigEntry = VidaaConfigEntry
 
 
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate old entry to new configuration version."""
+    _LOGGER.debug(
+        "Migrating config entry '%s' from version %s.%s",
+        entry.title,
+        entry.version,
+        entry.minor_version,
+    )
+
+    if entry.version == 1:
+        # Migrate entity registry if needed
+        try:
+            ent_reg = er.async_get(hass)
+            entities: list[Any] = []
+            if hasattr(er, "async_entries_for_config_entry"):
+                entities = er.async_entries_for_config_entry(ent_reg, entry.entry_id)
+            elif hasattr(ent_reg, "entities"):
+                if hasattr(ent_reg.entities, "get_entries_for_config_entry_id"):
+                    entities = list(ent_reg.entities.get_entries_for_config_entry_id(entry.entry_id))
+                elif isinstance(ent_reg.entities, dict):
+                    entities = [e for e in ent_reg.entities.values() if getattr(e, "config_entry_id", None) == entry.entry_id]
+            for reg_entry in entities:
+                if getattr(reg_entry, "platform", None) == LEGACY_DOMAIN:
+                    object.__setattr__(reg_entry, "platform", DOMAIN)
+        except Exception as err:
+            _LOGGER.debug("Non-fatal error migrating entity registry entries: %s", err)
+
+        # Migrate device registry identifiers
+        try:
+            dev_reg = dr.async_get(hass)
+            device = dev_reg.async_get_device(identifiers={(LEGACY_DOMAIN, entry.entry_id)})
+            if device:
+                dev_reg.async_update_device(
+                    device.id,
+                    merge_identifiers={(DOMAIN, entry.entry_id), (LEGACY_DOMAIN, entry.entry_id)},
+                )
+        except Exception as err:
+            _LOGGER.debug("Non-fatal error updating device registry: %s", err)
+
+        # Migrate domain attribute if still legacy
+        if getattr(entry, "domain", None) == LEGACY_DOMAIN:
+            object.__setattr__(entry, "domain", DOMAIN)
+
+        hass.config_entries.async_update_entry(
+            entry,
+            version=2,
+            minor_version=1,
+        )
+        _LOGGER.info(
+            "Successfully migrated config entry '%s' to version 2.1",
+            entry.title,
+        )
+
+    return True
+
+
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
-    """Set up the Hisense VIDAA TV integration services."""
+    """Set up the VIDAA Smart TV integration services."""
     await async_setup_services(hass)
+
+    # Automatically check for and migrate any remaining legacy entries
+    if hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_entries"):
+        for legacy_entry in hass.config_entries.async_entries(LEGACY_DOMAIN):
+            _LOGGER.info("Found legacy %s config entry '%s'; migrating to %s", LEGACY_DOMAIN, legacy_entry.title, DOMAIN)
+            await async_migrate_entry(hass, legacy_entry)
+
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry) -> bool:
-    """Set up Hisense VIDAA TV from a config entry."""
+    """Set up VIDAA Smart TV from a config entry."""
+    version = getattr(entry, "version", None)
+    if isinstance(version, int) and version < 2:
+        await async_migrate_entry(hass, entry)
+
     # [F2-leg2/F2-leg4/F2-leg6]: services are registered by async_setup, but
     # async_unload_entry removes them once the last entry goes away and
     # async_setup is never called again (e.g. after an options reload).  Keep

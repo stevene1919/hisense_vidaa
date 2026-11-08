@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant, SupportsResponse
 
 from ..const import (
     DOMAIN,
+    LEGACY_DOMAIN,
     SERVICE_CHANGE_CHANNEL,
     SERVICE_LAUNCH_APP,
     SERVICE_SEND_KEY,
@@ -113,6 +114,30 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 supports_response=SupportsResponse.OPTIONAL,
             )
 
+        # Register non-breaking alias under legacy domain (hisense_vidaa.<service>)
+        if not hass.services.has_service(LEGACY_DOMAIN, service_name):
+            def _make_legacy_handler(name: str, target_fn: Any):
+                async def _legacy_service_handler(call: Any) -> Any:
+                    _LOGGER.warning(
+                        "Action '%s.%s' is deprecated and will be removed in a future release. "
+                        "Please update your automations to use '%s.%s'.",
+                        LEGACY_DOMAIN,
+                        name,
+                        DOMAIN,
+                        name,
+                    )
+                    return await target_fn(call)
+
+                return _legacy_service_handler
+
+            hass.services.async_register(
+                LEGACY_DOMAIN,
+                service_name,
+                _make_legacy_handler(service_name, handler),
+                schema=schema,
+                supports_response=SupportsResponse.OPTIONAL,
+            )
+
 
 async def async_unload_services(hass: HomeAssistant) -> None:
     """Unregister all custom services if no active entries remain."""
@@ -141,3 +166,5 @@ async def async_unload_services(hass: HomeAssistant) -> None:
     for service_name in services_to_remove:
         if hass.services.has_service(DOMAIN, service_name):
             hass.services.async_remove(DOMAIN, service_name)
+        if hass.services.has_service(LEGACY_DOMAIN, service_name):
+            hass.services.async_remove(LEGACY_DOMAIN, service_name)

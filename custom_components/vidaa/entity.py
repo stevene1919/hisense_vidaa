@@ -17,6 +17,7 @@ from .const import (
     DEFAULT_BRAND,
     DEFAULT_NAME,
     DOMAIN,
+    LEGACY_DOMAIN,
 )
 
 __all__ = ["HisenseVidaaEntity", "VidaaEntity"]
@@ -57,7 +58,7 @@ class VidaaEntity(Entity):
         manufacturer = self._client.manufacturer or self._manufacturer or brand_mfg
         sw_version = self._client.firmware_version or self._sw_version
         info = DeviceInfo(
-            identifiers={(DOMAIN, self._entry_id)},
+            identifiers={(DOMAIN, self._entry_id), (LEGACY_DOMAIN, self._entry_id)},
             name=self._name,
             manufacturer=manufacturer,
             model=model,

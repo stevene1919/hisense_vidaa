@@ -46,7 +46,8 @@ class VidaaConfigFlow(
 ):
     """Handle a config flow for VIDAA Smart TV."""
 
-    VERSION = 1
+    VERSION = 2
+    MINOR_VERSION = 1
 
     def __init__(self) -> None:
         """Initialize config flow state."""

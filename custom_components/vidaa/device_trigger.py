@@ -22,12 +22,13 @@ from homeassistant.helpers.typing import ConfigType
 from .const import DOMAIN
 from .helpers import async_get_device_entry_by_device_id
 from .triggers.turn_on import (
+    LEGACY_PLATFORM_TYPE,
     PLATFORM_TYPE as TURN_ON_PLATFORM_TYPE,
     async_get_turn_on_description,
     async_get_turn_on_trigger,
 )
 
-TRIGGER_TYPES = {TURN_ON_PLATFORM_TYPE}
+TRIGGER_TYPES = {TURN_ON_PLATFORM_TYPE, LEGACY_PLATFORM_TYPE}
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {
         vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES),
@@ -41,7 +42,7 @@ async def async_validate_trigger_config(
     """Validate config."""
     config = TRIGGER_SCHEMA(config)
 
-    if config[CONF_TYPE] == TURN_ON_PLATFORM_TYPE:
+    if config[CONF_TYPE] in TRIGGER_TYPES:
         device_id = config[CONF_DEVICE_ID]
         try:
             device = async_get_device_entry_by_device_id(hass, device_id)
@@ -97,7 +98,7 @@ async def async_attach_trigger(
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
-    if (trigger_type := config[CONF_TYPE]) == TURN_ON_PLATFORM_TYPE:
+    if (trigger_type := config[CONF_TYPE]) in TRIGGER_TYPES:
         device_id = config[CONF_DEVICE_ID]
         trigger_data = trigger_info.get("trigger_data", {}) if isinstance(trigger_info, dict) else {}
         variables = {

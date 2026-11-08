@@ -10,7 +10,7 @@ from homeassistant.components.media_player import (
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 
-from custom_components.vidaa.const import DOMAIN
+from custom_components.vidaa.const import DOMAIN, LEGACY_DOMAIN
 from custom_components.vidaa.media_player import HisenseVidaaMediaPlayer
 from custom_components.vidaa.remote import HisenseVidaaRemote
 from custom_components.vidaa.tv.settings import SettingMenuItem
@@ -24,7 +24,7 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
     )
     dev_info = mp.device_info
     assert mp.device_class == MediaPlayerDeviceClass.TV
-    assert dev_info["identifiers"] == {(DOMAIN, "test_entry_id")}
+    assert dev_info["identifiers"] == {(DOMAIN, "test_entry_id"), (LEGACY_DOMAIN, "test_entry_id")}
     assert dev_info["model"] == "65U7G"
     assert dev_info["manufacturer"] == "Hisense"
     assert dev_info["sw_version"] == "V1.0"
@@ -34,7 +34,7 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
         entry=mock_entry,
     )
     rem_info = rem.device_info
-    assert rem_info["identifiers"] == {(DOMAIN, "test_entry_id")}
+    assert rem_info["identifiers"] == {(DOMAIN, "test_entry_id"), (LEGACY_DOMAIN, "test_entry_id")}
     assert rem_info["model"] == "65U7G"
 
 

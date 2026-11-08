@@ -27,7 +27,7 @@ from homeassistant.helpers.trigger import (
 )
 from homeassistant.helpers.typing import ConfigType
 
-from ..const import DOMAIN
+from ..const import DOMAIN, LEGACY_DOMAIN
 from ..helpers import (
     async_get_device_entry_by_device_id,
     async_get_device_id_from_entity_id,
@@ -35,6 +35,7 @@ from ..helpers import (
 
 # Stored in device automations as the trigger type; must stay stable
 PLATFORM_TYPE = f"{DOMAIN}.turn_on"
+LEGACY_PLATFORM_TYPE = f"{LEGACY_DOMAIN}.turn_on"
 
 _OPTIONS_SCHEMA_DICT: dict[vol.Marker, Any] = {
     vol.Optional(ATTR_DEVICE_ID): vol.All(cv.ensure_list, [cv.string]),
