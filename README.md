@@ -1,4 +1,4 @@
-# Hisense VIDAA TV Integration for Home Assistant
+# VIDAA Smart TV Integration for Home Assistant
 
 <p align="center">
   <a href="README.md"><img src="https://img.shields.io/badge/🇬🇧_English-blue?style=flat-square" alt="English"></a>
@@ -34,7 +34,7 @@ Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using 
 Setting up your TV takes less than 3 minutes across 3 simple steps:
 
 ### 1️⃣ Install via HACS
-Click the one-click button below (or search **Hisense VIDAA TV** in HACS → Integrations → Download):
+Click the one-click button below (or search **VIDAA Smart TV** in HACS → Integrations → Download):
 
 [![Open HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 

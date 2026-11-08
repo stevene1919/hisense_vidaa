@@ -1,6 +1,24 @@
 # Changelog
 
-All notable changes to the Hisense VIDAA TV integration will be documented in this file.
+All notable changes to the VIDAA Smart TV integration will be documented in this file.
+
+## [3.5.0] - 2026-11-08 — 🚀 VIDAA Smart TV Rebrand Edition
+
+This major update rebrands the integration to **VIDAA Smart TV** (`vidaa`), reflecting full multi-brand support across all television and projector manufacturers running VIDAA OS (Hisense, Toshiba, Loewe, Philips, Sharp, JVC, TOPTRO, and partner brands).
+
+### 🌟 What's New & Highlights in v3.5.0
+- **INTEGRATION REBRAND (`vidaa`)**:
+  - Rebranded the integration domain to `vidaa` and integration title to **VIDAA Smart TV**.
+  - Deployed official VIDAA iconography, high-resolution logos, and brand assets.
+  - Refactored core classes and symbols to `Vidaa*` (`VidaaClient`, `VidaaMediaPlayer`, `VidaaRemote`, `VidaaEntity`, etc.) with backwards-compatible aliases for legacy symbols.
+- **ZERO-BREAKING-CHANGE AUTOMATIC MIGRATION**:
+  - **Seamless Configuration Migration**: Existing config entries automatically upgrade from configuration version 1 to 2.1 via `async_migrate_entry()`.
+  - **Registry Preservation**: Entity registry platform entries and unique IDs are preserved and migrated without orphaned entities or broken dashboards.
+  - **Device Card Continuity**: Existing device registry identifiers are merged to ensure existing devices and custom cards in Home Assistant continue operating without duplication.
+  - **Legacy Action Aliases**: `hisense_vidaa.*` services (`send_key`, `send_key_sequence`, `change_channel`, `launch_app`, `set_picture_setting`, `set_sound_setting`, `send_text_input`) remain active as alias actions with deprecation notices, ensuring existing automations or scripts continue to work seamlessly.
+  - **Legacy Trigger Compatibility**: Automations listening to `hisense_vidaa.turn_on` device triggers continue functioning alongside canonical `vidaa.turn_on`.
+- **MEDIA PLAYER UI CONTROLS (#55)**:
+  - Ensured Previous/Next track and channel navigation buttons in the Home Assistant media player card remain visible and accessible whenever media playback controls are enabled.
 
 ## [3.3.2-beta.1] - 2026-11-08 — 📺 Media Player UI Controls Fix
 
