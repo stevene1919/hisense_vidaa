@@ -67,7 +67,6 @@ Supporta ufficialmente **qualsiasi Smart TV con sistema VIDAA OS** (associazione
 - **Controllo LAN Locale al 100% (`iot_class: local_push`)**: Nessuna dipendenza dal cloud, funziona perfettamente anche in VLAN isolate senza accesso a Internet.
 - **Piattaforma Media Player**: Accensione/spegnimento, controllo volume, cambio sorgente d'ingresso, selezione canali e avvio rapido delle app (Netflix, Prime Video, YouTube, RaiPlay, Mediaset Infinity, TIMVISION, ecc.).
 - **Regolazione Immagine e Audio (`select` e `number`)**: Modalità immagine (`Standard`, `Cinema`, `Dinamica`, `Sport`, `Filmmaker`) e regolazione di Luminosità, Contrasto e Retroilluminazione; selezione modalità audio ed equalizzatore.
-- **Notifiche su Schermo (`notify`)**: Invia messaggi pop-up direttamente sullo schermo della TV dalle automazioni.
 - **Telecomando Dedicato (`remote`)**: Navigazione con D-pad, tasti colorati, menu e ripetizione tasti configurabile.
 - **Automazioni di Accensione (`device_trigger`)**: Supporto nativo per trigger `hisense_vidaa.turn_on` per accendere prese smart o relè.
 

@@ -647,82 +647,6 @@ def do_upnp(ip: str) -> None:
     probe_upnp_services(ip, verbose=True)
 
 
-def do_notify(
-    creds: dict[str, Any],
-    message: str,
-    title: str | None = None,
-    duration: int = 5,
-    certfile: str | None = None,
-    keyfile: str | None = None,
-    ca_cert: str | None = None,
-    verify_ssl: bool = False,
-    brand: str | None = None,
-    probe_topics: bool = False,
-) -> None:
-    ip = creds.get("ip_address")
-    print(f"\n[NOTIFY] Sending toast notification to TV at {ip} (Title: '{title or ''}', Message: '{message}', Duration: {duration}s)...")
-
-    client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl, brand=brand)
-
-    received_messages: list[tuple[str, str]] = []
-
-    orig_handle_message = client._handle_message
-
-    def custom_handle_message(topic: str, payload: str) -> None:
-        received_messages.append((topic, payload))
-        print(f"   📥 TV Response on topic '{topic}': {payload}")
-        orig_handle_message(topic, payload)
-
-    client._handle_message = custom_handle_message
-
-    client.connect_and_run()
-    for _ in range(30):
-        if client.connected:
-            break
-        time.sleep(0.1)
-
-    if not client.connected:
-        print("❌ Could not connect to TV to send notification.")
-        client.disconnect()
-        return
-
-    if not probe_topics:
-        client.show_message(message=message, title=title, duration=duration)
-        print(f"✅ Published notification to candidate topics:\n   • {client.topics.ui}actions/showmessage\n   • {client.topics.ui}actions/toast\n   • {client.topics.ui}actions/notification")
-        print("   Listening for 3 seconds to check for any TV feedback/acknowledgment...")
-        time.sleep(3.0)
-    else:
-        print("\n🔍 [PROBE] Testing candidate notification topics and payload structures...")
-        candidate_topics = [
-            f"{client.topics.ui}actions/showmessage",
-            f"{client.topics.ui}actions/toast",
-            f"{client.topics.ui}actions/notification",
-            f"{client.topics.ui}actions/message",
-            f"{client.topics.platform}actions/showmessage",
-            f"{client.topics.platform}actions/toast",
-            f"{client.topics.platform}actions/notification",
-        ]
-        candidate_payloads = [
-            ("Standard JSON", json.dumps({"message": message, "title": title or "", "duration": duration, "text": message, "type": "notify"})),
-            ("Alt Text JSON", json.dumps({"title": title or "", "text": message, "duration": duration})),
-            ("Content JSON", json.dumps({"content": message, "title": title or "", "type": "toast"})),
-            ("Plain text", message),
-        ]
-        for topic in candidate_topics:
-            for name, payload in candidate_payloads:
-                print(f"\n   📤 Publishing to '{topic}' [{name}]: {payload[:60]}...")
-                if client.mqtt_client:
-                    client.mqtt_client.publish(topic, payload)
-                time.sleep(1.0)
-
-    if received_messages:
-        print(f"\n🎉 Received {len(received_messages)} response packet(s) from TV!")
-    else:
-        print("\nℹ️ No response packet received from TV (standard behavior on firmware without an MQTT notification listener).")
-
-    client.disconnect()
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Hisense VIDAA Integration CLI Test Tool",
@@ -739,12 +663,6 @@ def main() -> None:
 
   # Probe UPnP MediaRenderer services and actions:
   python3 test_client.py upnp --ip 192.168.50.12
-
-  # Send on-screen toast notification:
-  python3 test_client.py notify "Front door alert" --title "Doorbell"
-
-  # Probe candidate notification topics and payloads:
-  python3 test_client.py notify "Test notification" --probe
 
   # Test raw SSL/TLS certificate connection to TV:
   python3 test_client.py test-ssl --ip 192.168.50.12
@@ -768,7 +686,7 @@ def main() -> None:
 
     parser.add_argument(
         "action",
-        choices=["ping", "report", "probe", "probe-features", "test-ssl", "auth", "listen", "refresh", "send-key", "launch-app", "wake", "upnp", "notify"],
+        choices=["ping", "report", "probe", "probe-features", "test-ssl", "auth", "listen", "refresh", "send-key", "launch-app", "wake", "upnp"],
         help="Action to perform",
     )
     parser.add_argument("key", nargs="?", help="Key name (for send-key) or App name (for launch-app)")
@@ -788,9 +706,6 @@ def main() -> None:
     parser.add_argument("--probe", action="store_true", help="Include active feature & menu tree probing in markdown report")
     parser.add_argument("--app-id", help="App ID for launch-app action")
     parser.add_argument("--url", help="Deep link URL for launch-app action (e.g. netflix://)")
-    parser.add_argument("--message", help="Notification message text (for notify action)")
-    parser.add_argument("--title", help="Notification title (for notify action)")
-    parser.add_argument("--duration", type=int, default=5, help="Notification display duration in seconds (default: 5)")
     parser.add_argument("--config", default=DEFAULT_CREDS_FILE, help=f"Path to credentials file (default: {DEFAULT_CREDS_FILE})")
     parser.add_argument("-v", "--debug", action="store_true", help="Enable verbose debug logging")
 
@@ -898,28 +813,6 @@ def main() -> None:
             print("Error: --ip <IP> is required for 'upnp' action (or valid credentials.json).")
             sys.exit(1)
         do_upnp(ip)
-
-    elif args.action == "notify":
-        msg = args.message or args.key
-        if not msg:
-            print("Error: Specify notification message text, e.g.:")
-            print("  python3 test_client.py notify 'Front door alert' --title 'Doorbell'")
-            print("  python3 test_client.py notify --message 'Front door alert'")
-            sys.exit(1)
-        ip = args.ip or creds.get("ip_address")
-        creds["ip_address"] = ip
-        do_notify(
-            creds,
-            message=msg,
-            title=args.title,
-            duration=args.duration,
-            certfile=cert_path,
-            keyfile=key_path,
-            ca_cert=args.ca_cert,
-            verify_ssl=args.verify_ssl,
-            brand=brand,
-            probe_topics=args.probe,
-        )
 
 
 if __name__ == "__main__":

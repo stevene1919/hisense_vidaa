@@ -113,7 +113,6 @@
         "description": "Configure seletores de entidades, calibração de imagem, predefinições de som e temporizações.",
         "data": {
           "enable_remote": "Habilitar entidade de controle remoto dedicada",
-          "enable_notify": "Habilitar notificações toast na tela (apenas modelos suportados)",
           "enable_picture_controls": "Habilitar seletor de modo de imagem e controles deslizantes de calibração (Luz de fundo, Brilho, Contraste)",
           "enable_sound_controls": "Habilitar seletor de predefinições do equalizador de modo de som",
           "enable_audio_only": "Habilitar interruptor Apenas Áudio (Tela desligada)",
@@ -185,11 +184,6 @@
       },
       "trigger_reauth": {
         "name": "Iniciar novo pareamento"
-      }
-    },
-    "notify": {
-      "notifications": {
-        "name": "Notificações"
       }
     },
     "select": {

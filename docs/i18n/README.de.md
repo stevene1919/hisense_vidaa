@@ -67,7 +67,6 @@ Unterstützt offiziell **alle Smart-TVs mit VIDAA OS** (Kopplung per **4-stellig
 - **100 % Lokale LAN-Steuerung (`iot_class: local_push`)**: Vollständig lokal, keine Cloud-Abhängigkeit, funktioniert in isolierten IoT-VLANs.
 - **Mediaplayer**: Ein-/Ausschalten, Lautstärkeregelung, Eingangsquellen, Senderumschaltung, App-Start und kontextsensitive Tasten (Senderwechsel im Live-TV, Titelsprung in Apps).
 - **Bild & Tonjustierung (`select` & `number`)**: Bildmodi (`Standard`, `Kino`, `Dynamisch`, `Sport`, `Filmmaker`) und Helligkeit/Kontrast/Hintergrundbeleuchtung einstellen; Tonmodi und Tonausgabe umschalten.
-- **Bildschirm-Benachrichtigungen (`notify`)**: Toast-Nachrichten direkt auf den Fernseher senden.
 - **Dedizierte Fernbedienung (`remote`)**: Steuerkreuz-Navigation, Zifferntasten, Menü, Farbtasten und konfigurierbare Tastenwiederholung.
 - **Einschalt-Automationen (`device_trigger`)**: Native Unterstützung für `hisense_vidaa.turn_on`-Trigger zum Schalten von Zwischensteckern oder Wake-on-LAN.
 

@@ -81,8 +81,6 @@ def main() -> None:
     parser.add_argument("--send-key", type=str, default=None, help="Send a keypress command (e.g. KEY_HOME, KEY_VOLUMEUP)")
     parser.add_argument("--launch-app", type=str, default=None, help="Launch an app by name or App ID (e.g. Netflix, YouTube)")
     parser.add_argument("--change-source", type=str, default=None, help="Change active input source (e.g. HDMI1, HDMI2, TV)")
-    parser.add_argument("--notify", type=str, default=None, help="Send an on-screen toast notification message")
-    parser.add_argument("--notify-title", type=str, default="Home Assistant", help="Notification title (default: Home Assistant)")
     parser.add_argument("--sync-clock", action="store_true", help="Inspect UPnP Date header and calculate TV clock drift")
     parser.add_argument("--probe-upnp", action="store_true", help="Probe UPnP MediaRenderer services (volume, mute, transport info, lan control)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging")
@@ -238,12 +236,7 @@ def main() -> None:
         client.change_source(args.change_source)
         time.sleep(1.0)
 
-    if args.notify:
-        print(f"\nSending Notification: '{args.notify}' (Title: '{args.notify_title}')...")
-        client.show_message(args.notify, title=args.notify_title)
-        time.sleep(0.5)
-
-    if args.dump_state or not (args.monitor or args.send_key or args.launch_app or args.change_source or args.notify):
+    if args.dump_state or not (args.monitor or args.send_key or args.launch_app or args.change_source):
         print_section("3. Current TV State Snapshot")
         print(f"MQTT Connected:      {client.connected}")
         print(f"Auth Profile:        {client.auth_profile}")

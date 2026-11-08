@@ -23,7 +23,6 @@ from .actions import (
     async_set_sound_mode,
     async_set_sound_setting,
     async_set_volume,
-    async_show_message,
     async_turn_off_tv,
     async_turn_on_tv,
     change_source,
@@ -45,7 +44,6 @@ from .actions import (
     set_sound_mode,
     set_sound_setting,
     set_volume,
-    show_message,
     turn_off_tv,
     turn_on_tv,
 )
@@ -188,7 +186,6 @@ __all__ = [
     "async_set_sound_mode",
     "async_set_sound_setting",
     "async_set_volume",
-    "async_show_message",
     "async_turn_off_tv",
     "async_turn_on_tv",
     "build_media_channel_label",
@@ -249,7 +246,6 @@ __all__ = [
     "set_sound_mode",
     "set_sound_setting",
     "set_volume",
-    "show_message",
     "turn_off_tv",
     "turn_on_tv",
 ]

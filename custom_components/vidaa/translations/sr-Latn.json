@@ -113,7 +113,6 @@
         "description": "Konfigurišite prekidače entiteta, kalibraciju slike, unapred podešene režime zvuka i tajminge tastera daljinskog upravljača.",
         "data": {
           "enable_remote": "Omogući poseban entitet daljinskog upravljača (Remote)",
-          "enable_notify": "Omogući iskačuća obaveštenja na ekranu (samo za podržane modele)",
           "enable_picture_controls": "Omogući izbor režima slike i klizače za kalibraciju (pozadinsko osvetljenje, svetlina, kontrast)",
           "enable_sound_controls": "Omogući izbor unapred podešenih režima ekvilajzera za zvuk",
           "enable_audio_only": "Omogući prekidač za režim 'Samo audio' (isključen ekran)",
@@ -185,11 +184,6 @@
       },
       "trigger_reauth": {
         "name": "Pokreni ponovno uparivanje"
-      }
-    },
-    "notify": {
-      "notifications": {
-        "name": "Obaveštenja"
       }
     },
     "select": {

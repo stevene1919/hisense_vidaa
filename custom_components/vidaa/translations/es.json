@@ -113,7 +113,6 @@
         "description": "Configura selectores de entidades, calibración de imagen, preajustes de sonido y tiempos del mando a distancia.",
         "data": {
           "enable_remote": "Habilitar entidad de control remoto dedicada",
-          "enable_notify": "Habilitar notificaciones en pantalla tipo toast (solo modelos compatibles)",
           "enable_picture_controls": "Habilitar selector de modo de imagen y controles deslizantes de calibración (Luz de fondo, Brillo, Contraste)",
           "enable_sound_controls": "Habilitar selector de preajustes de ecualizador de modo de sonido",
           "enable_audio_only": "Habilitar interruptor Solo Audio (Pantalla apagada)",
@@ -185,11 +184,6 @@
       },
       "trigger_reauth": {
         "name": "Iniciar reemparejamiento"
-      }
-    },
-    "notify": {
-      "notifications": {
-        "name": "Notificaciones"
       }
     },
     "select": {

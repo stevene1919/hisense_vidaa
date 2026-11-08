@@ -1,11 +1,10 @@
-"""Tests for Hisense VIDAA select, number, notify platforms and entity availability matrix."""
+"""Tests for Hisense VIDAA select, number platforms and entity availability matrix."""
 
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.vidaa.notify import HisenseVidaaNotifyEntity
 from custom_components.vidaa.number import (
     HisenseVidaaBacklightNumber,
     HisenseVidaaBrightnessNumber,
@@ -19,29 +18,6 @@ from custom_components.vidaa.select import (
 )
 from custom_components.vidaa.switch import HisenseVidaaAudioOnlySwitch
 from custom_components.vidaa.tv.settings import SettingMenuItem
-
-
-@pytest.mark.anyio
-async def test_notify_entity(mock_client, mock_entry):
-    """Test on-screen toast notification entity."""
-    import threading
-    hass = MagicMock(spec=HomeAssistant)
-    hass.loop_thread_id = threading.get_ident()
-    hass.loop = MagicMock()
-    hass.data = {}
-    hass.states = MagicMock()
-    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
-
-    notify = HisenseVidaaNotifyEntity(
-        client=mock_client,
-        entry=mock_entry,
-    )
-    notify.hass = hass
-    assert notify.available is True
-    assert notify.unique_id == "test_entry_id_notify"
-
-    await notify.async_send_message("Someone is at the front door!", "Doorbell")
-    mock_client.show_message.assert_called_with("Someone is at the front door!", "Doorbell")
 
 
 @pytest.mark.anyio
@@ -273,29 +249,6 @@ def test_select_audio_output_string_volume_type(mock_client, mock_entry):
     # A mute broadcast (type 2) must not change the audio output selection.
     sel._handle_volume_update({"volume_type": "2", "volume_value": "0"})
     assert sel.current_option == "ARC / eARC"
-
-
-@pytest.mark.anyio
-async def test_notify_platform_purges_registry_when_disabled(
-    mock_client, mock_entry, monkeypatch
-):
-    """[F10-leg4] notify registry entry is purged when the feature is disabled."""
-    from custom_components.vidaa.const import CONF_ENABLE_NOTIFY, DOMAIN
-    from custom_components.vidaa.notify import async_setup_entry as async_setup_notify
-
-    hass = MagicMock(spec=HomeAssistant)
-    hass.data = {DOMAIN: {mock_entry.entry_id: {"client": mock_client}}}
-    mock_reg = MagicMock()
-    mock_reg.async_get_entity_id.return_value = "notify.living_room_tv"
-    monkeypatch.setattr(
-        "homeassistant.helpers.entity_registry.async_get", lambda h: mock_reg
-    )
-    mock_entry.options = {CONF_ENABLE_NOTIFY: False}
-
-    entities = []
-    await async_setup_notify(hass, mock_entry, lambda e: entities.extend(e))
-    mock_reg.async_remove.assert_called_once_with("notify.living_room_tv")
-    assert entities == []
 
 
 @pytest.mark.anyio

@@ -26,11 +26,6 @@
         "default": "mdi:cellphone-key"
       }
     },
-    "notify": {
-      "notifications": {
-        "default": "mdi:television-guide"
-      }
-    },
     "number": {
       "backlight": {
         "default": "mdi:brightness-7"

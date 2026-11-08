@@ -113,7 +113,6 @@
         "description": "Konfiguriere Entitätsschalter, Bildkalibrierung, Ton-Presets und Tastenverzögerungen.",
         "data": {
           "enable_remote": "Dedizierte Fernbedienungs-Entität aktivieren",
-          "enable_notify": "Toast-Benachrichtigungen auf dem Bildschirm aktivieren (nur unterstützte Modelle)",
           "enable_picture_controls": "Bildmodus-Auswahl und Kalibrierungs-Schieberegler aktivieren (Hintergrundbeleuchtung, Helligkeit, Kontrast)",
           "enable_sound_controls": "Tonmodus-Equalizer-Preset-Auswahl aktivieren",
           "enable_audio_only": "Nur-Audio-Schalter (Bildschirm aus) aktivieren",
@@ -185,11 +184,6 @@
       },
       "trigger_reauth": {
         "name": "Erneutes Koppeln auslösen"
-      }
-    },
-    "notify": {
-      "notifications": {
-        "name": "Benachrichtigungen"
       }
     },
     "select": {

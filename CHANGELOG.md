@@ -19,6 +19,10 @@ This major update rebrands the integration to **VIDAA Smart TV** (`vidaa`), refl
   - **Legacy Trigger Compatibility**: Automations listening to `hisense_vidaa.turn_on` device triggers continue functioning alongside canonical `vidaa.turn_on`.
 - **MEDIA PLAYER UI CONTROLS (#55)**:
   - Ensured Previous/Next track and channel navigation buttons in the Home Assistant media player card remain visible and accessible whenever media playback controls are enabled.
+- **REMOVAL OF UNSUPPORTED NOTIFY PLATFORM**:
+  - Removed the speculative on-screen toast notification (`notify`) platform, options flow toggle, and developer CLI actions (`test_client.py notify`, `debug_tv.py --notify`).
+  - Reverse engineering of the official VIDAA Android companion APK confirmed that notification components (`NotifyActivity`) correspond strictly to a mobile in-app promotional inbox rather than a TV compositor display listener.
+  - VIDAA OS firmware does not provide an external MQTT notification listener. Legacy `notify` entity registry entries are automatically pruned on entry setup to prevent orphaned entities.
 
 ## [3.3.2-beta.1] - 2026-11-08 — 📺 Media Player UI Controls Fix
 

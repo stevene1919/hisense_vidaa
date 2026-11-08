@@ -26,7 +26,6 @@ CONF_SW_VERSION = "sw_version"
 CONF_SECONDARY_MAC_ADDRESS = "secondary_mac_address"
 
 CONF_ENABLE_REMOTE = "enable_remote"
-CONF_ENABLE_NOTIFY = "enable_notify"
 CONF_ENABLE_WOL = "enable_wol"
 CONF_INCLUDE_APPS_IN_SOURCES = "include_apps_in_sources"
 CONF_SOURCES = "sources"
@@ -52,7 +51,6 @@ DEFAULT_CERT_FILENAME = "hisense.crt"
 DEFAULT_KEY_FILENAME = "hisense.key"
 
 DEFAULT_ENABLE_REMOTE = True
-DEFAULT_ENABLE_NOTIFY = False
 DEFAULT_ENABLE_WOL = False
 DEFAULT_REFRESH_IN_STANDBY = False
 DEFAULT_INCLUDE_APPS_IN_SOURCES = True

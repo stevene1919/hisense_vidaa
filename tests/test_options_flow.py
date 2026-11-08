@@ -89,7 +89,6 @@ async def test_options_flow(monkeypatch: pytest.MonkeyPatch) -> None:
     result_feat_submit = await handler.async_step_features_remote(
         user_input={
             "enable_remote": False,
-            "enable_notify": True,
             "enable_picture_controls": True,
             "enable_sound_controls": True,
             "enable_audio_only": True,
@@ -99,7 +98,6 @@ async def test_options_flow(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert result_feat_submit["type"] == "create_entry"
     assert result_feat_submit["data"]["enable_remote"] is False
-    assert result_feat_submit["data"]["enable_notify"] is True
     assert result_feat_submit["data"]["enable_picture_controls"] is True
     assert result_feat_submit["data"]["enable_sound_controls"] is True
     assert result_feat_submit["data"]["enable_audio_only"] is True

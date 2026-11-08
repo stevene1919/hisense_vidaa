@@ -113,7 +113,6 @@
         "description": "Configurez les entités, le calibrage d'image, les présets audio et les délais de télécommande.",
         "data": {
           "enable_remote": "Activer l'entité Télécommande dédiée",
-          "enable_notify": "Activer les notifications toast à l'écran (modèles compatibles uniquement)",
           "enable_picture_controls": "Activer le sélecteur de mode d'image et les curseurs de calibrage (Rétroéclairage, Luminosité, Contraste)",
           "enable_sound_controls": "Activer le sélecteur de préréglages d'égaliseur de mode sonore",
           "enable_audio_only": "Activer l'interrupteur Audio uniquement (Écran éteint)",
@@ -185,11 +184,6 @@
       },
       "trigger_reauth": {
         "name": "Déclencher le réappairage"
-      }
-    },
-    "notify": {
-      "notifications": {
-        "name": "Notifications"
       }
     },
     "select": {

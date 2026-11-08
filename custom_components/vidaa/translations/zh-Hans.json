@@ -114,7 +114,6 @@
         "description": "配置实体开关、图像校准、声音预设以及遥控按键延迟。",
         "data": {
           "enable_remote": "启用独立的遥控器 (Remote) 实体",
-          "enable_notify": "启用屏幕弹窗通知 (仅支持的机型)",
           "enable_picture_controls": "启用图像模式选择与校准滑块 (背光、亮度、对比度)",
           "enable_sound_controls": "启用声音模式均衡器预设选择器",
           "enable_audio_only": "启用“仅音频/关闭屏幕”切换开关",
@@ -186,11 +185,6 @@
       },
       "trigger_reauth": {
         "name": "触发重新配对"
-      }
-    },
-    "notify": {
-      "notifications": {
-        "name": "通知"
       }
     },
     "select": {

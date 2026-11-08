@@ -18,7 +18,6 @@ from ..const import (
     CONF_ENABLE_AUDIO_ONLY,
     CONF_ENABLE_CEC_NAMES,
     CONF_ENABLE_MEDIA_CONTROLS,
-    CONF_ENABLE_NOTIFY,
     CONF_ENABLE_PICTURE_CONTROLS,
     CONF_ENABLE_REMOTE,
     CONF_ENABLE_SOUND_CONTROLS,
@@ -37,7 +36,6 @@ from ..const import (
     DEFAULT_ENABLE_AUDIO_ONLY,
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
-    DEFAULT_ENABLE_NOTIFY,
     DEFAULT_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
     DEFAULT_ENABLE_SOUND_CONTROLS,
@@ -204,10 +202,6 @@ class VidaaOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_ENABLE_REMOTE,
                     default=options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE),
-                ): bool,
-                vol.Optional(
-                    CONF_ENABLE_NOTIFY,
-                    default=options.get(CONF_ENABLE_NOTIFY, DEFAULT_ENABLE_NOTIFY),
                 ): bool,
                 vol.Optional(
                     CONF_ENABLE_PICTURE_CONTROLS,

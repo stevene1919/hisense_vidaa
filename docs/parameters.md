@@ -26,7 +26,6 @@ The integration automatically registers entities across 9 Home Assistant platfor
 | **`binary_sensor`** | `BinarySensorEntity`        | Live MQTT Connection state and In Use indicator.                                                                                                                                                      |
 | **`button`**        | `ButtonEntity`              | **Sync TV Clock**, **Force Reconnect**, and **Trigger Re-pairing** diagnostic buttons.                                                                                                                |
 | **`switch`**        | `SwitchEntity`              | **Debug Logging** logger toggle and **Audio Only** screen backlight toggle.                                                                                                                           |
-| **`notify`**        | `NotifyEntity`              | On-screen toast message notification service (`notify.send_message`).                                                                                                                                 |
 | **`select`**        | `SelectEntity`              | **Picture Mode** (`Standard`, `Cinema Day`, `Cinema Night`, `Dynamic`, `Sports`, `Game`, `Filmmaker`) and **Sound Mode** switcher (`Standard`, `Theatre`, `Music`, `Speech`, `Late Night`, `Sports`). |
 | **`number`**        | `NumberEntity`              | Calibration sliders for **Backlight**, **Brightness**, and **Contrast** (0–100).                                                                                                                      |
 
@@ -88,7 +87,6 @@ To customize integration behavior for an existing TV, navigate to **Settings →
 | Parameter                     | Type                      | Default | Description                                                                                                |
 |:----------------------------- |:------------------------- |:------- |:---------------------------------------------------------------------------------------------------------- |
 | **`enable_remote`**           | `boolean`                 | `true`  | When enabled, registers a `remote.<tv>` entity for sending discrete remote keys and sequences.             |
-| **`enable_notify`**           | `boolean`                 | `true`  | When enabled, registers a `notify.<tv>` entity for displaying on-screen toast popup notifications.         |
 | **`enable_picture_controls`** | `boolean`                 | `true`  | Exposes `select.<tv>_picture_mode` and calibration number entities (Backlight, Brightness, Contrast).      |
 | **`enable_sound_controls`**   | `boolean`                 | `true`  | Exposes `select.<tv>_sound_mode` for switching audio modes (Standard, Theater, Music, Speech, Late Night). |
 | **`enable_audio_only`**       | `boolean`                 | `true`  | Exposes `switch.<tv>_audio_only` to turn off the TV display backlight while keeping audio playing.         |

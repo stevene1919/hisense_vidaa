@@ -134,16 +134,6 @@ Probes UPnP MediaRenderer SOAP services (`RenderingControl:1`, `AVTransport:1`, 
 python3 test_client.py upnp --ip <TV_IP>
 ```
 
-### 12. On-Screen Toast Notifications & Probing (`notify`)
-Sends an on-screen toast popup notification to the TV, or probes candidate notification topics and payload structures for troubleshooting TV firmware compositor listeners:
-```bash
-# Send standard toast notification:
-python3 test_client.py notify "Front door alert" --title "Doorbell"
-
-# Probe candidate notification topics and payloads (actions/showmessage, actions/toast, actions/notification):
-python3 test_client.py notify "Test notification" --probe
-```
-
 ---
 
 ## 🛠️ `debug_tv.py` — Live Runtime Debugger
@@ -156,9 +146,6 @@ python3 debug_tv.py --dump-state
 
 # Continuously stream live MQTT events from the TV:
 python3 debug_tv.py --monitor
-
-# Send an on-screen toast notification:
-python3 debug_tv.py --notify "Front door alert" --notify-title "Doorbell"
 
 # Send a remote keypress:
 python3 debug_tv.py --send-key KEY_HOME

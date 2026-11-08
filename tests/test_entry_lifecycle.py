@@ -19,7 +19,6 @@ from custom_components.vidaa.const import (
     CONF_AUTH_PROFILE,
     CONF_BRAND,
     CONF_CLIENT_ID,
-    CONF_ENABLE_NOTIFY,
     CONF_ENABLE_PICTURE_CONTROLS,
     CONF_ENABLE_REMOTE,
     CONF_IP_ADDRESS,
@@ -192,12 +191,12 @@ async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeyp
     hass.config_entries.async_loaded_entries = MagicMock(side_effect=lambda domain: list(loaded_entries))
     hass.config_entries.async_entries = MagicMock(side_effect=lambda domain: list(loaded_entries))
 
-    # 1. Setup entry with notify and picture_controls disabled
-    mock_entry.options = {"enable_remote": True, "enable_notify": False}
+    # 1. Setup entry with remote enabled and picture_controls disabled
+    mock_entry.options = {"enable_remote": True}
     result = await async_setup_entry(hass, mock_entry)
     assert result is True
 
-    # Forward entry setups should have received 7 platforms (excluding notify and number)
+    # Forward entry setups should have received 7 platforms (excluding number)
     expected_platforms = ["media_player", "sensor", "binary_sensor", "button", "switch", "select", "remote"]
     hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(mock_entry, expected_platforms)
     assert mock_entry.runtime_data.platforms == expected_platforms
@@ -495,10 +494,9 @@ async def test_setup_entry_cleans_up_disabled_platforms():
         CONF_ACCESS_TOKEN: "valid_token",
         CONF_BRAND: "his",
     }
-    # User disabled remote, notify, and picture controls
+    # User disabled remote and picture controls
     entry.options = {
         CONF_ENABLE_REMOTE: False,
-        CONF_ENABLE_NOTIFY: False,
         CONF_ENABLE_PICTURE_CONTROLS: False,
     }
 

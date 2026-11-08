@@ -113,7 +113,6 @@
         "description": "Configura selettori di entità, calibrazione immagine, preset audio e tempi del telecomando.",
         "data": {
           "enable_remote": "Abilita entità Telecomando dedicata",
-          "enable_notify": "Abilita notifiche toast sullo schermo (solo modelli supportati)",
           "enable_picture_controls": "Abilita selettore modalità immagine e cursori di calibrazione (Retroilluminazione, Luminosità, Contrasto)",
           "enable_sound_controls": "Abilita selettore preset equalizzatore modalità audio",
           "enable_audio_only": "Abilita interruttore display Solo Audio (Schermo spento)",
@@ -185,11 +184,6 @@
       },
       "trigger_reauth": {
         "name": "Attiva riaccoppiamento"
-      }
-    },
-    "notify": {
-      "notifications": {
-        "name": "Notifiche"
       }
     },
     "select": {

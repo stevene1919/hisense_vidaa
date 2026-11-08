@@ -67,7 +67,6 @@ Prend officiellement en charge **tous les téléviseurs sous VIDAA OS** (appaira
 - **Contrôle 100 % Local sur le LAN (`iot_class: local_push`)** : Zéro dépendance au cloud, fonctionne dans des VLANs IoT isolés.
 - **Lecteur Multimédia (`media_player`)** : Allumage/extinction, volume, sélection des sources, changement de chaîne, lancement d'applications et touches contextuelles (zapping en direct, navigation de pistes dans les applications).
 - **Réglages Image & Son (`select` & `number`)** : Modes d'image (`Standard`, `Cinéma`, `Dynamique`, `Sport`, `Filmmaker`), luminosité, contraste et rétroéclairage ; modes audio et sortie sonore.
-- **Notifications à l'Écran (`notify`)** : Envoi de messages toast personnalisés sur l'écran du téléviseur.
 - **Télécommande Dédiée (`remote`)** : Flèches directionnelles, pavé numérique, menu, touches de couleur et répétition de touches configurable.
 - **Déclencheurs d'Allumage (`device_trigger`)** : Prise en charge native du déclencheur `hisense_vidaa.turn_on` pour activer des prises connectées ou Wake-on-LAN.
 

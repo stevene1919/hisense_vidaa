@@ -30,7 +30,6 @@ from .const import (
     CONF_BRAND,
     CONF_CERTFILE,
     CONF_CLIENT_ID,
-    CONF_ENABLE_NOTIFY,
     CONF_ENABLE_PICTURE_CONTROLS,
     CONF_ENABLE_REMOTE,
     CONF_IP_ADDRESS,
@@ -48,7 +47,6 @@ from .const import (
     CONF_USERNAME,
     DEFAULT_BRAND,
     DEFAULT_BRAND_OPTION,
-    DEFAULT_ENABLE_NOTIFY,
     DEFAULT_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_REMOTE,
     DEFAULT_REFRESH_IN_STANDBY,
@@ -68,7 +66,6 @@ PLATFORMS: list[str] = [
     "binary_sensor",
     "button",
     "switch",
-    "notify",
     "select",
     "number",
 ]
@@ -389,8 +386,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
     # Prune retired diagnostic sensors (Brand Profile and Auth Profile are consolidated into media_player attributes)
     for suffix in ("brand_profile", "auth_profile"):
         unique_id = f"{entry.entry_id}_{suffix}"
-        if entity_id := entity_reg.async_get_entity_id("sensor", DOMAIN, unique_id):
-            entity_reg.async_remove(entity_id)
+        for domain in (DOMAIN, LEGACY_DOMAIN):
+            if entity_id := entity_reg.async_get_entity_id("sensor", domain, unique_id):
+                entity_reg.async_remove(entity_id)
     if entry.options.get(
         CONF_ENABLE_PICTURE_CONTROLS, DEFAULT_ENABLE_PICTURE_CONTROLS
     ):
@@ -398,24 +396,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
     else:
         for suffix in ("backlight", "brightness", "contrast"):
             unique_id = f"{entry.entry_id}_{suffix}"
-            if entity_id := entity_reg.async_get_entity_id("number", DOMAIN, unique_id):
-                entity_reg.async_remove(entity_id)
+            for domain in (DOMAIN, LEGACY_DOMAIN):
+                if entity_id := entity_reg.async_get_entity_id("number", domain, unique_id):
+                    entity_reg.async_remove(entity_id)
 
     if entry.options.get(CONF_ENABLE_REMOTE, DEFAULT_ENABLE_REMOTE):
         platforms_to_setup.append("remote")
     else:
         unique_id = f"{entry.entry_id}_remote"
-        if entity_id := entity_reg.async_get_entity_id("remote", DOMAIN, unique_id):
-            entity_reg.async_remove(entity_id)
+        for domain in (DOMAIN, LEGACY_DOMAIN):
+            if entity_id := entity_reg.async_get_entity_id("remote", domain, unique_id):
+                entity_reg.async_remove(entity_id)
 
-    if entry.options.get(
-        CONF_ENABLE_NOTIFY,
-        getattr(client, "has_notifications", DEFAULT_ENABLE_NOTIFY),
-    ):
-        platforms_to_setup.append("notify")
-    else:
-        unique_id = f"{entry.entry_id}_notify"
-        if entity_id := entity_reg.async_get_entity_id("notify", DOMAIN, unique_id):
+    # Prune retired notify entity if present in entity registry
+    unique_id = f"{entry.entry_id}_notify"
+    for domain in (DOMAIN, LEGACY_DOMAIN):
+        if entity_id := entity_reg.async_get_entity_id("notify", domain, unique_id):
             entity_reg.async_remove(entity_id)
 
     # Connect to MQTT broker

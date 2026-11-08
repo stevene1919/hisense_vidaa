@@ -24,7 +24,7 @@ def test_debug_tv_help_invocable() -> None:
     )
     assert result.returncode == 0
     assert "Hisense VIDAA TV Diagnostic and Live Debugging Tool" in result.stdout
-    assert "--notify" in result.stdout
+    assert "--sync-clock" in result.stdout
     assert "--probe" in result.stdout
 
 
@@ -39,7 +39,6 @@ def test_test_client_help_invocable() -> None:
     )
     assert result.returncode == 0
     assert "Hisense VIDAA Integration CLI Test Tool" in result.stdout
-    assert "notify" in result.stdout
     assert "report" in result.stdout
     assert "probe" in result.stdout
     assert "--verify-ssl" in result.stdout

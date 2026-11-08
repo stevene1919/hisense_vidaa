@@ -24,9 +24,7 @@ from .actions_input import (
 from .actions_media import (
     TvMediaActionsMixin,
     async_set_volume,
-    async_show_message,
     set_volume,
-    show_message,
 )
 from .actions_power import (
     TvPowerActionsMixin,
@@ -84,7 +82,6 @@ __all__ = [
     "async_set_sound_mode",
     "async_set_sound_setting",
     "async_set_volume",
-    "async_show_message",
     "async_turn_off_tv",
     "async_turn_on_tv",
     "change_source",
@@ -106,7 +103,6 @@ __all__ = [
     "set_sound_mode",
     "set_sound_setting",
     "set_volume",
-    "show_message",
     "turn_off_tv",
     "turn_on_tv",
 ]

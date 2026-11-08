@@ -219,7 +219,6 @@ class TvStateMixin:
         self.hdr_mode: str | None = None
         self.audio_format: str | None = None
         self.sleep_timer: int | None = None
-        self.has_notifications: bool = False
         self.device_name: str | None = None
         self.model_name: str | None = None
         self.manufacturer: str | None = None

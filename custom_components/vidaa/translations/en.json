@@ -114,7 +114,6 @@
         "description": "Configure entity toggles, picture calibration, sound presets, and remote key timings.",
         "data": {
           "enable_remote": "Enable dedicated Remote entity",
-          "enable_notify": "Enable on-screen toast notifications (supported models only)",
           "enable_picture_controls": "Enable Picture Mode select and calibration sliders (Backlight, Brightness, Contrast)",
           "enable_sound_controls": "Enable Sound Mode equalizer preset selector",
           "enable_audio_only": "Enable Audio-Only (Screen Off) display toggle switch",
@@ -186,11 +185,6 @@
       },
       "trigger_reauth": {
         "name": "Trigger Re-pairing"
-      }
-    },
-    "notify": {
-      "notifications": {
-        "name": "Notifications"
       }
     },
     "select": {

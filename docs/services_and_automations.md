@@ -176,21 +176,6 @@ data:
 
 ---
 
-## 📢 On-Screen Toast Notifications (`notify.send_message`)
-
-Send on-screen alert notifications and toast banners directly onto the TV display:
-
-```yaml
-action: notify.send_message
-target:
-  entity_id: notify.living_room_hisense_vidaa_tv_notifications
-data:
-  message: "Front Doorbell: Motion detected"
-  title: "Security Alert"
-```
-
----
-
 ## 🔊 Audio Output Mode Selection (`select.select_option`)
 
 Switch the TV sound output mode programmatically between internal speakers, ARC/eARC soundbar/receiver, headphones, or Bluetooth:
@@ -276,9 +261,6 @@ When switching active source to PlayStation 5 or Xbox Series X on HDMI 1 or HDMI
 ### Use Case 3: Bedtime All-Off & Late Night Audio Guard
 When executing a "Good Night" voice command or bedtime automation, if the TV is still playing in the living room, turn off screen backlight via `switch.living_room_hisense_vidaa_tv_audio_only` or automatically power off the TV after 30 minutes, switching sound output to `Late Night` EQ mode.
 
-### Use Case 4: Smart Doorbell On-Screen Notifications
-When someone rings the smart video doorbell, display a real-time high-priority text toast banner on the television screen notifying occupants without interrupting current playback.
-
 ---
 
 ## 🤖 Copy-Paste YAML Automation Recipes
@@ -340,24 +322,7 @@ action:
       value: 80
 ```
 
-### Recipe 3: Smart Doorbell Toast Notification
-```yaml
-alias: "Notifications: Show Doorbell Banner on TV"
-description: "Pop up an on-screen toast message when the front doorbell rings."
-trigger:
-  - platform: state
-    entity_id: binary_sensor.front_doorbell_visitor
-    to: "on"
-action:
-  - action: notify.send_message
-    target:
-      entity_id: notify.living_room_hisense_vidaa_tv_notifications
-    data:
-      title: "🔔 Doorbell Ringing"
-      message: "Someone is at the Front Door!"
-```
-
-### Recipe 4: Late Night Volume & EQ Guard
+### Recipe 3: Late Night Volume & EQ Guard
 ```yaml
 alias: "Audio: Late Night Equalizer Guard"
 description: "Switch sound mode to Late Night after 10 PM to compress dynamic volume range."

@@ -198,18 +198,6 @@ def dispatch_incoming_mqtt_message(client: HisenseTvClient, topic: str, payload:
             _LOGGER.debug("[%s] Error parsing soundsetting payload: %s", ip, e)
         return
 
-    if topic == f"{client.topics.mobile}ui_service/data/capability":
-        try:
-            data = json.loads(payload)
-            if isinstance(data, dict):
-                caps = str(data).lower()
-                if "notify" in caps or "toast" in caps or "showmessage" in caps or "message" in caps:
-                    client.has_notifications = True
-                    _LOGGER.info("[%s] TV reported support for on-screen notifications: %s", ip, data)
-        except Exception as e:
-            _LOGGER.debug("[%s] Error parsing capability descriptor: %s", ip, e)
-        return
-
     if topic in (
         f"{client.topics.mobile}platform_service/data/getdeviceinfo",
         f"{client.topics.mobile}platform_service/data/gettvinfo",
