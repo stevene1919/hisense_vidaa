@@ -81,6 +81,8 @@ def main() -> None:
     parser.add_argument("--send-key", type=str, default=None, help="Send a keypress command (e.g. KEY_HOME, KEY_VOLUMEUP)")
     parser.add_argument("--launch-app", type=str, default=None, help="Launch an app by name or App ID (e.g. Netflix, YouTube)")
     parser.add_argument("--change-source", type=str, default=None, help="Change active input source (e.g. HDMI1, HDMI2, TV)")
+    parser.add_argument("--text", type=str, default=None, help="Send text input to active TV on-screen field")
+    parser.add_argument("--text-action", choices=["insert", "replace", "clear"], default="insert", help="Action mode for text injection (default: insert)")
     parser.add_argument("--sync-clock", action="store_true", help="Inspect UPnP Date header and calculate TV clock drift")
     parser.add_argument("--probe-upnp", action="store_true", help="Probe UPnP MediaRenderer services (volume, mute, transport info, lan control)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging")
@@ -130,7 +132,7 @@ def main() -> None:
         probe_upnp_services(tv_ip)
 
     if (args.probe_upnp or args.sync_clock) and not (
-        args.monitor or args.send_key or args.launch_app or args.change_source or args.dump_state or args.probe
+        args.monitor or args.send_key or args.launch_app or args.change_source or args.text or args.dump_state or args.probe
     ):
         print("\nDiagnostic probe complete.")
         return
@@ -236,7 +238,12 @@ def main() -> None:
         client.change_source(args.change_source)
         time.sleep(1.0)
 
-    if args.dump_state or not (args.monitor or args.send_key or args.launch_app or args.change_source):
+    if args.text is not None:
+        print(f"\nSending Text Input: '{args.text}' (action: {args.text_action})...")
+        client.send_text_input(args.text, action=args.text_action)
+        time.sleep(0.5)
+
+    if args.dump_state or not (args.monitor or args.send_key or args.launch_app or args.change_source or args.text is not None):
         print_section("3. Current TV State Snapshot")
         print(f"MQTT Connected:      {client.connected}")
         print(f"Auth Profile:        {client.auth_profile}")

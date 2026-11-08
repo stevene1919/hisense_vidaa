@@ -36,6 +36,23 @@ def send_command(client: HisenseTvClient, command: str) -> bool:
     if not command:
         return False
     normalized_command = command.strip().lower()
+    if normalized_command.startswith(("text:", "type:")):
+        raw_val = command.split(":", 1)[1]
+        action = "insert"
+        if raw_val.lower().startswith("replace:"):
+            action = "replace"
+            raw_val = raw_val.split(":", 1)[1]
+        elif raw_val.lower().startswith("clear:"):
+            action = "clear"
+            raw_val = raw_val.split(":", 1)[1]
+        elif raw_val.lower() == "clear":
+            action = "clear"
+            raw_val = ""
+        client.send_text_input(raw_val, action=action)
+        return True
+    if normalized_command in ("clear_text", "text_clear"):
+        client.send_text_input("", action="clear")
+        return True
     if normalized_command.startswith("app:"):
         app_target = command.split(":", 1)[1].strip()
         return client._launch_app_by_name(app_target)
@@ -66,6 +83,23 @@ async def async_send_command(client: HisenseTvClient, command: str) -> bool:
     if not command:
         return False
     normalized_command = command.strip().lower()
+    if normalized_command.startswith(("text:", "type:")):
+        raw_val = command.split(":", 1)[1]
+        action = "insert"
+        if raw_val.lower().startswith("replace:"):
+            action = "replace"
+            raw_val = raw_val.split(":", 1)[1]
+        elif raw_val.lower().startswith("clear:"):
+            action = "clear"
+            raw_val = raw_val.split(":", 1)[1]
+        elif raw_val.lower() == "clear":
+            action = "clear"
+            raw_val = ""
+        await client.async_send_text_input(raw_val, action=action)
+        return True
+    if normalized_command in ("clear_text", "text_clear"):
+        await client.async_send_text_input("", action="clear")
+        return True
     if normalized_command.startswith("app:"):
         app_target = command.split(":", 1)[1].strip()
         return await client.async_launch_app_by_name(app_target)

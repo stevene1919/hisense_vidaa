@@ -1,6 +1,8 @@
 """Unit tests for HisenseTvClient state processing and callbacks."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from custom_components.vidaa.client import HisenseTvClient
 from custom_components.vidaa.tv.aliases import ALL_KEY_AND_APP_ALIASES as KEY_ALIASES
@@ -207,6 +209,23 @@ def test_source_cycling_and_command_helpers():
     assert client.send_command("app:netflix") is True
     client.send_key.assert_called_with("KEY_NETFLIX")
 
+    # 7. Virtual keyboard / text input prefix commands
+    client.send_text_input = MagicMock()
+    assert client.send_command("text:The Matrix") is True
+    client.send_text_input.assert_called_with("The Matrix", action="insert")
+
+    assert client.send_command("type:Blade Runner") is True
+    client.send_text_input.assert_called_with("Blade Runner", action="insert")
+
+    assert client.send_command("text:replace:New Query") is True
+    client.send_text_input.assert_called_with("New Query", action="replace")
+
+    assert client.send_command("text:clear") is True
+    client.send_text_input.assert_called_with("", action="clear")
+
+    assert client.send_command("clear_text") is True
+    client.send_text_input.assert_called_with("", action="clear")
+
 
 def test_volume_and_mute_state_parsing():
     """Test volume and mute parsing properly distinguishes ARC volume from mute packets."""
@@ -374,6 +393,31 @@ def test_generic_manufacturer_filtered_in_device_info_update():
 
     assert client.manufacturer == "Hisense"  # Unchanged!
     assert client.model_name == "65U7G"
+
+
+@pytest.mark.anyio
+async def test_async_send_command_text_prefixes():
+    """Test async_send_command parses and dispatches text and clear commands."""
+    from custom_components.vidaa.tv.actions_input import async_send_command
+
+    client = HisenseTvClient(ip="192.168.50.12", client_id="test_client")
+    client.async_send_text_input = AsyncMock()
+
+    assert await async_send_command(client, "text:Inception") is True
+    client.async_send_text_input.assert_called_with("Inception", action="insert")
+
+    assert await async_send_command(client, "type:Interstellar") is True
+    client.async_send_text_input.assert_called_with("Interstellar", action="insert")
+
+    assert await async_send_command(client, "text:replace:Dune") is True
+    client.async_send_text_input.assert_called_with("Dune", action="replace")
+
+    assert await async_send_command(client, "text:clear") is True
+    client.async_send_text_input.assert_called_with("", action="clear")
+
+    assert await async_send_command(client, "clear_text") is True
+    client.async_send_text_input.assert_called_with("", action="clear")
+
 
 
 

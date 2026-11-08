@@ -601,6 +601,36 @@ def do_send_key(
     client.disconnect()
 
 
+def do_send_text(
+    creds: dict[str, Any],
+    text: str,
+    action: str = "insert",
+    certfile: str | None = None,
+    keyfile: str | None = None,
+    ca_cert: str | None = None,
+    verify_ssl: bool = False,
+    brand: str | None = None,
+) -> None:
+    ip = creds.get("ip_address")
+    print(f"\n[TEXT] Sending text '{text}' (action: {action}) to TV at {ip}...")
+
+    client = create_client_from_creds(creds, certfile, keyfile, ca_cert=ca_cert, verify_ssl=verify_ssl, brand=brand)
+    client.connect_and_run()
+    for _ in range(30):
+        if client.connected:
+            break
+        time.sleep(0.1)
+
+    if client.connected:
+        client.send_text_input(text, action=action)
+        print(f"✅ Sent text '{text}' successfully.")
+        time.sleep(0.5)
+    else:
+        print("❌ Could not connect to TV to send text.")
+
+    client.disconnect()
+
+
 def do_launch_app(
     creds: dict[str, Any],
     app_name: str,
@@ -681,15 +711,19 @@ def main() -> None:
 
   # Send Wake-on-LAN magic packet:
   python3 test_client.py wake --mac E8:51:77:EC:98:1C --ip 192.168.50.12
+
+  # Send text input to on-screen search / keyboard field:
+  python3 test_client.py text "The Matrix"
+  python3 test_client.py text --text-action clear
 """,
     )
 
     parser.add_argument(
         "action",
-        choices=["ping", "report", "probe", "probe-features", "test-ssl", "auth", "listen", "refresh", "send-key", "launch-app", "wake", "upnp"],
+        choices=["ping", "report", "probe", "probe-features", "test-ssl", "auth", "listen", "refresh", "send-key", "launch-app", "text", "send-text", "wake", "upnp"],
         help="Action to perform",
     )
-    parser.add_argument("key", nargs="?", help="Key name (for send-key) or App name (for launch-app)")
+    parser.add_argument("key", nargs="?", help="Key name (for send-key), App name (for launch-app), or text string (for text)")
     parser.add_argument("--ip", help="IP address of the TV (required for ping/report/probe/test-ssl/auth/wake if not in config)")
     parser.add_argument("--mac", help="MAC address of the TV")
     parser.add_argument("--profile", choices=["auto", "modern", "middle", "remotenow", "legacy", "vidaa_2024", "remotenow_2018"], default="auto", help="Authentication profile and cert selector (default: auto)")
@@ -706,6 +740,8 @@ def main() -> None:
     parser.add_argument("--probe", action="store_true", help="Include active feature & menu tree probing in markdown report")
     parser.add_argument("--app-id", help="App ID for launch-app action")
     parser.add_argument("--url", help="Deep link URL for launch-app action (e.g. netflix://)")
+    parser.add_argument("--text", help="Text string to inject (for 'text' or 'send-text' action)")
+    parser.add_argument("--text-action", choices=["insert", "replace", "clear"], default="insert", help="Action mode for text injection (default: insert)")
     parser.add_argument("--config", default=DEFAULT_CREDS_FILE, help=f"Path to credentials file (default: {DEFAULT_CREDS_FILE})")
     parser.add_argument("-v", "--debug", action="store_true", help="Enable verbose debug logging")
 
@@ -787,6 +823,15 @@ def main() -> None:
         ip = args.ip or creds.get("ip_address")
         creds["ip_address"] = ip
         do_send_key(creds, args.key, cert_path, args.key_file, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, brand=brand)
+
+    elif args.action in ("text", "send-text"):
+        text = args.text or args.key
+        if not text and args.text_action != "clear":
+            print("Error: Specify text to send, e.g. python3 test_client.py text 'The Matrix' or python3 test_client.py text --text-action clear")
+            sys.exit(1)
+        ip = args.ip or creds.get("ip_address")
+        creds["ip_address"] = ip
+        do_send_text(creds, text or "", action=args.text_action, certfile=cert_path, keyfile=args.key_file, ca_cert=args.ca_cert, verify_ssl=args.verify_ssl, brand=brand)
 
     elif args.action == "launch-app":
         app_name = args.key

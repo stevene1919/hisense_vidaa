@@ -63,6 +63,17 @@ data:
   text: "The Matrix"
 ```
 
+> [!TIP]
+> You can also send text or clear search fields using the standard `remote.send_command` action via the `text:` / `type:` prefix:
+> ```yaml
+> action: remote.send_command
+> target:
+>   entity_id: remote.living_room_hisense_vidaa_tv_remote
+> data:
+>   command:
+>     - "text:The Matrix" # or "type:The Matrix", "text:replace:New Query", "clear_text"
+> ```
+
 ### 4. `hisense_vidaa.set_picture_setting`
 Execute custom picture setting adjustments via raw menu ID and parameter value.
 

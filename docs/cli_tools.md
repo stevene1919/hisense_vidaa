@@ -122,13 +122,21 @@ python3 test_client.py launch-app "YouTube"
 python3 test_client.py launch-app "Netflix"
 ```
 
-### 10. Wake-on-LAN Broadcast (`wake`)
+### 10. Virtual Keyboard & Text Input (`text`)
+Sends virtual keyboard input to an active on-screen search bar or text input field:
+```bash
+python3 test_client.py text "The Matrix"
+python3 test_client.py text --text-action replace "Blade Runner"
+python3 test_client.py text --text-action clear
+```
+
+### 11. Wake-on-LAN Broadcast (`wake`)
 Broadcasts a subnet-directed magic packet:
 ```bash
 python3 test_client.py wake --mac E8:51:77:EC:98:1C
 ```
 
-### 11. Probe UPnP MediaRenderer Services (`upnp`)
+### 12. Probe UPnP MediaRenderer Services (`upnp`)
 Probes UPnP MediaRenderer SOAP services (`RenderingControl:1`, `AVTransport:1`, and `LanControlInfo:1`) on port `38400` / `18400`:
 ```bash
 python3 test_client.py upnp --ip <TV_IP>
@@ -158,6 +166,11 @@ python3 debug_tv.py --launch-app "Disney+"
 # Switch input source:
 python3 debug_tv.py --change-source HDMI1
 python3 debug_tv.py --change-source TV
+
+# Send virtual keyboard text input to an active on-screen field:
+python3 debug_tv.py --text "Inception"
+python3 debug_tv.py --text "Dune" --text-action replace
+python3 debug_tv.py --text-action clear
 
 # Probe UPnP MediaRenderer services and actions (volume, mute, transport info):
 python3 debug_tv.py --probe-upnp
