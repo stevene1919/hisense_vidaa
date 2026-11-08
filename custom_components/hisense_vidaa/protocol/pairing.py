@@ -326,10 +326,12 @@ async def async_submit_pin_code(client: HisenseTvClient, pin_code: str) -> dict[
     if not client.mqtt_client:
         raise Exception("MQTT client not initialized")
 
-    await client.async_publish(
+    published = await client.async_publish(
         f"{client.topics.ui}actions/authenticationcode",
         json.dumps({"authNum": int(pin_code)}),
     )
+    if not published:
+        raise Exception("Failed to send PIN to TV (MQTT connection closed)")
 
     try:
         # Wait for the PIN result, but unblock early if the TV closes the dialog

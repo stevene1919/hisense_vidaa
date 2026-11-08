@@ -442,7 +442,8 @@ async def do_auth(
 
         print("\n✅ Initial connection established!")
         print("📺 Look at your TV screen. A 4-digit PIN should now be visible.")
-        pin = input("👉 Enter the 4-digit PIN: ").strip()
+        loop = asyncio.get_running_loop()
+        pin = (await loop.run_in_executor(None, input, "👉 Enter the 4-digit PIN: ")).strip()
 
         print(f"\n[AUTH] Submitting PIN '{pin}' and requesting tokens...")
         await client.async_submit_pin(pin)
@@ -665,13 +666,14 @@ def do_notify(
 
     received_messages: list[tuple[str, str]] = []
 
-    def on_mqtt_message(_client, _userdata, msg):
-        try:
-            payload_str = msg.payload.decode("utf-8", errors="replace")
-            received_messages.append((msg.topic, payload_str))
-            print(f"   📥 TV Response on topic '{msg.topic}': {payload_str}")
-        except Exception:
-            pass
+    orig_handle_message = client._handle_message
+
+    def custom_handle_message(topic: str, payload: str) -> None:
+        received_messages.append((topic, payload))
+        print(f"   📥 TV Response on topic '{topic}': {payload}")
+        orig_handle_message(topic, payload)
+
+    client._handle_message = custom_handle_message
 
     client.connect_and_run()
     for _ in range(30):
@@ -683,10 +685,6 @@ def do_notify(
         print("❌ Could not connect to TV to send notification.")
         client.disconnect()
         return
-
-    # Attach message listener to detect any TV feedback
-    if client.mqtt_client:
-        client.mqtt_client.on_message = on_mqtt_message
 
     if not probe_topics:
         client.show_message(message=message, title=title, duration=duration)

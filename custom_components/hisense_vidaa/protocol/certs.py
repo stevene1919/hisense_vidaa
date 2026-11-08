@@ -230,6 +230,26 @@ def extract_pkcs12_to_pem(
         return None
 
 
+def _get_default_search_dirs() -> list[str]:
+    """Build list of candidate certificate search paths, scanning upwards to repo root."""
+    search_dirs = [
+        "/config/ssl",
+        "/ssl",
+        "/config/certs",
+        "/config",
+        os.path.join(os.getcwd(), "ssl"),
+        os.path.join(os.getcwd(), "certs"),
+    ]
+    cur = os.path.dirname(os.path.abspath(__file__))
+    while cur and cur != os.path.dirname(cur):
+        for sub in ("ssl", "certs"):
+            candidate = os.path.join(cur, sub)
+            if os.path.isdir(candidate) and candidate not in search_dirs:
+                search_dirs.append(candidate)
+        cur = os.path.dirname(cur)
+    return search_dirs
+
+
 def resolve_ca_certificate(
     ca_path: str | None = None,
     search_dirs: list[str] | None = None,
@@ -243,15 +263,7 @@ def resolve_ca_certificate(
         return os.path.abspath(ca_path)
 
     if search_dirs is None:
-        component_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        search_dirs = [
-            "/config/ssl",
-            "/ssl",
-            "/config/certs",
-            "/config",
-            os.path.join(component_dir, "ssl"),
-            os.path.join(component_dir, "certs"),
-        ]
+        search_dirs = _get_default_search_dirs()
 
     ca_names = [
         "remote_ca.pem",
@@ -326,15 +338,7 @@ def resolve_certificates(
         tuple[certfile_path, keyfile_path]
     """
     if search_dirs is None:
-        component_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        search_dirs = [
-            "/config/ssl",
-            "/ssl",
-            "/config/certs",
-            "/config",
-            os.path.join(component_dir, "ssl"),
-            os.path.join(component_dir, "certs"),
-        ]
+        search_dirs = _get_default_search_dirs()
 
     # Handle direct PKCS#12 bundle input
     if certfile and (certfile.lower().endswith(".p12") or certfile.lower().endswith(".pfx")):

@@ -362,7 +362,7 @@ class ConnectionManagerMixin:
         try:
             await adapter.async_publish(topic, payload)
             return True
-        except Exception as err:
+        except (Exception, asyncio.CancelledError) as err:
             _LOGGER.debug("[%s] Publish to %s failed: %s", self.ip, topic, err)
             return False
 
@@ -374,7 +374,7 @@ class ConnectionManagerMixin:
         try:
             await adapter.async_subscribe(topics)
             return True
-        except Exception as err:
+        except (Exception, asyncio.CancelledError) as err:
             _LOGGER.debug("[%s] Subscribe to %s failed: %s", self.ip, topics, err)
             return False
 
@@ -407,6 +407,8 @@ class ConnectionManagerMixin:
         self._token_manager.stop_token_watch()
         self._token_manager.cancel_rejected_retry()
         await self._async_stop_session()
+        if hasattr(self, "upnp") and self.upnp:
+            await self.upnp.close()
         for task in list(self._background_tasks):
             task.cancel()
 

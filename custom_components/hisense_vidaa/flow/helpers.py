@@ -11,6 +11,7 @@ import voluptuous as vol
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import format_mac
 
+from .. import protocol
 from ..const import (
     BRAND_MAP,
     CONF_ACCESS_TOKEN,
@@ -49,7 +50,7 @@ from ..const import (
     DOMAIN,
     GENERIC_MANUFACTURERS,
 )
-from ..protocol import check_certs_exist, normalize_brand_code, resolve_certificates
+from ..protocol import normalize_brand_code, resolve_certificates
 from ..tv.fingerprint import get_arp_mac
 
 if TYPE_CHECKING:
@@ -97,7 +98,7 @@ def resolve_ssl_certs(
         return True, None, None, False
 
     resolved_cert, resolved_key = resolve_certificates(auth_profile)
-    if check_certs_exist(resolved_cert, resolved_key):
+    if protocol.check_certs_exist(resolved_cert, resolved_key):
         return True, resolved_cert, resolved_key, True
 
     return False, None, None, DEFAULT_USE_SSL

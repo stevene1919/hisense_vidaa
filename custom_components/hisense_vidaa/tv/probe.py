@@ -50,12 +50,26 @@ class FeatureProbeResult:
 
 def load_credentials_file(file_path: str = "credentials.json") -> dict[str, Any]:
     """Load credentials JSON dictionary from disk."""
-    if os.path.isfile(file_path):
-        try:
-            with open(file_path, encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            _LOGGER.warning("Could not read credentials file %s: %s", file_path, e)
+    candidate_paths = [file_path]
+    if not os.path.isabs(file_path):
+        candidate_paths.append(os.path.join(os.getcwd(), file_path))
+        cur = os.path.dirname(os.path.abspath(__file__))
+        while cur and cur != os.path.dirname(cur):
+            candidate_paths.append(os.path.join(cur, file_path))
+            candidate_paths.append(os.path.join(cur, "scripts", file_path))
+            cur = os.path.dirname(cur)
+        candidate_paths.extend([
+            os.path.join("/config", file_path),
+            os.path.join("/config/custom_components/hisense_vidaa", file_path),
+        ])
+
+    for path in candidate_paths:
+        if os.path.isfile(path):
+            try:
+                with open(path, encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                _LOGGER.warning("Could not read credentials file %s: %s", path, e)
     return {}
 
 
