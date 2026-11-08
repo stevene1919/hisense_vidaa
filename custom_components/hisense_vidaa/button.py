@@ -12,15 +12,15 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .client import HisenseTvClient
+from .client import VidaaClient
 from .const import (
     CONF_ENABLE_PICTURE_CONTROLS,
     CONF_ENABLE_SOUND_CONTROLS,
 )
-from .entity import HisenseVidaaEntity
+from .entity import VidaaEntity
 
 if TYPE_CHECKING:
-    from . import HisenseVidaaConfigEntry
+    from . import VidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,35 +29,35 @@ PARALLEL_UPDATES = 0
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: HisenseVidaaConfigEntry,
+    entry: VidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Hisense VIDAA buttons based on a config entry."""
-    client: HisenseTvClient = entry.runtime_data.client
+    """Set up VIDAA buttons based on a config entry."""
+    client: VidaaClient = entry.runtime_data.client
 
     entities: list[ButtonEntity] = [
-        HisenseVidaaForceReconnectButton(client, entry),
-        HisenseVidaaSyncClockButton(client, entry),
-        HisenseVidaaProbeCapabilitiesButton(client, entry),
-        HisenseVidaaTriggerReauthButton(client, entry),
+        VidaaForceReconnectButton(client, entry),
+        VidaaSyncClockButton(client, entry),
+        VidaaProbeCapabilitiesButton(client, entry),
+        VidaaTriggerReauthButton(client, entry),
     ]
 
     async_add_entities(entities)
 
 
-class HisenseVidaaBaseButton(HisenseVidaaEntity, ButtonEntity):
-    """Base button for Hisense VIDAA TV."""
+class VidaaBaseButton(VidaaEntity, ButtonEntity):
+    """Base button for VIDAA Smart TV."""
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
 
-class HisenseVidaaForceReconnectButton(HisenseVidaaBaseButton):
+class VidaaForceReconnectButton(VidaaBaseButton):
     """Button to force reconnect the MQTT client."""
 
     _attr_translation_key = "force_reconnect"
     _attr_icon = "mdi:lan-connect"
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_force_reconnect"
 
@@ -68,13 +68,13 @@ class HisenseVidaaForceReconnectButton(HisenseVidaaBaseButton):
         await self._client.async_connect_and_run()
 
 
-class HisenseVidaaSyncClockButton(HisenseVidaaBaseButton):
+class VidaaSyncClockButton(VidaaBaseButton):
     """Button to query and verify the TV's UPnP clock time."""
 
     _attr_translation_key = "sync_clock"
     _attr_icon = "mdi:clock-outline"
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_sync_clock"
 
@@ -91,14 +91,14 @@ class HisenseVidaaSyncClockButton(HisenseVidaaBaseButton):
             _LOGGER.warning("Could not fetch UPnP timestamp from TV at %s", self._client.ip)
 
 
-class HisenseVidaaProbeCapabilitiesButton(HisenseVidaaBaseButton):
+class VidaaProbeCapabilitiesButton(VidaaBaseButton):
     """Button to actively query and probe live TV picture and sound menu capabilities."""
 
     _attr_translation_key = "probe_capabilities"
     _attr_icon = "mdi:television-guide"
     _attr_entity_registry_enabled_default = False
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_probe_capabilities"
 
@@ -134,13 +134,13 @@ class HisenseVidaaProbeCapabilitiesButton(HisenseVidaaBaseButton):
             self.hass.config_entries.async_update_entry(self._entry, options=new_options)
 
 
-class HisenseVidaaTriggerReauthButton(HisenseVidaaBaseButton):
+class VidaaTriggerReauthButton(VidaaBaseButton):
     """Button to manually initiate re-pairing and re-authentication with the TV."""
 
     _attr_translation_key = "trigger_reauth"
     _attr_icon = "mdi:cellphone-key"
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_trigger_reauth"
 
@@ -148,4 +148,12 @@ class HisenseVidaaTriggerReauthButton(HisenseVidaaBaseButton):
         """Handle button press to trigger re-authentication flow."""
         _LOGGER.info("[%s] Manually triggering re-pairing flow for TV", self._client.ip)
         self._entry.async_start_reauth(self.hass)
+
+
+# Backwards-compatible aliases during migration
+HisenseVidaaBaseButton = VidaaBaseButton
+HisenseVidaaForceReconnectButton = VidaaForceReconnectButton
+HisenseVidaaSyncClockButton = VidaaSyncClockButton
+HisenseVidaaProbeCapabilitiesButton = VidaaProbeCapabilitiesButton
+HisenseVidaaTriggerReauthButton = VidaaTriggerReauthButton
 

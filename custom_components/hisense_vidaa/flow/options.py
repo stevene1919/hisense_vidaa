@@ -52,8 +52,8 @@ from ..const import (
 from ..protocol import check_certs_exist, validate_ssl_certs
 
 
-class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle categorized Hisense VIDAA options with intuitive menu navigation."""
+class VidaaOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle categorized VIDAA options with intuitive menu navigation."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -376,3 +376,7 @@ class HisenseVidaaOptionsFlowHandler(config_entries.OptionsFlow):
     ) -> config_entries.ConfigFlowResult:
         """Backward-compatible alias for security."""
         return await self.async_step_security(user_input)
+
+
+# Backwards-compatible alias during migration
+HisenseVidaaOptionsFlowHandler = VidaaOptionsFlowHandler

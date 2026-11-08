@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from ..client import HisenseTvClient
+from ..client import VidaaClient
 from ..tv.media import parse_applist_payload, parse_sourcelist_payload
 from ..tv.navigation import get_app_icon, get_source_icon
 from .diagnostic import (
@@ -20,10 +20,17 @@ from .diagnostic import (
     HisenseVidaaClockDriftSensor,
     HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
+    VidaaAudioOutputSensor,
+    VidaaAuthProfileSensor,
+    VidaaBaseSensor,
+    VidaaBrandProfileSensor,
+    VidaaClockDriftSensor,
+    VidaaReportedNameSensor,
+    VidaaSessionStatusSensor,
 )
 
 if TYPE_CHECKING:
-    from .. import HisenseVidaaConfigEntry
+    from .. import VidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,31 +47,41 @@ __all__ = [
     "HisenseVidaaMqttTrackingSensor",
     "HisenseVidaaReportedNameSensor",
     "HisenseVidaaSessionStatusSensor",
+    "VidaaActiveAppSensor",
+    "VidaaActiveSourceSensor",
+    "VidaaAudioOutputSensor",
+    "VidaaAuthProfileSensor",
+    "VidaaBaseSensor",
+    "VidaaBrandProfileSensor",
+    "VidaaClockDriftSensor",
+    "VidaaMqttTrackingSensor",
+    "VidaaReportedNameSensor",
+    "VidaaSessionStatusSensor",
     "async_setup_entry",
 ]
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: HisenseVidaaConfigEntry,
+    entry: VidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Hisense VIDAA sensors based on a config entry."""
-    client: HisenseTvClient = entry.runtime_data.client
+    """Set up VIDAA sensors based on a config entry."""
+    client: VidaaClient = entry.runtime_data.client
     async_add_entities([
-        HisenseVidaaSessionStatusSensor(client, entry),
-        HisenseVidaaReportedNameSensor(client, entry),
-        HisenseVidaaActiveAppSensor(client, entry),
-        HisenseVidaaActiveSourceSensor(client, entry),
-        HisenseVidaaAudioOutputSensor(client, entry),
-        HisenseVidaaClockDriftSensor(client, entry),
+        VidaaSessionStatusSensor(client, entry),
+        VidaaReportedNameSensor(client, entry),
+        VidaaActiveAppSensor(client, entry),
+        VidaaActiveSourceSensor(client, entry),
+        VidaaAudioOutputSensor(client, entry),
+        VidaaClockDriftSensor(client, entry),
     ])
 
 
-class HisenseVidaaMqttTrackingSensor(HisenseVidaaBaseSensor):
+class VidaaMqttTrackingSensor(VidaaBaseSensor):
     """Base class for sensors tracking live MQTT state and connection events."""
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry, default_on: str, default_off: str = "Off") -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry, default_on: str, default_off: str = "Off") -> None:
         super().__init__(client, entry)
         self._default_on = default_on
         self._default_off = default_off
@@ -109,13 +126,13 @@ class HisenseVidaaMqttTrackingSensor(HisenseVidaaBaseSensor):
         raise NotImplementedError
 
 
-class HisenseVidaaActiveAppSensor(HisenseVidaaMqttTrackingSensor):
+class VidaaActiveAppSensor(VidaaMqttTrackingSensor):
     """Sensor reporting the foreground active application."""
 
     _attr_translation_key = "active_app"
     _attr_icon = "mdi:application"
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry, default_on="Standby", default_off="Off")
         self._attr_unique_id = f"{self._entry_id}_active_app"
         self._app_dict: dict[str, str] = {}
@@ -185,13 +202,13 @@ class HisenseVidaaActiveAppSensor(HisenseVidaaMqttTrackingSensor):
         return get_app_icon(self._attr_native_value)
 
 
-class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
+class VidaaActiveSourceSensor(VidaaMqttTrackingSensor):
     """Sensor reporting current physical input source."""
 
     _attr_translation_key = "active_source"
     _attr_icon = "mdi:video-input-hdmi"
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry, default_on="Standby", default_off="Off")
         self._attr_unique_id = f"{self._entry_id}_active_source"
         self._available_sources: list[str] = []
@@ -267,3 +284,9 @@ class HisenseVidaaActiveSourceSensor(HisenseVidaaMqttTrackingSensor):
     def icon(self) -> str:
         """Return dynamic MDI icon based on active input source."""
         return get_source_icon(self._attr_native_value)
+
+
+# Backwards-compatible aliases during migration
+HisenseVidaaMqttTrackingSensor = VidaaMqttTrackingSensor
+HisenseVidaaActiveAppSensor = VidaaActiveAppSensor
+HisenseVidaaActiveSourceSensor = VidaaActiveSourceSensor

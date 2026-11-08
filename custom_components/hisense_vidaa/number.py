@@ -11,24 +11,24 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .client import HisenseTvClient
+from .client import VidaaClient
 from .const import (
     CONF_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_PICTURE_CONTROLS,
     DOMAIN,
 )
-from .entity import HisenseVidaaEntity
+from .entity import VidaaEntity
 
 if TYPE_CHECKING:
-    from . import HisenseVidaaConfigEntry
+    from . import VidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 0
 
 
-class HisenseVidaaBaseNumber(HisenseVidaaEntity, NumberEntity):
-    """Base number entity for Hisense VIDAA TV picture calibration."""
+class VidaaBaseNumber(VidaaEntity, NumberEntity):
+    """Base number entity for VIDAA TV picture calibration."""
 
     _attr_native_min_value = 0
     _attr_native_max_value = 100
@@ -37,7 +37,7 @@ class HisenseVidaaBaseNumber(HisenseVidaaEntity, NumberEntity):
 
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -69,14 +69,14 @@ class HisenseVidaaBaseNumber(HisenseVidaaEntity, NumberEntity):
         """Override in subclasses to read specific attribute."""
 
 
-class HisenseVidaaBacklightNumber(HisenseVidaaBaseNumber):
-    """Hisense VIDAA Backlight Slider."""
+class VidaaBacklightNumber(VidaaBaseNumber):
+    """VIDAA Backlight Slider."""
 
     _attr_translation_key = "backlight"
 
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -104,14 +104,14 @@ class HisenseVidaaBacklightNumber(HisenseVidaaBaseNumber):
         self.async_write_ha_state()
 
 
-class HisenseVidaaBrightnessNumber(HisenseVidaaBaseNumber):
-    """Hisense VIDAA Brightness Slider."""
+class VidaaBrightnessNumber(VidaaBaseNumber):
+    """VIDAA Brightness Slider."""
 
     _attr_translation_key = "brightness"
 
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -139,15 +139,14 @@ class HisenseVidaaBrightnessNumber(HisenseVidaaBaseNumber):
         self.async_write_ha_state()
 
 
-class HisenseVidaaContrastNumber(HisenseVidaaBaseNumber):
-    """Hisense VIDAA Contrast Slider."""
+class VidaaContrastNumber(VidaaBaseNumber):
+    """VIDAA Contrast Slider."""
 
     _attr_translation_key = "contrast"
 
-
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -175,13 +174,20 @@ class HisenseVidaaContrastNumber(HisenseVidaaBaseNumber):
         self.async_write_ha_state()
 
 
+# Backwards-compatible aliases during migration
+HisenseVidaaBaseNumber = VidaaBaseNumber
+HisenseVidaaBacklightNumber = VidaaBacklightNumber
+HisenseVidaaBrightnessNumber = VidaaBrightnessNumber
+HisenseVidaaContrastNumber = VidaaContrastNumber
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: HisenseVidaaConfigEntry,
+    config_entry: VidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Hisense VIDAA number platform."""
-    client: HisenseTvClient = config_entry.runtime_data.client
+    """Set up the VIDAA number platform."""
+    client: VidaaClient = config_entry.runtime_data.client
 
     enable_picture = config_entry.options.get(
         CONF_ENABLE_PICTURE_CONTROLS, DEFAULT_ENABLE_PICTURE_CONTROLS
@@ -197,9 +203,9 @@ async def async_setup_entry(
         return
 
     entities: list[NumberEntity] = [
-        HisenseVidaaBacklightNumber(client=client, entry=config_entry),
-        HisenseVidaaBrightnessNumber(client=client, entry=config_entry),
-        HisenseVidaaContrastNumber(client=client, entry=config_entry),
+        VidaaBacklightNumber(client=client, entry=config_entry),
+        VidaaBrightnessNumber(client=client, entry=config_entry),
+        VidaaContrastNumber(client=client, entry=config_entry),
     ]
 
     async_add_entities(entities)

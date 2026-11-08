@@ -42,8 +42,8 @@ PATH_AV_TRANSPORT = "/upnp/control/mingusavtr"
 PATH_LAN_CONTROL = "/upnp/control/hisense_lan_control"
 
 
-class HisenseUpnpClient:
-    """Asynchronous client for Hisense VIDAA TV UPnP / DLNA endpoints."""
+class VidaaUpnpClient:
+    """Asynchronous client for VIDAA OS Smart TV UPnP / DLNA endpoints."""
 
     def __init__(
         self,
@@ -337,3 +337,7 @@ class HisenseUpnpClient:
             "LanControlInfo",
             args,
         )
+
+
+# Backwards-compatible alias during migration
+HisenseUpnpClient = VidaaUpnpClient

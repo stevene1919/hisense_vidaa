@@ -42,6 +42,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "HisenseTvClient",
+    "VidaaClient",
     "async_perform_token_refresh",
     "get_tv_timestamp",
     "is_token_expired",
@@ -50,7 +51,7 @@ __all__ = [
 _LOGGER = logging.getLogger(__name__)
 
 
-class HisenseTvClient(
+class VidaaClient(
     CallbackRegistryMixin,
     TvStateMixin,
     ConnectionManagerMixin,
@@ -58,7 +59,7 @@ class HisenseTvClient(
     TvTokenLifecycleMixin,
     TvUpnpMixin,
 ):
-    """Client communicating with Hisense VIDAA TV over local TLS/MQTT broker."""
+    """Client communicating with VIDAA OS Smart TV over local TLS/MQTT broker."""
 
     TOKEN_WATCH_INTERVAL = TokenLifecycleManager.TOKEN_WATCH_INTERVAL
     PROACTIVE_REFRESH_SETTLE_SECONDS = TokenLifecycleManager.PROACTIVE_REFRESH_SETTLE_SECONDS
@@ -359,3 +360,7 @@ class HisenseTvClient(
     ) -> bool:
         """Sends standard Wake-on-LAN magic packet UDP broadcasts for one or multiple MACs."""
         return send_wake_on_lan(mac=mac, broadcast_ip=broadcast_ip, port=port, ip=ip)
+
+
+# Backwards-compatible alias during migration
+HisenseTvClient = VidaaClient

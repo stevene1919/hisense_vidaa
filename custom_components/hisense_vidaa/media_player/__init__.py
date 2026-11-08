@@ -17,7 +17,7 @@ from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from ..client import HisenseTvClient
+from ..client import VidaaClient
 from ..const import (
     AUTH_PROFILES,
     BRAND_MAP,
@@ -35,7 +35,7 @@ from ..const import (
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
 )
-from ..entity import HisenseVidaaEntity
+from ..entity import VidaaEntity
 from ..tv.media import (
     build_media_channel_label,
     build_media_player_current_source,
@@ -50,29 +50,29 @@ from .controls import MediaPlayerControlsMixin
 from .state_handler import MediaPlayerStateHandlerMixin
 
 if TYPE_CHECKING:
-    from .. import HisenseVidaaConfigEntry
+    from .. import VidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 0
 
-__all__ = ["HisenseVidaaMediaPlayer", "async_setup_entry"]
+__all__ = ["HisenseVidaaMediaPlayer", "VidaaMediaPlayer", "async_setup_entry"]
 
 
-class HisenseVidaaMediaPlayer(
+class VidaaMediaPlayer(
     MediaPlayerControlsMixin,
     MediaPlayerStateHandlerMixin,
-    HisenseVidaaEntity,
+    VidaaEntity,
     MediaPlayerEntity,
 ):
-    """Media player entity representing a Hisense VIDAA smart TV."""
+    """Media player entity representing a VIDAA Smart TV."""
 
     _attr_name = None
     _attr_device_class = MediaPlayerDeviceClass.TV
 
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         """Initialize the media player entity."""
@@ -366,9 +366,13 @@ class HisenseVidaaMediaPlayer(
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: HisenseVidaaConfigEntry,
+    config_entry: VidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Hisense VIDAA media player from a config entry."""
-    client: HisenseTvClient = config_entry.runtime_data.client
-    async_add_entities([HisenseVidaaMediaPlayer(client=client, entry=config_entry)])
+    """Set up VIDAA media player from a config entry."""
+    client: VidaaClient = config_entry.runtime_data.client
+    async_add_entities([VidaaMediaPlayer(client=client, entry=config_entry)])
+
+
+# Backwards-compatible alias during migration
+HisenseVidaaMediaPlayer = VidaaMediaPlayer

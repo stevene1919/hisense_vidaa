@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .client import HisenseTvClient
+from .client import VidaaClient
 from .const import (
     CONF_ENABLE_REMOTE,
     CONF_ENABLE_WOL,
@@ -26,10 +26,10 @@ from .const import (
     DEFAULT_KEY_REPEAT,
     DOMAIN,
 )
-from .entity import HisenseVidaaEntity
+from .entity import VidaaEntity
 
 if TYPE_CHECKING:
-    from . import HisenseVidaaConfigEntry
+    from . import VidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,15 +41,14 @@ PARALLEL_UPDATES = 0
 SERVICE_DEFAULT_NUM_REPEATS = 1
 
 
-class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
-    """Hisense VIDAA Remote entity."""
+class VidaaRemote(VidaaEntity, RemoteEntity):
+    """VIDAA Remote entity."""
 
     _attr_translation_key = "remote"
 
-
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -169,13 +168,17 @@ class HisenseVidaaRemote(HisenseVidaaEntity, RemoteEntity):
         self._handle_update()
 
 
+# Backwards-compatible alias during migration
+HisenseVidaaRemote = VidaaRemote
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: HisenseVidaaConfigEntry,
+    config_entry: VidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Hisense VIDAA remote entity."""
-    client: HisenseTvClient = config_entry.runtime_data.client
+    """Set up the VIDAA remote entity."""
+    client: VidaaClient = config_entry.runtime_data.client
 
     # Clean up the remote from the entity registry if the feature was disabled
     entity_reg = er.async_get(hass)
@@ -185,4 +188,4 @@ async def async_setup_entry(
             entity_reg.async_remove(entity_id)
         return
 
-    async_add_entities([HisenseVidaaRemote(client=client, entry=config_entry)])
+    async_add_entities([VidaaRemote(client=client, entry=config_entry)])

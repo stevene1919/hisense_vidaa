@@ -14,7 +14,7 @@ from .helpers import (
     collect_client_auth_data,
     resolve_ssl_certs,
 )
-from .options import HisenseVidaaOptionsFlowHandler
+from .options import HisenseVidaaOptionsFlowHandler, VidaaOptionsFlowHandler
 from .reauth import ReauthFlowMixin
 from .user import UserFlowMixin
 
@@ -24,6 +24,7 @@ __all__ = [
     "HisenseVidaaOptionsFlowHandler",
     "ReauthFlowMixin",
     "UserFlowMixin",
+    "VidaaOptionsFlowHandler",
     "async_disconnect_existing_client",
     "async_discover_device_details",
     "async_probe_device_capabilities",

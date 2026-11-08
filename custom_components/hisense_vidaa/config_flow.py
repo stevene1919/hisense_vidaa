@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from homeassistant import config_entries
 from homeassistant.core import callback
 
-from .client import HisenseTvClient
+from .client import HisenseTvClient, VidaaClient
 from .const import (
     DEFAULT_AUTH_PROFILE,
     DEFAULT_BRAND,
@@ -18,19 +18,25 @@ from .const import (
 from .flow import (
     CertsFlowMixin,
     DiscoveryFlowMixin,
-    HisenseVidaaOptionsFlowHandler,
     ReauthFlowMixin,
     UserFlowMixin,
+    VidaaOptionsFlowHandler,
 )
 from .protocol.pairing import async_probe_pairing_challenge
 
 if TYPE_CHECKING:
-    from . import HisenseVidaaConfigEntry
+    from . import VidaaConfigEntry
 
-__all__ = ["HisenseTvClient", "HisenseVidaaConfigFlow", "async_probe_pairing_challenge"]
+__all__ = [
+    "HisenseTvClient",
+    "HisenseVidaaConfigFlow",
+    "VidaaClient",
+    "VidaaConfigFlow",
+    "async_probe_pairing_challenge",
+]
 
 
-class HisenseVidaaConfigFlow(
+class VidaaConfigFlow(
     DiscoveryFlowMixin,
     ReauthFlowMixin,
     CertsFlowMixin,
@@ -38,7 +44,7 @@ class HisenseVidaaConfigFlow(
     config_entries.ConfigFlow,
     domain=DOMAIN,
 ):
-    """Handle a config flow for Hisense VIDAA TV."""
+    """Handle a config flow for VIDAA Smart TV."""
 
     VERSION = 1
 
@@ -50,7 +56,7 @@ class HisenseVidaaConfigFlow(
         self.certfile: str | None = None
         self.keyfile: str | None = None
         self.use_ssl: bool = DEFAULT_USE_SSL
-        self.client: HisenseTvClient | None = None
+        self.client: VidaaClient | None = None
         self.discovered_title: str | None = None
         self.model: str | None = None
         self.manufacturer: str | None = None
@@ -63,7 +69,11 @@ class HisenseVidaaConfigFlow(
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: HisenseVidaaConfigEntry,
+        config_entry: VidaaConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
-        return HisenseVidaaOptionsFlowHandler()
+        return VidaaOptionsFlowHandler()
+
+
+# Backwards-compatible alias during migration
+HisenseVidaaConfigFlow = VidaaConfigFlow

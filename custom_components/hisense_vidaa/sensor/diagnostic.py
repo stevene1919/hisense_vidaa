@@ -20,17 +20,17 @@ from ..const import (
     DEFAULT_BRAND,
     DEFAULT_BRAND_OPTION,
 )
-from ..entity import HisenseVidaaEntity
+from ..entity import VidaaEntity
 from ..tv.fingerprint import format_drift_human
 
 if TYPE_CHECKING:
-    from ..client import HisenseTvClient
+    from ..client import VidaaClient
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class HisenseVidaaBaseSensor(HisenseVidaaEntity, SensorEntity):
-    """Base class for Hisense VIDAA sensors with safe state scheduling."""
+class VidaaBaseSensor(VidaaEntity, SensorEntity):
+    """Base class for VIDAA sensors with safe state scheduling."""
 
     def _schedule_state_update(self) -> None:
         """Safely schedule state update if entity is added to hass."""
@@ -38,13 +38,13 @@ class HisenseVidaaBaseSensor(HisenseVidaaEntity, SensorEntity):
             self.schedule_update_ha_state()
 
 
-class HisenseVidaaSessionStatusSensor(HisenseVidaaBaseSensor):
+class VidaaSessionStatusSensor(VidaaBaseSensor):
     """Sensor displaying current authentication and session status."""
 
     _attr_translation_key = "session_status"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_session_status"
         self._reauth_required = False
@@ -78,7 +78,7 @@ class HisenseVidaaSessionStatusSensor(HisenseVidaaBaseSensor):
         self._update_state()
         self._schedule_state_update()
 
-    def _handle_auth_failed(self, client: HisenseTvClient) -> None:
+    def _handle_auth_failed(self, client: VidaaClient) -> None:
         self._reauth_required = True
         self._attr_native_value = "Reauth Required"
         self._attr_icon = "mdi:shield-alert"
@@ -118,13 +118,13 @@ class HisenseVidaaSessionStatusSensor(HisenseVidaaBaseSensor):
         return attrs
 
 
-class HisenseVidaaAuthProfileSensor(HisenseVidaaBaseSensor):
+class VidaaAuthProfileSensor(VidaaBaseSensor):
     """Sensor displaying configured authentication profile."""
 
     _attr_translation_key = "auth_profile"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_auth_profile"
         key = self._options.get(
@@ -134,14 +134,14 @@ class HisenseVidaaAuthProfileSensor(HisenseVidaaBaseSensor):
         self._attr_native_value = AUTH_PROFILES.get(key, key.title())
 
 
-class HisenseVidaaBrandProfileSensor(HisenseVidaaBaseSensor):
+class VidaaBrandProfileSensor(VidaaBaseSensor):
     """Sensor displaying configured brand profile and detected hardware brand."""
 
     _attr_translation_key = "brand_profile"
     _attr_icon = "mdi:tag-outline"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_brand_profile"
         self._update_value()
@@ -183,7 +183,7 @@ class HisenseVidaaBrandProfileSensor(HisenseVidaaBaseSensor):
         }
 
 
-class HisenseVidaaReportedNameSensor(HisenseVidaaBaseSensor):
+class VidaaReportedNameSensor(VidaaBaseSensor):
     """Sensor displaying live reported friendly TV name and system hardware details."""
 
     _attr_translation_key = "reported_name"
@@ -191,7 +191,7 @@ class HisenseVidaaReportedNameSensor(HisenseVidaaBaseSensor):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_reported_name"
         self._update_value()
@@ -248,14 +248,14 @@ class HisenseVidaaReportedNameSensor(HisenseVidaaBaseSensor):
         return attrs
 
 
-class HisenseVidaaAudioOutputSensor(HisenseVidaaEntity, SensorEntity):
+class VidaaAudioOutputSensor(VidaaEntity, SensorEntity):
     """Sensor reporting active audio output (TV Speakers vs ARC/eARC)."""
 
     _attr_translation_key = "audio_output"
     _attr_icon = "mdi:audio-video"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_audio_output"
         self._attr_native_value = "TV Speakers" if client.connected else "Off"
@@ -300,7 +300,7 @@ class HisenseVidaaAudioOutputSensor(HisenseVidaaEntity, SensorEntity):
             self._schedule_state_update()
 
 
-class HisenseVidaaClockDriftSensor(HisenseVidaaBaseSensor):
+class VidaaClockDriftSensor(VidaaBaseSensor):
     """Sensor displaying TV internal clock drift relative to host time."""
 
     _attr_translation_key = "clock_drift"
@@ -309,7 +309,7 @@ class HisenseVidaaClockDriftSensor(HisenseVidaaBaseSensor):
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_entity_registry_enabled_default = False
 
-    def __init__(self, client: HisenseTvClient, entry: ConfigEntry) -> None:
+    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
         super().__init__(client, entry)
         self._attr_unique_id = f"{self._entry_id}_clock_drift"
         self._update_state()
@@ -373,3 +373,13 @@ class HisenseVidaaClockDriftSensor(HisenseVidaaBaseSensor):
             attrs["last_synced"] = datetime.fromtimestamp(last_sync, tz=UTC).isoformat()
 
         return attrs
+
+
+# Backwards-compatible aliases during migration
+HisenseVidaaBaseSensor = VidaaBaseSensor
+HisenseVidaaSessionStatusSensor = VidaaSessionStatusSensor
+HisenseVidaaAuthProfileSensor = VidaaAuthProfileSensor
+HisenseVidaaBrandProfileSensor = VidaaBrandProfileSensor
+HisenseVidaaReportedNameSensor = VidaaReportedNameSensor
+HisenseVidaaAudioOutputSensor = VidaaAudioOutputSensor
+HisenseVidaaClockDriftSensor = VidaaClockDriftSensor

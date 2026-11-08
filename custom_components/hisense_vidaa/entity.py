@@ -6,7 +6,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.entity import Entity
 
-from .client import HisenseTvClient
+from .client import VidaaClient
 from .const import (
     BRAND_MAP,
     CONF_BRAND,
@@ -19,16 +19,18 @@ from .const import (
     DOMAIN,
 )
 
+__all__ = ["HisenseVidaaEntity", "VidaaEntity"]
 
-class HisenseVidaaEntity(Entity):
-    """Base entity representation for Hisense VIDAA TV."""
+
+class VidaaEntity(Entity):
+    """Base entity representation for VIDAA Smart TV."""
 
     _attr_has_entity_name = True
     _attr_should_poll = False
 
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         """Initialize the base entity."""
@@ -70,3 +72,7 @@ class HisenseVidaaEntity(Entity):
     def available(self) -> bool:
         """Return True if the TV entity is available."""
         return bool(self._entry_id and self._client)
+
+
+# Backwards-compatible alias during migration
+HisenseVidaaEntity = VidaaEntity

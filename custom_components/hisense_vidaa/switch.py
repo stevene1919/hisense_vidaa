@@ -18,11 +18,11 @@ from .const import (
     DEFAULT_ENABLE_AUDIO_ONLY,
     DOMAIN,
 )
-from .entity import HisenseVidaaEntity
+from .entity import VidaaEntity
 
 if TYPE_CHECKING:
-    from . import HisenseVidaaConfigEntry
-    from .client import HisenseTvClient
+    from . import VidaaConfigEntry
+    from .client import VidaaClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ WAKE_KEY = "KEY_INFO"
 KEY_GAP_SECONDS = 0.5
 
 
-class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
+class VidaaAudioOnlySwitch(VidaaEntity, SwitchEntity):
     """Switch for Audio-Only mode (display panel off, sound playing).
 
     Supported on select VIDAA TV models that implement KEY_AUDIO screen toggle.
@@ -43,7 +43,7 @@ class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
 
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -108,17 +108,16 @@ class HisenseVidaaAudioOnlySwitch(HisenseVidaaEntity, SwitchEntity):
         self.async_write_ha_state()
 
 
-class HisenseVidaaDebugLoggingSwitch(HisenseVidaaEntity, SwitchEntity):
+class VidaaDebugLoggingSwitch(VidaaEntity, SwitchEntity):
     """Switch to dynamically toggle verbose debug logging in Home Assistant runtime."""
 
     _attr_translation_key = "debug_logging"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
 
-
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -146,12 +145,17 @@ class HisenseVidaaDebugLoggingSwitch(HisenseVidaaEntity, SwitchEntity):
         self.async_write_ha_state()
 
 
+# Backwards-compatible aliases during migration
+HisenseVidaaAudioOnlySwitch = VidaaAudioOnlySwitch
+HisenseVidaaDebugLoggingSwitch = VidaaDebugLoggingSwitch
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: HisenseVidaaConfigEntry,
+    config_entry: VidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Hisense VIDAA switch platform."""
+    """Set up the VIDAA switch platform."""
     client = config_entry.runtime_data.client
 
     enable_audio_only = config_entry.options.get(
@@ -167,11 +171,11 @@ async def async_setup_entry(
         entity_reg.async_remove(entity_id)
 
     entities: list[SwitchEntity] = [
-        HisenseVidaaDebugLoggingSwitch(client=client, entry=config_entry),
+        VidaaDebugLoggingSwitch(client=client, entry=config_entry),
     ]
     if enable_audio_only:
         entities.append(
-            HisenseVidaaAudioOnlySwitch(client=client, entry=config_entry)
+            VidaaAudioOnlySwitch(client=client, entry=config_entry)
         )
 
     async_add_entities(entities)

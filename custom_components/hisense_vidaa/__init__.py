@@ -16,7 +16,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.trigger import PluggableAction
 
-from .client import HisenseTvClient
+from .client import HisenseTvClient, VidaaClient
 from .const import (
     CONF_ACCESS_TOKEN,
     CONF_ACCESS_TOKEN_DURATION,
@@ -72,16 +72,20 @@ DEFAULT_CLOCK_SYNC_INTERVAL = timedelta(hours=2)
 
 
 @dataclass
-class HisenseVidaaData:
-    """Runtime data for Hisense VIDAA TV integration."""
+class VidaaData:
+    """Runtime data for VIDAA Smart TV integration."""
 
-    client: HisenseTvClient
+    client: VidaaClient
     platforms: list[str]
     options: dict[str, Any]
     turn_on: PluggableAction | None = None
 
 
-type HisenseVidaaConfigEntry = ConfigEntry[HisenseVidaaData]
+# Backwards-compatible alias during migration
+HisenseVidaaData = VidaaData
+
+type VidaaConfigEntry = ConfigEntry[VidaaData]
+type HisenseVidaaConfigEntry = VidaaConfigEntry
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:

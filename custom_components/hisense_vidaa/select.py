@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .client import HisenseTvClient
+from .client import VidaaClient
 from .const import (
     CONF_ENABLE_PICTURE_CONTROLS,
     CONF_ENABLE_SOUND_CONTROLS,
@@ -19,10 +19,10 @@ from .const import (
     DEFAULT_ENABLE_SOUND_CONTROLS,
     DOMAIN,
 )
-from .entity import HisenseVidaaEntity
+from .entity import VidaaEntity
 
 if TYPE_CHECKING:
-    from . import HisenseVidaaConfigEntry
+    from . import VidaaConfigEntry
 from .tv.settings import (
     DEFAULT_MENU_ID_PICTURE_MODE,
     DEFAULT_MENU_ID_SOUND_MODE,
@@ -52,15 +52,15 @@ VOLUME_TYPE_MAP = {
 }
 
 
-class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
-    """Hisense VIDAA Audio Output Mode selector."""
+class VidaaAudioOutputSelect(VidaaEntity, SelectEntity):
+    """VIDAA Audio Output Mode selector."""
 
     _attr_translation_key = "audio_output"
     _attr_options = AUDIO_OUTPUT_OPTIONS
 
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -118,14 +118,14 @@ class HisenseVidaaAudioOutputSelect(HisenseVidaaEntity, SelectEntity):
         self.async_write_ha_state()
 
 
-class HisenseVidaaPictureModeSelect(HisenseVidaaEntity, SelectEntity):
-    """Hisense VIDAA Picture Mode selector."""
+class VidaaPictureModeSelect(VidaaEntity, SelectEntity):
+    """VIDAA Picture Mode selector."""
 
     _attr_translation_key = "picture_mode"
 
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -179,15 +179,14 @@ class HisenseVidaaPictureModeSelect(HisenseVidaaEntity, SelectEntity):
         self.async_write_ha_state()
 
 
-class HisenseVidaaSoundModeSelect(HisenseVidaaEntity, SelectEntity):
-    """Hisense VIDAA Sound Mode selector."""
+class VidaaSoundModeSelect(VidaaEntity, SelectEntity):
+    """VIDAA Sound Mode selector."""
 
     _attr_translation_key = "sound_mode"
 
-
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -241,13 +240,19 @@ class HisenseVidaaSoundModeSelect(HisenseVidaaEntity, SelectEntity):
         self.async_write_ha_state()
 
 
+# Backwards-compatible aliases during migration
+HisenseVidaaAudioOutputSelect = VidaaAudioOutputSelect
+HisenseVidaaPictureModeSelect = VidaaPictureModeSelect
+HisenseVidaaSoundModeSelect = VidaaSoundModeSelect
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: HisenseVidaaConfigEntry,
+    config_entry: VidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Hisense VIDAA select platform."""
-    client: HisenseTvClient = config_entry.runtime_data.client
+    """Set up the VIDAA select platform."""
+    client: VidaaClient = config_entry.runtime_data.client
 
     enable_picture = config_entry.options.get(
         CONF_ENABLE_PICTURE_CONTROLS, DEFAULT_ENABLE_PICTURE_CONTROLS
@@ -269,15 +274,15 @@ async def async_setup_entry(
             entity_reg.async_remove(entity_id)
 
     entities: list[SelectEntity] = [
-        HisenseVidaaAudioOutputSelect(client=client, entry=config_entry),
+        VidaaAudioOutputSelect(client=client, entry=config_entry),
     ]
     if enable_picture:
         entities.append(
-            HisenseVidaaPictureModeSelect(client=client, entry=config_entry)
+            VidaaPictureModeSelect(client=client, entry=config_entry)
         )
     if enable_sound:
         entities.append(
-            HisenseVidaaSoundModeSelect(client=client, entry=config_entry)
+            VidaaSoundModeSelect(client=client, entry=config_entry)
         )
 
     async_add_entities(entities)

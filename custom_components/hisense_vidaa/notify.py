@@ -11,26 +11,26 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .client import HisenseTvClient
+from .client import VidaaClient
 from .const import CONF_ENABLE_NOTIFY, DEFAULT_ENABLE_NOTIFY, DOMAIN
-from .entity import HisenseVidaaEntity
+from .entity import VidaaEntity
 
 if TYPE_CHECKING:
-    from . import HisenseVidaaConfigEntry
+    from . import VidaaConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 0
 
 
-class HisenseVidaaNotifyEntity(HisenseVidaaEntity, NotifyEntity):
-    """Hisense VIDAA Toast Notification entity."""
+class VidaaNotifyEntity(VidaaEntity, NotifyEntity):
+    """VIDAA Toast Notification entity."""
 
     _attr_translation_key = "notifications"
 
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         super().__init__(client=client, entry=entry)
@@ -45,13 +45,17 @@ class HisenseVidaaNotifyEntity(HisenseVidaaEntity, NotifyEntity):
         await self._client.async_show_message(message, title)
 
 
+# Backwards-compatible alias during migration
+HisenseVidaaNotifyEntity = VidaaNotifyEntity
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: HisenseVidaaConfigEntry,
+    config_entry: VidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Hisense VIDAA notify platform."""
-    client: HisenseTvClient = config_entry.runtime_data.client
+    """Set up the VIDAA notify platform."""
+    client: VidaaClient = config_entry.runtime_data.client
 
     # Clean up the notify entity from the entity registry if the feature was disabled
     entity_reg = er.async_get(hass)

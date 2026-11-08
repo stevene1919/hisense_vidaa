@@ -13,30 +13,30 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .client import HisenseTvClient
-from .entity import HisenseVidaaEntity
+from .client import VidaaClient
+from .entity import VidaaEntity
 
 if TYPE_CHECKING:
-    from . import HisenseVidaaConfigEntry
+    from . import VidaaConfigEntry
 
 PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: HisenseVidaaConfigEntry,
+    entry: VidaaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Hisense VIDAA binary sensors."""
-    client: HisenseTvClient = entry.runtime_data.client
+    """Set up VIDAA binary sensors."""
+    client: VidaaClient = entry.runtime_data.client
 
     async_add_entities([
-        HisenseVidaaMqttConnectedBinarySensor(client, entry),
-        HisenseVidaaInUseBinarySensor(client, entry),
+        VidaaMqttConnectedBinarySensor(client, entry),
+        VidaaInUseBinarySensor(client, entry),
     ])
 
 
-class HisenseVidaaMqttConnectedBinarySensor(HisenseVidaaEntity, BinarySensorEntity):
+class VidaaMqttConnectedBinarySensor(VidaaEntity, BinarySensorEntity):
     """Binary sensor indicating if TV MQTT broker connection is active."""
 
     _attr_translation_key = "mqtt_connected"
@@ -45,7 +45,7 @@ class HisenseVidaaMqttConnectedBinarySensor(HisenseVidaaEntity, BinarySensorEnti
 
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         """Initialize the binary sensor."""
@@ -74,7 +74,7 @@ class HisenseVidaaMqttConnectedBinarySensor(HisenseVidaaEntity, BinarySensorEnti
             self.schedule_update_ha_state()
 
 
-class HisenseVidaaInUseBinarySensor(HisenseVidaaEntity, BinarySensorEntity):
+class VidaaInUseBinarySensor(VidaaEntity, BinarySensorEntity):
     """Binary sensor indicating whether the TV is genuinely awake and displaying content."""
 
     _attr_translation_key = "in_use"
@@ -82,7 +82,7 @@ class HisenseVidaaInUseBinarySensor(HisenseVidaaEntity, BinarySensorEntity):
 
     def __init__(
         self,
-        client: HisenseTvClient,
+        client: VidaaClient,
         entry: ConfigEntry,
     ) -> None:
         """Initialize the in-use binary sensor."""
@@ -128,4 +128,9 @@ class HisenseVidaaInUseBinarySensor(HisenseVidaaEntity, BinarySensorEntity):
     def _handle_update(self, *args: Any) -> None:
         if getattr(self, "hass", None) is not None:
             self.schedule_update_ha_state()
+
+
+# Backwards-compatible aliases during migration
+HisenseVidaaMqttConnectedBinarySensor = VidaaMqttConnectedBinarySensor
+HisenseVidaaInUseBinarySensor = VidaaInUseBinarySensor
 
