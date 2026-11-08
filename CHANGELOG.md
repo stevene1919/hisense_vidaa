@@ -19,6 +19,16 @@ This major update rebrands the integration to **VIDAA Smart TV** (`vidaa`), refl
   - **Legacy Trigger Compatibility**: Automations listening to `hisense_vidaa.turn_on` device triggers continue functioning alongside canonical `vidaa.turn_on`.
 - **MEDIA PLAYER UI CONTROLS (#55)**:
   - Ensured Previous/Next track and channel navigation buttons in the Home Assistant media player card remain visible and accessible whenever media playback controls are enabled.
+- **VIRTUAL KEYBOARD & REMOTE TEXT INPUT**:
+  - Extended native `remote.send_command` action with command prefix parsing: `text:<string>` / `type:<string>` (insert text), `text:replace:<string>` (clear and replace text), and `clear_text` / `text:clear` (clear active input field).
+  - Added CLI `text` / `send-text` action to `scripts/test_client.py` with `--text` and `--text-action` flags.
+  - Added `--text` and `--text-action` CLI arguments to `scripts/debug_tv.py`.
+  - Added unit test coverage for sync and async text prefix command dispatch.
+- **WEB BROWSER & MOUSE CONTROLS**:
+  - Expanded key alias reference and documentation for web browser mouse navigation (`mouse`, `mouse_click`, `left_mouse`, `mouse_up`, `mouse_down`, `zoom_in`, `zoom_out`).
+  - Added explicit test coverage for all browser mouse aliases in `tests/test_client_state.py`.
+  - Clarified web browser-only mouse cursor limitation (*"Only available in Browser"* per APK analysis) in documentation, parameters, and protocol guides.
+  - Fixed broken anchor link in `docs/troubleshooting.md` pointing to `docs/services_and_automations.md#11-supported-key-names` and added comprehensive key aliases reference table.
 - **REMOVAL OF UNSUPPORTED NOTIFY PLATFORM**:
   - Removed the speculative on-screen toast notification (`notify`) platform, options flow toggle, and developer CLI actions (`test_client.py notify`, `debug_tv.py --notify`).
   - Reverse engineering of the official VIDAA Android companion APK confirmed that notification components (`NotifyActivity`) correspond strictly to a mobile in-app promotional inbox rather than a TV compositor display listener.

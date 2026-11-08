@@ -52,6 +52,40 @@ data:
   delay: 0.2
 ```
 
+#### 1.1 Supported Key Names & Aliases
+
+The integration supports both friendly lowercase aliases and native hardware `KEY_*` constants across `hisense_vidaa.send_key`, `hisense_vidaa.send_key_sequence`, and the native `remote.send_command` platform:
+
+| Category | Supported Key Aliases | Native Hardware Constant | Description |
+| :--- | :--- | :--- | :--- |
+| **Navigation** | `up`, `down`, `left`, `right` | `KEY_UP`, `KEY_DOWN`, `KEY_LEFT`, `KEY_RIGHT` | D-pad directional arrows |
+| **Confirmation** | `ok`, `enter` | `KEY_OK` | Center selection / confirm |
+| **System** | `home` | `KEY_HOME` | VIDAA Home Launcher |
+| | `back`, `return` | `KEY_RETURNS` | Return to previous screen |
+| | `menu` | `KEY_MENU` | Quick settings / context menu |
+| | `exit` | `KEY_EXIT` | Exit active application |
+| | `input`, `source` | `KEY_INPUT` | Input / source selection menu |
+| | `power` | `KEY_POWER` | Toggle TV power state |
+| **Volume & Audio** | `volume_up`, `volume_down` | `KEY_VOLUMEUP`, `KEY_VOLUMEDOWN` | Step volume level |
+| | `mute` | `KEY_MUTE` | Toggle audio mute |
+| | `audio_only`, `screen_off` | `KEY_AUDIO` | Turn off panel display while keeping audio playing |
+| | `voice_up`, `voice_down` | `KEY_VOICEUP`, `KEY_VOICEDOWN` | Remote voice volume levels |
+| **Media Playback** | `play`, `pause`, `stop` | `KEY_PLAY`, `KEY_PAUSE`, `KEY_STOP` | Media playback transport |
+| | `fast_forward`, `rewind` | `KEY_FORWARDS`, `KEY_BACKWARDS` | Fast forward / rewind media tracks |
+| **Channel / Tuner** | `channel_up`, `channel_down` | `KEY_CHANNELUP`, `KEY_CHANNELDOWN` | Channel up / down |
+| | `dot`, `channel_dot` | `KEY_CHANNELDOT` | Sub-channel separator (e.g. `7.1`) |
+| | `ch_list`, `channel_list` | `KEY_CH_LIST` | Electronic Program Guide / Channel List |
+| **Color Buttons** | `red`, `green`, `yellow`, `blue` | `KEY_RED`, `KEY_GREEN`, `KEY_YELLOW`, `KEY_BLUE` | HbbTV / Freeview interactive buttons |
+| **Number Pad** | `0`, `1`, `2`, `3`, `4`, `5`, `6`, `7`, `8`, `9` | `KEY_0` - `KEY_9` | Direct numeric keypad entry |
+| **Web Browser & Mouse** | `mouse`, `mouse_click`, `left_mouse` | `KEY_LEFTMOUSEKEYS` | Left mouse click / tap to enter in Browser |
+| | `mouse_up` | `KEY_UDULEFTMOUSEKEYS` | Mouse button release event |
+| | `mouse_down` | `KEY_UDDLEFTMOUSEKEYS` | Mouse button press event |
+| | `zoom_in`, `zoom+` | `KEY_ZOOMIN` | Zoom in on web browser page |
+| | `zoom_out`, `zoom-` | `KEY_ZOOMOUT` | Zoom out on web browser page |
+
+> [!NOTE]
+> **Web Browser Scope for Mouse Controls:** As verified in official VIDAA application analysis, on-screen mouse cursor functionality is exclusively supported when the TV is actively running the built-in **Web Browser** application (*"Only available in Browser"*). VIDAA's home screen and video streaming apps (e.g. Netflix, YouTube) do not render a mouse cursor and rely strictly on D-pad navigation keys (`up`, `down`, `left`, `right`, `ok`).
+
 ### 3. `hisense_vidaa.send_text_input`
 Inject virtual keyboard text directly into on-screen search bars and text inputs (e.g. searching YouTube, Netflix, or browser).
 

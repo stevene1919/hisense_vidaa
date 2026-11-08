@@ -39,6 +39,8 @@ Before deploying the integration, note the following hardware and firmware limit
 2. **Wi-Fi Wake-on-LAN Unreliability**: Wake-on-LAN (WoL) over 802.11 Wi-Fi can drop initial packets when the TV's Wi-Fi module enters deep power-saving mode. Connecting the TV via wired Ethernet or enabling multi-burst WoL in options is strongly recommended.
 3. **Firmware Compatibility Gaps**: Pre-2018 Hisense TV models (VIDAA U2 or earlier) lack the internal MQTT broker daemon on port `36669` and cannot be controlled via local TLS MQTT.
 4. **App Deep-Linking Restrictions**: Certain Smart TV applications (e.g. Netflix, Disney+) enforce proprietary DRM restrictions that prevent launching directly into specific video content URLs without navigating through the app's main UI.
+5. **Mouse Cursor Browser-Only Scope**: The on-screen mouse pointer in VIDAA OS is exclusively functional when running the TV's native **Web Browser** application (*"Only available in Browser"*). VIDAA's home screen and video streaming apps do not support cursor movement and use standard D-pad directional controls (`up`, `down`, `left`, `right`, `ok`). Mouse button clicks (`mouse_click`, `mouse_up`, `mouse_down`) and zoom keys (`zoom_in`, `zoom_out`) can be dispatched via `remote.send_command`.
+6. **Virtual Keyboard Text Injection Requirements**: Text injected via `hisense_vidaa.send_text_input` or `remote.send_command` (`text:<string>`) targets the active search bar or input field on screen. The TV OS requires an active on-screen keyboard dialog or focused text entry box (e.g. in YouTube search, web browser, or Wi-Fi settings); sending text while on passive video playback or menus without input fields will be ignored by the TV.
 
 ---
 

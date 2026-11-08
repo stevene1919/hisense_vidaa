@@ -1,6 +1,6 @@
-# 📋 Hisense VIDAA Integration Roadmap & TODO
+# 📋 VIDAA Smart TV Integration Roadmap & TODO
 
-This document tracks active pending tasks, investigations, and future roadmap items for the `hisense_vidaa` integration.
+This document tracks active pending tasks, investigations, and future roadmap items for the `vidaa` integration.
 
 ---
 
@@ -23,15 +23,7 @@ This document tracks active pending tasks, investigations, and future roadmap it
 
 ## 🗺️ Long-Term Roadmap & Future Enhancements
 
-### 1. Universal VIDAA Rebranding Migration (`hisense_vidaa` → `vidaa`)
-*Underlying multi-brand protocol support for Toshiba, Loewe, Philips/TPV, Schneider, etc., is fully active in v3.2.0 under the `hisense_vidaa` domain.*
-- [ ] **Full Domain Migration Strategy**:
-  - Evaluate future domain migration from `hisense_vidaa` to `vidaa` once partner brand testing matures.
-  - Implement `async_migrate_entry` to seamlessly preserve existing entity unique IDs, area assignments, and custom entity customizations without breaking existing setups.
-  - Alias legacy action services (`hisense_vidaa.send_key` → `vidaa.send_key`) with deprecation warnings to maintain automation backwards compatibility.
-  - Refresh brand assets (`brand/`) with official universal VIDAA OS logos alongside partner sub-badges.
-
-### 2. Home Assistant Core Upstream Submission
+### 1. Home Assistant Core Upstream Submission
 *The integration currently fulfills 100% of all 54 Integration Quality Scale rules (Bronze, Silver, Gold, Platinum) as tracked in `quality_scale.yaml`.*
 - [ ] **Core Submission Readiness**:
   - Monitor stability of native `aiomqtt` engine and multi-brand cascade in production via HACS.
@@ -43,6 +35,13 @@ This document tracks active pending tasks, investigations, and future roadmap it
 
 For complete details on completed features and technical improvements, refer to the [Changelog](CHANGELOG.md):
 
+* **v3.5.0**:
+  - **Universal VIDAA Rebranding (`vidaa`)**: Renamed integration domain to `vidaa` (VIDAA Smart TV), deployed official brand assets and icons, refactored symbols to `Vidaa*` with legacy aliases.
+  - **Zero-Breaking-Change Migration**: Built automated config entry migration (v1 -> v2.1), preserving entity registries, unique IDs, and area assignments. Maintained `hisense_vidaa.*` actions and device trigger compatibility.
+  - **Virtual Keyboard Input Support**: Extended `remote.send_command` with prefix parsing (`text:<str>`, `type:<str>`, `text:replace:<str>`, `clear_text`) and added CLI text commands to `test_client.py` and `debug_tv.py`.
+  - **Web Browser Mouse & Pointer Integration**: Documented browser-specific mouse controls (`mouse_click`, `mouse_up`, `mouse_down`, `zoom_in`, `zoom_out`) and clarified the browser-only cursor scope from APK reverse-engineering.
+  - **Removal of Unsupported Notify Platform**: Deprecated speculative `notify` platform and options toggle after companion APK decompilation confirmed notifications are an in-app mobile promotion feed with no TV compositor listener. Pruned legacy entity registry entries on setup.
+  - **Media Player UI Controls (#55)**: Restored persistent visibility for previous/next track and channel navigation buttons in the Home Assistant media player card.
 * **v3.3.0**: Context-aware channel track controls (Previous/Next track steps channels on Live TV, skips tracks on Apps/HDMI), HDMI container false-positive guard (`is_live_tv_source`), channel name matching in `play_media`, user-configurable source filtering in Options Flow (`CONF_SOURCES`), `PluggableAction` turn-on device automations, candidate toast notification probing, and full Serbian translations (294 unit tests).
 * **v3.2.0**: Universal VIDAA OEM Multi-Brand Support (Hisense, Toshiba, Loewe, Philips/TPV, Sharp, JVC, and regional partners), candidate OEM brand handshake cascade on `rc: 5`, certificate filename brand detection, post-PIN brand preservation fix, automatic credential regeneration on brand changes, Device Options & Manual IP brand selector, UPnP MAC fallback support, and comprehensive modular test suite (246 unit tests).
 * **v3.1.0**: Full architectural migration to native `aiomqtt>=2.3.0` async transport engine, shared `aiohttp.ClientSession` injection, multi-device service ambiguity guards, and 100% IQS rule compliance (`quality_scale.yaml`).

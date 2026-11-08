@@ -134,6 +134,10 @@ stateDiagram-v2
 | `/remoteapp/mobile/broadcast/platform_service/data/soundsetting` | `Subscribe` | Broadcast state push when sound mode or audio setting changes on TV |
 | `/remoteapp/mobile/{client_id}/ui_service/data/capability` | `Subscribe` | TV capabilities descriptor (e.g. hardware capabilities) |
 
+### 🖱️ Web Browser vs TV UI Mode
+* **Dual Text Ingestion (`actions/txtinputdata` vs `actions/bwsinputdata`):** When injecting virtual keyboard text, the integration routes payloads to `txtinputdata` (native OS input fields and apps like YouTube) and simultaneously to `bwsinputdata` (built-in Web Browser address bar and in-page inputs) to ensure consistent text delivery regardless of active view.
+* **Web Browser Cursor Mode:** In the official companion APK (`com.universal.remote.multi`), the on-screen mouse trackpad layout (`activity_mouse.xml`) is marked `"Only available in Browser"`. The TV OS disables cursor rendering on the launcher home screen and in third-party video apps; mouse click (`KEY_LEFTMOUSEKEYS`) and zoom (`KEY_ZOOMIN`/`KEY_ZOOMOUT`) commands sent over `actions/sendkey` operate specifically when interacting with web browser content.
+
 ---
 
 ## 🔑 Certificate Architecture & Extraction

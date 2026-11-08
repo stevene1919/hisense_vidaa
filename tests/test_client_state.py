@@ -20,7 +20,12 @@ def test_key_aliases():
     assert KEY_ALIASES["ok"] == "KEY_OK"
     assert KEY_ALIASES["voice_up"] == "KEY_VOICEUP"
     assert KEY_ALIASES["dot"] == "KEY_CHANNELDOT"
+    assert KEY_ALIASES["mouse"] == "KEY_LEFTMOUSEKEYS"
+    assert KEY_ALIASES["mouse_click"] == "KEY_LEFTMOUSEKEYS"
+    assert KEY_ALIASES["mouse_down"] == "KEY_UDDLEFTMOUSEKEYS"
     assert KEY_ALIASES["mouse_up"] == "KEY_UDULEFTMOUSEKEYS"
+    assert KEY_ALIASES["zoom_in"] == "KEY_ZOOMIN"
+    assert KEY_ALIASES["zoom_out"] == "KEY_ZOOMOUT"
     assert KEY_ALIASES["audio_only"] == "KEY_AUDIO"
     assert KEY_ALIASES["screen_off"] == "KEY_AUDIO"
 
