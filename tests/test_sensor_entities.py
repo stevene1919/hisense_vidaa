@@ -5,17 +5,17 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.binary_sensor import (
+from custom_components.vidaa.binary_sensor import (
     HisenseVidaaInUseBinarySensor,
     HisenseVidaaMqttConnectedBinarySensor,
 )
-from custom_components.hisense_vidaa.button import (
+from custom_components.vidaa.button import (
     HisenseVidaaForceReconnectButton,
     HisenseVidaaSyncClockButton,
     HisenseVidaaTriggerReauthButton,
     async_setup_entry as async_setup_buttons,
 )
-from custom_components.hisense_vidaa.sensor import (
+from custom_components.vidaa.sensor import (
     HisenseVidaaActiveAppSensor,
     HisenseVidaaActiveSourceSensor,
     HisenseVidaaAudioOutputSensor,
@@ -25,7 +25,7 @@ from custom_components.hisense_vidaa.sensor import (
     HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
 )
-from custom_components.hisense_vidaa.switch import (
+from custom_components.vidaa.switch import (
     HisenseVidaaAudioOnlySwitch,
     HisenseVidaaDebugLoggingSwitch,
 )
@@ -223,7 +223,7 @@ async def test_in_use_binary_sensor_and_live_tv_metadata(mock_client, mock_entry
 
 def test_auth_profile_sensor_prefers_entry_options(mock_client, mock_entry):
     """[F6-leg4] The auth-profile sensor reads entry.options before entry.data."""
-    from custom_components.hisense_vidaa.const import AUTH_PROFILES
+    from custom_components.vidaa.const import AUTH_PROFILES
 
     mock_entry.data = {**mock_entry.data, "auth_profile": "modern"}
     mock_entry.options = {**mock_entry.options, "auth_profile": "legacy"}
@@ -239,7 +239,7 @@ def test_auth_profile_sensor_prefers_entry_options(mock_client, mock_entry):
 
 def test_brand_profile_sensor_options_and_attributes(mock_client, mock_entry):
     """Test the brand-profile sensor displays configured profile and active hardware attributes."""
-    from custom_components.hisense_vidaa.const import BRAND_PROFILES
+    from custom_components.vidaa.const import BRAND_PROFILES
 
     # Auto detect profile
     mock_entry.data = {**mock_entry.data, "brand": "his", "brand_profile": "auto"}
@@ -322,7 +322,7 @@ def test_session_status_sensor_masks_client_id_and_applies_offset():
 @pytest.mark.anyio
 async def test_sensor_setup_entry_excludes_retired_sensors(mock_client, mock_entry):
     """Verify async_setup_entry for sensor platform does not add retired diagnostic entities."""
-    from custom_components.hisense_vidaa.sensor import async_setup_entry as async_setup_sensors
+    from custom_components.vidaa.sensor import async_setup_entry as async_setup_sensors
 
     hass = MagicMock(spec=HomeAssistant)
     added_sensors = []
@@ -421,12 +421,12 @@ def test_in_use_binary_sensor_dormant_and_hdmi_states(mock_client, mock_entry):
 
 def test_disabled_by_default_entities(mock_client, mock_entry):
     """Verify specialized diagnostic entities are disabled by default."""
-    from custom_components.hisense_vidaa.button import HisenseVidaaProbeCapabilitiesButton
-    from custom_components.hisense_vidaa.sensor import (
+    from custom_components.vidaa.button import HisenseVidaaProbeCapabilitiesButton
+    from custom_components.vidaa.sensor import (
         HisenseVidaaClockDriftSensor,
         HisenseVidaaReportedNameSensor,
     )
-    from custom_components.hisense_vidaa.switch import HisenseVidaaDebugLoggingSwitch
+    from custom_components.vidaa.switch import HisenseVidaaDebugLoggingSwitch
 
     s_drift = HisenseVidaaClockDriftSensor(mock_client, mock_entry)
     assert s_drift.entity_registry_enabled_default is False

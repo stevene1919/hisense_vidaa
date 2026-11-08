@@ -5,8 +5,8 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.protocol.dispatcher import (
+from custom_components.vidaa.client import HisenseTvClient
+from custom_components.vidaa.protocol.dispatcher import (
     dispatch_incoming_mqtt_message,
     mask_sensitive_payload,
 )
@@ -180,7 +180,7 @@ def test_auth_token_message_masks_tokens_in_debug_logs(caplog) -> None:
     import logging
     from unittest.mock import MagicMock, patch
 
-    from custom_components.hisense_vidaa.protocol.auth import perform_token_refresh
+    from custom_components.vidaa.protocol.auth import perform_token_refresh
 
     raw_payload = (
         '{"accesstoken": "AUTH_REFRESH_SECRET_ACCESS", '

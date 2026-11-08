@@ -1,6 +1,6 @@
 {
-  "domain": "hisense_vidaa",
-  "name": "Hisense VIDAA TV",
+  "domain": "vidaa",
+  "name": "VIDAA Smart TV",
   "codeowners": [
     "@stevene1919"
   ],

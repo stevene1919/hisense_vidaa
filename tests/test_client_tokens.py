@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.protocol.auth import is_token_expired
-from custom_components.hisense_vidaa.protocol.auth_lifecycle import TokenLifecycleManager
+from custom_components.vidaa.client import HisenseTvClient
+from custom_components.vidaa.protocol.auth import is_token_expired
+from custom_components.vidaa.protocol.auth_lifecycle import TokenLifecycleManager
 
 
 def test_check_and_refresh_token_not_expired():
@@ -77,7 +77,7 @@ async def test_check_and_refresh_token_expired():
         refresh_token_duration=30,
     )
 
-    with patch("custom_components.hisense_vidaa.client.async_perform_token_refresh", return_value=None) as mock_refresh, \
+    with patch("custom_components.vidaa.client.async_perform_token_refresh", return_value=None) as mock_refresh, \
          patch.object(client, "async_sync_clock"):
         assert await client.async_check_and_refresh_token(force=False) is False
         mock_refresh.assert_awaited_once()
@@ -290,7 +290,7 @@ async def test_refresh_tokens_restores_connection_on_failure():
     client.mqtt_client = MagicMock()
     client.connected = True
 
-    with patch("custom_components.hisense_vidaa.client.async_perform_token_refresh", return_value=None), \
+    with patch("custom_components.vidaa.client.async_perform_token_refresh", return_value=None), \
          patch.object(client, "async_sync_clock"), \
          patch.object(client, "async_connect_and_run") as mock_connect:
         assert await client.async_refresh_tokens() is False

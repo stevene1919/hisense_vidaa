@@ -124,7 +124,7 @@
       },
       "security": {
         "title": "Connection & Security",
-        "description": "Select TV OEM brand, authentication profile, encryption, and optional client certificates.",
+        "description": "Select authentication profile, encryption, and optional client certificates.",
         "data": {
           "auth_profile": "Authentication / Certificate Profile",
           "brand": "TV OEM Brand",
@@ -146,6 +146,9 @@
       },
       "auth_profile": {
         "name": "Auth Profile"
+      },
+      "brand_profile": {
+        "name": "Brand Profile"
       },
       "active_app": {
         "name": "Active App"
@@ -395,6 +398,7 @@
     },
     "brand": {
       "options": {
+        "auto": "Auto Detect (Recommended)",
         "his": "Hisense",
         "tos": "Toshiba",
         "loe": "Loewe",
@@ -415,7 +419,8 @@
         "ves": "Vestel",
         "bra": "Brandt",
         "met": "Metz",
-        "lei": "Leica"
+        "lei": "Leica",
+        "tpo": "TOPTRO"
       }
     }
   },
@@ -448,7 +453,7 @@
   },
   "device_automation": {
     "trigger_type": {
-      "hisense_vidaa.turn_on": "Device is requested to turn on"
+      "vidaa.turn_on": "Device is requested to turn on"
     }
   },
   "exceptions": {

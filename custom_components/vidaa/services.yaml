@@ -3,7 +3,7 @@ send_key:
   description: Send a remote control key command to the TV.
   target:
     entity:
-      integration: hisense_vidaa
+      integration: vidaa
       domain:
         - media_player
         - remote
@@ -43,7 +43,7 @@ send_key_sequence:
   description: Send a sequence of remote key commands with configurable delay between keys.
   target:
     entity:
-      integration: hisense_vidaa
+      integration: vidaa
       domain:
         - media_player
         - remote
@@ -73,7 +73,7 @@ change_channel:
   description: Directly tune to a numeric TV channel by dispatching sequential number keys.
   target:
     entity:
-      integration: hisense_vidaa
+      integration: vidaa
       domain:
         - media_player
         - remote
@@ -110,7 +110,7 @@ launch_app:
   description: Launch a smart TV application on the TV.
   target:
     entity:
-      integration: hisense_vidaa
+      integration: vidaa
       domain:
         - media_player
   fields:
@@ -148,7 +148,7 @@ set_picture_setting:
   description: Change a specific TV picture menu setting or calibration parameter.
   target:
     entity:
-      integration: hisense_vidaa
+      integration: vidaa
       domain:
         - media_player
         - select
@@ -177,7 +177,7 @@ set_sound_setting:
   description: Change a specific TV sound menu setting or equalizer preset.
   target:
     entity:
-      integration: hisense_vidaa
+      integration: vidaa
       domain:
         - media_player
         - select
@@ -205,7 +205,7 @@ send_text_input:
   description: Send virtual keyboard text string to active on-screen input field or browser search bar.
   target:
     entity:
-      integration: hisense_vidaa
+      integration: vidaa
       domain:
         - media_player
         - remote

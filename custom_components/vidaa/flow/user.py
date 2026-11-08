@@ -52,14 +52,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _get_client_class() -> type[HisenseTvClient]:
-    cf = sys.modules.get("custom_components.hisense_vidaa.config_flow")
+    cf = sys.modules.get("custom_components.vidaa.config_flow") or sys.modules.get("custom_components.hisense_vidaa.config_flow")
     if cf and hasattr(cf, "HisenseTvClient"):
         return cf.HisenseTvClient
     return HisenseTvClient
 
 
 def _get_probe_challenge_fn() -> Any:
-    cf = sys.modules.get("custom_components.hisense_vidaa.config_flow")
+    cf = sys.modules.get("custom_components.vidaa.config_flow") or sys.modules.get("custom_components.hisense_vidaa.config_flow")
     if cf and hasattr(cf, "async_probe_pairing_challenge"):
         return cf.async_probe_pairing_challenge
     return async_probe_pairing_challenge
@@ -388,7 +388,7 @@ class UserFlowMixin:
             if hasattr(self, "hass") and self.hass:
                 task = self.hass.async_create_background_task(
                     client.async_disconnect(),
-                    "hisense_vidaa_config_flow_remove",
+                    "vidaa_config_flow_remove",
                 )
 
                 def _done_callback(fut: Any) -> None:

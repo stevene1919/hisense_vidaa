@@ -5,7 +5,7 @@ turn_on:
       selector:
         device:
           filter:
-            - integration: hisense_vidaa
+            - integration: vidaa
           multiple: true
     entity_id:
       required: false
@@ -13,5 +13,5 @@ turn_on:
         entity:
           filter:
             - domain: media_player
-              integration: hisense_vidaa
+              integration: vidaa
           multiple: true

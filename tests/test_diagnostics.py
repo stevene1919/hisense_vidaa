@@ -7,8 +7,8 @@ import pytest
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.const import CONF_IP_ADDRESS, DOMAIN
-from custom_components.hisense_vidaa.diagnostics import async_get_config_entry_diagnostics
+from custom_components.vidaa.const import CONF_IP_ADDRESS, DOMAIN
+from custom_components.vidaa.diagnostics import async_get_config_entry_diagnostics
 
 
 @pytest.mark.anyio
@@ -131,7 +131,7 @@ async def test_diagnostics_redacts_fingerprint_and_topic_client_id():
     mock_client.access_token_duration = 3600
     mock_client.refresh_token = "secret_refresh_token"
     mock_client.refresh_token_duration = 86400
-    from custom_components.hisense_vidaa.protocol.topics import TopicPaths
+    from custom_components.vidaa.protocol.topics import TopicPaths
     mock_client.topics = TopicPaths(
         ui=f"ui_service/{client_id}/",
         platform=f"platform_service/{client_id}/",

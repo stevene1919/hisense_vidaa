@@ -8,10 +8,11 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import AbortFlow
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.config_flow import HisenseVidaaConfigFlow
+from custom_components.vidaa.client import HisenseTvClient
+from custom_components.vidaa.config_flow import HisenseVidaaConfigFlow
+from custom_components.vidaa.const import DOMAIN
 
-PROBE_PATH = "custom_components.hisense_vidaa.config_flow.async_probe_pairing_challenge"
+PROBE_PATH = "custom_components.vidaa.config_flow.async_probe_pairing_challenge"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -49,11 +50,11 @@ def _flow(hass: MagicMock, *, profile: str = "legacy") -> HisenseVidaaConfigFlow
 def no_network_start_auth(monkeypatch):
     """Keep the flow's client construction offline."""
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        "custom_components.vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.get_device_fingerprint",
+        "custom_components.vidaa.client.HisenseTvClient.get_device_fingerprint",
         MagicMock(return_value={}),
     )
 
@@ -67,7 +68,7 @@ async def test_duplicate_tv_aborts_with_already_configured(monkeypatch, no_netwo
     flow = _flow(hass, profile="legacy")
     flow._abort_if_unique_id_configured = MagicMock(side_effect=AbortFlow("already_configured"))
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.helpers.get_arp_mac",
+        "custom_components.vidaa.flow.helpers.get_arp_mac",
         lambda host: "e8:51:77:ec:98:1c",
     )
 
@@ -94,7 +95,7 @@ async def test_certs_step_does_not_swallow_abort_flow(monkeypatch, no_network_st
     flow = _flow(hass, profile="modern")
     flow._abort_if_unique_id_configured = MagicMock(side_effect=AbortFlow("already_configured"))
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.certs.check_certs_exist", lambda c, k: True
+        "custom_components.vidaa.flow.certs.check_certs_exist", lambda c, k: True
     )
 
     with pytest.raises(AbortFlow):
@@ -110,7 +111,7 @@ async def test_duplicate_add_keeps_running_client_connected():
     running = MagicMock()
     running.ip = "192.168.50.12"
     running.mac = "e8:51:77:ec:98:1c"
-    hass.data = {"hisense_vidaa": {"entry_1": {"client": running}}}
+    hass.data = {DOMAIN: {"entry_1": {"client": running}}}
 
     flow = _flow(hass)
     flow._abort_if_unique_id_configured = MagicMock(side_effect=AbortFlow("already_configured"))
@@ -132,7 +133,7 @@ async def test_reauth_disconnects_only_its_own_client():
     sibling.ip = "192.168.50.12"  # same IP, different entry
     sibling.mac = "e8:51:77:ec:98:1d"
     sibling.async_disconnect = AsyncMock()
-    hass.data = {"hisense_vidaa": {"entry_1": {"client": own}, "entry_2": {"client": sibling}}}
+    hass.data = {DOMAIN: {"entry_1": {"client": own}, "entry_2": {"client": sibling}}}
 
     flow = _flow(hass)
     flow._reauth_entry = MagicMock()

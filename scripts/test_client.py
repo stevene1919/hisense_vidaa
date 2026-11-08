@@ -44,15 +44,15 @@ if "homeassistant" not in sys.modules:
             )
             raise SystemExit(2) from exc
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.protocol.discovery import (
+from custom_components.vidaa.client import HisenseTvClient
+from custom_components.vidaa.protocol.discovery import (
     BRAND_MAP,
     format_drift_human,
     get_arp_mac,
     get_tv_timestamp,
     probe_upnp_services,
 )
-from custom_components.hisense_vidaa.tv.probe import (
+from custom_components.vidaa.tv.probe import (
     create_client_from_creds,
     generate_markdown_report,
     load_credentials_file,
@@ -803,7 +803,7 @@ def main() -> None:
     key_path = args.key_file
 
     if cert_path and (cert_path.lower().endswith(".p12") or cert_path.lower().endswith(".pfx")):
-        from custom_components.hisense_vidaa.protocol import extract_pkcs12_to_pem
+        from custom_components.vidaa.protocol import extract_pkcs12_to_pem
 
         extracted = extract_pkcs12_to_pem(cert_path)
         if extracted:

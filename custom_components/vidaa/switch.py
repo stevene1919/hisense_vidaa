@@ -130,18 +130,18 @@ class VidaaDebugLoggingSwitch(VidaaEntity, SwitchEntity):
     @property
     def is_on(self) -> bool:
         """Return True if debug logging is enabled for this integration."""
-        return logging.getLogger("custom_components.hisense_vidaa").isEnabledFor(logging.DEBUG)
+        return logging.getLogger("custom_components.vidaa").isEnabledFor(logging.DEBUG)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Enable debug logging."""
-        logging.getLogger("custom_components.hisense_vidaa").setLevel(logging.DEBUG)
-        _LOGGER.info("Debug logging enabled for custom_components.hisense_vidaa")
+        logging.getLogger("custom_components.vidaa").setLevel(logging.DEBUG)
+        _LOGGER.info("Debug logging enabled for custom_components.vidaa")
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Disable debug logging."""
-        logging.getLogger("custom_components.hisense_vidaa").setLevel(logging.NOTSET)
-        _LOGGER.info("Debug logging disabled for custom_components.hisense_vidaa")
+        logging.getLogger("custom_components.vidaa").setLevel(logging.NOTSET)
+        _LOGGER.info("Debug logging disabled for custom_components.vidaa")
         self.async_write_ha_state()
 
 

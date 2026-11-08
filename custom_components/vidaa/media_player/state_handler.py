@@ -17,15 +17,15 @@ from ..tv.media import (
 )
 
 if TYPE_CHECKING:
-    from . import HisenseVidaaMediaPlayer
+    from . import HisenseVidaaMediaPlayer, VidaaMediaPlayer
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class MediaPlayerStateHandlerMixin:
-    """Telemetry and broadcast handling mixin for HisenseVidaaMediaPlayer."""
+    """Telemetry and broadcast handling mixin for VidaaMediaPlayer."""
 
-    def _schedule_ha_update(self: HisenseVidaaMediaPlayer) -> None:
+    def _schedule_ha_update(self: VidaaMediaPlayer) -> None:
         """Schedules a Home Assistant state update if the entity is added to hass."""
         if getattr(self, "hass", None):
             self.schedule_update_ha_state()
@@ -58,12 +58,12 @@ class MediaPlayerStateHandlerMixin:
         ):
             self.hass.async_create_background_task(
                 self._client.async_query_initial_state(),
-                "hisense_vidaa_media_player_initial_state",
+                "vidaa_media_player_initial_state",
             )
 
         self._schedule_ha_update()
 
-    def _handle_state_update(self: HisenseVidaaMediaPlayer, data: dict[str, Any]) -> None:
+    def _handle_state_update(self: VidaaMediaPlayer, data: dict[str, Any]) -> None:
         if not isinstance(data, dict):
             return
 

@@ -6,8 +6,8 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
 
-from custom_components.hisense_vidaa.config_flow import HisenseVidaaConfigFlow
-from custom_components.hisense_vidaa.const import (
+from custom_components.vidaa.config_flow import HisenseVidaaConfigFlow
+from custom_components.vidaa.const import (
     CONF_BRAND,
     CONF_IP_ADDRESS,
     CONF_MAC_ADDRESS,
@@ -179,7 +179,7 @@ async def test_user_step_auto_certs_missing_routes_to_certs(monkeypatch):
     flow.context = {}
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.protocol.check_certs_exist",
+        "custom_components.vidaa.protocol.check_certs_exist",
         lambda c, k: False,
     )
 
@@ -222,19 +222,19 @@ async def test_certs_step_submission_valid(monkeypatch):
     flow._abort_if_unique_id_configured = MagicMock()
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.protocol.check_certs_exist",
+        "custom_components.vidaa.protocol.check_certs_exist",
         lambda c, k: True,
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.certs.check_certs_exist",
+        "custom_components.vidaa.flow.certs.check_certs_exist",
         lambda c, k: True,
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.certs.validate_ssl_certs",
+        "custom_components.vidaa.flow.certs.validate_ssl_certs",
         lambda c, k: (True, None),
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        "custom_components.vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
     )
 
@@ -264,15 +264,15 @@ async def test_zeroconf_discovery(monkeypatch):
     flow._abort_if_unique_id_configured = MagicMock()
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.helpers.get_arp_mac",
+        "custom_components.vidaa.flow.helpers.get_arp_mac",
         lambda host: "e8:51:77:ec:98:1c",
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.protocol.discovery.get_arp_mac",
+        "custom_components.vidaa.protocol.discovery.get_arp_mac",
         lambda host: "e8:51:77:ec:98:1c",
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.tv.fingerprint.get_arp_mac",
+        "custom_components.vidaa.tv.fingerprint.get_arp_mac",
         lambda host: "e8:51:77:ec:98:1c",
     )
 
@@ -350,11 +350,11 @@ async def test_certs_step_submission_invalid_pem(monkeypatch):
     flow.auth_profile = "modern"
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.certs.check_certs_exist",
+        "custom_components.vidaa.flow.certs.check_certs_exist",
         lambda c, k: True,
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.certs.validate_ssl_certs",
+        "custom_components.vidaa.flow.certs.validate_ssl_certs",
         lambda c, k: (False, "invalid_ssl_cert: PEM lib error"),
     )
 
@@ -447,7 +447,7 @@ async def test_manual_ip_upnp_brand_autodetect(monkeypatch):
         "friendly_name": "Loewe TV",
     }
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.tv.fingerprint.query_upnp_descriptor",
+        "custom_components.vidaa.tv.fingerprint.query_upnp_descriptor",
         lambda ip, timeout: mock_upnp,
     )
 
@@ -462,7 +462,7 @@ async def test_manual_ip_upnp_brand_autodetect(monkeypatch):
         created_clients.append(client)
         return client
 
-    monkeypatch.setattr("custom_components.hisense_vidaa.config_flow.HisenseTvClient", mock_client_factory)
+    monkeypatch.setattr("custom_components.vidaa.config_flow.HisenseTvClient", mock_client_factory)
     monkeypatch.setattr(flow, "_async_resolve_ssl_certs", AsyncMock(return_value=True))
     monkeypatch.setattr(flow, "async_step_auth", AsyncMock(return_value={"type": "form", "step_id": "auth"}))
 

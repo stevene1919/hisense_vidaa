@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.protocol.pairing import (
+from custom_components.vidaa.client import HisenseTvClient
+from custom_components.vidaa.protocol.pairing import (
     _async_execute_pairing_attempt,
     async_start_pairing_handshake,
 )

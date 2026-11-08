@@ -426,7 +426,7 @@
   },
   "device_automation": {
     "trigger_type": {
-      "hisense_vidaa.turn_on": "请求打开设备"
+      "vidaa.turn_on": "请求打开设备"
     }
   },
   "triggers": {

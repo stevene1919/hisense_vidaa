@@ -7,8 +7,8 @@ import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 
-from custom_components.hisense_vidaa import async_setup
-from custom_components.hisense_vidaa.const import (
+from custom_components.vidaa import async_setup
+from custom_components.vidaa.const import (
     ATTR_ACTION,
     ATTR_APP,
     ATTR_CHANNEL,
@@ -199,7 +199,7 @@ async def test_launch_app_service_with_app_id_and_url_overrides():
     assert res_id_only["targets"][0]["app_name"] == "YouTube"
 
     # Schema validation: calling with neither app nor app_id should fail validation
-    from custom_components.hisense_vidaa.services import _validate_launch_app_data
+    from custom_components.vidaa.services import _validate_launch_app_data
     with pytest.raises(vol.Invalid):
         _validate_launch_app_data({})
 
@@ -507,7 +507,7 @@ async def test_change_channel_service():
 
 def test_services_helpers() -> None:
     """Test service helper functions."""
-    from custom_components.hisense_vidaa.services import (
+    from custom_components.vidaa.services import (
         _as_id_set,
         parse_key_sequence,
     )

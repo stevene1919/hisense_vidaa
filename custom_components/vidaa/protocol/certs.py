@@ -138,6 +138,7 @@ def extract_pkcs12_to_pem(
         candidate_dirs.append(os.path.dirname(os.path.abspath(p12_path)))
         import tempfile
 
+        candidate_dirs.append(os.path.join(tempfile.gettempdir(), "vidaa_certs"))
         candidate_dirs.append(os.path.join(tempfile.gettempdir(), "hisense_vidaa_certs"))
 
     for c_dir in candidate_dirs:
@@ -204,7 +205,7 @@ def extract_pkcs12_to_pem(
     except (OSError, PermissionError):
         import tempfile
 
-        dest_dir = os.path.join(tempfile.gettempdir(), "hisense_vidaa_certs")
+        dest_dir = os.path.join(tempfile.gettempdir(), "vidaa_certs")
         os.makedirs(dest_dir, exist_ok=True)
 
     base_name = os.path.splitext(os.path.basename(p12_path))[0]

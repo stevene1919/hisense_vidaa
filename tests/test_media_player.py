@@ -10,9 +10,10 @@ from homeassistant.components.media_player import (
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.media_player import HisenseVidaaMediaPlayer
-from custom_components.hisense_vidaa.remote import HisenseVidaaRemote
-from custom_components.hisense_vidaa.tv.settings import SettingMenuItem
+from custom_components.vidaa.const import DOMAIN
+from custom_components.vidaa.media_player import HisenseVidaaMediaPlayer
+from custom_components.vidaa.remote import HisenseVidaaRemote
+from custom_components.vidaa.tv.settings import SettingMenuItem
 
 
 def test_media_player_and_remote_device_info(mock_client, mock_entry):
@@ -23,7 +24,7 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
     )
     dev_info = mp.device_info
     assert mp.device_class == MediaPlayerDeviceClass.TV
-    assert dev_info["identifiers"] == {("hisense_vidaa", "test_entry_id")}
+    assert dev_info["identifiers"] == {(DOMAIN, "test_entry_id")}
     assert dev_info["model"] == "65U7G"
     assert dev_info["manufacturer"] == "Hisense"
     assert dev_info["sw_version"] == "V1.0"
@@ -33,7 +34,7 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
         entry=mock_entry,
     )
     rem_info = rem.device_info
-    assert rem_info["identifiers"] == {("hisense_vidaa", "test_entry_id")}
+    assert rem_info["identifiers"] == {(DOMAIN, "test_entry_id")}
     assert rem_info["model"] == "65U7G"
 
 
@@ -341,7 +342,7 @@ async def test_media_player_parses_camelcase_source_and_app_payloads(mock_client
 
 def test_sourcelist_and_applist_parsers_accept_camelcase():
     """[F5-leg4] The data parsers accept the same spellings as the payload parsers."""
-    from custom_components.hisense_vidaa.tv.media import (
+    from custom_components.vidaa.tv.media import (
         parse_applist_data,
         parse_sourcelist_data,
     )
@@ -402,8 +403,8 @@ async def test_remote_platform_purges_registry_when_disabled(
     mock_client, mock_entry, monkeypatch
 ):
     """[F10-leg4] remote registry entry is purged when the feature is disabled."""
-    from custom_components.hisense_vidaa.const import CONF_ENABLE_REMOTE, DOMAIN
-    from custom_components.hisense_vidaa.remote import async_setup_entry as async_setup_remote
+    from custom_components.vidaa.const import CONF_ENABLE_REMOTE, DOMAIN
+    from custom_components.vidaa.remote import async_setup_entry as async_setup_remote
 
     hass = MagicMock(spec=HomeAssistant)
     hass.data = {DOMAIN: {mock_entry.entry_id: {"client": mock_client}}}
@@ -570,7 +571,7 @@ def test_media_player_extra_state_attributes(mock_client, mock_entry):
 
 def test_media_player_mro_precedence():
     """Ensure MediaPlayerControlsMixin overrides Home Assistant MediaPlayerEntity stubs."""
-    from custom_components.hisense_vidaa.media_player.controls import MediaPlayerControlsMixin
+    from custom_components.vidaa.media_player.controls import MediaPlayerControlsMixin
 
     # Check that async control methods resolve to MediaPlayerControlsMixin
     assert HisenseVidaaMediaPlayer.async_turn_on == MediaPlayerControlsMixin.async_turn_on
@@ -641,7 +642,7 @@ async def test_media_player_context_aware_track_controls(mock_client, mock_entry
 @pytest.mark.anyio
 async def test_media_player_source_filtering_option(mock_client, mock_entry):
     """Test user-configured source filtering via CONF_SOURCES option."""
-    from custom_components.hisense_vidaa.const import CONF_SOURCES
+    from custom_components.vidaa.const import CONF_SOURCES
 
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
     mp._source_dict = {"HDMI1": {}, "HDMI2": {}, "TV": {}, "AV": {}}

@@ -49,7 +49,7 @@ combine-as-imports = true
 
 [tool.codespell]
 quiet-level = 2
-skip = "./.git/*,./.pytest_cache/*,./.ruff_cache/*,*.png,*.p12,*.pem,*.key,credentials.json,./custom_components/hisense_vidaa/translations/*,./docs/i18n/*"
+skip = "./.git/*,./.pytest_cache/*,./.ruff_cache/*,*.png,*.p12,*.pem,*.key,credentials.json,./custom_components/hisense_vidaa/translations/*,./custom_components/vidaa/translations/*,./docs/i18n/*"
 ignore-words-list = "hass,vidaa,remotenow"
 
 [tool.mypy]

@@ -1,6 +1,7 @@
-"""Constants for the Hisense VIDAA TV integration."""
+"""Constants for the VIDAA Smart TV integration."""
 
-DOMAIN = "hisense_vidaa"
+DOMAIN = "vidaa"
+LEGACY_DOMAIN = "hisense_vidaa"
 
 CONF_IP_ADDRESS = "ip_address"
 CONF_MAC_ADDRESS = "mac_address"
@@ -39,7 +40,7 @@ CONF_KEY_REPEAT = "key_repeat"
 CONF_REFRESH_IN_STANDBY = "refresh_in_standby"
 
 DEFAULT_PORT = 36669
-DEFAULT_NAME = "Hisense VIDAA TV"
+DEFAULT_NAME = "VIDAA Smart TV"
 DEFAULT_BRAND = "his"
 DEFAULT_BRAND_OPTION = "auto"
 DEFAULT_TIMEOUT = 10

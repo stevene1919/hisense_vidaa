@@ -60,6 +60,7 @@ def load_credentials_file(file_path: str = "credentials.json") -> dict[str, Any]
             cur = os.path.dirname(cur)
         candidate_paths.extend([
             os.path.join("/config", file_path),
+            os.path.join("/config/custom_components/vidaa", file_path),
             os.path.join("/config/custom_components/hisense_vidaa", file_path),
         ])
 

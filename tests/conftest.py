@@ -807,7 +807,7 @@ def mock_entry(mock_client):
 def mock_client():
     from unittest.mock import AsyncMock
 
-    from custom_components.hisense_vidaa.tv.actions import turn_off_tv, turn_on_tv
+    from custom_components.vidaa.tv.actions import turn_off_tv, turn_on_tv
 
     client = MagicMock()
     client.ip = "192.168.50.12"

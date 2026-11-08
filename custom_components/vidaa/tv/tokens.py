@@ -18,21 +18,21 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _get_perform_token_refresh_fn() -> Any:
-    cl = sys.modules.get("custom_components.hisense_vidaa.client")
+    cl = sys.modules.get("custom_components.vidaa.client") or sys.modules.get("custom_components.hisense_vidaa.client")
     if cl and hasattr(cl, "async_perform_token_refresh"):
         return cl.async_perform_token_refresh
     return async_perform_token_refresh
 
 
 def _get_is_token_expired_fn() -> Any:
-    cl = sys.modules.get("custom_components.hisense_vidaa.client")
+    cl = sys.modules.get("custom_components.vidaa.client") or sys.modules.get("custom_components.hisense_vidaa.client")
     if cl and hasattr(cl, "is_token_expired"):
         return cl.is_token_expired
     return is_token_expired
 
 
 def _get_tv_timestamp_fn() -> Any:
-    cl = sys.modules.get("custom_components.hisense_vidaa.client")
+    cl = sys.modules.get("custom_components.vidaa.client") or sys.modules.get("custom_components.hisense_vidaa.client")
     if cl and hasattr(cl, "get_tv_timestamp"):
         return cl.get_tv_timestamp
     return get_tv_timestamp

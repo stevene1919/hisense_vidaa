@@ -270,7 +270,7 @@ class ConnectionManagerMixin:
                     reconnect=True,
                     standard=True,
                 ),
-                name=f"hisense_vidaa_mqtt_{self.ip}",
+                name=f"vidaa_mqtt_{self.ip}",
             )
             self._token_manager.start_token_watch()
 
@@ -295,7 +295,7 @@ class ConnectionManagerMixin:
             self._mqtt_session_loop(
                 client_id, username, password, ssl_ctx, reconnect=False, standard=False, ready=ready
             ),
-            name=f"hisense_vidaa_pairing_{self.ip}",
+            name=f"vidaa_pairing_{self.ip}",
         )
         try:
             await asyncio.wait_for(asyncio.shield(ready), timeout=timeout)

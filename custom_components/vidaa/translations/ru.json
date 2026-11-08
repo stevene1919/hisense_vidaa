@@ -426,7 +426,7 @@
   },
   "device_automation": {
     "trigger_type": {
-      "hisense_vidaa.turn_on": "Запрошено включение устройства"
+      "vidaa.turn_on": "Запрошено включение устройства"
     }
   },
   "triggers": {

@@ -347,7 +347,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         if not was_on and now_on:
             hass.async_create_background_task(
                 _async_sync_tv_clock(),
-                f"hisense_vidaa_wake_clock_sync_{entry.entry_id}",
+                f"vidaa_wake_clock_sync_{entry.entry_id}",
             )
 
     client.register_state_callback(_on_state_change)

@@ -40,15 +40,15 @@ if "homeassistant" not in sys.modules:
             )
             raise SystemExit(2) from exc
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.protocol.discovery import (
+from custom_components.vidaa.client import HisenseTvClient
+from custom_components.vidaa.protocol.discovery import (
     BRAND_MAP,
     format_drift_human,
     get_device_fingerprint,
     get_tv_timestamp,
     probe_upnp_services,
 )
-from custom_components.hisense_vidaa.tv.probe import (
+from custom_components.vidaa.tv.probe import (
     create_client_from_creds,
     load_credentials_file,
 )

@@ -5,20 +5,20 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.notify import HisenseVidaaNotifyEntity
-from custom_components.hisense_vidaa.number import (
+from custom_components.vidaa.notify import HisenseVidaaNotifyEntity
+from custom_components.vidaa.number import (
     HisenseVidaaBacklightNumber,
     HisenseVidaaBrightnessNumber,
     HisenseVidaaContrastNumber,
 )
-from custom_components.hisense_vidaa.select import (
+from custom_components.vidaa.select import (
     AUDIO_OUTPUT_TV_SPEAKERS,
     HisenseVidaaAudioOutputSelect,
     HisenseVidaaPictureModeSelect,
     HisenseVidaaSoundModeSelect,
 )
-from custom_components.hisense_vidaa.switch import HisenseVidaaAudioOnlySwitch
-from custom_components.hisense_vidaa.tv.settings import SettingMenuItem
+from custom_components.vidaa.switch import HisenseVidaaAudioOnlySwitch
+from custom_components.vidaa.tv.settings import SettingMenuItem
 
 
 @pytest.mark.anyio
@@ -162,13 +162,13 @@ async def test_picture_calibration_numbers(mock_client, mock_entry):
 @pytest.mark.anyio
 async def test_select_and_number_platforms_lifecycle(mock_client, mock_entry, monkeypatch):
     """Test select and number platforms creation, options gating, and lifecycle unregistration."""
-    from custom_components.hisense_vidaa.const import (
+    from custom_components.vidaa.const import (
         CONF_ENABLE_PICTURE_CONTROLS,
         CONF_ENABLE_SOUND_CONTROLS,
         DOMAIN,
     )
-    from custom_components.hisense_vidaa.number import async_setup_entry as async_setup_number
-    from custom_components.hisense_vidaa.select import async_setup_entry as async_setup_select
+    from custom_components.vidaa.number import async_setup_entry as async_setup_number
+    from custom_components.vidaa.select import async_setup_entry as async_setup_select
 
     hass = MagicMock(spec=HomeAssistant)
     hass.data = {DOMAIN: {mock_entry.entry_id: {"client": mock_client}}}
@@ -213,15 +213,15 @@ async def test_select_and_number_platforms_lifecycle(mock_client, mock_entry, mo
 @pytest.mark.anyio
 async def test_entity_availability_matrix(mock_client, mock_entry):
     """Test availability of various entities during online and offline TV states."""
-    from custom_components.hisense_vidaa.binary_sensor import HisenseVidaaMqttConnectedBinarySensor
-    from custom_components.hisense_vidaa.button import (
+    from custom_components.vidaa.binary_sensor import HisenseVidaaMqttConnectedBinarySensor
+    from custom_components.vidaa.button import (
         HisenseVidaaForceReconnectButton,
         HisenseVidaaTriggerReauthButton,
     )
-    from custom_components.hisense_vidaa.number import HisenseVidaaBacklightNumber
-    from custom_components.hisense_vidaa.select import HisenseVidaaPictureModeSelect
-    from custom_components.hisense_vidaa.sensor import HisenseVidaaActiveSourceSensor, HisenseVidaaSessionStatusSensor
-    from custom_components.hisense_vidaa.switch import (
+    from custom_components.vidaa.number import HisenseVidaaBacklightNumber
+    from custom_components.vidaa.select import HisenseVidaaPictureModeSelect
+    from custom_components.vidaa.sensor import HisenseVidaaActiveSourceSensor, HisenseVidaaSessionStatusSensor
+    from custom_components.vidaa.switch import (
         HisenseVidaaAudioOnlySwitch,
         HisenseVidaaDebugLoggingSwitch,
     )
@@ -280,8 +280,8 @@ async def test_notify_platform_purges_registry_when_disabled(
     mock_client, mock_entry, monkeypatch
 ):
     """[F10-leg4] notify registry entry is purged when the feature is disabled."""
-    from custom_components.hisense_vidaa.const import CONF_ENABLE_NOTIFY, DOMAIN
-    from custom_components.hisense_vidaa.notify import async_setup_entry as async_setup_notify
+    from custom_components.vidaa.const import CONF_ENABLE_NOTIFY, DOMAIN
+    from custom_components.vidaa.notify import async_setup_entry as async_setup_notify
 
     hass = MagicMock(spec=HomeAssistant)
     hass.data = {DOMAIN: {mock_entry.entry_id: {"client": mock_client}}}

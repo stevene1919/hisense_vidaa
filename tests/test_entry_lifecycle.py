@@ -7,14 +7,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
-from custom_components.hisense_vidaa import (
+from custom_components.vidaa import (
     DOMAIN,
     async_remove_entry,
     async_setup_entry,
     async_unload_entry,
     update_listener,
 )
-from custom_components.hisense_vidaa.const import (
+from custom_components.vidaa.const import (
     CONF_ACCESS_TOKEN,
     CONF_AUTH_PROFILE,
     CONF_BRAND,
@@ -75,7 +75,7 @@ def _setup_hass(mock_entry, mock_client, monkeypatch):
     hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
     hass.services = FakeServices()
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.HisenseTvClient",
+        "custom_components.vidaa.HisenseTvClient",
         lambda *args, **kwargs: mock_client,
     )
     mock_client.has_notifications = False
@@ -147,7 +147,7 @@ async def test_remove_entry_deletes_persistent_issues(mock_entry, monkeypatch):
     hass = MagicMock()
     deleted = []
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.ir.async_delete_issue",
+        "custom_components.vidaa.ir.async_delete_issue",
         lambda hass_arg, domain, issue_id: deleted.append((domain, issue_id)),
     )
 
@@ -169,7 +169,7 @@ async def test_entry_lifecycle_setup_and_unload(mock_entry, mock_client, monkeyp
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
     hass.loop = MagicMock()
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.HisenseTvClient",
+        "custom_components.vidaa.HisenseTvClient",
         lambda *args, **kwargs: mock_client,
     )
     mock_client.has_notifications = False
@@ -221,7 +221,7 @@ async def test_entry_auth_failed_callback_creates_repair_issue_and_starts_reauth
     hass.loop.call_soon_threadsafe = MagicMock(side_effect=lambda func, *args: func(*args))
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.HisenseTvClient",
+        "custom_components.vidaa.HisenseTvClient",
         lambda *args, **kwargs: mock_client,
     )
     mock_client.has_notifications = False
@@ -234,7 +234,7 @@ async def test_entry_auth_failed_callback_creates_repair_issue_and_starts_reauth
         created_issues[issue_id] = kwargs
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.ir.async_create_issue",
+        "custom_components.vidaa.ir.async_create_issue",
         mock_create_issue,
     )
 
@@ -267,7 +267,7 @@ async def test_update_listener_options_filtering(mock_entry, mock_client, monkey
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
     hass.loop = MagicMock()
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.HisenseTvClient",
+        "custom_components.vidaa.HisenseTvClient",
         lambda *args, **kwargs: mock_client,
     )
     mock_client.has_notifications = False
@@ -312,11 +312,11 @@ async def test_periodic_and_wake_clock_sync(mock_entry, mock_client, monkeypatch
         return MagicMock()
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.async_track_time_interval",
+        "custom_components.vidaa.async_track_time_interval",
         mock_track_time,
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.HisenseTvClient",
+        "custom_components.vidaa.HisenseTvClient",
         lambda *args, **kwargs: mock_client,
     )
     mock_client.has_notifications = False
@@ -362,7 +362,7 @@ async def test_periodic_and_wake_clock_sync(mock_entry, mock_client, monkeypatch
 @pytest.mark.anyio
 async def test_async_remove_config_entry_device(mock_entry):
     """Test stale device removal handler."""
-    from custom_components.hisense_vidaa import async_remove_config_entry_device
+    from custom_components.vidaa import async_remove_config_entry_device
 
     hass = MagicMock()
     device_entry = MagicMock()
@@ -381,7 +381,7 @@ async def test_device_info_update_enriches_device_registry(mock_entry, mock_clie
     hass.loop.call_soon_threadsafe = MagicMock(side_effect=lambda func, *args: func(*args))
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.HisenseTvClient",
+        "custom_components.vidaa.HisenseTvClient",
         lambda *args, **kwargs: mock_client,
     )
     mock_client.has_notifications = False
@@ -459,7 +459,7 @@ async def test_async_setup_entry_passes_brand_to_client(mock_entry, monkeypatch)
         return client
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.HisenseTvClient",
+        "custom_components.vidaa.HisenseTvClient",
         mock_client_factory,
     )
 
@@ -512,7 +512,7 @@ async def test_setup_entry_cleans_up_disabled_platforms():
     mock_reg.async_get_entity_id = MagicMock(side_effect=lambda domain, platform, uid: f"{domain}.{uid}")
     mock_reg.async_remove = MagicMock(side_effect=lambda eid: removed_entities.append(eid))
 
-    with patch("custom_components.hisense_vidaa.HisenseTvClient", return_value=mock_client), \
+    with patch("custom_components.vidaa.HisenseTvClient", return_value=mock_client), \
          patch("homeassistant.helpers.entity_registry.async_get", return_value=mock_reg), \
          patch("homeassistant.helpers.issue_registry.async_create_issue"), \
          patch("homeassistant.helpers.issue_registry.async_delete_issue"):
@@ -569,9 +569,9 @@ async def test_async_setup_entry_resolves_certs_in_executor():
     mock_client.certfile = "/ssl/hisense.crt"
     mock_client.keyfile = "/ssl/hisense.key"
 
-    with patch("custom_components.hisense_vidaa.HisenseTvClient", return_value=mock_client), \
-         patch("custom_components.hisense_vidaa.resolve_certificates", return_value=("/ssl/hisense.crt", "/ssl/hisense.key")) as mock_resolve, \
-         patch("custom_components.hisense_vidaa.resolve_ca_certificate", return_value=None), \
+    with patch("custom_components.vidaa.HisenseTvClient", return_value=mock_client), \
+         patch("custom_components.vidaa.resolve_certificates", return_value=("/ssl/hisense.crt", "/ssl/hisense.key")) as mock_resolve, \
+         patch("custom_components.vidaa.resolve_ca_certificate", return_value=None), \
          patch("homeassistant.helpers.issue_registry.async_create_issue"), \
          patch("homeassistant.helpers.issue_registry.async_delete_issue"):
         res = await async_setup_entry(hass, entry)
@@ -617,7 +617,7 @@ async def test_setup_entry_prunes_retired_diagnostic_sensors():
     mock_client.async_check_and_refresh_token = AsyncMock(return_value=False)
     mock_client.async_connect_and_run = AsyncMock()
 
-    with patch("custom_components.hisense_vidaa.HisenseTvClient", return_value=mock_client), \
+    with patch("custom_components.vidaa.HisenseTvClient", return_value=mock_client), \
          patch("homeassistant.helpers.entity_registry.async_get", return_value=mock_ent_reg), \
          patch("homeassistant.helpers.issue_registry.async_delete_issue"):
         res = await async_setup_entry(hass, entry)
