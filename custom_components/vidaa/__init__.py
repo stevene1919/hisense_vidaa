@@ -117,7 +117,17 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     entities = [e for e in ent_reg.entities.values() if getattr(e, "config_entry_id", None) == entry.entry_id]
             for reg_entry in entities:
                 if getattr(reg_entry, "platform", None) == LEGACY_DOMAIN:
-                    object.__setattr__(reg_entry, "platform", DOMAIN)
+                    if hasattr(ent_reg, "async_update_entity_platform"):
+                        try:
+                            ent_reg.async_update_entity_platform(
+                                reg_entry.entity_id,
+                                new_platform=DOMAIN,
+                                new_config_entry_id=entry.entry_id,
+                            )
+                        except Exception:
+                            object.__setattr__(reg_entry, "platform", DOMAIN)
+                    else:
+                        object.__setattr__(reg_entry, "platform", DOMAIN)
         except Exception as err:
             _LOGGER.debug("Non-fatal error migrating entity registry entries: %s", err)
 
@@ -153,6 +163,36 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Set up the VIDAA Smart TV integration services."""
     await async_setup_services(hass)
+
+    # Check for leftover legacy custom_components/hisense_vidaa directory
+    try:
+        if hasattr(hass, "config") and hasattr(hass.config, "path"):
+            legacy_dir = hass.config.path("custom_components", LEGACY_DOMAIN)
+            if os.path.isdir(legacy_dir):
+                _LOGGER.warning(
+                    "Legacy integration directory '%s' detected alongside '%s'. "
+                    "Please remove 'custom_components/%s' and restart Home Assistant to avoid conflicts.",
+                    legacy_dir,
+                    DOMAIN,
+                    LEGACY_DOMAIN,
+                )
+                ir.async_create_issue(
+                    hass,
+                    DOMAIN,
+                    "legacy_folder_detected",
+                    is_fixable=False,
+                    is_persistent=True,
+                    severity=ir.IssueSeverity.WARNING,
+                    translation_key="legacy_folder_detected",
+                    translation_placeholders={
+                        "legacy_domain": LEGACY_DOMAIN,
+                        "new_domain": DOMAIN,
+                    },
+                )
+            else:
+                ir.async_delete_issue(hass, DOMAIN, "legacy_folder_detected")
+    except Exception as err:
+        _LOGGER.debug("Could not inspect custom_components directory: %s", err)
 
     # Automatically check for and migrate any remaining legacy entries
     if hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_entries"):

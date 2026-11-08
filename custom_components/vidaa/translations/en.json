@@ -425,6 +425,10 @@
     }
   },
   "issues": {
+    "legacy_folder_detected": {
+      "title": "Legacy integration folder detected",
+      "description": "The integration has successfully upgraded to VIDAA Smart TV (`{new_domain}`). The old folder `custom_components/{legacy_domain}` is still present on your storage. Please remove `custom_components/{legacy_domain}` and restart Home Assistant to avoid potential component collisions."
+    },
     "certificate_missing": {
       "title": "Missing VIDAA Client Certificates",
       "fix_flow": {

@@ -54,6 +54,12 @@ async def test_async_migrate_entry_v1_to_v2():
     ent_reg = MagicMock()
     ent_reg.entities = {mock_entity.entity_id: mock_entity}
 
+    def _mock_update_platform(entity_id, new_platform, **kwargs):
+        mock_entity.platform = new_platform
+        return mock_entity
+
+    ent_reg.async_update_entity_platform.side_effect = _mock_update_platform
+
     # Mock device registry
     mock_device = MagicMock()
     mock_device.id = "dev_reg_id_1"
@@ -206,3 +212,23 @@ async def test_async_setup_auto_migrates_legacy_entries():
             version=2,
             minor_version=1,
         )
+
+
+@pytest.mark.anyio
+async def test_legacy_directory_detection_issue():
+    """Test async_setup creates a repair issue when old custom_components/hisense_vidaa exists."""
+    hass = MagicMock()
+    hass.services = MagicMock()
+    hass.services.has_service = MagicMock(return_value=False)
+    hass.services.async_register = MagicMock()
+    hass.config_entries = MagicMock()
+    hass.config_entries.async_entries.return_value = []
+    hass.config.path.return_value = "/config/custom_components/hisense_vidaa"
+
+    with patch("os.path.isdir", return_value=True), \
+         patch("custom_components.vidaa.ir.async_create_issue") as mock_create_issue:
+
+        res = await async_setup(hass, {})
+        assert res is True
+        mock_create_issue.assert_called_once()
+        assert mock_create_issue.call_args[0][2] == "legacy_folder_detected"
