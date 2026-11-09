@@ -2,14 +2,15 @@
 
 All notable changes to the VIDAA Smart TV integration will be documented in this file.
 
-## [3.5.0] - 2026-11-08 — 🚀 VIDAA Smart TV Rebrand Edition
+## [3.5.0] - 2026-11-10 — 🚀 VIDAA Smart TV Rebrand Edition
 
-This major update rebrands the integration to **VIDAA Smart TV** (`vidaa`), reflecting full multi-brand support across all television and projector manufacturers running VIDAA OS (Hisense, Toshiba, Loewe, Philips, Sharp, JVC, TOPTRO, and partner brands).
+This major update rebrands the integration to **VIDAA Smart TV** (`vidaa`), reflecting full universal multi-brand support across all television and projector manufacturers running VIDAA OS (Hisense, Toshiba, Loewe, Philips, Sharp, JVC, TOPTRO, and partner brands).
 
 ### 🌟 What's New & Highlights in v3.5.0
-- **INTEGRATION REBRAND (`vidaa`)**:
+- **INTEGRATION REBRAND & UI LOCALIZATION (`vidaa`)**:
   - Rebranded the integration domain to `vidaa` and integration title to **VIDAA Smart TV**.
-  - Deployed official VIDAA iconography, high-resolution logos, and brand assets.
+  - Deployed official VIDAA multi-brand iconography, high-resolution logos, and brand assets.
+  - Rebranded all user-facing setup, options, and error strings across English and 10 localized translation catalogs (`de`, `es`, `fr`, `it`, `pt`, `pt-BR`, `ru`, `sr`, `sr-Latn`, `uk`), keeping brand selection labels untouched.
   - Refactored core classes and symbols to `Vidaa*` (`VidaaClient`, `VidaaMediaPlayer`, `VidaaRemote`, `VidaaEntity`, etc.) with backwards-compatible aliases for legacy symbols.
 - **ZERO-BREAKING-CHANGE AUTOMATIC MIGRATION**:
   - **Seamless Configuration Migration**: Existing config entries automatically upgrade from configuration version 1 to 2.1 via `async_migrate_entry()`.
@@ -17,6 +18,23 @@ This major update rebrands the integration to **VIDAA Smart TV** (`vidaa`), refl
   - **Device Card Continuity**: Existing device registry identifiers are merged to ensure existing devices and custom cards in Home Assistant continue operating without duplication.
   - **Legacy Action Aliases**: `hisense_vidaa.*` services (`send_key`, `send_key_sequence`, `change_channel`, `launch_app`, `set_picture_setting`, `set_sound_setting`, `send_text_input`) remain active as alias actions with deprecation notices, ensuring existing automations or scripts continue to work seamlessly.
   - **Legacy Trigger Compatibility**: Automations listening to `hisense_vidaa.turn_on` device triggers continue functioning alongside canonical `vidaa.turn_on`.
+  - **Transitional Shim & Collision Guard**: Bundled a non-breaking `custom_components/hisense_vidaa` shim for zero-friction upgrades, with automatic Home Assistant Repair alerts to help users safely clean up obsolete directories.
+- **HDMI-CEC INPUT DISCOVERY & CLEAN SOURCE ATTRIBUTES (#56)**:
+  - **Discovered Device Names for All Inputs**: The media player source selector dropdown and active source sensors now discover and display friendly HDMI-CEC device names (e.g. `HDMI 1 (Chromecast)`, `HDMI 2 (PlayStation 5)`) for **all** connected inputs, not just the currently active one.
+  - **Direct CEC Input Selection**: Users can switch inputs directly by selecting the CEC device name (e.g., choosing "Chromecast" from the dropdown automatically switches to HDMI 1).
+  - **Enhanced Telemetry Attributes**: Added `raw_source` (e.g., `HDMI1`), `connected_device` (e.g., `Chromecast`), and `custom_labels` dictionary to both the media player and `sensor.<tv>_active_source`.
+- **STREAMLINED AUDIO ROUTING ATTRIBUTE**:
+  - Retired the unsupported `select.<tv>_audio_output` and `sensor.<tv>_audio_output` entities (automatically pruned from entity registries).
+  - TV firmware reverse-engineering and empirical testing confirmed VIDAA OS only broadcasts binary audio state (`volume_type`: TV Speakers vs ARC/eARC) without external write support.
+  - Active audio output routing is now cleanly exposed as the `audio_output` attribute (`TV Speakers` or `ARC / eARC`) on the media player entity.
+- **MEDIA PLAYER TRANSPORT CONTROLS DISABLED BY DEFAULT**:
+  - Changed default for `enable_media_controls` from `true` to `false` (`CONF_ENABLE_MEDIA_CONTROLS = False`). This keeps default media player cards sleek, preventing clutter on TVs where media transport buttons (Play/Pause/Stop/Track) are not desired.
+  - Users can easily re-enable transport controls anytime via **Settings → Devices & Services → VIDAA Smart TV → Configure → Sources & Media**.
+- **HOME LAUNCHER NAVIGATION & NON-BLOCKING CLOCK SYNC (#58, #59)**:
+  - **Home Screen Detection (`remote_launcher`)**: Added state tracking for the TV's `remote_launcher` broadcast when pressing Home or exiting an app, accurately updating Active App to "Home Launcher" and clearing active source (Issue #58).
+  - **Thread-Offloaded Clock Sync**: Offloaded synchronous UPnP HTTP fallback clock sync to an executor thread via `asyncio.to_thread()`, preventing event loop blocking during time synchronization (Issue #59).
+- **DISCOVERY DUPLICATE IP GUARD**:
+  - SSDP / UPnP discovery now checks for existing configured IP addresses and aborts if an entry for that TV already exists, eliminating redundant discovery prompts.
 - **MEDIA PLAYER UI CONTROLS (#55)**:
   - Ensured Previous/Next track and channel navigation buttons in the Home Assistant media player card remain visible and accessible whenever media playback controls are enabled.
 - **VIRTUAL KEYBOARD & REMOTE TEXT INPUT**:
@@ -33,6 +51,9 @@ This major update rebrands the integration to **VIDAA Smart TV** (`vidaa`), refl
   - Removed the speculative on-screen toast notification (`notify`) platform, options flow toggle, and developer CLI actions (`test_client.py notify`, `debug_tv.py --notify`).
   - Reverse engineering of the official VIDAA Android companion APK confirmed that notification components (`NotifyActivity`) correspond strictly to a mobile in-app promotional inbox rather than a TV compositor display listener.
   - VIDAA OS firmware does not provide an external MQTT notification listener. Legacy `notify` entity registry entries are automatically pruned on entry setup to prevent orphaned entities.
+- **COMPREHENSIVE DOCUMENTATION & MULTILINGUAL REBRAND**:
+  - Fully audited and updated all 19 documentation guides, configuration parameter references, network and standby guides, and example automations to canonical `vidaa.*` actions and `vidaa.turn_on` triggers.
+  - Updated documentation READMEs across all 6 supported languages (`de`, `fr`, `it`, `ru`, `uk`, `zh-CN`).
 
 ## [3.3.2-beta.1] - 2026-11-08 — 📺 Media Player UI Controls Fix
 

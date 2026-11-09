@@ -36,8 +36,12 @@ This document tracks active pending tasks, investigations, and future roadmap it
 For complete details on completed features and technical improvements, refer to the [Changelog](CHANGELOG.md):
 
 * **v3.5.0**:
-  - **Universal VIDAA Rebranding (`vidaa`)**: Renamed integration domain to `vidaa` (VIDAA Smart TV), deployed official brand assets and icons, refactored symbols to `Vidaa*` with legacy aliases.
-  - **Zero-Breaking-Change Migration**: Built automated config entry migration (v1 -> v2.1), preserving entity registries, unique IDs, and area assignments. Maintained `hisense_vidaa.*` actions and device trigger compatibility.
+  - **Universal VIDAA Rebranding (`vidaa`)**: Renamed integration domain to `vidaa` (VIDAA Smart TV), deployed official brand assets and icons, rebranded UI strings and translations, refactored symbols to `Vidaa*` with legacy aliases.
+  - **Zero-Breaking-Change Migration**: Built automated config entry migration (v1 -> v2.1), preserving entity registries, unique IDs, and area assignments. Maintained `hisense_vidaa.*` actions, device trigger compatibility, and transitional shim.
+  - **HDMI-CEC Input Discovery & Clean Attributes (#56)**: Source dropdown and active source sensors discover and display friendly CEC names for all connected inputs (`HDMI 1 (Chromecast)`), allowing direct input selection by device name with clean `raw_source` and `connected_device` attributes.
+  - **Streamlined Audio Output Attribute**: Replaced unsupported select/sensor entities with clean `audio_output` attribute (`TV Speakers` or `ARC / eARC`) on the media player entity.
+  - **Transport Controls Disabled by Default**: Kept media player cards sleek by defaulting `enable_media_controls` to false, with full user toggle in Options Flow.
+  - **Home Launcher Detection & Clock Sync (#58, #59)**: Added `remote_launcher` state tracking for Home screen navigation and offloaded fallback clock sync to thread.
   - **Virtual Keyboard Input Support**: Extended `remote.send_command` with prefix parsing (`text:<str>`, `type:<str>`, `text:replace:<str>`, `clear_text`) and added CLI text commands to `test_client.py` and `debug_tv.py`.
   - **Web Browser Mouse & Pointer Integration**: Documented browser-specific mouse controls (`mouse_click`, `mouse_up`, `mouse_down`, `zoom_in`, `zoom_out`) and clarified the browser-only cursor scope from APK reverse-engineering.
   - **Removal of Unsupported Notify Platform**: Deprecated speculative `notify` platform and options toggle after companion APK decompilation confirmed notifications are an in-app mobile promotion feed with no TV compositor listener. Pruned legacy entity registry entries on setup.
