@@ -10,7 +10,7 @@ from homeassistant.components.media_player import (
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 
-from custom_components.vidaa.const import DOMAIN, LEGACY_DOMAIN
+from custom_components.vidaa.const import CONF_ENABLE_MEDIA_CONTROLS, DOMAIN, LEGACY_DOMAIN
 from custom_components.vidaa.media_player import HisenseVidaaMediaPlayer
 from custom_components.vidaa.remote import HisenseVidaaRemote
 from custom_components.vidaa.tv.settings import SettingMenuItem
@@ -39,14 +39,22 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
 
 
 def test_media_player_assumed_state(mock_client, mock_entry):
-    """Test media player assumed_state returns True when on and False when off."""
+    """Test media player assumed_state respects enable_media_controls option."""
+    # 1. By default (enable_media_controls=False): assumed_state is False even when on
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
     mock_client.is_on = True
     mock_client.connected = True
-    assert mp.assumed_state is True
+    assert mp.assumed_state is False
+    assert not (mp.supported_features & MediaPlayerEntityFeature.PLAY)
+
+    # 2. When enable_media_controls is explicitly enabled in options
+    mock_entry.options = {CONF_ENABLE_MEDIA_CONTROLS: True}
+    mp_with_controls = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    assert mp_with_controls.assumed_state is True
+    assert bool(mp_with_controls.supported_features & MediaPlayerEntityFeature.PLAY)
 
     mock_client.is_on = False
-    assert mp.assumed_state is False
+    assert mp_with_controls.assumed_state is False
 
 
 @pytest.mark.anyio
