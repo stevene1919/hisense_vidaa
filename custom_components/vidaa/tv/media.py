@@ -162,10 +162,19 @@ def build_media_player_source_list(
 ) -> list[str]:
     """Builds the full sorted list of selectable inputs and smart TV apps."""
     sources: list[str] = []
-    for source_name in source_dict.keys():
+    for source_name, source_data in source_dict.items():
         if "hdmi" in source_name.lower() or source_name.lower() in ("tv", "av"):
-            if enable_cec and source_name == current_source and connected_device and "hdmi" in source_name.lower():
-                sources.append(f"{source_name} ({connected_device})")
+            dev_label = None
+            if enable_cec and "hdmi" in source_name.lower():
+                if isinstance(source_data, dict):
+                    dev_label = (
+                        source_data.get("displayname2")
+                        or source_data.get("source_detail")
+                    )
+                if not dev_label and source_name == current_source and connected_device:
+                    dev_label = connected_device
+            if dev_label:
+                sources.append(f"{source_name} ({dev_label})")
             else:
                 sources.append(source_name)
 
@@ -175,7 +184,13 @@ def build_media_player_source_list(
         full_list = sorted(sources)
 
     if configured_sources:
-        filtered = [s for s in full_list if s in configured_sources or (current_source and s == current_source)]
+        filtered = [
+            s
+            for s in full_list
+            if s in configured_sources
+            or clean_source_label(s) in configured_sources
+            or (current_source and s == current_source)
+        ]
         return filtered if filtered else full_list
 
     return full_list
@@ -329,9 +344,18 @@ def execute_select_source(
     matched_source = source_dict.get(source) or source_dict.get(cleaned_source)
     if not matched_source:
         for source_name, source_data in source_dict.items():
-            if isinstance(source_data, dict) and source_name.lower() in (source_lower, cleaned_lower):
-                matched_source = source_data
-                break
+            if isinstance(source_data, dict):
+                if source_name.lower() in (source_lower, cleaned_lower):
+                    matched_source = source_data
+                    break
+                cec_label = str(
+                    source_data.get("displayname2")
+                    or source_data.get("source_detail")
+                    or ""
+                ).strip().lower()
+                if cec_label and cec_label in (source_lower, cleaned_lower):
+                    matched_source = source_data
+                    break
     if matched_source:
         resolved_source_id = str(matched_source.get("sourceid") or matched_source.get("sourcename") or "")
         resolved_source_name = str(matched_source.get("sourcename") or cleaned_source)
@@ -369,9 +393,18 @@ async def async_execute_select_source(
     matched_source = source_dict.get(source) or source_dict.get(cleaned_source)
     if not matched_source:
         for source_name, source_data in source_dict.items():
-            if isinstance(source_data, dict) and source_name.lower() in (source_lower, cleaned_lower):
-                matched_source = source_data
-                break
+            if isinstance(source_data, dict):
+                if source_name.lower() in (source_lower, cleaned_lower):
+                    matched_source = source_data
+                    break
+                cec_label = str(
+                    source_data.get("displayname2")
+                    or source_data.get("source_detail")
+                    or ""
+                ).strip().lower()
+                if cec_label and cec_label in (source_lower, cleaned_lower):
+                    matched_source = source_data
+                    break
     if matched_source:
         resolved_source_id = str(matched_source.get("sourceid") or matched_source.get("sourcename") or "")
         resolved_source_name = str(matched_source.get("sourcename") or cleaned_source)

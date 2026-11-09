@@ -236,7 +236,11 @@ class VidaaActiveSourceSensor(VidaaMqttTrackingSensor):
         elif statetype == "sourceswitch":
             self._attr_native_value = state.get("sourcename") or state.get("sourceName") or state.get("displayname") or "HDMI"
             self._last_known_source = self._attr_native_value
-            self._connected_device = state.get("displayname2") or state.get("source_detail")
+            self._connected_device = (
+                state.get("displayname2")
+                or state.get("source_detail")
+                or self._custom_labels.get(self._attr_native_value)
+            )
             self._channel_name = self._channel_num = None
         elif statetype == "livetv":
             self._attr_native_value = "TV"
@@ -250,7 +254,11 @@ class VidaaActiveSourceSensor(VidaaMqttTrackingSensor):
         elif state.get("sourcename") or state.get("sourceName"):
             self._attr_native_value = state.get("sourcename") or state.get("sourceName")
             self._last_known_source = self._attr_native_value
-            self._connected_device = state.get("displayname2") or state.get("source_detail")
+            self._connected_device = (
+                state.get("displayname2")
+                or state.get("source_detail")
+                or self._custom_labels.get(self._attr_native_value)
+            )
         self._schedule_state_update()
 
     def _handle_sourcelist_update(self, sources: list[dict[str, Any]]) -> None:
@@ -260,12 +268,22 @@ class VidaaActiveSourceSensor(VidaaMqttTrackingSensor):
                 self._last_known_source = active_src
                 if self._client.connected and self._client.is_on:
                     self._attr_native_value = active_src
+            if (
+                self._attr_native_value
+                and self._attr_native_value in self._custom_labels
+                and not self._connected_device
+            ):
+                self._connected_device = self._custom_labels[self._attr_native_value]
             self._schedule_state_update()
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return sensor attributes."""
         attrs: dict[str, Any] = {}
+        if self._attr_native_value and self._attr_native_value not in ("Off", "Standby", "None"):
+            attrs["raw_source"] = self._attr_native_value
+            if self._connected_device and "hdmi" in str(self._attr_native_value).lower():
+                attrs["display_name"] = f"{self._attr_native_value} ({self._connected_device})"
         if self._last_known_source:
             attrs["last_known_source"] = self._last_known_source
         for key, val in (

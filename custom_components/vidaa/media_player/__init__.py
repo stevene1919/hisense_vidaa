@@ -189,11 +189,32 @@ class VidaaMediaPlayer(
                 attributes["software_version"] = self._client.firmware_version
         if self._mac:
             attributes["mac_address"] = self._mac
-        if self._connected_device:
-            attributes["connected_device"] = self._connected_device
+        if self._source:
+            attributes["raw_source"] = self._source
+        connected_dev = self._resolve_connected_device()
+        if connected_dev:
+            attributes["connected_device"] = connected_dev
+        custom_labels: dict[str, str] = {}
+        for s_name, s_info in self._source_dict.items():
+            if isinstance(s_info, dict):
+                lbl = s_info.get("displayname2") or s_info.get("source_detail")
+                if lbl and str(lbl).strip():
+                    custom_labels[s_name] = str(lbl).strip()
+        if custom_labels:
+            attributes["custom_labels"] = custom_labels
         if self._channel_infos:
             attributes["channel_infos"] = self._channel_infos
         return attributes
+
+    def _resolve_connected_device(self) -> str | None:
+        """Resolve connected CEC device name from live state or cached sourcelist."""
+        if self._connected_device:
+            return self._connected_device
+        if self._source and self._source in self._source_dict:
+            src_info = self._source_dict[self._source]
+            if isinstance(src_info, dict):
+                return src_info.get("displayname2") or src_info.get("source_detail")
+        return None
 
     @property
     def icon(self) -> str | None:
@@ -246,7 +267,7 @@ class VidaaMediaPlayer(
         enable_cec = self._options.get(CONF_ENABLE_CEC_NAMES, DEFAULT_ENABLE_CEC_NAMES)
         return build_media_player_current_source(
             source=self._source,
-            connected_device=self._connected_device,
+            connected_device=self._resolve_connected_device(),
             enable_cec=enable_cec,
         )
 
@@ -291,7 +312,7 @@ class VidaaMediaPlayer(
             source_dict=self._source_dict,
             app_dict=self._app_dict,
             current_source=self._source,
-            connected_device=self._connected_device,
+            connected_device=self._resolve_connected_device(),
             enable_cec=enable_cec,
             include_apps=include_apps,
             configured_sources=configured_sources,

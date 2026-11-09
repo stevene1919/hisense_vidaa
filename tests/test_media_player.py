@@ -179,7 +179,7 @@ async def test_media_player_cec_source_naming(mock_client, mock_entry):
     )
     mp.hass = hass
     mp._source_dict = {
-        "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1"},
+        "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1", "displayname2": "Chromecast"},
         "HDMI2": {"sourceid": "HDMI2", "sourcename": "HDMI2"},
     }
     mp._source = "HDMI2"
@@ -187,11 +187,17 @@ async def test_media_player_cec_source_naming(mock_client, mock_entry):
 
     assert mp.source == "HDMI2 (PlayStation 5)"
     assert "HDMI2 (PlayStation 5)" in mp.source_list
-    assert "HDMI1" in mp.source_list
+    assert "HDMI1 (Chromecast)" in mp.source_list
+    assert mp.extra_state_attributes["raw_source"] == "HDMI2"
+    assert mp.extra_state_attributes["custom_labels"] == {"HDMI1": "Chromecast"}
 
     # Test select_source stripping HDMI-CEC device label
     await mp.async_select_source("HDMI2 (PlayStation 5)")
     mock_client.change_source.assert_called_with("HDMI2", "HDMI2")
+
+    # Test select_source matching by CEC device name directly
+    await mp.async_select_source("Chromecast")
+    mock_client.change_source.assert_called_with("HDMI1", "HDMI1")
 
 
 @pytest.mark.anyio
