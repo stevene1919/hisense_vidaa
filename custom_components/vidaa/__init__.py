@@ -414,6 +414,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry)
         if entity_id := entity_reg.async_get_entity_id("notify", domain, unique_id):
             entity_reg.async_remove(entity_id)
 
+    # Prune retired audio output select entity if present in entity registry
+    unique_id = f"{entry.entry_id}_audio_output_select"
+    for domain in (DOMAIN, LEGACY_DOMAIN):
+        if entity_id := entity_reg.async_get_entity_id("select", domain, unique_id):
+            entity_reg.async_remove(entity_id)
+
     # Connect to MQTT broker
     try:
         await client.async_connect_and_run()

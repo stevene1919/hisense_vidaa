@@ -188,9 +188,6 @@
       }
     },
     "select": {
-      "audio_output": {
-        "name": "Audio Output Mode"
-      },
       "picture_mode": {
         "name": "Picture Mode"
       },
@@ -340,44 +337,17 @@
     }
   },
   "exceptions": {
-    "ambiguous_target": {
-      "message": "Multiple Hisense VIDAA TVs are configured. Please specify a target TV, or use 'all' to target every TV."
+    "device_config_entry_not_loaded": {
+      "message": "The Hisense VIDAA integration for device {device_id} is not loaded."
     },
-    "no_target_device": {
-      "message": "No matching Hisense VIDAA TV was found for the specified service call target."
+    "device_not_valid": {
+      "message": "Device {device_id} is not a valid Hisense VIDAA device."
     },
-    "not_connected": {
-      "message": "Cannot send command: TV is currently disconnected."
+    "invalid_entity_id": {
+      "message": "Entity {entity_id} is not a valid Hisense VIDAA entity."
     },
-    "send_key_failed": {
-      "message": "Failed to send key {key}: {error}"
-    },
-    "empty_key_sequence": {
-      "message": "Sequence must contain at least one key."
-    },
-    "send_key_sequence_failed": {
-      "message": "Failed to send sequence key {key}: {error}"
-    },
-    "invalid_channel_digits": {
-      "message": "Channel {channel} contains no valid digits."
-    },
-    "change_channel_digit_failed": {
-      "message": "Failed to send channel digit {digit}: {error}"
-    },
-    "change_channel_confirm_failed": {
-      "message": "Failed to send channel confirm key: {error}"
-    },
-    "launch_app_failed": {
-      "message": "Failed to launch app {app_name}: {error}"
-    },
-    "set_picture_setting_failed": {
-      "message": "Failed to set picture setting (menu_id={menu_id}): {error}"
-    },
-    "set_sound_setting_failed": {
-      "message": "Failed to set sound setting (menu_id={menu_id}): {error}"
-    },
-    "send_text_input_failed": {
-      "message": "Failed to send text input: {error}"
+    "unhandled_trigger_type": {
+      "message": "Trigger type {trigger_type} is not handled."
     }
   },
   "selector": {
@@ -452,20 +422,6 @@
   "device_automation": {
     "trigger_type": {
       "vidaa.turn_on": "Device is requested to turn on"
-    }
-  },
-  "exceptions": {
-    "device_config_entry_not_loaded": {
-      "message": "The Hisense VIDAA integration for device {device_id} is not loaded."
-    },
-    "device_not_valid": {
-      "message": "Device {device_id} is not a valid Hisense VIDAA device."
-    },
-    "invalid_entity_id": {
-      "message": "Entity {entity_id} is not a valid Hisense VIDAA entity."
-    },
-    "unhandled_trigger_type": {
-      "message": "Trigger type {trigger_type} is not handled."
     }
   },
   "triggers": {

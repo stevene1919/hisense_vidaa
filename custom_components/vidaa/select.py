@@ -18,6 +18,7 @@ from .const import (
     DEFAULT_ENABLE_PICTURE_CONTROLS,
     DEFAULT_ENABLE_SOUND_CONTROLS,
     DOMAIN,
+    LEGACY_DOMAIN,
 )
 from .entity import VidaaEntity
 
@@ -34,88 +35,6 @@ from .tv.settings import (
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 0
-
-AUDIO_OUTPUT_TV_SPEAKERS = "TV Speakers"
-AUDIO_OUTPUT_ARC = "ARC / eARC"
-AUDIO_OUTPUT_HEADPHONE = "Headphone / Bluetooth"
-
-AUDIO_OUTPUT_OPTIONS = [
-    AUDIO_OUTPUT_TV_SPEAKERS,
-    AUDIO_OUTPUT_ARC,
-    AUDIO_OUTPUT_HEADPHONE,
-]
-
-VOLUME_TYPE_MAP = {
-    0: AUDIO_OUTPUT_TV_SPEAKERS,
-    1: AUDIO_OUTPUT_ARC,
-    2: AUDIO_OUTPUT_HEADPHONE,
-}
-
-
-class VidaaAudioOutputSelect(VidaaEntity, SelectEntity):
-    """VIDAA Audio Output Mode selector."""
-
-    _attr_translation_key = "audio_output"
-    _attr_options = AUDIO_OUTPUT_OPTIONS
-
-    def __init__(
-        self,
-        client: VidaaClient,
-        entry: ConfigEntry,
-    ) -> None:
-        super().__init__(client=client, entry=entry)
-        self._attr_unique_id = f"{self._entry_id}_audio_output_select"
-        self._volume_type = 0
-
-    @property
-    def unique_id(self) -> str:
-        return self._attr_unique_id
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return super().available and bool(self._client and self._client.connected)
-
-    async def async_added_to_hass(self) -> None:
-        self._client.register_volume_callback(self._handle_volume_update)
-        self._client.register_connected_callback(self._handle_connection_change)
-        self._client.register_disconnected_callback(self._handle_connection_change)
-
-    async def async_will_remove_from_hass(self) -> None:
-        self._client.unregister_volume_callback(self._handle_volume_update)
-        self._client.unregister_connected_callback(self._handle_connection_change)
-        self._client.unregister_disconnected_callback(self._handle_connection_change)
-
-    def _handle_connection_change(self, *args: Any) -> None:
-        self.schedule_update_ha_state()
-
-    @property
-    def current_option(self) -> str:
-        return VOLUME_TYPE_MAP.get(self._volume_type, AUDIO_OUTPUT_TV_SPEAKERS)
-
-    def _handle_volume_update(self, data: dict[str, Any]) -> None:
-        vol_type = data.get("volume_type")
-        if vol_type in (0, "0", 1, "1"):
-            self._volume_type = int(vol_type)
-            self.schedule_update_ha_state()
-
-    async def async_select_option(self, option: str) -> None:
-        """Change the audio output option."""
-        ao_item = find_menu_item_by_name(self._client.sound_settings, "Audio Output") or find_menu_item_by_name(self._client.sound_settings, "Speaker")
-        if ao_item and ao_item.is_select:
-            await self._client.async_set_setting(ao_item.menu_id, option)
-            return
-
-        if option == AUDIO_OUTPUT_TV_SPEAKERS:
-            self._volume_type = 0
-            await self._client.async_send_key("KEY_AUDIO_ONLY")
-        elif option == AUDIO_OUTPUT_ARC:
-            self._volume_type = 1
-            await self._client.async_send_key("KEY_SOUND")
-        elif option == AUDIO_OUTPUT_HEADPHONE:
-            # Do not corrupt _volume_type (2 represents Mute in VIDAA volumechange payload)
-            await self._client.async_send_key("KEY_HEADPHONE")
-        self.async_write_ha_state()
 
 
 class VidaaPictureModeSelect(VidaaEntity, SelectEntity):
@@ -241,7 +160,6 @@ class VidaaSoundModeSelect(VidaaEntity, SelectEntity):
 
 
 # Backwards-compatible aliases during migration
-HisenseVidaaAudioOutputSelect = VidaaAudioOutputSelect
 HisenseVidaaPictureModeSelect = VidaaPictureModeSelect
 HisenseVidaaSoundModeSelect = VidaaSoundModeSelect
 
@@ -263,19 +181,24 @@ async def async_setup_entry(
 
     # Clean up disabled/unsupported entities from entity registry
     entity_reg = er.async_get(hass)
-    if not enable_picture:
-        unique_id = f"{config_entry.entry_id}_picture_mode"
-        if entity_id := entity_reg.async_get_entity_id("select", DOMAIN, unique_id):
+    for domain in (DOMAIN, LEGACY_DOMAIN):
+        unique_id = f"{config_entry.entry_id}_audio_output_select"
+        if entity_id := entity_reg.async_get_entity_id("select", domain, unique_id):
             entity_reg.async_remove(entity_id)
+
+    if not enable_picture:
+        for domain in (DOMAIN, LEGACY_DOMAIN):
+            unique_id = f"{config_entry.entry_id}_picture_mode"
+            if entity_id := entity_reg.async_get_entity_id("select", domain, unique_id):
+                entity_reg.async_remove(entity_id)
 
     if not enable_sound:
-        unique_id = f"{config_entry.entry_id}_sound_mode"
-        if entity_id := entity_reg.async_get_entity_id("select", DOMAIN, unique_id):
-            entity_reg.async_remove(entity_id)
+        for domain in (DOMAIN, LEGACY_DOMAIN):
+            unique_id = f"{config_entry.entry_id}_sound_mode"
+            if entity_id := entity_reg.async_get_entity_id("select", domain, unique_id):
+                entity_reg.async_remove(entity_id)
 
-    entities: list[SelectEntity] = [
-        VidaaAudioOutputSelect(client=client, entry=config_entry),
-    ]
+    entities: list[SelectEntity] = []
     if enable_picture:
         entities.append(
             VidaaPictureModeSelect(client=client, entry=config_entry)
@@ -285,4 +208,5 @@ async def async_setup_entry(
             VidaaSoundModeSelect(client=client, entry=config_entry)
         )
 
-    async_add_entities(entities)
+    if entities:
+        async_add_entities(entities)

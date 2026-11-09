@@ -221,20 +221,6 @@ data:
 
 ---
 
-## 🔊 Audio Output Mode Selection (`select.select_option`)
-
-Switch the TV sound output mode programmatically between internal speakers, ARC/eARC soundbar/receiver, headphones, or Bluetooth:
-
-```yaml
-action: select.select_option
-target:
-  entity_id: select.living_room_hisense_vidaa_tv_audio_output
-data:
-  option: "ARC / eARC" # Options: "TV Speakers", "ARC / eARC", "Headphone / Bluetooth"
-```
-
----
-
 ## 🎮 Native Remote Key Sequences (`remote.send_command`)
 
 Home Assistant's native `remote.send_command` action can dispatch ordered key sequences with custom delays between presses:

@@ -188,9 +188,6 @@
       }
     },
     "select": {
-      "audio_output": {
-        "name": "Режим аудіовиходу"
-      },
       "picture_mode": {
         "name": "Режим зображення"
       },

@@ -187,9 +187,6 @@
       }
     },
     "select": {
-      "audio_output": {
-        "name": "Modo de saída de áudio"
-      },
       "picture_mode": {
         "name": "Modo de imagem"
       },

@@ -43,9 +43,6 @@
       }
     },
     "select": {
-      "audio_output": {
-        "default": "mdi:volume-source"
-      },
       "picture_mode": {
         "default": "mdi:image-filter-hdr"
       },

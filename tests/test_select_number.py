@@ -1,6 +1,6 @@
 """Tests for Hisense VIDAA select, number platforms and entity availability matrix."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -11,48 +11,32 @@ from custom_components.vidaa.number import (
     HisenseVidaaContrastNumber,
 )
 from custom_components.vidaa.select import (
-    AUDIO_OUTPUT_TV_SPEAKERS,
-    HisenseVidaaAudioOutputSelect,
     HisenseVidaaPictureModeSelect,
     HisenseVidaaSoundModeSelect,
+    async_setup_entry as async_setup_select_entry,
 )
 from custom_components.vidaa.switch import HisenseVidaaAudioOnlySwitch
-from custom_components.vidaa.tv.settings import SettingMenuItem
 
 
 @pytest.mark.anyio
-async def test_select_entity(mock_client, mock_entry):
-    """Test Audio Output select entity and volume update filtering."""
-    import threading
+async def test_select_platform_prunes_audio_output_select(mock_client, mock_entry):
+    """Test select platform setup prunes retired audio_output_select from entity registry."""
     hass = MagicMock(spec=HomeAssistant)
-    hass.loop_thread_id = threading.get_ident()
-    hass.loop = MagicMock()
-    hass.data = {}
-    hass.states = MagicMock()
-    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
-
-    sel = HisenseVidaaAudioOutputSelect(
-        client=mock_client,
-        entry=mock_entry,
+    mock_registry = MagicMock()
+    mock_registry.async_get_entity_id.side_effect = lambda domain, platform, uid: (
+        "select.hisense_tv_audio_output_mode" if "audio_output_select" in uid else None
     )
-    sel.hass = hass
-    sel.entity_id = "select.audio_output"
-    assert sel.available is True
-    assert sel.unique_id == "test_entry_id_audio_output_select"
-    assert sel.current_option == "TV Speakers"
 
-    # Handle volume update to ARC
-    sel._handle_volume_update({"volume_type": 1})
-    assert sel.current_option == "ARC / eARC"
+    with patch("homeassistant.helpers.entity_registry.async_get", return_value=mock_registry):
+        async_add_entities = MagicMock()
+        mock_entry.options = {
+            "enable_picture_controls": False,
+            "enable_sound_controls": False,
+        }
+        await async_setup_select_entry(hass, mock_entry, async_add_entities)
 
-    # Select TV Speakers
-    await sel.async_select_option("TV Speakers")
-    mock_client.send_key.assert_called_with("KEY_AUDIO_ONLY")
-    assert sel.current_option == "TV Speakers"
-
-    # Mute broadcast (volume_type: 2) must not change audio output selection
-    sel._handle_volume_update({"volume_type": 2, "volume_value": 0})
-    assert sel.current_option == "TV Speakers"
+    mock_registry.async_remove.assert_called_with("select.hisense_tv_audio_output_mode")
+    async_add_entities.assert_not_called()
 
 
 @pytest.mark.anyio
@@ -158,7 +142,7 @@ async def test_select_and_number_platforms_lifecycle(mock_client, mock_entry, mo
     mock_entry.options = {}
     default_select_entities = []
     await async_setup_select(hass, mock_entry, lambda entities: default_select_entities.extend(entities))
-    assert len(default_select_entities) == 1  # Only audio output select
+    assert len(default_select_entities) == 0
 
     default_number_entities = []
     await async_setup_number(hass, mock_entry, lambda entities: default_number_entities.extend(entities))
@@ -171,7 +155,7 @@ async def test_select_and_number_platforms_lifecycle(mock_client, mock_entry, mo
     }
     select_entities = []
     await async_setup_select(hass, mock_entry, lambda entities: select_entities.extend(entities))
-    assert len(select_entities) == 3
+    assert len(select_entities) == 2
 
     for sel in select_entities:
         await sel.async_added_to_hass()
@@ -238,19 +222,6 @@ async def test_entity_availability_matrix(mock_client, mock_entry):
     assert num_backlight.available is False
 
 
-def test_select_audio_output_string_volume_type(mock_client, mock_entry):
-    """[F9-leg4] The audio-output select coerces string volume_type broadcasts."""
-    sel = HisenseVidaaAudioOutputSelect(client=mock_client, entry=mock_entry)
-    assert sel.current_option == "TV Speakers"
-
-    sel._handle_volume_update({"volume_type": "1"})
-    assert sel.current_option == "ARC / eARC"
-
-    # A mute broadcast (type 2) must not change the audio output selection.
-    sel._handle_volume_update({"volume_type": "2", "volume_value": "0"})
-    assert sel.current_option == "ARC / eARC"
-
-
 @pytest.mark.anyio
 async def test_entities_register_connection_callbacks():
     """Select, number, and switch entities register connect/disconnect callbacks."""
@@ -258,17 +229,10 @@ async def test_entities_register_connection_callbacks():
     entry = MagicMock()
     entry.entry_id = "entry123"
 
-    audio_sel = HisenseVidaaAudioOutputSelect(client, entry)
     pic_sel = HisenseVidaaPictureModeSelect(client, entry)
     snd_sel = HisenseVidaaSoundModeSelect(client, entry)
     num_ent = HisenseVidaaBacklightNumber(client, entry)
     sw_ent = HisenseVidaaAudioOnlySwitch(client, entry)
-
-    # AudioOutputSelect
-    await audio_sel.async_added_to_hass()
-    client.register_connected_callback.assert_called()
-    client.register_disconnected_callback.assert_called()
-    client.reset_mock()
 
     # PictureModeSelect
     await pic_sel.async_added_to_hass()
@@ -292,35 +256,4 @@ async def test_entities_register_connection_callbacks():
     await sw_ent.async_added_to_hass()
     client.register_connected_callback.assert_called()
     client.register_disconnected_callback.assert_called()
-
-
-@pytest.mark.anyio
-async def test_audio_output_select_dynamic_item_and_no_mute_corruption():
-    """AudioOutputSelect uses sound menu item if available and avoids setting volume_type=2."""
-    client = MagicMock()
-    client.send_key = AsyncMock()
-    client.async_send_key = AsyncMock()
-    client.async_set_setting = AsyncMock()
-    client.sound_settings = {
-        10: SettingMenuItem(
-            menu_id=10,
-            name="Audio Output",
-            value="TV Speakers",
-            options=["TV Speakers", "ARC / eARC", "Bluetooth"],
-        )
-    }
-    entry = MagicMock()
-    entry.entry_id = "entry123"
-
-    sel = HisenseVidaaAudioOutputSelect(client, entry)
-    sel.hass = MagicMock()
-
-    # When dynamic setting is present, async_set_setting is used
-    await sel.async_select_option("Bluetooth")
-    client.async_set_setting.assert_awaited_once_with(10, "Bluetooth")
-
-    # When dynamic setting is absent
-    client.sound_settings = {}
-    await sel.async_select_option(AUDIO_OUTPUT_TV_SPEAKERS)
-    assert sel._volume_type == 0
 
