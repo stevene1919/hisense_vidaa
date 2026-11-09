@@ -1,4 +1,4 @@
-# Integrazione Hisense VIDAA TV per Home Assistant
+# Integrazione VIDAA Smart TV per Home Assistant
 
 <p align="center">
   <a href="../../README.md"><img src="https://img.shields.io/badge/🇬🇧_English-gray?style=flat-square" alt="English"></a>
@@ -28,7 +28,7 @@ Si connette **direttamente** al broker MQTT interno del televisore (porta TLS `3
 La configurazione richiede meno di 3 minuti in 3 semplici passaggi:
 
 ### 1️⃣ Installazione tramite HACS
-Fai clic sul pulsante qui sotto (o cerca **Hisense VIDAA TV** in HACS → Integrazioni → Scarica):
+Fai clic sul pulsante qui sotto (o cerca **VIDAA Smart TV** in HACS → Integrazioni → Scarica):
 
 [![Apri HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
@@ -43,7 +43,7 @@ I televisori VIDAA richiedono la crittografia reciproca TLS sulla porta 36669. C
 
 ### 3️⃣ Associazione con PIN su Schermo
 1. Riavvia Home Assistant (`Impostazioni` → `Sistema` → `Riavvia`).
-2. Vai su **Impostazioni → Dispositivi e servizi → Aggiungi integrazione** e cerca **Hisense VIDAA TV**.
+2. Vai su **Impostazioni → Dispositivi e servizi → Aggiungi integrazione** e cerca **VIDAA Smart TV**.
 3. Inserisci l'indirizzo IP locale del tuo televisore e fai clic su **Invia**.
 4. Digita il **codice PIN a 4 cifre** visualizzato sullo schermo della TV per completare la configurazione!
 
@@ -68,7 +68,7 @@ Supporta ufficialmente **qualsiasi Smart TV con sistema VIDAA OS** (associazione
 - **Piattaforma Media Player**: Accensione/spegnimento, controllo volume, cambio sorgente d'ingresso, selezione canali e avvio rapido delle app (Netflix, Prime Video, YouTube, RaiPlay, Mediaset Infinity, TIMVISION, ecc.).
 - **Regolazione Immagine e Audio (`select` e `number`)**: Modalità immagine (`Standard`, `Cinema`, `Dinamica`, `Sport`, `Filmmaker`) e regolazione di Luminosità, Contrasto e Retroilluminazione; selezione modalità audio ed equalizzatore.
 - **Telecomando Dedicato (`remote`)**: Navigazione con D-pad, tasti colorati, menu e ripetizione tasti configurabile.
-- **Automazioni di Accensione (`device_trigger`)**: Supporto nativo per trigger `hisense_vidaa.turn_on` per accendere prese smart o relè.
+- **Automazioni di Accensione (`device_trigger`)**: Supporto nativo per trigger `vidaa.turn_on` per accendere prese smart o relè.
 
 ---
 

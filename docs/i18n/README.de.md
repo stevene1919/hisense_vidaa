@@ -1,4 +1,4 @@
-# Hisense VIDAA TV Integration für Home Assistant
+# VIDAA Smart TV Integration für Home Assistant
 
 <p align="center">
   <a href="../../README.md"><img src="https://img.shields.io/badge/🇬🇧_English-gray?style=flat-square" alt="English"></a>
@@ -28,7 +28,7 @@ Verbindet sich **direkt** mit dem internen MQTT-Broker des Fernsehers (TLS-Port 
 Die Einrichtung dauert weniger als 3 Minuten in 3 einfachen Schritten:
 
 ### 1️⃣ Installation über HACS
-Klicken Sie auf den Button unten (oder suchen Sie in HACS nach **Hisense VIDAA TV** → Integrationen → Herunterladen):
+Klicken Sie auf den Button unten (oder suchen Sie in HACS nach **VIDAA Smart TV** → Integrationen → Herunterladen):
 
 [![HACS öffnen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
@@ -43,7 +43,7 @@ VIDAA-Fernseher erfordern gegenseitiges TLS auf Port 36669. Kopieren Sie die uni
 
 ### 3️⃣ Kopplung mit Bildschirm-PIN
 1. Starten Sie Home Assistant neu (`Einstellungen` → `System` → `Neu starten`).
-2. Gehen Sie zu **Einstellungen → Geräte & Dienste → Integration hinzufügen** und suchen Sie nach **Hisense VIDAA TV**.
+2. Gehen Sie zu **Einstellungen → Geräte & Dienste → Integration hinzufügen** und suchen Sie nach **VIDAA Smart TV**.
 3. Geben Sie die lokale IP-Adresse Ihres Fernsehers ein und klicken Sie auf **Absenden**.
 4. Geben Sie den auf dem Fernsehbildschirm angezeigten **4-stelligen PIN-Code** ein. Fertig!
 
@@ -68,7 +68,7 @@ Unterstützt offiziell **alle Smart-TVs mit VIDAA OS** (Kopplung per **4-stellig
 - **Mediaplayer**: Ein-/Ausschalten, Lautstärkeregelung, Eingangsquellen, Senderumschaltung, App-Start und kontextsensitive Tasten (Senderwechsel im Live-TV, Titelsprung in Apps).
 - **Bild & Tonjustierung (`select` & `number`)**: Bildmodi (`Standard`, `Kino`, `Dynamisch`, `Sport`, `Filmmaker`) und Helligkeit/Kontrast/Hintergrundbeleuchtung einstellen; Tonmodi und Tonausgabe umschalten.
 - **Dedizierte Fernbedienung (`remote`)**: Steuerkreuz-Navigation, Zifferntasten, Menü, Farbtasten und konfigurierbare Tastenwiederholung.
-- **Einschalt-Automationen (`device_trigger`)**: Native Unterstützung für `hisense_vidaa.turn_on`-Trigger zum Schalten von Zwischensteckern oder Wake-on-LAN.
+- **Einschalt-Automationen (`device_trigger`)**: Native Unterstützung für `vidaa.turn_on`-Trigger zum Schalten von Zwischensteckern oder Wake-on-LAN.
 
 ---
 

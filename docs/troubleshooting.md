@@ -1,6 +1,6 @@
-# 🛠️ Hisense VIDAA TV Troubleshooting Guide
+# 🛠️ VIDAA Smart TV Troubleshooting Guide
 
-This guide helps you identify, diagnose, and resolve common issues encountered when using the **Hisense VIDAA TV** integration in Home Assistant, including service call errors, standby behavior, pairing recovery, and network connectivity.
+This guide helps you identify, diagnose, and resolve common issues encountered when using the **VIDAA Smart TV** integration in Home Assistant, including service call errors, standby behavior, pairing recovery, and network connectivity.
 
 ---
 
@@ -10,7 +10,7 @@ When something isn't working as expected, follow these first steps:
 
 1. **Check TV Power & Network State**: Can the TV be pinged, or is it in deep sleep? (VIDAA TVs shut down their network cards in deep standby unless Wake-on-LAN/Mobile Turn-On is enabled in TV settings).
 2. **Check Home Assistant Repairs**: If the TV wiped its pairing session tokens, Home Assistant will create an alert under **Settings** → **Repairs**.
-3. **Inspect Entity State & Diagnostics**: Open `media_player.<tv_name>` in Developer Tools or download diagnostics from the integration device card (**Settings** → **Devices & Services** → **Hisense VIDAA TV** → **⋮** → **Download diagnostics**).
+3. **Inspect Entity State & Diagnostics**: Open `media_player.<tv_name>` in Developer Tools or download diagnostics from the integration device card (**Settings** → **Devices & Services** → **VIDAA Smart TV** → **⋮** → **Download diagnostics**).
 4. **Enable Debug Logging**: Toggle `switch.<tv_name>_debug_logging` to capture live communication in **Settings** → **System** → **Logs**.
 
 ---
@@ -80,7 +80,7 @@ When an automation or manual service call fails, Home Assistant displays an erro
   * When communicating with licensed partner brands (Toshiba, Loewe, TPV/Philips, Sharp, JVC, TOPTRO, etc.), the TV/projector broker validates client credentials against an OEM brand prefix salt. If generic Hisense credentials (`his`) are sent to a partner device, the broker rejects authentication with `rc: 5` (MQTT 3.1.1) or `rc: 135` (MQTT 5.0).
 * **Fix:**
   * Keep **Brand Profile** set to **Auto Detect (Recommended)**. When enabled, the integration queries UPnP port `38400` / `18400` to extract `brand=` from `<modelDescription>` or cascades through supported candidate OEM brands (`tos`, `loe`, `tpv`, `shp`, `jvc`, `tpo`).
-  * If adding a device across an isolated VLAN where UPnP is blocked and cascade is exhausted, open **Settings → Devices & Services → Hisense VIDAA TV → Configure → Security** and manually select your device's brand from the dropdown.
+  * If adding a device across an isolated VLAN where UPnP is blocked and cascade is exhausted, open **Settings → Devices & Services → VIDAA Smart TV → Configure → Security** and manually select your device's brand from the dropdown.
   * Inspect `sensor.<tv_name>_brand_profile` to view the currently configured brand profile and active OEM brand code in real time.
 
 ### 4. Do I Need an Android Phone or Android TV to Use This?
@@ -100,5 +100,5 @@ If you continue to experience problems:
 
 1. Enable the integration's diagnostic switch: `switch.<tv_name>_debug_logging`.
 2. Reproduce the problem (e.g. attempt to turn on, send a key, or change inputs).
-3. Download the sanitized diagnostic file from **Settings** → **Devices & Services** → **Hisense VIDAA TV** → **⋮** → **Download diagnostics**.
+3. Download the sanitized diagnostic file from **Settings** → **Devices & Services** → **VIDAA Smart TV** → **⋮** → **Download diagnostics**.
 4. Open an issue on GitHub: [`https://github.com/stevene1919/hisense_vidaa/issues`](https://github.com/stevene1919/hisense_vidaa/issues) and attach the sanitized diagnostics JSON file along with relevant log excerpts.

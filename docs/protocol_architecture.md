@@ -1,25 +1,25 @@
 # 🔬 VIDAA Protocol & Cryptographic Architecture
 
-This document provides a comprehensive technical breakdown of the Hisense VIDAA OS MQTT communication protocol, reverse-engineered from `libmqttcrypt.so` and the official VIDAA / RemoteNOW Android applications.
+This document provides a comprehensive technical breakdown of the VIDAA OS MQTT communication protocol, reverse-engineered from `libmqttcrypt.so` and the official VIDAA / RemoteNOW Android applications.
 
 > [!NOTE]
 > **100% Pure Python Implementation (Zero Native Binaries):**
 > `libmqttcrypt.so` is the proprietary compiled C library inside the official Hisense Android APKs and TV firmware from which the dynamic hashing formulas and 64-bit XOR bitmasks were originally reverse-engineered.
 > 
-> This Home Assistant integration **does not** load, bundle, or execute any native binary files. All cryptographic calculations, dynamic timestamps, and challenge-response routines are implemented in **100% native Python** ([`crypto.py`](../custom_components/hisense_vidaa/crypto.py)), ensuring seamless cross-platform portability across any Home Assistant host architecture (Linux ARM64, AMD64, Raspberry Pi, Home Assistant OS) without external binaries or compilation steps.
+> This Home Assistant integration **does not** load, bundle, or execute any native binary files. All cryptographic calculations, dynamic timestamps, and challenge-response routines are implemented in **100% native Python** ([`crypto.py`](../custom_components/vidaa/protocol/crypto.py)), ensuring seamless cross-platform portability across any Home Assistant host architecture (Linux ARM64, AMD64, Raspberry Pi, Home Assistant OS) without external binaries or compilation steps.
 
 
 ---
 
 ## 🧭 Communication Overview
 
-Hisense smart TVs running VIDAA OS host an internal MQTT broker listening on TLS port `36669`. Communication requires mutual TLS with client certificates and a challenge-response pairing sequence.
+Smart TVs and projectors running VIDAA OS host an internal MQTT broker listening on TLS port `36669`. Communication requires mutual TLS with client certificates and a challenge-response pairing sequence.
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant HA as Home Assistant (Client)
-    participant TV as Hisense VIDAA TV (:36669)
+    participant TV as VIDAA Smart TV (:36669)
     
     Note over HA,TV: 1. TLS v1.2 Mutual Handshake (Client Cert & Key)
     HA->>TV: Connect MQTT (Dynamic Username + Salt Hash)
@@ -192,7 +192,7 @@ In addition to the primary MQTT broker on port `36669`, VIDAA OS exposes an unau
 ```mermaid
 flowchart TD
     HA["Home Assistant (Client)"]
-    TV["Hisense VIDAA TV (:38400)"]
+    TV["VIDAA Smart TV (:38400)"]
 
     HA -- "SSDP M-SEARCH (UDP 1900)" --> TV
     TV -- "SSDP Response (MediaRenderer:1)" --> HA

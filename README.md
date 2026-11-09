@@ -24,7 +24,7 @@ A native Home Assistant integration for smart TVs and projectors running **VIDAA
 Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using client certificates, providing instant local push updates, media player controls, app launching, Wake-on-LAN, and virtual remote navigation without external bridges or cloud dependencies.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/assets/screenshots/integration_device.png" alt="Hisense VIDAA TV in Home Assistant" width="100%" />
+  <img src="https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/assets/screenshots/integration_device.png" alt="VIDAA Smart TV in Home Assistant" width="100%" />
 </p>
 
 ---
@@ -49,7 +49,7 @@ VIDAA TVs enforce mutual TLS on port 36669. Drop the universal **`El.p12`** file
 
 ### 3️⃣ Pair with On-Screen PIN
 1. Restart Home Assistant (`Settings` → `System` → `Restart`).
-2. Go to **Settings → Devices & Services → Add Integration** and search for **Hisense VIDAA TV**.
+2. Go to **Settings → Devices & Services → Add Integration** and search for **VIDAA Smart TV**.
 3. Enter your TV's local IP address and click **Submit**.
 4. Type the **4-digit PIN** displayed on your TV screen to complete setup!
 

@@ -1,6 +1,6 @@
 # 🖼️ Screenshots & UI Gallery
 
-This gallery showcases the Hisense VIDAA TV integration interface, device pages, controls, and entity dialogs across Home Assistant.
+This gallery showcases the VIDAA Smart TV integration interface, device pages, controls, and entity dialogs across Home Assistant.
 
 ---
 
@@ -9,7 +9,7 @@ This gallery showcases the Hisense VIDAA TV integration interface, device pages,
 The primary device overview page displaying media controls, power state, input selector, active app sensor, audio output routing, diagnostic sensors, and utility buttons:
 
 <p align="center">
-  <img src="../assets/screenshots/integration_device.png" alt="Hisense VIDAA Device Page in Home Assistant" width="100%" />
+  <img src="../assets/screenshots/integration_device.png" alt="VIDAA Smart TV Device Page in Home Assistant" width="100%" />
 </p>
 
 ---

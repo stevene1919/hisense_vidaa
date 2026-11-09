@@ -1,4 +1,4 @@
-# Hisense VIDAA TV 智能电视 Home Assistant 集成
+# VIDAA Smart TV 智能电视 Home Assistant 集成
 
 <p align="center">
   <a href="../../README.md"><img src="https://img.shields.io/badge/🇬🇧_English-gray?style=flat-square" alt="English"></a>
@@ -28,7 +28,7 @@
 只需 3 个简步，3 分钟内完成设置：
 
 ### 1️⃣ 通过 HACS 安装
-点击下方按钮（或在 HACS 中搜索 **Hisense VIDAA TV** → 集成 → 下载）：
+点击下方按钮（或在 HACS 中搜索 **VIDAA Smart TV** → 集成 → 下载）：
 
 [![打开 HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
@@ -43,7 +43,7 @@ VIDAA 电视要求在 36669 端口进行双向 TLS 认证。将通用秘钥文�
 
 ### 3️⃣ 屏幕 PIN 码配对
 1. 重启 Home Assistant（`配置` → `系统` → `重新启动`）。
-2. 前往 **配置 → 设备与服务 → 添加集成**，搜索 **Hisense VIDAA TV**。
+2. 前往 **配置 → 设备与服务 → 添加集成**，搜索 **VIDAA Smart TV**。
 3. 输入电视的局域网 IP 地址，点击 **提交**。
 4. 在弹出窗口中输入电视屏幕上显示的 **4 位数字 PIN 码** 即可完成配对！
 
@@ -68,7 +68,7 @@ VIDAA 电视要求在 36669 端口进行双向 TLS 认证。将通用秘钥文�
 - **媒体播放器 (`media_player`)**：开关机、音量调节、输入源切换、频道切换、应用快速启动及上下文按键（电视模式换台、应用内切歌）。
 - **画质与音效调节 (`select` 与 `number`)**：图像模式（`标准`、`影院`、`动态`、`体育`、`Filmmaker`）、亮度、对比度与背光微调；声音模式与音频输出设备切换。
 - **专用虚拟遥控器 (`remote`)**：方向导航键、数字键、主页/菜单、四色按键及自定义长按连发。
-- **开机自动化触发器 (`device_trigger`)**：原生支持 `hisense_vidaa.turn_on` 触发器，用于自动化控制智能插座通电或发送局域网唤醒。
+- **开机自动化触发器 (`device_trigger`)**：原生支持 `vidaa.turn_on` 触发器，用于自动化控制智能插座通电或发送局域网唤醒。
 
 ---
 

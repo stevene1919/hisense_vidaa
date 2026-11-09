@@ -37,7 +37,7 @@ curl -sSL https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/scrip
 # Download debug_tv.py (optional live debugger):
 curl -sSL https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/scripts/debug_tv.py -o debug_tv.py
 
-# Run probe (automatically links to /config/custom_components/hisense_vidaa):
+# Run probe (automatically links to /config/custom_components/vidaa):
 python3 test_client.py probe --ip <TV_IP>
 ```
 

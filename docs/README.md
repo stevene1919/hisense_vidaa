@@ -1,6 +1,6 @@
-# 📚 Hisense VIDAA Integration Documentation Index
+# 📚 VIDAA Smart TV Integration Documentation Index
 
-Welcome to the technical documentation library for the **Hisense VIDAA TV Integration for Home Assistant**.
+Welcome to the technical documentation library for the **VIDAA Smart TV Integration for Home Assistant**.
 
 This directory contains in-depth documentation covering installation, networking, SSL certificates, protocol reverse-engineering, custom automations, and UI dashboard cards.
 

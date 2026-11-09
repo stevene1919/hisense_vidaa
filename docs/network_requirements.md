@@ -1,6 +1,6 @@
 # 🌐 Network Requirements & Best Practices
 
-To ensure reliable, long-term operation of the Hisense VIDAA TV integration, please review the following network topology recommendations.
+To ensure reliable, long-term operation of the VIDAA Smart TV integration, please review the following network topology recommendations.
 
 ---
 
@@ -9,11 +9,11 @@ To ensure reliable, long-term operation of the Hisense VIDAA TV integration, ple
 > [!NOTE]
 > **No Cloud or Internet Access Required**:
 > 
-> The `hisense_vidaa` integration is **100% local (`iot_class: local_push`)**. Home Assistant connects directly to the TV's embedded MQTT broker on port `36669` over your local subnet (`LAN`).
+> The VIDAA Smart TV (`vidaa`) integration is **100% local (`iot_class: local_push`)**. Home Assistant connects directly to the TV's embedded MQTT broker on port `36669` over your local subnet (`LAN`).
 > 
 > - **Local Authentication & Token Renewal**: The initial 4-digit PIN challenge-response handshake and subsequent 30-day token renewals are computed and validated **entirely on the TV hardware itself**. No cloud authentication servers, external API endpoints, or internet bridges are contacted.
 > - **Isolated IoT VLAN Friendly**: The TV can be safely placed on an isolated IoT VLAN without internet access (WAN blocked), provided Home Assistant can reach the TV on port `36669` (and UDP port `9` for Wake-on-LAN).
-> - **Official App vs Integration**: While official Hisense smartphone apps (*RemoteNOW* / *VIDAA Smart Remote*) require internet connectivity for cloud account logins and catalog syncing, the underlying hardware control channel on the TV is local. This integration interacts directly with that local channel, bypassing the cloud entirely.
+> - **Official App vs Integration**: While official smartphone apps (*RemoteNOW* / *VIDAA Smart Remote*) require internet connectivity for cloud account logins and catalog syncing, the underlying hardware control channel on the TV is local. This integration interacts directly with that local channel, bypassing the cloud entirely.
 
 ---
 
@@ -45,7 +45,7 @@ For models that do support hardware Wake-on-LAN:
 2. **Enable Wake-on-LAN in TV Settings**:
    - Navigate to **Settings → Network / System → Advanced Settings → Wake on LAN / Power on by Apps** and ensure it is switched **ON**.
 3. **Enable WoL in Integration Options**:
-   - In Home Assistant, go to **Settings → Devices & Services → Hisense VIDAA TV → Configure** and check **Enable Wake-on-LAN**.
+   - In Home Assistant, go to **Settings → Devices & Services → VIDAA Smart TV → Configure** and check **Enable Wake-on-LAN**.
 
 ---
 
@@ -84,7 +84,7 @@ To prevent connected HDMI devices (such as **Chromecast with Google TV**, **Appl
 
 ## 🔒 5. IoT VLAN Firewall & Port Matrix
 
-If your Hisense TV is placed on an isolated **IoT VLAN** separate from your Home Assistant server (e.g. `HA_VLAN` ↔ `IOT_VLAN`), configure the following firewall rules on your router/gateway:
+If your VIDAA TV is placed on an isolated **IoT VLAN** separate from your Home Assistant server (e.g. `HA_VLAN` ↔ `IOT_VLAN`), configure the following firewall rules on your router/gateway:
 
 ### 📋 Port & Protocol Matrix
 
@@ -104,7 +104,7 @@ If your Hisense TV is placed on an isolated **IoT VLAN** separate from your Home
 
 1. **HA to TV (Unicast TCP/UDP)**:
    - **Source**: Home Assistant Server IP (`HA_IP`)
-   - **Destination**: Hisense TV IP (`TV_IP`)
+   - **Destination**: TV IP (`TV_IP`)
    - **Allowed Ports**: `TCP 36669, 56669, 38400, 18400`, `UDP 9, 7`
    - **Action**: `ACCEPT`
 2. **TV to HA (Established / Related Return Traffic)**:
@@ -132,7 +132,7 @@ When a TV is deployed in a hardened smart home environment:
 - **No RF Antenna Connected**: Streaming and smart apps only (HDMI / OTT).
 - **Isolated IoT VLAN with WAN Blocked**: All outbound internet access is firewalled to protect privacy and prevent manufacturer telemetry.
 
-In this topology, the TV has **no way to reach public NTP servers**. As a result, its hardware clock can drift significantly (often falling behind by hours, days, or even weeks). While the `hisense_vidaa` integration automatically detects clock drift via UPnP `Date:` headers and compensates for timestamp skew during dynamic MQTT challenge generation, extreme drift can affect TLS certificate validation and token expiry calculation.
+In this topology, the TV has **no way to reach public NTP servers**. As a result, its hardware clock can drift significantly (often falling behind by hours, days, or even weeks). While the `vidaa` integration automatically detects clock drift via UPnP `Date:` headers and compensates for timestamp skew during dynamic MQTT challenge generation, extreme drift can affect TLS certificate validation and token expiry calculation.
 
 ### 🛑 The DNS Sinkhole Trap (AdGuard Home / Pi-hole returning 0.0.0.0)
 
