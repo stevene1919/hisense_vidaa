@@ -379,3 +379,25 @@ async def test_token_refresh_failure_honors_clock_offset():
     # so auth_failed MUST NOT be dispatched if clock_offset is applied properly!
     client._dispatch_auth_failed.assert_not_called()
 
+
+@pytest.mark.anyio
+async def test_async_sync_clock_fallback_uses_thread():
+    """Test async_sync_clock falls back to synchronous fn in a thread without blocking (Issue #59)."""
+    client = HisenseTvClient(ip="192.168.50.12")
+    host_now = int(time.time())
+    mock_tv_ts = host_now - 100
+
+    def mock_sync_get_tv_timestamp(ip, timeout=2.0):
+        import threading
+        assert threading.current_thread() is not threading.main_thread()
+        return mock_tv_ts
+
+    with (
+        patch.object(client.upnp, "async_get_tv_timestamp", AsyncMock(return_value=None)),
+        patch("custom_components.vidaa.tv.tokens._get_tv_timestamp_fn", return_value=mock_sync_get_tv_timestamp),
+    ):
+        offset = await client.async_sync_clock()
+
+    assert offset == mock_tv_ts - host_now
+    assert client.tv_timestamp == mock_tv_ts
+

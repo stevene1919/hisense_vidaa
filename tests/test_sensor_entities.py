@@ -389,6 +389,35 @@ def test_active_app_standby_and_last_known_app(mock_client, mock_entry):
     assert sensor.extra_state_attributes["last_known_app"] == "Netflix"
 
 
+def test_active_app_and_source_remote_launcher_transition(mock_client, mock_entry):
+    """Test Active App and Source sensors correctly handle remote_launcher broadcast (Issue #58)."""
+    mock_client.connected = True
+    mock_client.is_on = True
+    app_sensor = HisenseVidaaActiveAppSensor(mock_client, mock_entry)
+    source_sensor = HisenseVidaaActiveSourceSensor(mock_client, mock_entry)
+
+    app_sensor._handle_applist_update([
+        {"appId": "1", "appName": "netflix"},
+        {"appId": "3", "appName": "youtube"},
+    ])
+    # Enter Netflix
+    app_sensor._handle_state_update({"statetype": "app", "name": "netflix", "url": "netflix", "appId": "1"})
+    assert app_sensor.native_value == "netflix"
+
+    # Return to Home Screen via remote_launcher
+    app_sensor._handle_state_update({"statetype": "remote_launcher"})
+    assert app_sensor.native_value == "Home Launcher"
+    assert app_sensor.extra_state_attributes["last_known_app"] == "Home Launcher"
+
+    # Active source sensor on remote_launcher
+    source_sensor._handle_state_update({"statetype": "remote_launcher"})
+    assert source_sensor.native_value == "None"
+
+    # Enter YouTube
+    app_sensor._handle_state_update({"statetype": "app", "name": "youtube", "url": "youtube", "appId": "3"})
+    assert app_sensor.native_value == "youtube"
+
+
 def test_in_use_binary_sensor_dormant_and_hdmi_states(mock_client, mock_entry):
     """Test in_use binary sensor accounts for HDMI display, dormant modes, and power."""
     sensor = HisenseVidaaInUseBinarySensor(mock_client, mock_entry)

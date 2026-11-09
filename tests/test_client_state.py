@@ -320,6 +320,16 @@ def test_apply_state_update_fake_sleep_vocabulary():
     apply_state_update(client, {"statetype": "livetv"})
     assert client.state == "on"
 
+    # (d) remote_launcher and launcher update current_app (Issue #58)
+    apply_state_update(client, {"statetype": "app", "appname": "Netflix", "appid": "1"})
+    assert client.current_app == "Netflix"
+    assert client.current_app_id == "1"
+
+    apply_state_update(client, {"statetype": "remote_launcher"})
+    assert client.state == "on"
+    assert client.current_app == "Home Launcher"
+    assert client.current_app_id is None
+
 
 def test_device_info_telemetry_and_entity_binding():
     """Test getdeviceinfo and gettvinfo telemetry update client state and HisenseVidaaEntity device_info."""

@@ -161,7 +161,10 @@ class TvTokenLifecycleMixin:
         if tv_timestamp is None:
             try:
                 fn = _get_tv_timestamp_fn()
-                tv_timestamp = fn(self.ip, timeout=timeout)
+                if asyncio.iscoroutinefunction(fn):
+                    tv_timestamp = await fn(self.ip, timeout=timeout)
+                else:
+                    tv_timestamp = await asyncio.to_thread(fn, self.ip, timeout=timeout)
             except Exception:
                 tv_timestamp = None
         if tv_timestamp:

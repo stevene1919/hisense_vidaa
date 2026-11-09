@@ -61,6 +61,9 @@ def apply_state_update(client: HisenseTvClient, data: Any) -> None:
         client.current_source_id = "TV"
     if "appname" in data:
         client.current_app = data["appname"]
+    elif statetype in ("launcher", "remote_launcher"):
+        client.current_app = "Home Launcher"
+        client.current_app_id = None
     if "appid" in data:
         client.current_app_id = str(data["appid"])
     if "channel_name" in data:

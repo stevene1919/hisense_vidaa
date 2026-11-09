@@ -169,7 +169,7 @@ class VidaaActiveAppSensor(VidaaMqttTrackingSensor):
             self._last_known_app = "Live TV"
         elif statetype == "sourceswitch":
             self._attr_native_value = "TV Input"
-        elif statetype == "launcher":
+        elif statetype in ("launcher", "remote_launcher"):
             self._attr_native_value = "Home Launcher"
             self._last_known_app = "Home Launcher"
         else:
@@ -244,7 +244,7 @@ class VidaaActiveSourceSensor(VidaaMqttTrackingSensor):
             self._connected_device = None
             self._channel_name = state.get("channel_name")
             self._channel_num = state.get("channel_num")
-        elif statetype in ("app", "launcher"):
+        elif statetype in ("app", "launcher", "remote_launcher"):
             self._attr_native_value = "None"
             self._connected_device = self._channel_name = self._channel_num = None
         elif state.get("sourcename") or state.get("sourceName"):
