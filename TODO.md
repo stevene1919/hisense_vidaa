@@ -4,6 +4,23 @@ This document tracks active pending tasks, investigations, and future roadmap it
 
 ---
 
+## 🚀 v3.5.0 Release & Rebrand Transition Tasks
+
+### 1. GitHub Repository & HACS Rebrand Finalization
+- [ ] **GitHub Repository Rename**:
+  - Rename repository on GitHub from `stevene1919/hisense_vidaa` $\rightarrow$ `stevene1919/vidaa` (leveraging GitHub's automatic HTTP & Git redirection).
+  - Update local Git remotes and submodule paths to point to canonical `stevene1919/vidaa`.
+- [ ] **Release Tagging & Publishing**:
+  - Create Git tag `v3.5.0` and publish the release on GitHub with attached `vidaa.zip` distribution archive.
+  - Review automated release workflow (`.github/workflows/release.yml`) asset creation and hash generation.
+- [ ] **HACS Catalog Update**:
+  - Submit / update repository metadata in the HACS Default store (`hacs/default`) to reflect the new repository name and `VIDAA Smart TV` branding.
+- [ ] **Post-Release Migration Monitoring**:
+  - Monitor community feedback on automatic entry migration (`v1` $\rightarrow$ `v2.1`).
+  - Verify legacy folder collision repair issue properly alerts users with obsolete `custom_components/hisense_vidaa` folders.
+
+---
+
 ## 🎯 Active Tasks & Real-World Investigations
 
 ### 1. Community Hardware Feedback & 4-Tier Auth Cascade ([Issue #6](https://github.com/stevene1919/hisense_vidaa/issues/6))
@@ -42,10 +59,12 @@ For complete details on completed features and technical improvements, refer to 
   - **Streamlined Audio Output Attribute**: Replaced unsupported select/sensor entities with clean `audio_output` attribute (`TV Speakers` or `ARC / eARC`) on the media player entity.
   - **Transport Controls Disabled by Default**: Kept media player cards sleek by defaulting `enable_media_controls` to false, with full user toggle in Options Flow.
   - **Home Launcher Detection & Clock Sync (#58, #59)**: Added `remote_launcher` state tracking for Home screen navigation and offloaded fallback clock sync to thread.
+  - **Duplicate IP Discovery Guard**: SSDP / UPnP discovery now checks for existing configured IP addresses and aborts if an entry for that TV already exists.
   - **Virtual Keyboard Input Support**: Extended `remote.send_command` with prefix parsing (`text:<str>`, `type:<str>`, `text:replace:<str>`, `clear_text`) and added CLI text commands to `test_client.py` and `debug_tv.py`.
   - **Web Browser Mouse & Pointer Integration**: Documented browser-specific mouse controls (`mouse_click`, `mouse_up`, `mouse_down`, `zoom_in`, `zoom_out`) and clarified the browser-only cursor scope from APK reverse-engineering.
   - **Removal of Unsupported Notify Platform**: Deprecated speculative `notify` platform and options toggle after companion APK decompilation confirmed notifications are an in-app mobile promotion feed with no TV compositor listener. Pruned legacy entity registry entries on setup.
   - **Media Player UI Controls (#55)**: Restored persistent visibility for previous/next track and channel navigation buttons in the Home Assistant media player card.
+  - **Comprehensive Documentation Rebrand**: Fully audited and updated all 19 documentation guides, configuration parameter references, network and standby guides, and multilingual READMEs to canonical `vidaa.*` actions and `vidaa.turn_on` triggers.
 * **v3.3.0**: Context-aware channel track controls (Previous/Next track steps channels on Live TV, skips tracks on Apps/HDMI), HDMI container false-positive guard (`is_live_tv_source`), channel name matching in `play_media`, user-configurable source filtering in Options Flow (`CONF_SOURCES`), `PluggableAction` turn-on device automations, candidate toast notification probing, and full Serbian translations (294 unit tests).
 * **v3.2.0**: Universal VIDAA OEM Multi-Brand Support (Hisense, Toshiba, Loewe, Philips/TPV, Sharp, JVC, and regional partners), candidate OEM brand handshake cascade on `rc: 5`, certificate filename brand detection, post-PIN brand preservation fix, automatic credential regeneration on brand changes, Device Options & Manual IP brand selector, UPnP MAC fallback support, and comprehensive modular test suite (246 unit tests).
 * **v3.1.0**: Full architectural migration to native `aiomqtt>=2.3.0` async transport engine, shared `aiohttp.ClientSession` injection, multi-device service ambiguity guards, and 100% IQS rule compliance (`quality_scale.yaml`).
