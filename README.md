@@ -86,7 +86,7 @@ This integration officially supports **any smart TV running VIDAA OS** (pairing 
 - **Pluggable Turn-On Automations (`device_trigger`)**: Intercepts `media_player.turn_on` via standard Home Assistant `PluggableAction` triggers, enabling custom power-on sequences (smart plugs, relays, IR blasters) with automatic fallback to native WoL and MQTT power keys.
 - **Dedicated Remote Platform**: Fast key command dispatching, key aliases (`home`, `menu`, `back`, `ok`, etc.), configurable repeat counts, and inter-key delay options.
 - **Picture & Display Adjustments (`number` & `select`)**: Fine-tune Backlight, Brightness, and Contrast slider entities (0–100) and switch Picture Modes (`Standard`, `Cinema Day`, `Cinema Night`, `Dynamic`, `Sports`, `Game`, `Filmmaker Mode`) dynamically.
-- **Sound Mode Selector (`select`)**: Switch real-time TV sound equalizer modes (`Standard`, `Theatre`, `Music`, `Speech`, `Late Night`, `Sports`) and audio output routing (`select.{tv}_audio_output`).
+- **Sound Mode Selector (`select`)**: Switch real-time TV sound equalizer modes (`Standard`, `Theatre`, `Music`, `Speech`, `Late Night`, `Sports`). Audio output routing (`TV Speakers` vs `ARC / eARC`) is exposed as the `audio_output` attribute on the media player.
 - **Subnet Wake-on-LAN**: Reliable, multi-burst WoL magic packet dispatching with configurable subnet broadcasting across dual-NIC and VLAN networks.
 - **Tabbed Options Flow**: Beautiful, categorized options menu (General & Power, Sources & Media, Remote Key Timings, Security & Brand) for adjusting settings without re-pairing.
 

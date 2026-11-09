@@ -157,11 +157,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
-    """Set up the VIDAA Smart TV integration services."""
-    await async_setup_services(hass)
-
-    # Check for leftover legacy custom_components/hisense_vidaa directory
+def _check_and_manage_legacy_repair(hass: HomeAssistant) -> None:
+    """Check for leftover legacy custom_components/hisense_vidaa directory."""
     try:
         if hasattr(hass, "config") and hasattr(hass.config, "path"):
             legacy_dir = hass.config.path("custom_components", LEGACY_DOMAIN)
@@ -191,6 +188,14 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     except Exception as err:
         _LOGGER.debug("Could not inspect custom_components directory: %s", err)
 
+
+async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
+    """Set up the VIDAA Smart TV integration services."""
+    await async_setup_services(hass)
+
+    # Check for leftover legacy custom_components/hisense_vidaa directory
+    _check_and_manage_legacy_repair(hass)
+
     # Automatically check for and migrate any remaining legacy entries
     if hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_entries"):
         for legacy_entry in hass.config_entries.async_entries(LEGACY_DOMAIN):
@@ -202,6 +207,8 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: HisenseVidaaConfigEntry) -> bool:
     """Set up VIDAA Smart TV from a config entry."""
+    _check_and_manage_legacy_repair(hass)
+
     version = getattr(entry, "version", None)
     if isinstance(version, int) and version < 2:
         await async_migrate_entry(hass, entry)

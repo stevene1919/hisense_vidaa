@@ -583,6 +583,23 @@ def test_media_player_extra_state_attributes(mock_client, mock_entry):
     assert "brand_profile" in attrs
 
 
+def test_media_player_audio_output_attribute(mock_client, mock_entry):
+    """audio_output attribute tracks volume_type (0=TV Speakers, 1=ARC/eARC); mute does not change it."""
+    mock_client.connected = True
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp.hass = None
+    assert mp.extra_state_attributes["audio_output"] == "TV Speakers"
+
+    mp._handle_volume_update({"volume_type": "1", "volume_value": 5})
+    assert mp.extra_state_attributes["audio_output"] == "ARC / eARC"
+
+    mp._handle_volume_update({"volume_type": 2, "volume_value": 0})
+    assert mp.extra_state_attributes["audio_output"] == "ARC / eARC"
+
+    mp._handle_volume_update({"volume_type": 0, "volume_value": 5})
+    assert mp.extra_state_attributes["audio_output"] == "TV Speakers"
+
+
 def test_media_player_mro_precedence():
     """Ensure MediaPlayerControlsMixin overrides Home Assistant MediaPlayerEntity stubs."""
     from custom_components.vidaa.media_player.controls import MediaPlayerControlsMixin

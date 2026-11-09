@@ -79,6 +79,7 @@ class VidaaMediaPlayer(
         super().__init__(client=client, entry=entry)
         self._attr_unique_id = f"{self._entry_id}_media_player"
         self._volume = 0
+        self._volume_type = 0
         self._muted = False
         self._source = None
         self._source_list = []
@@ -179,6 +180,7 @@ class VidaaMediaPlayer(
             "auth_profile": AUTH_PROFILES.get(auth_key, str(auth_key).title() if auth_key else "Auto"),
             "brand_profile": BRAND_PROFILES.get(brand_key, str(brand_key).title() if brand_key else "Auto"),
             "active_brand": BRAND_MAP.get(active_code, str(active_code).upper() if active_code else "Hisense"),
+            "audio_output": "ARC / eARC" if self._volume_type == 1 else "TV Speakers",
         }
         if self._client:
             if getattr(self._client, "device_name", None):

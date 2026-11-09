@@ -342,7 +342,7 @@ def generate_markdown_report(
         lines.append("- `remote.<tv>`: Fast Direct Remote Key Commands (`KEY_POWER`, `KEY_HOME`, `KEY_BACK`, etc.)")
         lines.append("- `sensor.<tv>_active_source`: Live input tracking")
         lines.append("- `sensor.<tv>_active_app`: Live foreground app tracking")
-        lines.append("- `sensor.<tv>_audio_output`: Live audio output routing (TV Speakers vs ARC/eARC)")
+        lines.append("- `media_player.<tv>` `audio_output` attribute: Live audio output routing (TV Speakers vs ARC/eARC)")
         lines.append("- `sensor.<tv>_session_status`: Token session health & encryption status")
         lines.append("- `binary_sensor.<tv>_mqtt_connected`: Real-time broker connection status")
 

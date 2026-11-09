@@ -367,7 +367,7 @@ class UserFlowMixin:
             await self.client.async_disconnect()
             self.client = None
 
-            default_title = f"{BRAND_MAP.get(self.brand, 'Hisense')} TV ({self.ip_address})"
+            default_title = f"{BRAND_MAP.get(self.brand, 'VIDAA')} TV ({self.ip_address})"
             return self.async_create_entry(
                 title=self.discovered_title or default_title,
                 data=entry_data,

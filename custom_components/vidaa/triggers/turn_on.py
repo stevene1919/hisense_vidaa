@@ -71,7 +71,7 @@ def async_get_turn_on_trigger(device_id: str) -> dict[str, str]:
 def async_get_turn_on_description(hass: HomeAssistant, device_id: str) -> str:
     """Return the trigger description for a device."""
     device = async_get_device_entry_by_device_id(hass, device_id)
-    name = getattr(device, "name_by_user", None) or getattr(device, "name", "Hisense TV")
+    name = getattr(device, "name_by_user", None) or getattr(device, "name", "VIDAA TV")
     return f"{DOMAIN} turn on trigger for {name}"
 
 

@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Konfigurišite Hisense VIDAA TV",
-        "description": "Unesite IP adresu svog Hisense televizora.",
+        "title": "Konfigurišite VIDAA Smart TV",
+        "description": "Unesite IP adresu svog VIDAA televizora.",
         "data": {
           "ip_address": "IP adresa",
           "auth_profile": "Profil autentifikacije / sertifikata",
@@ -11,7 +11,7 @@
         }
       },
       "discovery_confirm": {
-        "title": "Pronađen Hisense VIDAA TV",
+        "title": "Pronađen VIDAA Smart TV",
         "description": "Da li želite da podesite {name} na adresi {ip_address}?"
       },
       "auth": {
@@ -22,12 +22,12 @@
         }
       },
       "reauth_confirm": {
-        "title": "Ponovna autentifikacija Hisense televizora",
-        "description": "Home Assistant mora ponovo da se upari sa vašim Hisense televizorom ({ip_address}). Pritisnite Pošalji da biste prikazali PIN na ekranu televizora."
+        "title": "Ponovna autentifikacija VIDAA televizora",
+        "description": "Home Assistant mora ponovo da se upari sa vašim VIDAA televizorom ({ip_address}). Pritisnite Pošalji da biste prikazali PIN na ekranu televizora."
       },
       "reconfigure": {
-        "title": "Ponovna konfiguracija Hisense VIDAA televizora",
-        "description": "Ažurirajte podešavanja veze ili ponovo uparite svoj Hisense televizor.",
+        "title": "Ponovna konfiguracija VIDAA televizora",
+        "description": "Ažurirajte podešavanja veze ili ponovo uparite svoj VIDAA televizor.",
         "data": {
           "ip_address": "IP adresa",
           "auth_profile": "Profil autentifikacije / sertifikata",
@@ -36,7 +36,7 @@
       },
       "certs": {
         "title": "Klijentski sertifikati",
-        "description": "Konfigurišite TLS/SSL klijentske sertifikate za komunikaciju sa vašim Hisense VIDAA televizorom. Postavite svoje sertifikate u {cert_dir} ({cert_file} i {key_file}).",
+        "description": "Konfigurišite TLS/SSL klijentske sertifikate za komunikaciju sa vašim VIDAA televizorom. Postavite svoje sertifikate u {cert_dir} ({cert_file} i {key_file}).",
         "data": {
           "use_ssl": "Koristi šifrovanu SSL/TLS vezu",
           "certfile": "Putanja do datoteke sertifikata (.crt / .pem)",
@@ -45,7 +45,7 @@
       },
       "options": {
         "title": "Funkcije i opcije uređaja",
-        "description": "Prilagodite funkcije za svoj Hisense VIDAA televizor.",
+        "description": "Prilagodite funkcije za svoj VIDAA televizor.",
         "data": {
           "enable_remote": "Omogući poseban entitet daljinskog upravljača (Remote)",
           "enable_wol": "Omogući uključivanje putem Wake-on-LAN-a",
@@ -68,13 +68,13 @@
       "reauth_successful": "Ponovna autentifikacija je bila uspešna.",
       "reconfigure_successful": "Ponovna konfiguracija je bila uspešna.",
       "already_configured": "Ovaj uređaj je već konfigurisan.",
-      "not_vidaa_tv": "Pronađeni uređaj nije kompatibilan Hisense VIDAA televizor."
+      "not_vidaa_tv": "Pronađeni uređaj nije kompatibilan VIDAA televizor."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Opcije za Hisense VIDAA TV",
+        "title": "Opcije za VIDAA Smart TV",
         "description": "Izaberite kategoriju opcija za konfiguraciju:",
         "menu_options": {
           "power_network": "⚡ Napajanje i mreža",
@@ -337,10 +337,10 @@
   },
   "exceptions": {
     "ambiguous_target": {
-      "message": "Konfigurisano je više Hisense VIDAA televizora. Navedite ciljni televizor ili koristite 'all' da biste obuhvatili sve televizore."
+      "message": "Konfigurisano je više VIDAA televizora. Navedite ciljni televizor ili koristite 'all' da biste obuhvatili sve televizore."
     },
     "no_target_device": {
-      "message": "Nije pronađen odgovarajući Hisense VIDAA televizor za navedeni cilj servisnog poziva."
+      "message": "Nije pronađen odgovarajući VIDAA televizor za navedeni cilj servisnog poziva."
     },
     "not_connected": {
       "message": "Nije moguće poslati komandu: televizor je trenutno isključen sa mreže."
@@ -430,12 +430,12 @@
       }
     },
     "auth_token_invalidated": {
-      "title": "Hisense TV: Potrebna ponovna autentifikacija",
+      "title": "VIDAA TV: Potrebna ponovna autentifikacija",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Ponovno uparivanje sa Hisense televizorom",
-            "description": "Home Assistant više ne može da se autentifikuje sa vašim Hisense televizorom ({ip_address}). TV broker je odbio sačuvane tokene za pristup i osvežavanje (ovo se obično dešava nakon ažuriranja firmvera ili potpunog gašenja iz struje).\n\nKliknite na **Pošalji** da biste pokrenuli proces uparivanja. Proverite da li je vaš televizor **uključen** (ne u režimu mirovanja) — PIN kod će se pojaviti na ekranu."
+            "title": "Ponovno uparivanje sa VIDAA televizorom",
+            "description": "Home Assistant više ne može da se autentifikuje sa vašim VIDAA televizorom ({ip_address}). TV broker je odbio sačuvane tokene za pristup i osvežavanje (ovo se obično dešava nakon ažuriranja firmvera ili potpunog gašenja iz struje).\n\nKliknite na **Pošalji** da biste pokrenuli proces uparivanja. Proverite da li je vaš televizor **uključen** (ne u režimu mirovanja) — PIN kod će se pojaviti na ekranu."
           }
         }
       }

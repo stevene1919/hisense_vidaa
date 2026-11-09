@@ -18,7 +18,6 @@ from custom_components.vidaa.button import (
 from custom_components.vidaa.sensor import (
     HisenseVidaaActiveAppSensor,
     HisenseVidaaActiveSourceSensor,
-    HisenseVidaaAudioOutputSensor,
     HisenseVidaaAuthProfileSensor,
     HisenseVidaaBrandProfileSensor,
     HisenseVidaaClockDriftSensor,
@@ -86,11 +85,6 @@ async def test_sensor_entities(mock_client, mock_entry):
     })
     assert s_source.extra_state_attributes["channel_name"] == "ABC HD"
     assert s_source.extra_state_attributes["channel_num"] == "20"
-
-    s_audio = HisenseVidaaAudioOutputSensor(mock_client, mock_entry)
-    assert s_audio.native_value == "TV Speakers"
-    s_audio._handle_volume_update({"volume_type": 1, "volume_value": 20})
-    assert s_audio.native_value == "ARC / eARC"
 
     s_name = HisenseVidaaReportedNameSensor(mock_client, mock_entry)
     assert s_name.native_value == "Living Room TV"
@@ -291,19 +285,6 @@ def test_session_status_latches_reauth_required(mock_client, mock_entry):
     assert sensor.native_value == "Active"
 
 
-def test_audio_output_sensor_string_volume_type(mock_client, mock_entry):
-    """[F9-leg4] The audio-output sensor coerces string volume_type broadcasts."""
-    mock_client.connected = True
-    sensor = HisenseVidaaAudioOutputSensor(mock_client, mock_entry)
-    assert sensor.native_value == "TV Speakers"
-
-    sensor._handle_volume_update({"volume_type": "1"})
-    assert sensor.native_value == "ARC / eARC"
-
-    sensor._handle_volume_update({"volume_type": "0"})
-    assert sensor.native_value == "TV Speakers"
-
-
 def test_session_status_sensor_masks_client_id_and_applies_offset():
     """SessionStatusSensor masks client_id and applies clock_offset."""
     client = MagicMock()
@@ -338,8 +319,9 @@ async def test_sensor_setup_entry_excludes_retired_sensors(mock_client, mock_ent
     added_sensors = []
     await async_setup_sensors(hass, mock_entry, lambda entities: added_sensors.extend(entities))
 
-    assert len(added_sensors) == 6
+    assert len(added_sensors) == 5
     unique_ids = [s.unique_id for s in added_sensors]
+    assert f"{mock_entry.entry_id}_audio_output" not in unique_ids
     assert f"{mock_entry.entry_id}_brand_profile" not in unique_ids
     assert f"{mock_entry.entry_id}_auth_profile" not in unique_ids
     assert any(isinstance(s, HisenseVidaaActiveSourceSensor) for s in added_sensors)

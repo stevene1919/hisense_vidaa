@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configure Hisense VIDAA TV",
-        "description": "Enter the IP address of your Hisense TV.",
+        "title": "Configure VIDAA Smart TV",
+        "description": "Enter the IP address of your VIDAA TV.",
         "data": {
           "ip_address": "IP Address",
           "auth_profile": "Authentication / Certificate Profile",
@@ -11,7 +11,7 @@
         }
       },
       "discovery_confirm": {
-        "title": "Discovered Hisense VIDAA TV",
+        "title": "Discovered VIDAA Smart TV",
         "description": "Do you want to set up {name} at {ip_address}?"
       },
       "auth": {
@@ -22,12 +22,12 @@
         }
       },
       "reauth_confirm": {
-        "title": "Reauthenticate Hisense TV",
-        "description": "Home Assistant needs to pair with your Hisense TV ({ip_address}) again. Press Submit to display the PIN on your TV screen."
+        "title": "Reauthenticate VIDAA TV",
+        "description": "Home Assistant needs to pair with your VIDAA TV ({ip_address}) again. Press Submit to display the PIN on your TV screen."
       },
       "reconfigure": {
-        "title": "Reconfigure Hisense VIDAA TV",
-        "description": "Update the connection settings or re-pair with your Hisense TV.",
+        "title": "Reconfigure VIDAA Smart TV",
+        "description": "Update the connection settings or re-pair with your VIDAA TV.",
         "data": {
           "ip_address": "IP Address",
           "auth_profile": "Authentication / Certificate Profile",
@@ -36,7 +36,7 @@
       },
       "certs": {
         "title": "Client Certificates",
-        "description": "Configure TLS/SSL client certificates for communicating with your Hisense VIDAA TV. Place your certificates in {cert_dir} ({cert_file} and {key_file}).",
+        "description": "Configure TLS/SSL client certificates for communicating with your VIDAA Smart TV. Place your certificates in {cert_dir} ({cert_file} and {key_file}).",
         "data": {
           "use_ssl": "Use Encrypted SSL/TLS Connection",
           "certfile": "Certificate File Path (.crt / .pem)",
@@ -45,7 +45,7 @@
       },
       "options": {
         "title": "Device Features & Options",
-        "description": "Customize features for your Hisense VIDAA TV.",
+        "description": "Customize features for your VIDAA Smart TV.",
         "data": {
           "enable_remote": "Enable dedicated Remote entity",
           "enable_wol": "Enable Wake-on-LAN power on",
@@ -68,13 +68,13 @@
       "reauth_successful": "Re-authentication was successful.",
       "reconfigure_successful": "Reconfiguration was successful.",
       "already_configured": "This device is already configured.",
-      "not_vidaa_tv": "Discovered device is not a compatible Hisense VIDAA TV."
+      "not_vidaa_tv": "Discovered device is not a compatible VIDAA Smart TV."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Hisense VIDAA TV Options",
+        "title": "VIDAA Smart TV Options",
         "description": "Select an options category to configure:",
         "menu_options": {
           "power_network": "⚡ Power & Network",
@@ -338,13 +338,13 @@
   },
   "exceptions": {
     "device_config_entry_not_loaded": {
-      "message": "The Hisense VIDAA integration for device {device_id} is not loaded."
+      "message": "The VIDAA integration for device {device_id} is not loaded."
     },
     "device_not_valid": {
-      "message": "Device {device_id} is not a valid Hisense VIDAA device."
+      "message": "Device {device_id} is not a valid VIDAA device."
     },
     "invalid_entity_id": {
-      "message": "Entity {entity_id} is not a valid Hisense VIDAA entity."
+      "message": "Entity {entity_id} is not a valid VIDAA entity."
     },
     "unhandled_trigger_type": {
       "message": "Trigger type {trigger_type} is not handled."
@@ -408,12 +408,12 @@
       }
     },
     "auth_token_invalidated": {
-      "title": "Hisense TV: Reauthentication Required",
+      "title": "VIDAA TV: Reauthentication Required",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Re-pair with Hisense TV",
-            "description": "Home Assistant can no longer authenticate with your Hisense TV ({ip_address}). The TV broker has rejected the stored access and refresh tokens (this usually happens after a firmware update or hard power-cycle).\n\nClick **Submit** to start the pairing flow. Make sure your TV is powered **on** (not in standby) — a PIN code will appear on screen."
+            "title": "Re-pair with VIDAA TV",
+            "description": "Home Assistant can no longer authenticate with your VIDAA TV ({ip_address}). The TV broker has rejected the stored access and refresh tokens (this usually happens after a firmware update or hard power-cycle).\n\nClick **Submit** to start the pairing flow. Make sure your TV is powered **on** (not in standby) — a PIN code will appear on screen."
           }
         }
       }
@@ -426,7 +426,7 @@
   },
   "triggers": {
     "turn_on": {
-      "description": "Triggers when one or more Hisense VIDAA TVs are requested to turn on.",
+      "description": "Triggers when one or more VIDAA Smart TVs are requested to turn on.",
       "fields": {
         "device_id": {
           "description": "The TVs to listen to. At least one device or entity is required.",

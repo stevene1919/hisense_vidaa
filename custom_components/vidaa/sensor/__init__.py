@@ -7,20 +7,20 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from ..client import VidaaClient
+from ..const import DOMAIN, LEGACY_DOMAIN
 from ..tv.media import parse_applist_payload, parse_sourcelist_payload
 from ..tv.navigation import get_app_icon, get_source_icon
 from .diagnostic import (
-    HisenseVidaaAudioOutputSensor,
     HisenseVidaaAuthProfileSensor,
     HisenseVidaaBaseSensor,
     HisenseVidaaBrandProfileSensor,
     HisenseVidaaClockDriftSensor,
     HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
-    VidaaAudioOutputSensor,
     VidaaAuthProfileSensor,
     VidaaBaseSensor,
     VidaaBrandProfileSensor,
@@ -39,7 +39,6 @@ PARALLEL_UPDATES = 0
 __all__ = [
     "HisenseVidaaActiveAppSensor",
     "HisenseVidaaActiveSourceSensor",
-    "HisenseVidaaAudioOutputSensor",
     "HisenseVidaaAuthProfileSensor",
     "HisenseVidaaBaseSensor",
     "HisenseVidaaBrandProfileSensor",
@@ -49,7 +48,6 @@ __all__ = [
     "HisenseVidaaSessionStatusSensor",
     "VidaaActiveAppSensor",
     "VidaaActiveSourceSensor",
-    "VidaaAudioOutputSensor",
     "VidaaAuthProfileSensor",
     "VidaaBaseSensor",
     "VidaaBrandProfileSensor",
@@ -67,13 +65,20 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up VIDAA sensors based on a config entry."""
+    # Prune retired standalone audio output sensor from entity registry
+    # (audio_output is now consolidated under media_player extra_state_attributes)
+    entity_reg = er.async_get(hass)
+    for domain in (DOMAIN, LEGACY_DOMAIN):
+        unique_id = f"{entry.entry_id}_audio_output"
+        if entity_id := entity_reg.async_get_entity_id("sensor", domain, unique_id):
+            entity_reg.async_remove(entity_id)
+
     client: VidaaClient = entry.runtime_data.client
     async_add_entities([
         VidaaSessionStatusSensor(client, entry),
         VidaaReportedNameSensor(client, entry),
         VidaaActiveAppSensor(client, entry),
         VidaaActiveSourceSensor(client, entry),
-        VidaaAudioOutputSensor(client, entry),
         VidaaClockDriftSensor(client, entry),
     ])
 

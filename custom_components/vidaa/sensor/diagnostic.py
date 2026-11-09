@@ -248,58 +248,6 @@ class VidaaReportedNameSensor(VidaaBaseSensor):
         return attrs
 
 
-class VidaaAudioOutputSensor(VidaaEntity, SensorEntity):
-    """Sensor reporting active audio output (TV Speakers vs ARC/eARC)."""
-
-    _attr_translation_key = "audio_output"
-    _attr_icon = "mdi:audio-video"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
-        super().__init__(client, entry)
-        self._attr_unique_id = f"{self._entry_id}_audio_output"
-        self._attr_native_value = "TV Speakers" if client.connected else "Off"
-
-    def _schedule_state_update(self) -> None:
-        if getattr(self, "hass", None) is not None:
-            self.schedule_update_ha_state()
-
-    async def async_added_to_hass(self) -> None:
-        self._client.register_connected_callback(self._handle_connected)
-        self._client.register_state_callback(self._handle_state_update)
-        self._client.register_volume_callback(self._handle_volume_update)
-        self._client.register_disconnected_callback(self._handle_disconnected)
-
-    async def async_will_remove_from_hass(self) -> None:
-        self._client.unregister_connected_callback(self._handle_connected)
-        self._client.unregister_state_callback(self._handle_state_update)
-        self._client.unregister_volume_callback(self._handle_volume_update)
-        self._client.unregister_disconnected_callback(self._handle_disconnected)
-
-    def _handle_connected(self) -> None:
-        if self._attr_native_value == "Off":
-            self._attr_native_value = "TV Speakers"
-        self._schedule_state_update()
-
-    def _handle_disconnected(self) -> None:
-        self._attr_native_value = "Off"
-        self._schedule_state_update()
-
-    def _handle_volume_update(self, data: dict[str, Any]) -> None:
-        if isinstance(data, dict):
-            vol_type = data.get("volume_type")
-            if vol_type in (1, "1"):
-                self._attr_native_value = "ARC / eARC"
-            elif vol_type in (0, "0"):
-                self._attr_native_value = "TV Speakers"
-            self._schedule_state_update()
-
-    def _handle_state_update(self, state: dict[str, Any]) -> None:
-        if isinstance(state, dict) and (state.get("statetype") == "fake_sleep_0" or not self._client.connected):
-            self._attr_native_value = "Off"
-            self._schedule_state_update()
-
-
 class VidaaClockDriftSensor(VidaaBaseSensor):
     """Sensor displaying TV internal clock drift relative to host time."""
 
@@ -381,5 +329,4 @@ HisenseVidaaSessionStatusSensor = VidaaSessionStatusSensor
 HisenseVidaaAuthProfileSensor = VidaaAuthProfileSensor
 HisenseVidaaBrandProfileSensor = VidaaBrandProfileSensor
 HisenseVidaaReportedNameSensor = VidaaReportedNameSensor
-HisenseVidaaAudioOutputSensor = VidaaAudioOutputSensor
 HisenseVidaaClockDriftSensor = VidaaClockDriftSensor

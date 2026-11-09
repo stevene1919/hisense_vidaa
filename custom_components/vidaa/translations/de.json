@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Hisense VIDAA TV konfigurieren",
-        "description": "Gib die IP-Adresse deines Hisense-Fernsehers ein.",
+        "title": "VIDAA Smart TV konfigurieren",
+        "description": "Gib die IP-Adresse deines VIDAA-Fernsehers ein.",
         "data": {
           "ip_address": "IP-Adresse",
           "auth_profile": "Authentifizierungs- / Zertifikatsprofil",
@@ -11,7 +11,7 @@
         }
       },
       "discovery_confirm": {
-        "title": "Hisense VIDAA TV entdeckt",
+        "title": "VIDAA Smart TV entdeckt",
         "description": "Möchtest du {name} unter {ip_address} einrichten?"
       },
       "auth": {
@@ -22,12 +22,12 @@
         }
       },
       "reauth_confirm": {
-        "title": "Hisense TV neu authentifizieren",
-        "description": "Home Assistant muss sich erneut mit deinem Hisense-Fernseher ({ip_address}) koppeln. Klicke auf Absenden, um die PIN auf deinem Fernsehbildschirm anzuzeigen."
+        "title": "VIDAA TV neu authentifizieren",
+        "description": "Home Assistant muss sich erneut mit deinem VIDAA-Fernseher ({ip_address}) koppeln. Klicke auf Absenden, um die PIN auf deinem Fernsehbildschirm anzuzeigen."
       },
       "reconfigure": {
-        "title": "Hisense VIDAA TV neu konfigurieren",
-        "description": "Aktualisiere die Verbindungseinstellungen oder kopple deinen Hisense-Fernseher erneut.",
+        "title": "VIDAA Smart TV neu konfigurieren",
+        "description": "Aktualisiere die Verbindungseinstellungen oder kopple deinen VIDAA-Fernseher erneut.",
         "data": {
           "ip_address": "IP-Adresse",
           "auth_profile": "Authentifizierungs- / Zertifikatsprofil",
@@ -36,7 +36,7 @@
       },
       "certs": {
         "title": "Client-Zertifikate",
-        "description": "Konfiguriere TLS/SSL-Client-Zertifikate für die Kommunikation mit deinem Hisense VIDAA TV. Lege deine Zertifikate in {cert_dir} ab ({cert_file} und {key_file}).",
+        "description": "Konfiguriere TLS/SSL-Client-Zertifikate für die Kommunikation mit deinem VIDAA Smart TV. Lege deine Zertifikate in {cert_dir} ab ({cert_file} und {key_file}).",
         "data": {
           "use_ssl": "Verschlüsselte SSL/TLS-Verbindung verwenden",
           "certfile": "Zertifikatsdateipfad (.crt / .pem)",
@@ -45,7 +45,7 @@
       },
       "options": {
         "title": "Gerätefunktionen & Optionen",
-        "description": "Passe die Funktionen für deinen Hisense VIDAA TV an.",
+        "description": "Passe die Funktionen für deinen VIDAA Smart TV an.",
         "data": {
           "enable_remote": "Dedizierte Fernbedienungs-Entität aktivieren",
           "enable_wol": "Einschalten über Wake-on-LAN aktivieren",
@@ -68,13 +68,13 @@
       "reauth_successful": "Neu-Authentifizierung war erfolgreich.",
       "reconfigure_successful": "Neukonfiguration war erfolgreich.",
       "already_configured": "Dieses Gerät ist bereits konfiguriert.",
-      "not_vidaa_tv": "Das erkannte Gerät ist kein kompatibler Hisense VIDAA TV."
+      "not_vidaa_tv": "Das erkannte Gerät ist kein kompatibler VIDAA Smart TV."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Hisense VIDAA TV Optionen",
+        "title": "VIDAA Smart TV Optionen",
         "description": "Wähle eine Optionen-Kategorie zum Konfigurieren:",
         "menu_options": {
           "power_network": "⚡ Energie & Netzwerk",
@@ -337,10 +337,10 @@
   },
   "exceptions": {
     "ambiguous_target": {
-      "message": "Es sind mehrere Hisense VIDAA TVs konfiguriert. Bitte geben Sie einen Ziel-Fernseher an oder verwenden Sie 'all', um alle Fernseher anzusprechen."
+      "message": "Es sind mehrere VIDAA Smart TVs konfiguriert. Bitte geben Sie einen Ziel-Fernseher an oder verwenden Sie 'all', um alle Fernseher anzusprechen."
     },
     "no_target_device": {
-      "message": "Es wurde kein passender Hisense VIDAA TV für das angegebene Dienstaufrufziel gefunden."
+      "message": "Es wurde kein passender VIDAA Smart TV für das angegebene Dienstaufrufziel gefunden."
     },
     "not_connected": {
       "message": "Befehl kann nicht gesendet werden: Der Fernseher ist derzeit nicht verbunden."
@@ -430,12 +430,12 @@
       }
     },
     "auth_token_invalidated": {
-      "title": "Hisense TV: Neu-Authentifizierung erforderlich",
+      "title": "VIDAA TV: Neu-Authentifizierung erforderlich",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Erneut mit Hisense TV koppeln",
-            "description": "Home Assistant kann sich nicht mehr an deinem Hisense-Fernseher ({ip_address}) authentifizieren. Der TV-Broker hat die gespeicherten Zugriffs- und Aktualisierungstoken abgelehnt (dies geschieht normalerweise nach einem Firmware-Update oder einem Kaltstart).\n\nKlicke auf **Absenden**, um den Kopplungsprozess zu starten. Stelle sicher, dass dein Fernseher **eingeschaltet** ist (nicht im Standby) – auf dem Bildschirm erscheint ein PIN-Code."
+            "title": "Erneut mit VIDAA TV koppeln",
+            "description": "Home Assistant kann sich nicht mehr an deinem VIDAA-Fernseher ({ip_address}) authentifizieren. Der TV-Broker hat die gespeicherten Zugriffs- und Aktualisierungstoken abgelehnt (dies geschieht normalerweise nach einem Firmware-Update oder einem Kaltstart).\n\nKlicke auf **Absenden**, um den Kopplungsprozess zu starten. Stelle sicher, dass dein Fernseher **eingeschaltet** ist (nicht im Standby) – auf dem Bildschirm erscheint ein PIN-Code."
           }
         }
       }

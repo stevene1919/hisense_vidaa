@@ -46,6 +46,11 @@ class DiscoveryFlowMixin:
                 updates={CONF_IP_ADDRESS: self.ip_address}
             )
 
+        if hasattr(self, "_async_current_entries"):
+            for existing in self._async_current_entries():
+                if getattr(existing, "data", {}).get(CONF_IP_ADDRESS) == self.ip_address:
+                    return self.async_abort(reason="already_configured")
+
         return await self.async_step_discovery_confirm()
 
     async def async_step_ssdp(
@@ -92,7 +97,7 @@ class DiscoveryFlowMixin:
         return self.async_show_form(
             step_id="discovery_confirm",
             description_placeholders={
-                "name": self.discovered_title or self.ip_address or "Hisense TV",
+                "name": self.discovered_title or self.ip_address or "VIDAA TV",
                 "ip_address": self.ip_address or "",
             },
             errors=errors,

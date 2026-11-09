@@ -203,7 +203,7 @@ def _get_target_clients(hass: HomeAssistant, call: ServiceCall) -> list[Any]:
         return all_clients
     if len(all_clients) > 1:
         raise ServiceValidationError(
-            "Multiple Hisense VIDAA TVs are configured. Please specify a target TV, or use 'all' to target every TV.",
+            "Multiple VIDAA Smart TVs are configured. Please specify a target TV, or use 'all' to target every TV.",
             translation_domain=DOMAIN,
             translation_key="ambiguous_target",
         )
@@ -215,7 +215,7 @@ def _resolve_service_targets(hass: HomeAssistant, call: ServiceCall) -> list[Any
     clients = _get_target_clients(hass, call)
     if not clients:
         raise ServiceValidationError(
-            "No matching Hisense VIDAA TV was found for the specified service call target.",
+            "No matching VIDAA Smart TV was found for the specified service call target.",
             translation_domain=DOMAIN,
             translation_key="no_target_device",
         )
