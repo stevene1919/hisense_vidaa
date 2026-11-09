@@ -86,6 +86,10 @@ When an automation or manual service call fails, Home Assistant displays an erro
 ### 4. Do I Need an Android Phone or Android TV to Use This?
 * **No.** VIDAA OS is a Linux-based operating system, not Android TV.
 * **No Android Hardware/OS Required:** You do not need an Android phone, tablet, or emulator to set up or run this integration. Home Assistant connects directly to the TV over your local network.
+* **What if my TV runs Android TV or Google TV?**
+  * If your TV runs Android TV or Google TV (including North American Hisense Android models, Sony, TCL, Chromecast, or NVIDIA Shield), this integration will not connect because port `36669` is not present.
+  * For standard D-pad navigation and volume control, use Home Assistant's built-in [Android TV Remote](https://www.home-assistant.io/integrations/androidtv_remote/) integration.
+  * For advanced features (direct OS shell access, dynamic HDMI-CEC input discovery, real-time on-screen keyboard detection, and SoC hardware health sensors over native TLS 1.3 Wireless Debugging), use [**ADB mDNS**](https://github.com/stevene1919/adb_mdns/).
 * **Why the APK is Mentioned:** The vendor pre-signs its client mutual TLS certificate (`.p12` bundle) inside the publicly available VIDAA remote app package (`.apk`). Because an `.apk` is simply an unencrypted ZIP archive, you can open and extract it on any computer (Windows, macOS, Linux) with standard tools like `unzip` or 7-Zip without ever owning an Android device.
 
 ---

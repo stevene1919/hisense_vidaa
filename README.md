@@ -70,8 +70,11 @@ This integration officially supports **any smart TV running VIDAA OS** (pairing 
 > 💡 **Universal Architecture**: All VIDAA OS devices share the same internal broker and certificate authority (`RemoteCA`). The integration features **zero-configuration auto-detection** (querying UPnP `<modelDescription>` on port 38400 or certificate filename hints) to resolve your TV or projector brand, apply the correct security salt, and configure the proper manufacturer in Home Assistant's Device Registry. See the **[Complete OEM Brand Reference Matrix](docs/protocol_architecture.md#%EF%B8%8F-multi-brand-vidaa-os-ecosystem--oem-licensing)** for the full table of all 22+ supported partner brands.
 
 > [!NOTE]
-> **VIDAA OS vs Android TV (No Android Device Required)**:
-> This integration is specifically for televisions powered by **VIDAA OS** (embedded Linux). It is **not** for models running Android TV or Google TV (which should use Home Assistant's built-in Android TV Remote integration).
+> **VIDAA OS vs Android TV / Google TV**:
+> This integration is specifically for televisions powered by **VIDAA OS** (embedded Linux).
+> If your TV or projector runs **Android TV** or **Google TV** (such as North American Hisense Android models, Sony, TCL, Chromecast, or NVIDIA Shield):
+> - **Basic Remote Control**: Use Home Assistant's core [Android TV Remote](https://www.home-assistant.io/integrations/androidtv_remote/) integration for standard directional navigation and volume control.
+> - **Advanced Control & Diagnostics**: Check out [**ADB mDNS**](https://github.com/stevene1919/adb_mdns/) for direct OS shell access (`dumpsys`, `am`), dynamic HDMI-CEC input discovery, real-time on-screen keyboard detection, hardware SoC health sensors (CPU/RAM/storage), and reboot-proof dynamic mDNS tracking.
 
 ---
 
@@ -131,6 +134,12 @@ Standalone CLI tools ([`scripts/test_client.py`](scripts/test_client.py) and [`s
 ## 📋 Roadmap & Backlog
 
 See [`TODO.md`](TODO.md) for active development items, planned enhancements, and feature requests.
+
+---
+
+## 🌟 Other Integrations
+
+- 📺 [**ADB mDNS - Android Debug Bridge**](https://github.com/stevene1919/adb_mdns/): For smart TVs or streaming boxes running Android TV / Google TV. While Home Assistant's core integration covers basic remote keys, ADB mDNS unlocks advanced capabilities over native TLS 1.3 Wireless Debugging—including full shell execution, dynamic HDMI-CEC device discovery, keyboard active sensing, hardware telemetry, and reboot-proof dynamic mDNS tracking.
 
 ---
 
