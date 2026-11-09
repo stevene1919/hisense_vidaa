@@ -7,6 +7,7 @@ This document tracks active pending tasks, investigations, and future roadmap it
 ## 🚀 v3.5.0 Release & Rebrand Transition Tasks
 
 ### 1. GitHub Repository & HACS Rebrand Finalization
+
 - [ ] **GitHub Repository Rename**:
   - Rename repository on GitHub from `stevene1919/hisense_vidaa` $\rightarrow$ `stevene1919/vidaa` (leveraging GitHub's automatic HTTP & Git redirection).
   - Update local Git remotes and submodule paths to point to canonical `stevene1919/vidaa`.
@@ -24,12 +25,14 @@ This document tracks active pending tasks, investigations, and future roadmap it
 ## 🎯 Active Tasks & Real-World Investigations
 
 ### 1. Community Hardware Feedback & 4-Tier Auth Cascade ([Issue #6](https://github.com/stevene1919/hisense_vidaa/issues/6))
+
 - [ ] **Real-World Verification Across Diverse Firmware**:
   - Gather and monitor community feedback on TV firmware builds in the Middle tier (3000–3285) and Modern tier (≥ 3290) using the automated fallback cascade.
   - Test pairing across various international regional models (UK, EU, US, Australia) with isolated VLANs where UPnP/mDNS is blocked.
   - Document whether TVs with full internal paired device memory benefit from clearing paired mobile devices in TV Settings (*Settings → System → Advanced Settings → Mobile App Connection / Paired Devices*).
 
 ### 2. Cold AC Power Interruption Empirical Testing
+
 - [ ] **Physical Hardware Behavior Under Abrupt Mains Cut**:
   - Test physical behavior of TV and SoC when mains AC power is abruptly disconnected and restored (simulated blackout / wall switch cut).
   - Observe and document whether the TV restores to Cold Standby (screen off, network stack/broker uninitialized) or returns to active power state.
@@ -41,7 +44,9 @@ This document tracks active pending tasks, investigations, and future roadmap it
 ## 🗺️ Long-Term Roadmap & Future Enhancements
 
 ### 1. Home Assistant Core Upstream Submission
+
 *The integration currently fulfills 100% of all 54 Integration Quality Scale rules (Bronze, Silver, Gold, Platinum) as tracked in `quality_scale.yaml`.*
+
 - [ ] **Core Submission Readiness**:
   - Monitor stability of native `aiomqtt` engine and multi-brand cascade in production via HACS.
   - Coordinate upstream submission to `home-assistant/core` when appropriate.
@@ -55,7 +60,7 @@ For complete details on completed features and technical improvements, refer to 
 * **v3.5.0**:
   - **Universal VIDAA Rebranding (`vidaa`)**: Renamed integration domain to `vidaa` (VIDAA Smart TV), deployed official brand assets and icons, rebranded UI strings and translations, refactored symbols to `Vidaa*` with legacy aliases.
   - **Zero-Breaking-Change Migration**: Built automated config entry migration (v1 -> v2.1), preserving entity registries, unique IDs, and area assignments. Maintained `hisense_vidaa.*` actions, device trigger compatibility, and transitional shim.
-  - **HDMI-CEC Input Discovery & Clean Attributes (#56)**: Source dropdown and active source sensors discover and display friendly CEC names for all connected inputs (`HDMI 1 (Chromecast)`), allowing direct input selection by device name with clean `raw_source` and `connected_device` attributes.
+  - **HDMI-CEC Input Discovery & Clean Attributes**: Source dropdown and active source sensors discover and display friendly CEC names for all connected inputs (`HDMI 1 (Chromecast)`), allowing direct input selection by device name with clean `raw_source` and `connected_device` attributes.
   - **Streamlined Audio Output Attribute**: Replaced unsupported select/sensor entities with clean `audio_output` attribute (`TV Speakers` or `ARC / eARC`) on the media player entity.
   - **Transport Controls Disabled by Default**: Kept media player cards sleek by defaulting `enable_media_controls` to false, with full user toggle in Options Flow.
   - **Home Launcher Detection & Clock Sync (#58, #59)**: Added `remote_launcher` state tracking for Home screen navigation and offloaded fallback clock sync to thread.
