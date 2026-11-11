@@ -292,6 +292,56 @@ async def test_remote_and_media_player_idempotent_power_control(mock_client, moc
 
 
 @pytest.mark.anyio
+async def test_media_player_select_source_and_play_media_when_off(mock_client, mock_entry):
+    """Test that selecting source or playing media when TV is off powers on first."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
+
+    mp = HisenseVidaaMediaPlayer(
+        client=mock_client,
+        entry=mock_entry,
+    )
+    mp.hass = hass
+    mp._source_dict = {
+        "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1"},
+        "HDMI2": {"sourceid": "HDMI2", "sourcename": "HDMI2"},
+    }
+    mp._app_dict = {
+        "Netflix": {"appId": "1", "name": "Netflix", "url": "url1"},
+    }
+
+    # Put TV in off state
+    mp._handle_state_update({"statetype": "fake_sleep_0"})
+    assert mp.state == "off"
+
+    # Test select_source when off: should turn on then change source
+    mock_client.send_key.reset_mock()
+    mock_client.change_source.reset_mock()
+    await mp.async_select_source("HDMI2")
+
+    mock_client.send_key.assert_called_once_with("KEY_POWER")
+    mock_client.change_source.assert_called_once_with("HDMI2", "HDMI2")
+
+    # Put TV in off state again
+    mp._handle_state_update({"statetype": "fake_sleep_0"})
+    assert mp.state == "off"
+
+    # Test play_media when off: should turn on then launch app
+    mock_client.send_key.reset_mock()
+    mock_client.async_launch_app = AsyncMock()
+    await mp.async_play_media("app", "Netflix")
+
+    mock_client.send_key.assert_called_once_with("KEY_POWER")
+    mock_client.async_launch_app.assert_awaited_once_with("1", "Netflix", "url1")
+
+
+@pytest.mark.anyio
 async def test_remote_send_command_num_repeats_option(mock_client, mock_entry):
     """[F1-leg4] The key_repeat option applies when HA sends the service default."""
     mock_entry.options = {"enable_remote": True, "key_repeat": 5}

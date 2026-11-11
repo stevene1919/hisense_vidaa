@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
+
+from homeassistant.const import STATE_OFF
 
 from ..const import (
     CONF_ENABLE_WOL,
@@ -96,12 +99,31 @@ class MediaPlayerControlsMixin:
         self: HisenseVidaaMediaPlayer, media_type: str, media_id: str, **kwargs: Any
     ) -> None:
         """Launch an app, tune to channel, open URL/deep-link, or execute key command."""
+        if self.state == STATE_OFF:
+            _LOGGER.debug(
+                "[%s] TV is off; powering on before playing media '%s:%s'",
+                getattr(self._client, "ip", "unknown"),
+                media_type,
+                media_id,
+            )
+            await self.async_turn_on()
+            await asyncio.sleep(0.5)
+
         await async_execute_play_media(
             self._client, self._app_dict, media_type, media_id
         )
 
     async def async_select_source(self: HisenseVidaaMediaPlayer, source: str) -> None:
         """Select input source or smart application."""
+        if self.state == STATE_OFF:
+            _LOGGER.debug(
+                "[%s] TV is off; powering on before selecting source '%s'",
+                getattr(self._client, "ip", "unknown"),
+                source,
+            )
+            await self.async_turn_on()
+            await asyncio.sleep(0.5)
+
         await async_execute_select_source(
             self._client, self._source_dict, self._app_dict, source
         )
