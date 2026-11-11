@@ -142,20 +142,11 @@
       "session_status": {
         "name": "Sitzungsstatus"
       },
-      "auth_profile": {
-        "name": "Authentifizierungsprofil"
-      },
-      "brand_profile": {
-        "name": "Markenprofil"
-      },
       "active_app": {
         "name": "Aktive App"
       },
       "active_source": {
         "name": "Aktive Quelle"
-      },
-      "audio_output": {
-        "name": "Audioausgang"
       },
       "reported_name": {
         "name": "Gemeldeter Name"
@@ -203,11 +194,6 @@
       },
       "contrast": {
         "name": "Kontrast"
-      }
-    },
-    "remote": {
-      "remote": {
-        "name": "Fernbedienung"
       }
     },
     "switch": {

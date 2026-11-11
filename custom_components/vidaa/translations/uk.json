@@ -143,20 +143,11 @@
       "session_status": {
         "name": "Статус сесії"
       },
-      "auth_profile": {
-        "name": "Профіль автентифікації"
-      },
-      "brand_profile": {
-        "name": "Профіль бренду"
-      },
       "active_app": {
         "name": "Активний додаток"
       },
       "active_source": {
         "name": "Активне джерело"
-      },
-      "audio_output": {
-        "name": "Аудіовихід"
       },
       "reported_name": {
         "name": "Ім'я ТВ"
@@ -204,11 +195,6 @@
       },
       "contrast": {
         "name": "Контрастність"
-      }
-    },
-    "remote": {
-      "remote": {
-        "name": "Пульт"
       }
     },
     "switch": {

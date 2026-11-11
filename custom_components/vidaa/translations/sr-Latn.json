@@ -142,20 +142,11 @@
       "session_status": {
         "name": "Status sesije"
       },
-      "auth_profile": {
-        "name": "Profil autentifikacije"
-      },
-      "brand_profile": {
-        "name": "Profil marke"
-      },
       "active_app": {
         "name": "Aktivna aplikacija"
       },
       "active_source": {
         "name": "Aktivni izvor"
-      },
-      "audio_output": {
-        "name": "Audio izlaz"
       },
       "reported_name": {
         "name": "Prijavljeni naziv"
@@ -203,11 +194,6 @@
       },
       "contrast": {
         "name": "Kontrast"
-      }
-    },
-    "remote": {
-      "remote": {
-        "name": "Daljinski upravljač"
       }
     },
     "switch": {

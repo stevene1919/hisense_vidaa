@@ -141,58 +141,49 @@
   "entity": {
     "sensor": {
       "session_status": {
-        "name": "Session Status"
-      },
-      "auth_profile": {
-        "name": "Auth Profile"
-      },
-      "brand_profile": {
-        "name": "Brand Profile"
+        "name": "Session status"
       },
       "active_app": {
-        "name": "Active App"
+        "name": "Active app"
       },
       "active_source": {
-        "name": "Active Source"
-      },
-      "audio_output": {
-        "name": "Audio Output"
+        "name": "Active source"
       },
       "reported_name": {
-        "name": "Reported Name"
+        "name": "Reported name"
       },
       "clock_drift": {
-        "name": "Clock Drift"
+        "name": "Clock drift"
       }
     },
     "binary_sensor": {
       "mqtt_connected": {
-        "name": "MQTT Connected"
+        "name": "MQTT connection"
       },
       "in_use": {
-        "name": "In Use"
+        "name": "In use"
       }
     },
     "button": {
       "force_reconnect": {
-        "name": "Force Reconnect"
+        "name": "Force reconnect"
       },
       "sync_clock": {
-        "name": "Sync Clock"
+        "name": "Sync clock"
       },
       "probe_capabilities": {
-        "name": "Probe Capabilities"
+        "name": "Probe capabilities"
       },
       "trigger_reauth": {
-        "name": "Trigger Re-pairing"
+        "name": "Trigger re-pairing"
       }
     },
     "select": {
       "picture_mode": {
-        "name": "Picture Mode"
+        "name": "Picture mode"
       },
       "sound_mode": {
-        "name": "Sound Mode"
+        "name": "Sound mode"
       }
     },
     "number": {
@@ -206,17 +197,12 @@
         "name": "Contrast"
       }
     },
-    "remote": {
-      "remote": {
-        "name": "Remote"
-      }
-    },
     "switch": {
       "audio_only": {
-        "name": "Audio Only"
+        "name": "Audio only"
       },
       "debug_logging": {
-        "name": "Debug Logging"
+        "name": "Debug logging"
       }
     }
   },

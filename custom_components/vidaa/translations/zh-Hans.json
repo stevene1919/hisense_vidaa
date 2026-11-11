@@ -143,20 +143,11 @@
       "session_status": {
         "name": "会话状态"
       },
-      "auth_profile": {
-        "name": "认证配置"
-      },
-      "brand_profile": {
-        "name": "品牌配置"
-      },
       "active_app": {
         "name": "当前应用"
       },
       "active_source": {
         "name": "当前输入源"
-      },
-      "audio_output": {
-        "name": "音频输出"
       },
       "reported_name": {
         "name": "上报电视名称"
@@ -204,11 +195,6 @@
       },
       "contrast": {
         "name": "对比度"
-      }
-    },
-    "remote": {
-      "remote": {
-        "name": "遥控器"
       }
     },
     "switch": {

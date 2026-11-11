@@ -44,7 +44,7 @@ SERVICE_DEFAULT_NUM_REPEATS = 1
 class VidaaRemote(VidaaEntity, RemoteEntity):
     """VIDAA Remote entity."""
 
-    _attr_translation_key = "remote"
+    _attr_name = None
 
     def __init__(
         self,

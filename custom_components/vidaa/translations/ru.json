@@ -143,20 +143,11 @@
       "session_status": {
         "name": "Статус сессии"
       },
-      "auth_profile": {
-        "name": "Профиль аутентификации"
-      },
-      "brand_profile": {
-        "name": "Профиль бренда"
-      },
       "active_app": {
         "name": "Активное приложение"
       },
       "active_source": {
         "name": "Активный источник"
-      },
-      "audio_output": {
-        "name": "Аудиовыход"
       },
       "reported_name": {
         "name": "Имя ТВ"
@@ -204,11 +195,6 @@
       },
       "contrast": {
         "name": "Контрастность"
-      }
-    },
-    "remote": {
-      "remote": {
-        "name": "Пульт"
       }
     },
     "switch": {
