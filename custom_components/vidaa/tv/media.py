@@ -143,7 +143,7 @@ def is_live_tv_source(
 def build_media_player_current_source(
     source: str | None,
     connected_device: str | None,
-    enable_cec: bool = True,
+    enable_cec: bool = False,
 ) -> str | None:
     """Builds the active source name, optionally augmenting with HDMI-CEC connected device names."""
     if enable_cec and source and connected_device and "hdmi" in source.lower():
@@ -156,7 +156,7 @@ def build_media_player_source_list(
     app_dict: dict[str, dict[str, Any]],
     current_source: str | None = None,
     connected_device: str | None = None,
-    enable_cec: bool = True,
+    enable_cec: bool = False,
     include_apps: bool = True,
     configured_sources: list[str] | None = None,
 ) -> list[str]:

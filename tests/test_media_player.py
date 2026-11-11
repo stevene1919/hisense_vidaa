@@ -201,6 +201,39 @@ async def test_media_player_cec_source_naming(mock_client, mock_entry):
 
 
 @pytest.mark.anyio
+async def test_media_player_cec_source_naming_disabled_by_default(mock_client, mock_entry):
+    """Test that HDMI-CEC source labeling is disabled by default."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
+
+    # Empty options, should use DEFAULT_ENABLE_CEC_NAMES (False)
+    mock_entry.options = {"include_apps_in_sources": True}
+    mp = HisenseVidaaMediaPlayer(
+        client=mock_client,
+        entry=mock_entry,
+    )
+    mp.hass = hass
+    mp._source_dict = {
+        "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1", "displayname2": "Chromecast"},
+        "HDMI2": {"sourceid": "HDMI2", "sourcename": "HDMI2"},
+    }
+    mp._source = "HDMI2"
+    mp._connected_device = "PlayStation 5"
+
+    assert mp.source == "HDMI2"
+    assert "HDMI2" in mp.source_list
+    assert "HDMI2 (PlayStation 5)" not in mp.source_list
+    assert "HDMI1" in mp.source_list
+    assert "HDMI1 (Chromecast)" not in mp.source_list
+
+
+@pytest.mark.anyio
 async def test_remote_and_media_player_idempotent_power_control(mock_client, mock_entry):
     """Test idempotent power control on media player and remote."""
     hass = MagicMock(spec=HomeAssistant)

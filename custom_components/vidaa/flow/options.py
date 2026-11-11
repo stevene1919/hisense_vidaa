@@ -119,6 +119,7 @@ class VidaaOptionsFlowHandler(config_entries.OptionsFlow):
             discovered_sources = build_media_player_source_list(
                 source_dict=sources_dict,
                 app_dict=apps_dict,
+                enable_cec=options.get(CONF_ENABLE_CEC_NAMES, DEFAULT_ENABLE_CEC_NAMES),
                 include_apps=True,
             )
 
