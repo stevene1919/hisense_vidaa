@@ -68,11 +68,15 @@ def get_source_icon(source_name: str | None) -> str:
         return "mdi:power-sleep"
     if "off" in val:
         return "mdi:television-off"
+    if "home" in val or "launcher" in val:
+        return "mdi:view-dashboard"
+    if val == "app":
+        return "mdi:application"
     if "hdmi" in val:
         return "mdi:video-input-hdmi"
     if "tv" in val:
         return "mdi:television-classic"
-    if "av" in val:
+    if "av" in val or "component" in val:
         return "mdi:video-input-component"
     return "mdi:video-input-hdmi"
 

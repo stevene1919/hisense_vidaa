@@ -57,14 +57,20 @@ async def test_sensor_entities(mock_client, mock_entry):
 
     s_source = HisenseVidaaActiveSourceSensor(mock_client, mock_entry)
     s_source._handle_sourcelist_update([
-        {"sourceName": "HDMI 1", "displayname2": "Chromecast", "is_active": True},
-        {"sourceName": "HDMI 2", "is_active": False},
+        {"sourceName": "TV", "has_signal": 0, "is_active": False},
+        {"sourceName": "VIDAA tv", "has_signal": 1, "is_active": False},
+        {"sourceName": "HDMI 1", "displayname2": "Chromecast", "has_signal": 1, "is_active": True},
+        {"sourceName": "HDMI 2", "has_signal": 1, "is_active": False},
     ])
     assert s_source.native_value == "HDMI 1"
-    assert s_source.extra_state_attributes["raw_source"] == "HDMI 1"
+    assert "raw_source" not in s_source.extra_state_attributes
+    assert "custom_labels" not in s_source.extra_state_attributes
     assert s_source.extra_state_attributes["connected_device"] == "Chromecast"
     assert s_source.extra_state_attributes["display_name"] == "HDMI 1 (Chromecast)"
-    assert s_source.extra_state_attributes["custom_labels"] == {"HDMI 1": "Chromecast"}
+    assert s_source.extra_state_attributes["available_sources"] == ["TV", "HDMI 1", "HDMI 2"]
+    assert s_source.extra_state_attributes["connected_inputs"] == ["HDMI 1", "HDMI 2"]
+    assert "VIDAA tv" not in s_source.extra_state_attributes["available_sources"]
+    assert "VIDAA tv" not in s_source.extra_state_attributes["connected_inputs"]
 
     s_source._handle_state_update({
         "statetype": "sourceswitch",
@@ -80,8 +86,9 @@ async def test_sensor_entities(mock_client, mock_entry):
         "channel_name": "ABC HD",
         "channel_num": "20",
     })
-    assert s_source.extra_state_attributes["channel_name"] == "ABC HD"
-    assert s_source.extra_state_attributes["channel_num"] == "20"
+    assert s_source.native_value == "TV"
+    assert "channel_name" not in s_source.extra_state_attributes
+    assert "channel_num" not in s_source.extra_state_attributes
 
     s_name = HisenseVidaaReportedNameSensor(mock_client, mock_entry)
     assert s_name.native_value == "Living Room TV"
@@ -382,9 +389,14 @@ def test_active_app_and_source_remote_launcher_transition(mock_client, mock_entr
     assert app_sensor.native_value == "Home Launcher"
     assert app_sensor.extra_state_attributes["last_known_app"] == "Home Launcher"
 
-    # Active source sensor on remote_launcher
+    # Active source sensor on remote_launcher and app transitions
     source_sensor._handle_state_update({"statetype": "remote_launcher"})
-    assert source_sensor.native_value == "None"
+    assert source_sensor.native_value == "Home Launcher"
+    assert source_sensor.icon == "mdi:view-dashboard"
+
+    source_sensor._handle_state_update({"statetype": "app", "name": "youtube", "appId": "3"})
+    assert source_sensor.native_value == "App"
+    assert source_sensor.icon == "mdi:application"
 
     # Enter YouTube
     app_sensor._handle_state_update({"statetype": "app", "name": "youtube", "url": "youtube", "appId": "3"})

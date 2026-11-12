@@ -20,6 +20,7 @@ __all__ = [
     "execute_play_media",
     "execute_select_source",
     "is_live_tv_source",
+    "is_physical_input_source",
     "parse_applist_data",
     "parse_applist_payload",
     "parse_media_state_broadcast",
@@ -60,10 +61,31 @@ def parse_applist_payload(
     return app_dict, app_icons, favorite_apps
 
 
+def is_physical_input_source(source_name: str | None) -> bool:
+    """Return True if the source name represents a physical hardware input or broadcast tuner."""
+    if not source_name:
+        return False
+    s_lower = str(source_name).strip().lower()
+    if "hdmi" in s_lower:
+        return True
+    return s_lower in (
+        "tv",
+        "dtv",
+        "atv",
+        "tuner",
+        "antenna",
+        "cable",
+        "av",
+        "component",
+        "composite",
+        "vga",
+    )
+
+
 def parse_sourcelist_payload(
     sources: list[dict[str, Any]] | None,
 ) -> tuple[list[str], list[str], dict[str, str], str | None]:
-    """Parses raw TV source list payload.
+    """Parses raw TV source list payload into physical hardware inputs.
 
     Returns:
         (available_sources: [name, ...], connected_inputs: [name, ...], custom_labels: {name: custom_label}, active_source: str | None)
@@ -83,7 +105,7 @@ def parse_sourcelist_payload(
                 or source.get("displayname")
                 or source.get("name")
             )
-            if source_name:
+            if source_name and is_physical_input_source(source_name):
                 available_sources.append(source_name)
                 if source.get("has_signal") in ("1", 1, True):
                     connected_inputs.append(source_name)
@@ -91,13 +113,13 @@ def parse_sourcelist_payload(
                 if custom_label and str(custom_label).strip():
                     custom_labels[source_name] = str(custom_label).strip()
 
-            if (
-                source.get("is_signal") in ("1", 1, True)
-                or source.get("is_active")
-                or source.get("isactive")
-                or source.get("active")
-            ):
-                active_source = source_name
+                if (
+                    source.get("is_signal") in ("1", 1, True)
+                    or source.get("is_active")
+                    or source.get("isactive")
+                    or source.get("active")
+                ):
+                    active_source = source_name
 
     return available_sources, connected_inputs, custom_labels, active_source
 
@@ -163,7 +185,7 @@ def build_media_player_source_list(
     """Builds the full sorted list of selectable inputs and smart TV apps."""
     sources: list[str] = []
     for source_name, source_data in source_dict.items():
-        if "hdmi" in source_name.lower() or source_name.lower() in ("tv", "av"):
+        if is_physical_input_source(source_name):
             dev_label = None
             if enable_cec and "hdmi" in source_name.lower():
                 if isinstance(source_data, dict):

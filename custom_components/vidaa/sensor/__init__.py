@@ -212,8 +212,6 @@ class VidaaActiveSourceSensor(VidaaMqttTrackingSensor):
         self._connected_inputs: list[str] = []
         self._custom_labels: dict[str, str] = {}
         self._connected_device: str | None = None
-        self._channel_name: str | None = None
-        self._channel_num: str | None = None
         self._last_known_source: str | None = None
 
     def _register_custom_callbacks(self) -> None:
@@ -226,10 +224,10 @@ class VidaaActiveSourceSensor(VidaaMqttTrackingSensor):
         statetype = state.get("statetype")
         if not self._client.connected:
             self._attr_native_value = "Off"
-            self._connected_device = self._channel_name = self._channel_num = None
+            self._connected_device = None
         elif statetype == "fake_sleep_0" or not self._client.is_on:
             self._attr_native_value = "Standby"
-            self._connected_device = self._channel_name = self._channel_num = None
+            self._connected_device = None
         elif statetype == "sourceswitch":
             self._attr_native_value = state.get("sourcename") or state.get("sourceName") or state.get("displayname") or "HDMI"
             self._last_known_source = self._attr_native_value
@@ -238,16 +236,16 @@ class VidaaActiveSourceSensor(VidaaMqttTrackingSensor):
                 or state.get("source_detail")
                 or self._custom_labels.get(self._attr_native_value)
             )
-            self._channel_name = self._channel_num = None
         elif statetype == "livetv":
             self._attr_native_value = "TV"
             self._last_known_source = "TV"
             self._connected_device = None
-            self._channel_name = state.get("channel_name")
-            self._channel_num = state.get("channel_num")
-        elif statetype in ("app", "launcher", "remote_launcher"):
-            self._attr_native_value = "None"
-            self._connected_device = self._channel_name = self._channel_num = None
+        elif statetype == "app":
+            self._attr_native_value = "App"
+            self._connected_device = None
+        elif statetype in ("launcher", "remote_launcher"):
+            self._attr_native_value = "Home Launcher"
+            self._connected_device = None
         elif state.get("sourcename") or state.get("sourceName"):
             self._attr_native_value = state.get("sourcename") or state.get("sourceName")
             self._last_known_source = self._attr_native_value
@@ -275,21 +273,21 @@ class VidaaActiveSourceSensor(VidaaMqttTrackingSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return sensor attributes."""
+        """Return physical input source attributes."""
         attrs: dict[str, Any] = {}
-        if self._attr_native_value and self._attr_native_value not in ("Off", "Standby", "None"):
-            attrs["raw_source"] = self._attr_native_value
-            if self._connected_device and "hdmi" in str(self._attr_native_value).lower():
-                attrs["display_name"] = f"{self._attr_native_value} ({self._connected_device})"
+        if (
+            self._attr_native_value
+            and self._attr_native_value not in ("Off", "Standby", "App", "Home Launcher")
+            and self._connected_device
+            and "hdmi" in str(self._attr_native_value).lower()
+        ):
+            attrs["display_name"] = f"{self._attr_native_value} ({self._connected_device})"
         if self._last_known_source:
             attrs["last_known_source"] = self._last_known_source
         for key, val in (
             ("available_sources", self._available_sources),
             ("connected_inputs", self._connected_inputs),
-            ("custom_labels", self._custom_labels),
             ("connected_device", self._connected_device),
-            ("channel_name", self._channel_name),
-            ("channel_num", self._channel_num),
         ):
             if val:
                 attrs[key] = val
