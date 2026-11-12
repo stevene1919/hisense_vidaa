@@ -19,18 +19,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from ..client import VidaaClient
 from ..const import (
-    AUTH_PROFILES,
-    BRAND_MAP,
-    BRAND_PROFILES,
-    CONF_AUTH_PROFILE,
-    CONF_BRAND,
     CONF_ENABLE_CEC_NAMES,
     CONF_ENABLE_MEDIA_CONTROLS,
     CONF_INCLUDE_APPS_IN_SOURCES,
     CONF_SOURCES,
-    DEFAULT_AUTH_PROFILE,
-    DEFAULT_BRAND,
-    DEFAULT_BRAND_OPTION,
     DEFAULT_ENABLE_CEC_NAMES,
     DEFAULT_ENABLE_MEDIA_CONTROLS,
     DEFAULT_INCLUDE_APPS_IN_SOURCES,
@@ -82,6 +74,7 @@ class VidaaMediaPlayer(
         self._volume_type = 0
         self._muted = False
         self._source = None
+        self._app_id: str | None = None
         self._source_list = []
         self._source_dict = {}
         self._app_list = []
@@ -90,7 +83,6 @@ class VidaaMediaPlayer(
         self._connected_device = None
         self._channel_name = None
         self._channel_num = None
-        self._volume_type = 0
         self._state = STATE_ON if getattr(client, "connected", False) else STATE_OFF
         self._debounce_handle: asyncio.TimerHandle | None = None
 
@@ -162,35 +154,10 @@ class VidaaMediaPlayer(
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return device-specific, Live TV, and configuration metadata attributes."""
-        auth_key = self._options.get(
-            CONF_AUTH_PROFILE,
-            self._entry.data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE),
-        )
-        brand_key = self._options.get(
-            CONF_BRAND,
-            self._entry.data.get("brand_profile", self._entry.data.get(CONF_BRAND, DEFAULT_BRAND_OPTION)),
-        )
-        active_code = getattr(self._client, "brand", None) or self._entry.data.get(CONF_BRAND, DEFAULT_BRAND)
-        if active_code == "auto":
-            active_code = self._entry.data.get("resolved_brand", DEFAULT_BRAND)
-
+        """Return audio output and active source/tuner context attributes."""
         attributes: dict[str, Any] = {
-            "mqtt_connected": self._client.connected,
-            "auth_profile": AUTH_PROFILES.get(auth_key, str(auth_key).title() if auth_key else "Auto"),
-            "brand_profile": BRAND_PROFILES.get(brand_key, str(brand_key).title() if brand_key else "Auto"),
-            "active_brand": BRAND_MAP.get(active_code, str(active_code).upper() if active_code else "Hisense"),
             "audio_output": "ARC / eARC" if self._volume_type == 1 else "TV Speakers",
         }
-        if self._client:
-            if getattr(self._client, "device_name", None):
-                attributes["reported_name"] = self._client.device_name
-            if getattr(self._client, "model_name", None):
-                attributes["model"] = self._client.model_name
-            if getattr(self._client, "firmware_version", None):
-                attributes["software_version"] = self._client.firmware_version
-        if self._mac:
-            attributes["mac_address"] = self._mac
         if self._source:
             attributes["raw_source"] = self._source
         connected_dev = self._resolve_connected_device()
@@ -207,6 +174,41 @@ class VidaaMediaPlayer(
         if self._channel_infos:
             attributes["channel_infos"] = self._channel_infos
         return attributes
+
+    def _resolve_active_app_info(self) -> dict[str, Any] | None:
+        """Resolve app metadata if the current source matches an installed application."""
+        if not self._source or not self._app_dict:
+            return None
+        if self._source in self._app_dict:
+            info = self._app_dict[self._source]
+            return info if isinstance(info, dict) else None
+        src_lower = self._source.lower()
+        for name, info in self._app_dict.items():
+            if name.lower() == src_lower and isinstance(info, dict):
+                return info
+        return None
+
+    @property
+    def app_name(self) -> str | None:
+        """Return the name of the currently running application."""
+        if self._state == STATE_OFF:
+            return None
+        if (app_info := self._resolve_active_app_info()) is not None:
+            return str(app_info.get("name") or app_info.get("appName") or self._source)
+        if getattr(self, "_app_id", None) and self._source:
+            return self._source
+        return None
+
+    @property
+    def app_id(self) -> str | None:
+        """Return the ID of the currently running application."""
+        if self._state == STATE_OFF:
+            return None
+        if (app_info := self._resolve_active_app_info()) is not None:
+            raw_id = app_info.get("appId") or app_info.get("app_id")
+            if raw_id is not None and str(raw_id):
+                return str(raw_id)
+        return getattr(self, "_app_id", None)
 
     def _resolve_connected_device(self) -> str | None:
         """Resolve connected CEC device name from live state or cached sourcelist."""
@@ -298,7 +300,7 @@ class VidaaMediaPlayer(
             return None
         if self.is_live_tv():
             return MediaType.CHANNEL
-        if self._source and self._source in self._app_dict:
+        if self.app_name is not None:
             return MediaType.APP
         return None
 
@@ -322,12 +324,13 @@ class VidaaMediaPlayer(
 
     @property
     def media_title(self) -> str | None:
-        """Return the title of current playing media or Live TV program."""
+        """Return the Live TV program title or connected CEC/custom input device label."""
         if self._state == STATE_OFF:
             return None
-        if self._client and self._client.current_program:
-            return self._client.current_program
-        return self._source
+        prog = getattr(self._client, "current_program", None) if self._client else None
+        if isinstance(prog, str) and prog:
+            return prog
+        return self._resolve_connected_device()
 
     @property
     def media_series_title(self) -> str | None:

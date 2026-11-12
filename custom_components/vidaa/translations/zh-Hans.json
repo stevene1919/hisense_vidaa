@@ -324,13 +324,13 @@
   },
   "exceptions": {
     "device_config_entry_not_loaded": {
-      "message": "设备 {device_id} 的海信 VIDAA 集成未加载。"
+      "message": "设备 {device_id} 的 VIDAA 集成未加载。"
     },
     "device_not_valid": {
-      "message": "设备 {device_id} 不是有效的海信 VIDAA 设备。"
+      "message": "设备 {device_id} 不是有效的 VIDAA 设备。"
     },
     "invalid_entity_id": {
-      "message": "实体 {entity_id} 不是有效的海信 VIDAA 实体。"
+      "message": "实体 {entity_id} 不是有效的 VIDAA 实体。"
     },
     "unhandled_trigger_type": {
       "message": "不支持触发器类型 {trigger_type}。"

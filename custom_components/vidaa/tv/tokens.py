@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import sys
 import time
@@ -153,7 +154,7 @@ class TvTokenLifecycleMixin:
         sync_fn = self.__dict__.get("sync_clock")
         if sync_fn is not None and callable(sync_fn):
             res = sync_fn(timeout=timeout)
-            if asyncio.iscoroutine(res):
+            if inspect.iscoroutine(res):
                 return await res
             return res
 
@@ -161,7 +162,7 @@ class TvTokenLifecycleMixin:
         if tv_timestamp is None:
             try:
                 fn = _get_tv_timestamp_fn()
-                if asyncio.iscoroutinefunction(fn):
+                if inspect.iscoroutinefunction(fn):
                     tv_timestamp = await fn(self.ip, timeout=timeout)
                 else:
                     tv_timestamp = await asyncio.to_thread(fn, self.ip, timeout=timeout)

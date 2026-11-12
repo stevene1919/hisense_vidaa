@@ -54,9 +54,6 @@
       "session_status": {
         "default": "mdi:shield-check"
       },
-      "auth_profile": {
-        "default": "mdi:shield-key-outline"
-      },
       "reported_name": {
         "default": "mdi:television-ambient-light"
       },
@@ -65,9 +62,6 @@
       },
       "active_source": {
         "default": "mdi:video-input-hdmi"
-      },
-      "audio_output": {
-        "default": "mdi:volume-source"
       },
       "clock_drift": {
         "default": "mdi:clock-check-outline"

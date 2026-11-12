@@ -15,15 +15,11 @@ from ..const import DOMAIN, LEGACY_DOMAIN
 from ..tv.media import parse_applist_payload, parse_sourcelist_payload
 from ..tv.navigation import get_app_icon, get_source_icon
 from .diagnostic import (
-    HisenseVidaaAuthProfileSensor,
     HisenseVidaaBaseSensor,
-    HisenseVidaaBrandProfileSensor,
     HisenseVidaaClockDriftSensor,
     HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
-    VidaaAuthProfileSensor,
     VidaaBaseSensor,
-    VidaaBrandProfileSensor,
     VidaaClockDriftSensor,
     VidaaReportedNameSensor,
     VidaaSessionStatusSensor,
@@ -39,18 +35,14 @@ PARALLEL_UPDATES = 0
 __all__ = [
     "HisenseVidaaActiveAppSensor",
     "HisenseVidaaActiveSourceSensor",
-    "HisenseVidaaAuthProfileSensor",
     "HisenseVidaaBaseSensor",
-    "HisenseVidaaBrandProfileSensor",
     "HisenseVidaaClockDriftSensor",
     "HisenseVidaaMqttTrackingSensor",
     "HisenseVidaaReportedNameSensor",
     "HisenseVidaaSessionStatusSensor",
     "VidaaActiveAppSensor",
     "VidaaActiveSourceSensor",
-    "VidaaAuthProfileSensor",
     "VidaaBaseSensor",
-    "VidaaBrandProfileSensor",
     "VidaaClockDriftSensor",
     "VidaaMqttTrackingSensor",
     "VidaaReportedNameSensor",
@@ -65,13 +57,13 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up VIDAA sensors based on a config entry."""
-    # Prune retired standalone audio output sensor from entity registry
-    # (audio_output is now consolidated under media_player extra_state_attributes)
+    # Prune retired standalone sensors from entity registry
     entity_reg = er.async_get(hass)
-    for domain in (DOMAIN, LEGACY_DOMAIN):
-        unique_id = f"{entry.entry_id}_audio_output"
-        if entity_id := entity_reg.async_get_entity_id("sensor", domain, unique_id):
-            entity_reg.async_remove(entity_id)
+    for suffix in ("audio_output", "brand_profile", "auth_profile"):
+        unique_id = f"{entry.entry_id}_{suffix}"
+        for domain in (DOMAIN, LEGACY_DOMAIN):
+            if entity_id := entity_reg.async_get_entity_id("sensor", domain, unique_id):
+                entity_reg.async_remove(entity_id)
 
     client: VidaaClient = entry.runtime_data.client
     async_add_entities([

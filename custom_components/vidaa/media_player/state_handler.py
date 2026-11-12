@@ -43,10 +43,12 @@ class MediaPlayerStateHandlerMixin:
         if parsed["is_on"] and statetype not in ("fake_sleep_0", "fake_sleep_1"):
             if statetype in ("sourceswitch", "app", "livetv"):
                 self._source = parsed["source"]
+                self._app_id = parsed.get("app_id") if statetype == "app" else None
                 self._connected_device = parsed["connected_device"]
                 self._channel_name = parsed["channel_name"]
                 self._channel_num = parsed["channel_num"]
         elif not parsed["is_on"]:
+            self._app_id = None
             self._connected_device = None
             self._channel_name = None
             self._channel_num = None

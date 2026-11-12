@@ -81,7 +81,7 @@ When an automation or manual service call fails, Home Assistant displays an erro
 * **Fix:**
   * Keep **Brand Profile** set to **Auto Detect (Recommended)**. When enabled, the integration queries UPnP port `38400` / `18400` to extract `brand=` from `<modelDescription>` or cascades through supported candidate OEM brands (`tos`, `loe`, `tpv`, `shp`, `jvc`, `tpo`).
   * If adding a device across an isolated VLAN where UPnP is blocked and cascade is exhausted, open **Settings → Devices & Services → VIDAA Smart TV → Configure → Security** and manually select your device's brand from the dropdown.
-  * Inspect `sensor.<tv_name>_brand_profile` to view the currently configured brand profile and active OEM brand code in real time.
+  * Inspect `sensor.<tv_name>_session_status` attributes (`brand_profile`, `active_brand`, `auth_profile`) to view the currently configured brand profile and active OEM brand in real time.
 
 ### 4. Do I Need an Android Phone or Android TV to Use This?
 * **No.** VIDAA OS is a Linux-based operating system, not Android TV.

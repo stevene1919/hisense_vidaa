@@ -55,6 +55,7 @@ class VidaaSessionStatusSensor(VidaaBaseSensor):
         self._client.register_disconnected_callback(self._handle_disconnected)
         self._client.register_token_refreshed_callback(self._handle_state_change)
         self._client.register_auth_failed_callback(self._handle_auth_failed)
+        self._client.register_device_info_callback(self._handle_state_change)
         self._update_state()
 
     async def async_will_remove_from_hass(self) -> None:
@@ -62,6 +63,7 @@ class VidaaSessionStatusSensor(VidaaBaseSensor):
         self._client.unregister_disconnected_callback(self._handle_disconnected)
         self._client.unregister_token_refreshed_callback(self._handle_state_change)
         self._client.unregister_auth_failed_callback(self._handle_auth_failed)
+        self._client.unregister_device_info_callback(self._handle_state_change)
 
     def _handle_state_change(self, *args: Any) -> None:
         self._update_state()
@@ -97,12 +99,33 @@ class VidaaSessionStatusSensor(VidaaBaseSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return diagnostic session details."""
+        """Return diagnostic session and profile details."""
         raw_cid = self._client.client_id or ""
         masked_cid = f"{raw_cid[:8]}...{raw_cid[-4:]}" if len(raw_cid) > 12 else raw_cid
+        entry_data = getattr(self._entry, "data", None)
+        data_dict = entry_data if isinstance(entry_data, dict) else {}
+        opts_dict = self._options if isinstance(self._options, dict) else {}
+
+        auth_key = opts_dict.get(
+            CONF_AUTH_PROFILE,
+            data_dict.get(CONF_AUTH_PROFILE, getattr(self._client, "auth_profile", DEFAULT_AUTH_PROFILE)),
+        )
+        brand_key = opts_dict.get(
+            CONF_BRAND,
+            data_dict.get("brand_profile", data_dict.get(CONF_BRAND, DEFAULT_BRAND_OPTION)),
+        )
+        active_code = getattr(self._client, "brand", None)
+        if not isinstance(active_code, str) or not active_code:
+            active_code = data_dict.get(CONF_BRAND, DEFAULT_BRAND)
+        if active_code == "auto":
+            active_code = data_dict.get("resolved_brand", DEFAULT_BRAND)
+
         attrs: dict[str, Any] = {
             "client_id": masked_cid,
             "auth_profile": self._client.auth_profile,
+            "configured_auth_profile": AUTH_PROFILES.get(str(auth_key), str(auth_key).title() if auth_key else "Auto"),
+            "brand_profile": BRAND_PROFILES.get(str(brand_key), str(brand_key).title() if brand_key else "Auto"),
+            "active_brand": BRAND_MAP.get(str(active_code), str(active_code).upper() if active_code else "Hisense"),
             "encryption": "TLSv1.2 (Port 36669)" if self._client.use_ssl else "Unencrypted (Port 36669)",
             "local_only": True,
         }
@@ -116,71 +139,6 @@ class VidaaSessionStatusSensor(VidaaBaseSensor):
             exp = (self._client.refresh_token_time + (self._client.refresh_token_duration * 86400)) - offset
             attrs["refresh_token_expires_at"] = datetime.fromtimestamp(exp, tz=UTC).isoformat()
         return attrs
-
-
-class VidaaAuthProfileSensor(VidaaBaseSensor):
-    """Sensor displaying configured authentication profile."""
-
-    _attr_translation_key = "auth_profile"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
-        super().__init__(client, entry)
-        self._attr_unique_id = f"{self._entry_id}_auth_profile"
-        key = self._options.get(
-            CONF_AUTH_PROFILE,
-            entry.data.get(CONF_AUTH_PROFILE, DEFAULT_AUTH_PROFILE),
-        )
-        self._attr_native_value = AUTH_PROFILES.get(key, key.title())
-
-
-class VidaaBrandProfileSensor(VidaaBaseSensor):
-    """Sensor displaying configured brand profile and detected hardware brand."""
-
-    _attr_translation_key = "brand_profile"
-    _attr_icon = "mdi:tag-outline"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, client: VidaaClient, entry: ConfigEntry) -> None:
-        super().__init__(client, entry)
-        self._attr_unique_id = f"{self._entry_id}_brand_profile"
-        self._update_value()
-
-    async def async_added_to_hass(self) -> None:
-        self._client.register_connected_callback(self._handle_update)
-        self._client.register_device_info_callback(self._handle_update)
-        self._update_value()
-
-    async def async_will_remove_from_hass(self) -> None:
-        self._client.unregister_connected_callback(self._handle_update)
-        self._client.unregister_device_info_callback(self._handle_update)
-
-    def _handle_update(self, *args: Any) -> None:
-        self._update_value()
-        self._schedule_state_update()
-
-    def _update_value(self) -> None:
-        key = self._options.get(
-            CONF_BRAND,
-            self._entry.data.get("brand_profile", self._entry.data.get(CONF_BRAND, DEFAULT_BRAND_OPTION)),
-        )
-        self._attr_native_value = BRAND_PROFILES.get(key, key.title() if key else "Auto")
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return diagnostic brand details."""
-        configured = self._options.get(
-            CONF_BRAND,
-            self._entry.data.get("brand_profile", self._entry.data.get(CONF_BRAND, DEFAULT_BRAND_OPTION)),
-        )
-        active_code = getattr(self._client, "brand", None) or self._entry.data.get(CONF_BRAND, DEFAULT_BRAND)
-        if active_code == "auto":
-            active_code = self._entry.data.get("resolved_brand", DEFAULT_BRAND)
-        return {
-            "configured_profile": configured,
-            "active_brand_code": active_code,
-            "active_brand": BRAND_MAP.get(active_code, active_code.upper() if active_code else "Hisense"),
-        }
 
 
 class VidaaReportedNameSensor(VidaaBaseSensor):
@@ -326,7 +284,5 @@ class VidaaClockDriftSensor(VidaaBaseSensor):
 # Backwards-compatible aliases during migration
 HisenseVidaaBaseSensor = VidaaBaseSensor
 HisenseVidaaSessionStatusSensor = VidaaSessionStatusSensor
-HisenseVidaaAuthProfileSensor = VidaaAuthProfileSensor
-HisenseVidaaBrandProfileSensor = VidaaBrandProfileSensor
 HisenseVidaaReportedNameSensor = VidaaReportedNameSensor
 HisenseVidaaClockDriftSensor = VidaaClockDriftSensor

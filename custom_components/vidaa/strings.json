@@ -387,6 +387,7 @@
     },
     "brand": {
       "options": {
+        "auto": "Auto Detect (Recommended)",
         "his": "Hisense",
         "tos": "Toshiba",
         "loe": "Loewe",
@@ -407,7 +408,8 @@
         "ves": "Vestel",
         "bra": "Brandt",
         "met": "Metz",
-        "lei": "Leica"
+        "lei": "Leica",
+        "tpo": "TOPTRO"
       }
     }
   },

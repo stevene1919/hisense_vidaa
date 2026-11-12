@@ -284,8 +284,8 @@ VIDAA OS is not exclusive to Hisense televisions; it is licensed globally to mul
    Once an OEM brand is resolved via cascade, certificate hinting, UPnP auto-detection, or manual selection, post-PIN device detail queries preserve the active OEM brand, preventing fallback resets to `"his"`.
 5. **Certificate Filename Hinting**:
    If users place brand-named client certificates in `/config/ssl/` (e.g. `toshiba.crt`, `loewe.pem`, `philips.crt`, `sharp.pem`, `jvc.key`, `toptro.crt`, `rcamobile.p12`), the integration automatically detects the brand from the file names during setup.
-6. **Dedicated Brand Profile Diagnostic Telemetry**:
-   Exposes `sensor.<device>_brand_profile` under Home Assistant's **Diagnostic** category. This displays the configured brand profile (`Auto Detect (Recommended)`, `Hisense`, `Toshiba`, etc.) and exposes diagnostic attributes (`configured_profile`, `active_brand_code`, `active_brand`), making it trivial to inspect which OEM salt is active in runtime.
+6. **Session & Brand Profile Diagnostic Telemetry**:
+   Exposes `sensor.<device>_session_status` under Home Assistant's **Diagnostic** category. Its state attributes include `brand_profile` (`Auto Detect (Recommended)`, `Hisense`, `Toshiba`, etc.), `active_brand`, `auth_profile`, and `configured_auth_profile`, making it trivial to inspect which OEM salt and authentication tier are active in runtime.
 7. **Runtime Brand Updates**:
    Changing `CONF_BRAND` in the Security Options menu dynamically regenerates pairing credentials and refreshes MQTT sessions without breaking existing entity registries.
 

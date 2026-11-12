@@ -18,8 +18,6 @@ from custom_components.vidaa.button import (
 from custom_components.vidaa.sensor import (
     HisenseVidaaActiveAppSensor,
     HisenseVidaaActiveSourceSensor,
-    HisenseVidaaAuthProfileSensor,
-    HisenseVidaaBrandProfileSensor,
     HisenseVidaaClockDriftSensor,
     HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
@@ -50,8 +48,7 @@ async def test_sensor_entities(mock_client, mock_entry):
     assert s_status.native_value == "Reauth Required"
 
     mock_client.connected = True
-    s_profile = HisenseVidaaAuthProfileSensor(mock_client, mock_entry)
-    assert s_profile.native_value == "VIDAA 2.0 (Newer Firmware / 2024+)"
+    assert s_status.extra_state_attributes["configured_auth_profile"] == "VIDAA 2.0 (Newer Firmware / 2024+)"
 
     s_app = HisenseVidaaActiveAppSensor(mock_client, mock_entry)
     s_app._handle_applist_update([{"appId": "123", "appName": "Netflix"}])
@@ -225,44 +222,28 @@ async def test_in_use_binary_sensor_and_live_tv_metadata(mock_client, mock_entry
     assert bin_in_use.extra_state_attributes["program_title"] == "News 7pm"
 
 
-def test_auth_profile_sensor_prefers_entry_options(mock_client, mock_entry):
-    """[F6-leg4] The auth-profile sensor reads entry.options before entry.data."""
-    from custom_components.vidaa.const import AUTH_PROFILES
+def test_session_status_auth_and_brand_profile_attributes(mock_client, mock_entry):
+    """Test SessionStatusSensor exposes configured_auth_profile, brand_profile, and active_brand."""
+    from custom_components.vidaa.const import AUTH_PROFILES, BRAND_PROFILES
 
-    mock_entry.data = {**mock_entry.data, "auth_profile": "modern"}
+    mock_entry.data = {**mock_entry.data, "auth_profile": "modern", "brand": "his", "brand_profile": "auto"}
     mock_entry.options = {**mock_entry.options, "auth_profile": "legacy"}
-    sensor = HisenseVidaaAuthProfileSensor(mock_client, mock_entry)
-    assert sensor.native_value == AUTH_PROFILES["legacy"]
-
-    # Falls back to entry.data when options don't override the profile.
-    mock_entry.options = dict(mock_entry.options)
-    mock_entry.options.pop("auth_profile")
-    sensor_fallback = HisenseVidaaAuthProfileSensor(mock_client, mock_entry)
-    assert sensor_fallback.native_value == AUTH_PROFILES["modern"]
-
-
-def test_brand_profile_sensor_options_and_attributes(mock_client, mock_entry):
-    """Test the brand-profile sensor displays configured profile and active hardware attributes."""
-    from custom_components.vidaa.const import BRAND_PROFILES
-
-    # Auto detect profile
-    mock_entry.data = {**mock_entry.data, "brand": "his", "brand_profile": "auto"}
-    mock_entry.options = {}
     mock_client.brand = "his"
-    sensor = HisenseVidaaBrandProfileSensor(mock_client, mock_entry)
-    assert sensor.native_value == BRAND_PROFILES["auto"]
-    assert sensor.extra_state_attributes["configured_profile"] == "auto"
-    assert sensor.extra_state_attributes["active_brand_code"] == "his"
-    assert sensor.extra_state_attributes["active_brand"] == "Hisense"
 
-    # Options override with explicit brand (e.g. Toshiba or TOPTRO)
+    sensor = HisenseVidaaSessionStatusSensor(mock_client, mock_entry)
+    attrs = sensor.extra_state_attributes
+    assert attrs["configured_auth_profile"] == AUTH_PROFILES["legacy"]
+    assert attrs["brand_profile"] == BRAND_PROFILES["auto"]
+    assert attrs["active_brand"] == "Hisense"
+
+    # Falls back to entry.data when options don't override the profile, and respects explicit brand override
     mock_entry.options = {"brand": "tpo"}
     mock_client.brand = "tpo"
-    sensor_tpo = HisenseVidaaBrandProfileSensor(mock_client, mock_entry)
-    assert sensor_tpo.native_value == BRAND_PROFILES["tpo"]
-    assert sensor_tpo.extra_state_attributes["configured_profile"] == "tpo"
-    assert sensor_tpo.extra_state_attributes["active_brand_code"] == "tpo"
-    assert sensor_tpo.extra_state_attributes["active_brand"] == "TOPTRO"
+    sensor_tpo = HisenseVidaaSessionStatusSensor(mock_client, mock_entry)
+    attrs_tpo = sensor_tpo.extra_state_attributes
+    assert attrs_tpo["configured_auth_profile"] == AUTH_PROFILES["modern"]
+    assert attrs_tpo["brand_profile"] == BRAND_PROFILES["tpo"]
+    assert attrs_tpo["active_brand"] == "TOPTRO"
 
 
 def test_session_status_latches_reauth_required(mock_client, mock_entry):

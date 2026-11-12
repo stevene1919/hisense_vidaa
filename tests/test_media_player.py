@@ -648,22 +648,66 @@ def test_media_player_dynamic_source_icons(mock_client, mock_entry):
     assert mp.icon == "mdi:television"
 
 
-def test_media_player_extra_state_attributes(mock_client, mock_entry):
-    """Test extra_state_attributes reporting client info and profiles safely."""
+def test_media_player_extra_state_attributes_and_standard_properties(mock_client, mock_entry):
+    """Test extra_state_attributes omits DeviceInfo duplicates and exposes standard app/title properties."""
     mock_client.device_name = "Hisense Bedroom TV"
     mock_client.model_name = "58A53FXVT"
     mock_client.firmware_version = "V0000.06.30T.N0921"
     mock_client.connected = True
     mock_client.brand = "his"
+    mock_client.current_program = None
 
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp._state = STATE_ON
+    mp._source = "HDMI2"
+    mp._source_dict = {
+        "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1", "displayname2": "Chromecast"},
+        "HDMI2": {"sourceid": "HDMI2", "sourcename": "HDMI2"},
+    }
+    mp._app_dict = {
+        "Netflix": {"appId": "1", "name": "Netflix", "url": "netflix://"},
+    }
+
     attrs = mp.extra_state_attributes
-    assert attrs["reported_name"] == "Hisense Bedroom TV"
-    assert attrs["model"] == "58A53FXVT"
-    assert attrs["software_version"] == "V0000.06.30T.N0921"
-    assert attrs["mqtt_connected"] is True
-    assert "auth_profile" in attrs
-    assert "brand_profile" in attrs
+    # DeviceInfo / diagnostic duplicates must NOT be in extra_state_attributes
+    for key in (
+        "reported_name",
+        "model",
+        "software_version",
+        "mac_address",
+        "mqtt_connected",
+        "auth_profile",
+        "brand_profile",
+        "active_brand",
+    ):
+        assert key not in attrs
+
+    # Source / audio runtime attributes remain present
+    assert attrs["audio_output"] == "TV Speakers"
+    assert attrs["raw_source"] == "HDMI2"
+    assert attrs["custom_labels"] == {"HDMI1": "Chromecast"}
+
+    # On unlabeled HDMI2: media_title, app_name, and app_id are None (no duplicate "HDMI2" title)
+    assert mp.media_title is None
+    assert mp.app_name is None
+    assert mp.app_id is None
+
+    # On labeled HDMI1: media_title resolves to connected CEC/custom label
+    mp._source = "HDMI1"
+    assert mp.media_title == "Chromecast"
+    assert mp.app_name is None
+    assert mp.app_id is None
+
+    # When running an app: standard app_name and app_id are populated, media_title is None
+    mp._source = "Netflix"
+    assert mp.app_name == "Netflix"
+    assert mp.app_id == "1"
+    assert mp.media_title is None
+
+    # When watching Live TV with EPG program: media_title returns current_program
+    mp._source = "TV"
+    mock_client.current_program = "Evening News"
+    assert mp.media_title == "Evening News"
 
 
 def test_media_player_audio_output_attribute(mock_client, mock_entry):

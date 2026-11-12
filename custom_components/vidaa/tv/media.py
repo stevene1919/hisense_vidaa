@@ -425,6 +425,7 @@ def parse_media_state_broadcast(
         "is_on": True,
         "state": "on",
         "source": None,
+        "app_id": None,
         "connected_device": None,
         "channel_name": None,
         "channel_num": None,
@@ -442,7 +443,10 @@ def parse_media_state_broadcast(
         result["source"] = data.get("sourcename") or data.get("displayname")
         result["connected_device"] = data.get("displayname2") or data.get("source_detail")
     elif statetype == "app":
-        result["source"] = data.get("name")
+        result["source"] = data.get("name") or data.get("appName")
+        raw_app_id = data.get("appId") or data.get("activeAppId")
+        if raw_app_id is not None and str(raw_app_id):
+            result["app_id"] = str(raw_app_id)
     elif statetype == "livetv":
         result["source"] = "TV"
         result["channel_name"] = data.get("channel_name")
