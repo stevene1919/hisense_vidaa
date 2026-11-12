@@ -99,18 +99,6 @@ class VidaaInUseBinarySensor(VidaaEntity, BinarySensorEntity):
         app = (self._client.current_app or "").strip().lower()
         return app not in ("off", "standby", "sleep")
 
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return metadata regarding the current playback or TV broadcast."""
-        if not self._client:
-            return {}
-        return {
-            "current_source": self._client.current_source,
-            "channel_name": self._client.current_channel,
-            "channel_number": self._client.channel_number,
-            "program_title": self._client.current_program,
-        }
-
     async def async_added_to_hass(self) -> None:
         """Register callbacks when added."""
         self._client.register_connected_callback(self._handle_update)

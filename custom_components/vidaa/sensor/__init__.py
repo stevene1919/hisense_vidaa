@@ -139,14 +139,27 @@ class VidaaActiveAppSensor(VidaaMqttTrackingSensor):
 
     def _register_custom_callbacks(self) -> None:
         self._client.register_applist_callback(self._handle_applist_update)
+        self._client.register_sourcelist_callback(self._handle_sourcelist_update)
 
     def _unregister_custom_callbacks(self) -> None:
         self._client.unregister_applist_callback(self._handle_applist_update)
+        self._client.unregister_sourcelist_callback(self._handle_sourcelist_update)
 
     def _handle_applist_update(self, apps: list[dict[str, Any]]) -> None:
         if apps:
             self._app_dict, self._app_icons, self._favorite_apps = parse_applist_payload(apps)
             self._schedule_state_update()
+
+    def _handle_sourcelist_update(self, sources: list[dict[str, Any]]) -> None:
+        if sources and self._client.connected and self._client.is_on:
+            _, _, _, active_src = parse_sourcelist_payload(sources)
+            if active_src and self._attr_native_value in ("Off", "Standby"):
+                if active_src.lower() == "tv":
+                    self._attr_native_value = "Live TV"
+                    self._last_known_app = "Live TV"
+                else:
+                    self._attr_native_value = "TV Input"
+                self._schedule_state_update()
 
     def _handle_state_update(self, state: dict[str, Any]) -> None:
         if not isinstance(state, dict):
@@ -182,10 +195,6 @@ class VidaaActiveAppSensor(VidaaMqttTrackingSensor):
         attrs: dict[str, Any] = {"total_installed_apps": len(self._app_dict)}
         if self._last_known_app:
             attrs["last_known_app"] = self._last_known_app
-        if self._favorite_apps:
-            attrs["favorite_apps"] = self._favorite_apps
-        if self._attr_native_value and self._attr_native_value in self._app_icons:
-            attrs["icon_url"] = self._app_icons[self._attr_native_value]
         return attrs
 
     @property

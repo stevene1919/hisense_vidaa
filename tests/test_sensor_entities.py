@@ -214,19 +214,23 @@ async def test_switch_entities(mock_client, mock_entry):
 
 
 @pytest.mark.anyio
-async def test_in_use_binary_sensor_and_live_tv_metadata(mock_client, mock_entry):
-    """Test In Use binary sensor and Live TV broadcast attributes."""
+async def test_in_use_binary_sensor_and_active_app_cold_boot(mock_client, mock_entry):
+    """Test In Use binary sensor and Active App cold-boot sourcelist recovery."""
     mock_client.state = "on"
     mock_client.connected = True
-    mock_client.current_channel = "ABC HD"
-    mock_client.channel_number = "20"
-    mock_client.current_program = "News 7pm"
+    mock_client.is_on = True
 
     bin_in_use = HisenseVidaaInUseBinarySensor(mock_client, mock_entry)
     assert bin_in_use.is_on is True
-    assert bin_in_use.extra_state_attributes["channel_name"] == "ABC HD"
-    assert bin_in_use.extra_state_attributes["channel_number"] == "20"
-    assert bin_in_use.extra_state_attributes["program_title"] == "News 7pm"
+    assert not getattr(bin_in_use, "extra_state_attributes", None)
+
+    # Cold-boot recovery: ActiveAppSensor starts in Standby, then sourcelist reports HDMI2 active
+    s_app = HisenseVidaaActiveAppSensor(mock_client, mock_entry)
+    assert s_app.native_value == "Standby"
+    s_app._handle_sourcelist_update([
+        {"sourceName": "HDMI2", "has_signal": 1, "is_signal": 1},
+    ])
+    assert s_app.native_value == "TV Input"
 
 
 def test_session_status_auth_and_brand_profile_attributes(mock_client, mock_entry):
