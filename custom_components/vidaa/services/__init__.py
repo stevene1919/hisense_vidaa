@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import functools
 import logging
-import os
 from typing import Any
 
-import yaml
 from homeassistant.core import HomeAssistant, SupportsResponse
 
 try:
@@ -111,14 +109,36 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         ),
     ]
 
-    services_yaml_descriptions: dict[str, Any] = {}
-    try:
-        yaml_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "services.yaml")
-        if os.path.isfile(yaml_path):
-            with open(yaml_path, encoding="utf-8") as f:
-                services_yaml_descriptions = yaml.safe_load(f) or {}
-    except Exception as err:
-        _LOGGER.debug("Could not read services.yaml for legacy alias schemas: %s", err)
+    legacy_service_metadata: dict[str, dict[str, Any]] = {
+        SERVICE_SEND_KEY: {
+            "name": "Send Key",
+            "description": "Send a remote control key command to the TV.",
+        },
+        SERVICE_SEND_KEY_SEQUENCE: {
+            "name": "Send Key Sequence",
+            "description": "Send a sequence of remote key commands with configurable delay between keys.",
+        },
+        SERVICE_CHANGE_CHANNEL: {
+            "name": "Change Channel",
+            "description": "Change the TV channel by number or name.",
+        },
+        SERVICE_LAUNCH_APP: {
+            "name": "Launch App",
+            "description": "Launch an installed Smart TV application by name or app ID.",
+        },
+        SERVICE_SET_PICTURE_SETTING: {
+            "name": "Set Picture Setting",
+            "description": "Adjust picture settings or presets on the TV.",
+        },
+        SERVICE_SET_SOUND_SETTING: {
+            "name": "Set Sound Setting",
+            "description": "Adjust sound settings or audio modes on the TV.",
+        },
+        SERVICE_SEND_TEXT_INPUT: {
+            "name": "Send Text Input",
+            "description": "Send text or search strings to an active on-screen keyboard.",
+        },
+    }
 
     for service_name, handler, schema in services_map:
         if not hass.services.has_service(DOMAIN, service_name):
@@ -158,17 +178,15 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             # errors when Home Assistant builds action descriptions without hisense_vidaa installed.
             if async_set_service_schema is not None:
                 try:
-                    yaml_desc = services_yaml_descriptions.get(service_name) or {}
+                    meta = legacy_service_metadata.get(service_name) or {}
                     legacy_schema_desc = {
-                        "name": f"[Deprecated] {yaml_desc.get('name', service_name)}",
+                        "name": f"[Deprecated] {meta.get('name', service_name)}",
                         "description": (
                             f"[Deprecated alias for {DOMAIN}.{service_name}] "
-                            f"{yaml_desc.get('description', f'Please update automations to use {DOMAIN}.{service_name}.')}"
+                            f"{meta.get('description', f'Please update automations to use {DOMAIN}.{service_name}.')}"
                         ),
-                        "fields": yaml_desc.get("fields", {}),
+                        "fields": {},
                     }
-                    if "target" in yaml_desc:
-                        legacy_schema_desc["target"] = yaml_desc["target"]
 
                     async_set_service_schema(hass, LEGACY_DOMAIN, service_name, legacy_schema_desc)
                 except Exception as err:
