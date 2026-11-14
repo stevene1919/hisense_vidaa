@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ruff:
     name: Run Ruff Linting
@@ -16,3 +20,13 @@ jobs:
 
       - name: Run Ruff
         uses: astral-sh/ruff-action@v3
+
+  codespell:
+    name: Run Codespell
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Run Codespell
+        uses: codespell-project/actions-codespell@v2
