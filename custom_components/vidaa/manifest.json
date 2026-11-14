@@ -9,7 +9,7 @@
   "documentation": "https://stevene.enuff.com/hisensevidaa",
   "integration_type": "device",
   "iot_class": "local_push",
-  "issue_tracker": "https://github.com/stevene1919/hisense_vidaa/issues",
+  "issue_tracker": "https://github.com/stevene1919/vidaa/issues",
   "quality_scale": "bronze",
   "requirements": [
     "aiomqtt>=2.3.0",
