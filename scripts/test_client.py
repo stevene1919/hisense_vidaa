@@ -20,7 +20,7 @@ from typing import Any
 # Ensure script directory, repo root, or HA config is in Python path for package resolution
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(SCRIPT_DIR)
-COMP_DIR = os.path.join(REPO_ROOT, "custom_components", "hisense_vidaa")
+COMP_DIR = os.path.join(REPO_ROOT, "custom_components", "vidaa")
 HA_CONFIG_DIR = "/config"
 for p in (REPO_ROOT, SCRIPT_DIR, HA_CONFIG_DIR):
     if os.path.isdir(p) and p not in sys.path:
