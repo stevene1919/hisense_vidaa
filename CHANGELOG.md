@@ -2,73 +2,51 @@
 
 All notable changes to the VIDAA Smart TV integration will be documented in this file.
 
-## [3.5.0] - 2026-11-10 — 🚀 VIDAA Smart TV Rebrand Edition
+## [3.5.0] - 2026-11-14 — 🚀 VIDAA Smart TV Rebrand Edition
 
-This major update rebrands the integration to **VIDAA Smart TV** (`vidaa`), reflecting full universal multi-brand support across all television and projector manufacturers running VIDAA OS (Hisense, Toshiba, Loewe, Philips, Sharp, JVC, TOPTRO, and partner brands).
+This major milestone rebrands the integration to **VIDAA Smart TV** (`vidaa`), celebrating full universal support across all TV and projector manufacturers powered by VIDAA OS (Hisense, Toshiba, Loewe, Philips, Sharp, JVC, TOPTRO, and regional brands).
+
+### ☕ Support the Project
+
+If this integration makes controlling your smart home entertainment a breeze, consider supporting continued open-source development:
+
+[![Support on Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/stevene_)
 
 ### 🌟 What's New & Highlights in v3.5.0
 
-- **INTEGRATION REBRAND & UI LOCALIZATION (`vidaa`)**:
+- **UNIVERSAL VIDAA REBRAND (`vidaa`)**:
   - Rebranded the integration domain to `vidaa` and integration title to **VIDAA Smart TV**.
-  - Deployed official VIDAA multi-brand iconography, high-resolution logos, and brand assets.
-  - Rebranded all user-facing setup, options, and error strings across English and 10 localized translation catalogs (`de`, `es`, `fr`, `it`, `pt`, `pt-BR`, `ru`, `sr`, `sr-Latn`, `uk`), keeping brand selection labels untouched.
-  - Refactored core classes and symbols to `Vidaa*` (`VidaaClient`, `VidaaMediaPlayer`, `VidaaRemote`, `VidaaEntity`, etc.) with backwards-compatible aliases for legacy symbols.
-- **ZERO-BREAKING-CHANGE AUTOMATIC MIGRATION**:
-  - **Seamless Configuration Migration**: Existing config entries automatically upgrade from configuration version 1 to 2.1 via `async_migrate_entry()`.
-  - **Registry Preservation**: Entity registry platform entries and unique IDs are preserved and migrated without orphaned entities or broken dashboards.
-  - **Device Card Continuity**: Existing device registry identifiers are merged to ensure existing devices and custom cards in Home Assistant continue operating without duplication.
-  - **Legacy Action Aliases**: `hisense_vidaa.*` services (`send_key`, `send_key_sequence`, `change_channel`, `launch_app`, `set_picture_setting`, `set_sound_setting`, `send_text_input`) remain active as alias actions with deprecation notices, ensuring existing automations or scripts continue to work seamlessly.
-  - **Legacy Trigger Compatibility**: Automations listening to `hisense_vidaa.turn_on` device triggers continue functioning alongside canonical `vidaa.turn_on`.
-  - **Transitional Shim & Collision Guard**: Bundled a non-breaking `custom_components/hisense_vidaa` shim for zero-friction upgrades, with automatic Home Assistant Repair alerts to help users safely clean up obsolete directories.
-- **HDMI-CEC INPUT DISCOVERY & CLEAN SOURCE ATTRIBUTES**:
-  - **Discovered Device Names for All Inputs**: The media player source selector dropdown and active source sensors now discover and display friendly HDMI-CEC device names (e.g. `HDMI 1 (Chromecast)`, `HDMI 2 (PlayStation 5)`) for **all** connected inputs, not just the currently active one.
-  - **Direct CEC Input Selection**: Users can switch inputs directly by selecting the CEC device name (e.g., choosing "Chromecast" from the dropdown automatically switches to HDMI 1).
-  - **Enhanced Telemetry Attributes**: Added `raw_source` (e.g., `HDMI1`), `connected_device` (e.g., `Chromecast`), and `custom_labels` dictionary to both the media player and `sensor.<tv>_active_source`.
-- **STREAMLINED AUDIO ROUTING ATTRIBUTE**:
-  - Retired the unsupported `select.<tv>_audio_output` and `sensor.<tv>_audio_output` entities (automatically pruned from entity registries).
-  - TV firmware reverse-engineering and empirical testing confirmed VIDAA OS only broadcasts binary audio state (`volume_type`: TV Speakers vs ARC/eARC) without external write support.
-  - Active audio output routing is now cleanly exposed as the `audio_output` attribute (`TV Speakers` or `ARC / eARC`) on the media player entity.
-- **MEDIA PLAYER TRANSPORT CONTROLS DISABLED BY DEFAULT**:
-  - Changed default for `enable_media_controls` from `true` to `false` (`CONF_ENABLE_MEDIA_CONTROLS = False`). This keeps default media player cards sleek, preventing clutter on TVs where media transport buttons (Play/Pause/Stop/Track) are not desired.
-  - Users can easily re-enable transport controls anytime via **Settings → Devices & Services → VIDAA Smart TV → Configure → Sources & Media**.
-- **HOME LAUNCHER NAVIGATION & NON-BLOCKING CLOCK SYNC (#58, #59)**:
-  - **Home Screen Detection (`remote_launcher`)**: Added state tracking for the TV's `remote_launcher` broadcast when pressing Home or exiting an app, accurately updating Active App to "Home Launcher" and clearing active source (Issue #58).
-  - **Thread-Offloaded Clock Sync**: Offloaded synchronous UPnP HTTP fallback clock sync to an executor thread via `asyncio.to_thread()`, preventing event loop blocking during time synchronization (Issue #59).
-- **DISCOVERY DUPLICATE IP GUARD**:
-  - SSDP / UPnP discovery now checks for existing configured IP addresses and aborts if an entry for that TV already exists, eliminating redundant discovery prompts.
-- **MEDIA PLAYER UI CONTROLS (#55)**:
-  - Ensured Previous/Next track and channel navigation buttons in the Home Assistant media player card remain visible and accessible whenever media playback controls are enabled.
-- **AUTO POWER-ON ON SOURCE & MEDIA PLAYBACK**:
-  - Automatically triggers TV wake/power-on (`async_turn_on()`) when selecting a source or launching media while the TV is in standby or powered off.
-- **HOME ASSISTANT CORE ARCHITECTURE & ENTITY STANDARDIZATION**:
-  - **Entity Naming Alignment**: Stripped redundant integration name prefixes from entity display titles, relying on Home Assistant's native device naming convention (`Hisense TV Active source` → `Active source`).
-  - **Media Player Property Compliance**: Implemented native `@property app_name` and `@property app_id` properties and pruned redundant diagnostic and hardware attributes (`model`, `software_version`, `mac_address`, etc., which reside exclusively on `DeviceInfo`). Cleaned `media_title` so unlabelled physical inputs do not duplicate `source`.
-  - **Diagnostic Sensor Consolidation**: Consolidated standalone `auth_profile` and `brand_profile` sensors into `sensor.<tv>_session_status` attributes (`configured_auth_profile`, `brand_profile`, `active_brand`) and automatically pruned retired entities from the registry.
-  - **Physical Input Filtering**: Filtered `sensor.<tv>_active_source` to strictly reflect physical hardware ports (HDMI, AV, TV tuner), preventing apps like "VIDAA tv" from masquerading as physical inputs.
-  - **Cold-Boot HDMI Signal Recovery**: Added sourcelist signal recovery on cold-boot for `sensor.<tv>_active_app`, preventing it from being stuck in "Standby" when HA restarts while the TV is on an external HDMI input.
-  - **Binary Sensor Cleanup**: Removed duplicate and null-leaking attributes from `binary_sensor.<tv>_in_use`.
-- **SETTINGS & CALIBRATION BROADCAST TELEMETRY**:
-  - Enhanced `apply_picture_update` and `apply_sound_update` to preserve discovered human-readable names and available `options` when incremental `notify_value_changed` broadcasts arrive from the TV remote.
-  - Resolved fallback menu IDs (`91` for Picture Mode, `1` for Sound Mode) so unsolicited TV broadcasts immediately update `client.picture_mode` and `client.sound_mode` even before a full menu tree is probed.
-- **PYTHON 3.16 COMPATIBILITY**:
-  - Replaced deprecated `asyncio.iscoroutinefunction()` and `asyncio.iscoroutine()` with `inspect.iscoroutinefunction()` and `inspect.iscoroutine()` in token synchronization routines.
-- **VIRTUAL KEYBOARD & REMOTE TEXT INPUT**:
-  - Extended native `remote.send_command` action with command prefix parsing: `text:<string>` / `type:<string>` (insert text), `text:replace:<string>` (clear and replace text), and `clear_text` / `text:clear` (clear active input field).
-  - Added CLI `text` / `send-text` action to `scripts/test_client.py` with `--text` and `--text-action` flags.
-  - Added `--text` and `--text-action` CLI arguments to `scripts/debug_tv.py`.
-  - Added unit test coverage for sync and async text prefix command dispatch.
-- **WEB BROWSER & MOUSE CONTROLS**:
-  - Expanded key alias reference and documentation for web browser mouse navigation (`mouse`, `mouse_click`, `left_mouse`, `mouse_up`, `mouse_down`, `zoom_in`, `zoom_out`).
-  - Added explicit test coverage for all browser mouse aliases in `tests/test_client_state.py`.
-  - Clarified web browser-only mouse cursor limitation (*"Only available in Browser"* per APK analysis) in documentation, parameters, and protocol guides.
-  - Fixed broken anchor link in `docs/troubleshooting.md` pointing to `docs/services_and_automations.md#11-supported-key-names` and added comprehensive key aliases reference table.
-- **REMOVAL OF UNSUPPORTED NOTIFY PLATFORM**:
-  - Removed the speculative on-screen toast notification (`notify`) platform, options flow toggle, and developer CLI actions (`test_client.py notify`, `debug_tv.py --notify`).
-  - Reverse engineering of the official VIDAA Android companion APK confirmed that notification components (`NotifyActivity`) correspond strictly to a mobile in-app promotional inbox rather than a TV compositor display listener.
-  - VIDAA OS firmware does not provide an external MQTT notification listener. Legacy `notify` entity registry entries are automatically pruned on entry setup to prevent orphaned entities.
-- **COMPREHENSIVE DOCUMENTATION & MULTILINGUAL REBRAND**:
-  - Fully audited and updated all 19 documentation guides, configuration parameter references, network and standby guides, and example automations to canonical `vidaa.*` actions and `vidaa.turn_on` triggers.
-  - Updated documentation READMEs across all 6 supported languages (`de`, `fr`, `it`, `ru`, `uk`, `zh-CN`).
+  - Added official VIDAA iconography, vibrant high-res logos, and brand artwork.
+  - Complete native localization across 11 languages (`de`, `es`, `fr`, `it`, `pt`, `pt-BR`, `ru`, `sr`, `sr-Latn`, `uk`, `zh-Hans`).
+  - Seamlessly refactored all internal classes to `Vidaa*` while preserving backwards-compatible aliases for custom scripts.
+- **ZERO-EFFORT AUTOMATIC MIGRATION (No Re-Pairing Needed)**:
+  - **Automatic Setup Upgrade**: Existing TVs automatically upgrade from configuration v1 to v2.1—no need to enter PINs or re-pair.
+  - **Preserved Dashboards & Names**: All entity IDs, custom names, area assignments, and dashboard cards are preserved seamlessly.
+  - **Backward-Compatible Automations**: All existing `hisense_vidaa.*` actions and device triggers continue working alongside the new canonical `vidaa.*` actions.
+  - **Clean Up Alerts**: Includes a friendly Home Assistant Repairs notification to help you safely delete the obsolete `hisense_vidaa` folder after upgrading.
+- **HDMI-CEC INPUT DISCOVERY & DEVICE NAMES**:
+  - **Friendly Input Names**: Your TV now automatically discovers and shows friendly names for connected HDMI devices (e.g., `HDMI 1 (Chromecast)` or `HDMI 2 (PlayStation 5)`) in your source list.
+  - **Direct Device Selection**: Switch directly by selecting the device name from the dropdown.
+  - Cleaned up attributes so inputs display neatly without repeating names.
+- **SMART AUTO POWER-ON**:
+  - Selecting an input or playing media while your TV is off or in standby will now automatically wake and turn on the TV for you.
+- **STREAMLINED AUDIO ROUTING**:
+  - Audio output is now cleanly reported as an `audio_output` attribute on your TV (`TV Speakers` or `ARC / eARC`), retiring clunky standalone select entities.
+- **SLEEK MEDIA PLAYER CONTROLS**:
+  - Media playback buttons (Play/Pause/Track) are now disabled by default to keep TV cards sleek and minimal. You can easily toggle them on anytime under **Configure → Sources & Media**.
+  - Restored persistent Previous/Next track and channel navigation buttons when media controls are active (#55).
+- **ACCURATE HOME LAUNCHER & TV INPUT DETECTION**:
+  - Added smart detection for the VIDAA Home screen (`remote_launcher`), accurately reporting when you return to the home screen.
+  - Fixed TV input sensors on restart so your TV never gets falsely stuck on "Standby" when turned on to an HDMI port.
+- **UNIFIED DIAGNOSTICS**:
+  - Consolidated diagnostic sensors into a single, clean Session Status sensor (`sensor.<tv>_session_status`), decluttering your entity list.
+  - Cleaned up hardware attributes (MAC address, model, software version) so they live properly in the Device Info card where Home Assistant expects them.
+- **REMOTE KEYBOARD & TEXT INPUT**:
+  - Added virtual text typing to `remote.send_command` using the `text:<string>` prefix, making on-screen searches and typing fast from automations and scripts.
+- **PERFORMANCE & FUTURE-PROOFING**:
+  - Non-blocking clock synchronization via UPnP HTTP executor threads (#59).
+  - Full Python 3.14 and Python 3.16 compatibility.
+  - Filtered duplicate discovery prompts when a TV is already configured on your network.
 
 ## [3.3.2-beta.1] - 2026-11-08 — 📺 Media Player UI Controls Fix
 
