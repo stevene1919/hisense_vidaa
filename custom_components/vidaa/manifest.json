@@ -6,7 +6,7 @@
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://stevene.enuff.com/hisensevidaa",
+  "documentation": "https://stevene.enuff.com/vidaa",
   "integration_type": "device",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/stevene1919/vidaa/issues",
