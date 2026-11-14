@@ -8,7 +8,7 @@ import pytest
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.const import (
+from custom_components.vidaa.const import (
     CONF_ACCESS_TOKEN,
     CONF_AUTH_PROFILE,
     CONF_BRAND,
@@ -19,7 +19,7 @@ from custom_components.hisense_vidaa.const import (
     CONF_MAC_ADDRESS,
     CONF_USE_SSL,
 )
-from custom_components.hisense_vidaa.flow import HisenseVidaaOptionsFlowHandler
+from custom_components.vidaa.flow import HisenseVidaaOptionsFlowHandler
 
 
 @pytest.mark.anyio
@@ -89,7 +89,6 @@ async def test_options_flow(monkeypatch: pytest.MonkeyPatch) -> None:
     result_feat_submit = await handler.async_step_features_remote(
         user_input={
             "enable_remote": False,
-            "enable_notify": True,
             "enable_picture_controls": True,
             "enable_sound_controls": True,
             "enable_audio_only": True,
@@ -99,7 +98,6 @@ async def test_options_flow(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert result_feat_submit["type"] == "create_entry"
     assert result_feat_submit["data"]["enable_remote"] is False
-    assert result_feat_submit["data"]["enable_notify"] is True
     assert result_feat_submit["data"]["enable_picture_controls"] is True
     assert result_feat_submit["data"]["enable_sound_controls"] is True
     assert result_feat_submit["data"]["enable_audio_only"] is True
@@ -136,11 +134,11 @@ async def test_options_flow(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # Test security step with valid paths (monkeypatched check_certs_exist)
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.options.check_certs_exist",
+        "custom_components.vidaa.flow.options.check_certs_exist",
         lambda c, k: True,
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.options.validate_ssl_certs",
+        "custom_components.vidaa.flow.options.validate_ssl_certs",
         lambda c, k: (True, None),
     )
     result_sec_submit = await handler.async_step_security(

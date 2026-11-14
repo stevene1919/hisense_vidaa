@@ -1,0 +1,107 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "mqtt_connected": {
+        "default": "mdi:lan-connect"
+      },
+      "in_use": {
+        "default": "mdi:television",
+        "state": {
+          "on": "mdi:television",
+          "off": "mdi:television-off"
+        }
+      }
+    },
+    "button": {
+      "force_reconnect": {
+        "default": "mdi:lan-connect"
+      },
+      "sync_clock": {
+        "default": "mdi:clock-outline"
+      },
+      "probe_capabilities": {
+        "default": "mdi:television-shimmer"
+      },
+      "trigger_reauth": {
+        "default": "mdi:cellphone-key"
+      }
+    },
+    "number": {
+      "backlight": {
+        "default": "mdi:brightness-7"
+      },
+      "brightness": {
+        "default": "mdi:brightness-6"
+      },
+      "contrast": {
+        "default": "mdi:contrast-circle"
+      }
+    },
+    "remote": {
+      "remote": {
+        "default": "mdi:remote"
+      }
+    },
+    "select": {
+      "picture_mode": {
+        "default": "mdi:image-filter-hdr"
+      },
+      "sound_mode": {
+        "default": "mdi:surround-sound"
+      }
+    },
+    "sensor": {
+      "session_status": {
+        "default": "mdi:shield-check"
+      },
+      "reported_name": {
+        "default": "mdi:television-ambient-light"
+      },
+      "active_app": {
+        "default": "mdi:application"
+      },
+      "active_source": {
+        "default": "mdi:video-input-hdmi"
+      },
+      "clock_drift": {
+        "default": "mdi:clock-check-outline"
+      }
+    },
+    "switch": {
+      "audio_only": {
+        "default": "mdi:television-off"
+      },
+      "debug_logging": {
+        "default": "mdi:bug-outline"
+      }
+    }
+  },
+  "services": {
+    "send_key": {
+      "service": "mdi:remote"
+    },
+    "send_key_sequence": {
+      "service": "mdi:playlist-play"
+    },
+    "change_channel": {
+      "service": "mdi:numeric"
+    },
+    "launch_app": {
+      "service": "mdi:play-box-multiple"
+    },
+    "set_picture_setting": {
+      "service": "mdi:tune"
+    },
+    "set_sound_setting": {
+      "service": "mdi:equalizer"
+    },
+    "send_text_input": {
+      "service": "mdi:keyboard-outline"
+    }
+  },
+  "triggers": {
+    "turn_on": {
+      "trigger": "mdi:television-play"
+    }
+  }
+}

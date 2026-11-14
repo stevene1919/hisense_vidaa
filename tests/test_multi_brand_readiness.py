@@ -15,12 +15,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.config_flow import HisenseVidaaConfigFlow
-from custom_components.hisense_vidaa.const import BRAND_OPTIONS
-from custom_components.hisense_vidaa.protocol.certs import detect_brand_from_cert_paths
-from custom_components.hisense_vidaa.protocol.discovery import normalize_brand_code
-from custom_components.hisense_vidaa.tv.upnp_desc import parse_upnp_renderer_descriptor
+from custom_components.vidaa.client import HisenseTvClient
+from custom_components.vidaa.config_flow import HisenseVidaaConfigFlow
+from custom_components.vidaa.const import BRAND_OPTIONS
+from custom_components.vidaa.protocol.certs import detect_brand_from_cert_paths
+from custom_components.vidaa.protocol.discovery import normalize_brand_code
+from custom_components.vidaa.tv.upnp_desc import parse_upnp_renderer_descriptor
 
 
 def test_oem_brands_in_brand_options():

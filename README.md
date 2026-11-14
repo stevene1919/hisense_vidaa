@@ -1,4 +1,4 @@
-# Hisense VIDAA TV Integration for Home Assistant
+# VIDAA Smart TV Integration for Home Assistant
 
 <p align="center">
   <a href="README.md"><img src="https://img.shields.io/badge/🇬🇧_English-blue?style=flat-square" alt="English"></a>
@@ -24,7 +24,7 @@ A native Home Assistant integration for smart TVs and projectors running **VIDAA
 Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using client certificates, providing instant local push updates, media player controls, app launching, Wake-on-LAN, and virtual remote navigation without external bridges or cloud dependencies.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/assets/screenshots/integration_device.png" alt="Hisense VIDAA TV in Home Assistant" width="100%" />
+  <img src="https://raw.githubusercontent.com/stevene1919/hisense_vidaa/main/assets/screenshots/integration_device.png" alt="VIDAA Smart TV in Home Assistant" width="100%" />
 </p>
 
 ---
@@ -34,7 +34,7 @@ Connects **directly** to the TV's internal MQTT broker (TLS port `36669`) using 
 Setting up your TV takes less than 3 minutes across 3 simple steps:
 
 ### 1️⃣ Install via HACS
-Click the one-click button below (or search **Hisense VIDAA TV** in HACS → Integrations → Download):
+Click the one-click button below (or search **VIDAA Smart TV** in HACS → Integrations → Download):
 
 [![Open HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
@@ -49,7 +49,7 @@ VIDAA TVs enforce mutual TLS on port 36669. Drop the universal **`El.p12`** file
 
 ### 3️⃣ Pair with On-Screen PIN
 1. Restart Home Assistant (`Settings` → `System` → `Restart`).
-2. Go to **Settings → Devices & Services → Add Integration** and search for **Hisense VIDAA TV**.
+2. Go to **Settings → Devices & Services → Add Integration** and search for **VIDAA Smart TV**.
 3. Enter your TV's local IP address and click **Submit**.
 4. Type the **4-digit PIN** displayed on your TV screen to complete setup!
 
@@ -86,8 +86,7 @@ This integration officially supports **any smart TV running VIDAA OS** (pairing 
 - **Pluggable Turn-On Automations (`device_trigger`)**: Intercepts `media_player.turn_on` via standard Home Assistant `PluggableAction` triggers, enabling custom power-on sequences (smart plugs, relays, IR blasters) with automatic fallback to native WoL and MQTT power keys.
 - **Dedicated Remote Platform**: Fast key command dispatching, key aliases (`home`, `menu`, `back`, `ok`, etc.), configurable repeat counts, and inter-key delay options.
 - **Picture & Display Adjustments (`number` & `select`)**: Fine-tune Backlight, Brightness, and Contrast slider entities (0–100) and switch Picture Modes (`Standard`, `Cinema Day`, `Cinema Night`, `Dynamic`, `Sports`, `Game`, `Filmmaker Mode`) dynamically.
-- **Sound Mode Selector (`select`)**: Switch real-time TV sound equalizer modes (`Standard`, `Theatre`, `Music`, `Speech`, `Late Night`, `Sports`) and audio output routing (`select.{tv}_audio_output`).
-- **On-Screen Toast Notifications (`notify`)**: Send customized on-screen toast messages to the TV directly from Home Assistant automations.
+- **Sound Mode Selector (`select`)**: Switch real-time TV sound equalizer modes (`Standard`, `Theatre`, `Music`, `Speech`, `Late Night`, `Sports`). Audio output routing (`TV Speakers` vs `ARC / eARC`) is exposed as the `audio_output` attribute on the media player.
 - **Subnet Wake-on-LAN**: Reliable, multi-burst WoL magic packet dispatching with configurable subnet broadcasting across dual-NIC and VLAN networks.
 - **Tabbed Options Flow**: Beautiful, categorized options menu (General & Power, Sources & Media, Remote Key Timings, Security & Brand) for adjusting settings without re-pairing.
 

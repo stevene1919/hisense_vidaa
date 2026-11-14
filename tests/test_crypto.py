@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import pkcs12
 
-from custom_components.hisense_vidaa.protocol import (
+from custom_components.vidaa.protocol import (
     CLIENT_ID_PATTERN,
     XOR_TIMESTAMP_MASK,
     clean_mac,
@@ -300,7 +300,7 @@ def test_resolve_certificates_failed_p12_returns_none(tmp_path):
 
 def test_profile_cert_candidates_el_p12_membership():
     """Verify El.p12 and el.p12 exist in candidate lists for appropriate profiles."""
-    from custom_components.hisense_vidaa.protocol.certs import PROFILE_CERT_CANDIDATES
+    from custom_components.vidaa.protocol.certs import PROFILE_CERT_CANDIDATES
 
     for profile in ("modern", "middle", "auto"):
         _, _, p12_names = PROFILE_CERT_CANDIDATES[profile]
@@ -310,7 +310,7 @@ def test_profile_cert_candidates_el_p12_membership():
 
 def test_get_profile_default_cert_paths(tmp_path):
     """Test get_profile_default_cert_paths for different auth profiles."""
-    from custom_components.hisense_vidaa.protocol import get_profile_default_cert_paths
+    from custom_components.vidaa.protocol import get_profile_default_cert_paths
 
     _cert, _key, cert_dir, cert_name, key_name = get_profile_default_cert_paths(
         "modern", config_dir=str(tmp_path)
@@ -328,7 +328,7 @@ def test_get_profile_default_cert_paths(tmp_path):
 
 def test_generate_initial_credentials_oem_brands():
     """Test generating initial dynamic credentials for OEM VIDAA brands."""
-    from custom_components.hisense_vidaa.protocol import generate_initial_credentials
+    from custom_components.vidaa.protocol import generate_initial_credentials
 
     # Toshiba brand
     client_id, username, password = generate_initial_credentials(
@@ -357,7 +357,7 @@ def test_generate_initial_credentials_oem_brands():
 
 def test_validate_ssl_certs(tmp_path):
     """Test validate_ssl_certs with missing, invalid, and empty inputs."""
-    from custom_components.hisense_vidaa.protocol import validate_ssl_certs
+    from custom_components.vidaa.protocol import validate_ssl_certs
 
     # None inputs
     assert validate_ssl_certs(None, None) == (True, None)
@@ -419,9 +419,9 @@ def test_client_skips_cert_resolution_when_unneeded():
     """Test HisenseTvClient skips disk cert resolution when SSL is disabled or certs are pre-resolved."""
     from unittest.mock import patch
 
-    from custom_components.hisense_vidaa.client import HisenseTvClient
+    from custom_components.vidaa.client import HisenseTvClient
 
-    with patch("custom_components.hisense_vidaa.client.resolve_certificates") as mock_resolve:
+    with patch("custom_components.vidaa.client.resolve_certificates") as mock_resolve:
         # Non-SSL client skips resolve_certificates
         client1 = HisenseTvClient("192.168.1.50", use_ssl=False)
         assert client1.use_ssl is False

@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.config_flow import HisenseVidaaConfigFlow
-from custom_components.hisense_vidaa.const import (
+from custom_components.vidaa.config_flow import HisenseVidaaConfigFlow
+from custom_components.vidaa.const import (
     CONF_AUTH_PROFILE,
     CONF_BRAND,
     CONF_CERTFILE,
@@ -62,7 +62,7 @@ async def test_reauth_flow_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # Confirm reauth
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        "custom_components.vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
     )
     result_confirm = await flow.async_step_reauth_confirm(user_input={})
@@ -71,7 +71,7 @@ async def test_reauth_flow_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # Submit PIN
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_submit_pin",
+        "custom_components.vidaa.client.HisenseTvClient.async_submit_pin",
         AsyncMock(return_value=None),
     )
     flow.client.access_token = "new_access_token"
@@ -112,13 +112,13 @@ async def test_reconfigure_flow_success(monkeypatch: pytest.MonkeyPatch) -> None
     flow._abort_if_unique_id_configured = MagicMock()
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        "custom_components.vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
     )
     # Legacy/reconfigure now probes the static session for a PIN challenge;
     # return "no challenge" so the flow takes the unchanged no-PIN path.
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.config_flow.async_probe_pairing_challenge",
+        "custom_components.vidaa.config_flow.async_probe_pairing_challenge",
         AsyncMock(return_value=False),
     )
 
@@ -209,7 +209,7 @@ async def test_reauth_keeps_entry_transport_settings(monkeypatch: pytest.MonkeyP
     }
     flow = _reauth_flow(hass, entry, "legacy_entry")
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        "custom_components.vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
     )
 
@@ -242,7 +242,7 @@ async def test_reauth_seeds_certificates_from_entry(monkeypatch: pytest.MonkeyPa
     }
     flow = _reauth_flow(hass, entry, "tls_entry")
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        "custom_components.vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
     )
 
@@ -273,7 +273,7 @@ async def test_reauth_success_deletes_auth_token_issue(monkeypatch: pytest.Monke
 
     deleted = []
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.reauth.ir.async_delete_issue",
+        "custom_components.vidaa.flow.reauth.ir.async_delete_issue",
         lambda hass_arg, domain, issue_id: deleted.append((domain, issue_id)),
     )
 
@@ -303,15 +303,15 @@ async def test_reconfigure_aborts_when_new_ip_belongs_to_another_tv(
     flow = _reauth_flow(hass, own_entry, "own_entry")
     hass.config_entries.async_entries = MagicMock(return_value=[own_entry, other_entry])
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.reauth.async_resolve_mac",
+        "custom_components.vidaa.flow.reauth.async_resolve_mac",
         AsyncMock(return_value="e8:51:77:ec:98:2d"),
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        "custom_components.vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.flow.reauth.ReauthFlowMixin._async_finish_reauth",
+        "custom_components.vidaa.flow.reauth.ReauthFlowMixin._async_finish_reauth",
         AsyncMock(return_value={"type": "abort", "reason": "reconfigure_successful"}),
     )
 
@@ -364,7 +364,7 @@ async def test_reauth_confirm_disconnects_existing_running_client_before_start_a
         events.append("start_auth")
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        "custom_components.vidaa.client.HisenseTvClient.async_start_auth",
         mock_start_auth,
     )
 
@@ -398,7 +398,7 @@ async def test_reauth_preserves_oem_brand(monkeypatch: pytest.MonkeyPatch) -> No
 
     # Confirm reauth
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        "custom_components.vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
     )
     result_confirm = await flow.async_step_reauth_confirm(user_input={})
@@ -409,7 +409,7 @@ async def test_reauth_preserves_oem_brand(monkeypatch: pytest.MonkeyPatch) -> No
 
     # Submit PIN and verify updated entry retains brand='tos'
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_submit_pin",
+        "custom_components.vidaa.client.HisenseTvClient.async_submit_pin",
         AsyncMock(return_value=None),
     )
     flow.client.access_token = "new_tos_token"

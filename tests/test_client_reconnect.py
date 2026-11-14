@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
+from custom_components.vidaa.client import HisenseTvClient
 
 
 @pytest.mark.anyio
@@ -296,7 +296,7 @@ async def test_refresh_tokens_unbinds_callbacks_before_teardown():
     client.mqtt_client = old_session
     client.connected = True
 
-    with patch("custom_components.hisense_vidaa.client.async_perform_token_refresh", return_value={
+    with patch("custom_components.vidaa.client.async_perform_token_refresh", return_value={
             "accesstoken": "new_at",
             "accesstoken_time": now,
             "accesstoken_duration_day": 2,

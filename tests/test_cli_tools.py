@@ -24,8 +24,10 @@ def test_debug_tv_help_invocable() -> None:
     )
     assert result.returncode == 0
     assert "Hisense VIDAA TV Diagnostic and Live Debugging Tool" in result.stdout
-    assert "--notify" in result.stdout
+    assert "--sync-clock" in result.stdout
     assert "--probe" in result.stdout
+    assert "--text" in result.stdout
+    assert "--text-action" in result.stdout
 
 
 def test_test_client_help_invocable() -> None:
@@ -39,9 +41,11 @@ def test_test_client_help_invocable() -> None:
     )
     assert result.returncode == 0
     assert "Hisense VIDAA Integration CLI Test Tool" in result.stdout
-    assert "notify" in result.stdout
     assert "report" in result.stdout
     assert "probe" in result.stdout
+    assert "text" in result.stdout
+    assert "--text" in result.stdout
+    assert "--text-action" in result.stdout
     assert "--verify-ssl" in result.stdout
     assert "--probe" in result.stdout
 
@@ -57,3 +61,24 @@ def test_cli_tools_syntax_and_import() -> None:
 
     assert callable(debug_tv.main)
     assert callable(test_client.main)
+    assert callable(test_client.do_send_text)
+
+
+def test_do_send_text_mocked(monkeypatch) -> None:
+    """Test do_send_text connects and dispatches send_text_input."""
+    from unittest.mock import MagicMock
+    scripts_dir = str(REPO_ROOT / "scripts")
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    import test_client
+
+    mock_client = MagicMock()
+    mock_client.connected = True
+    monkeypatch.setattr(test_client, "create_client_from_creds", lambda *a, **k: mock_client)
+
+    test_client.do_send_text({"ip_address": "192.168.1.50"}, "Blade Runner", action="insert")
+
+    mock_client.connect_and_run.assert_called_once()
+    mock_client.send_text_input.assert_called_once_with("Blade Runner", action="insert")
+    mock_client.disconnect.assert_called_once()
+

@@ -76,7 +76,7 @@ Copy your **`El.p12`** file into your Home Assistant **`/config/ssl/`** folder:
 2. **Add the Integration**:
    - Go to **Settings → Devices & Services**.
    - Click the blue **Add Integration** button in the bottom right corner.
-   - Search for **Hisense VIDAA TV** and click it.
+   - Search for **VIDAA Smart TV** and click it.
 3. **Connect to Your TV**:
    - Enter your TV's IP address (e.g. `192.168.1.50`).
    - Leave **Auth Profile** and **Brand** set to **Auto Detect (Recommended)**.

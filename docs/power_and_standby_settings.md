@@ -1,12 +1,12 @@
 # ⚡ VIDAA TV Power, Standby & Network Settings Guide
 
-This guide details optimal TV system and power configurations to ensure continuous Home Assistant connectivity, reliable Wake-on-LAN, and zero authentication token loss across all Hisense VIDAA OS generations.
+This guide details optimal TV system and power configurations to ensure continuous Home Assistant connectivity, reliable Wake-on-LAN, and zero authentication token loss across all VIDAA OS generations.
 
 ---
 
 ## 🧭 The Core Principle: Tier 1 vs Tier 2 Standby
 
-Hisense smart TVs implement a **two-tier standby architecture** driven by statutory national energy efficiency mandates (e.g. **Australian GEMS / AS/NZS 62087**, **European Ecodesign / Lot 26 / Directive 2019/2021**, and **US Energy Star**):
+VIDAA smart TVs implement a **two-tier standby architecture** driven by statutory national energy efficiency mandates (e.g. **Australian GEMS / AS/NZS 62087**, **European Ecodesign / Lot 26 / Directive 2019/2021**, and **US Energy Star**):
 
 ```
 +-----------------------------------------------------------------------------------+
@@ -121,12 +121,12 @@ Streaming boxes routinely put their video outputs to sleep after 15–30 minutes
 > **CRITICAL HARDWARE DIRECTIVE**: Never power external HDMI streaming dongles (Chromecast with Google TV, Amazon Fire TV Stick 4K, Roku Streaming Stick, Apple TV adapters) from the TV's onboard USB ports. **Always use an independent mains AC wall adapter.**
 
 #### 1. Severe Power Mismatch (2.5W vs. 7.5W+)
-* **TV USB Port Limit**: Standard Hisense VIDAA USB 2.0 ports deliver only **5V @ 0.5A (2.5W)** (or up to 4.5W on USB 3.0).
+* **TV USB Port Limit**: Standard VIDAA TV USB 2.0 ports deliver only **5V @ 0.5A (2.5W)** (or up to 4.5W on USB 3.0).
 * **Streaming Stick Demands**: Devices like Chromecast with Google TV (`sabrina`) require a minimum of **5V @ 1.5A (7.5W)**.
 * **The Squeeze**: While idle video playback may occasionally survive on 2.5W due to dedicated hardware ASIC decoding, background OS tasks (app auto-updates, storage writes, Android ART `bg-dexopt` package compilation, and 5GHz Wi-Fi bursts) spike instantaneous power draw past 7.5W–10W.
 
 #### 2. The Cascading Failure Mode & Standby Brownout
-Powering streaming sticks from the TV's USB port induces an electrical brownout sequence that invalidates the `hisense_vidaa` integration:
+Powering streaming sticks from the TV's USB port induces an electrical brownout sequence that invalidates the `vidaa` integration session:
 
 ```
 [TV Enters Standby: fake_sleep_0]

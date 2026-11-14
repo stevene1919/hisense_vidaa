@@ -8,15 +8,16 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.config_flow import HisenseVidaaConfigFlow
-from custom_components.hisense_vidaa.protocol.pairing import (
+from custom_components.vidaa.client import HisenseTvClient
+from custom_components.vidaa.config_flow import HisenseVidaaConfigFlow
+from custom_components.vidaa.const import DOMAIN
+from custom_components.vidaa.protocol.pairing import (
     PairingStatusError,
     async_probe_pairing_challenge,
     async_submit_pin_code,
 )
 
-PROBE_PATH = "custom_components.hisense_vidaa.config_flow.async_probe_pairing_challenge"
+PROBE_PATH = "custom_components.vidaa.config_flow.async_probe_pairing_challenge"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -54,11 +55,11 @@ def _flow(hass: MagicMock, *, profile: str = "legacy") -> HisenseVidaaConfigFlow
 def no_network_start_auth(monkeypatch):
     """Keep the flow's client construction offline."""
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_start_auth",
+        "custom_components.vidaa.client.HisenseTvClient.async_start_auth",
         AsyncMock(return_value=None),
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.get_device_fingerprint",
+        "custom_components.vidaa.client.HisenseTvClient.get_device_fingerprint",
         MagicMock(return_value={}),
     )
 
@@ -220,7 +221,7 @@ async def test_static_pin_submit_completes_flow(monkeypatch, no_network_start_au
     flow = _flow(hass)
     monkeypatch.setattr(PROBE_PATH, AsyncMock(return_value=True))
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_submit_pin",
+        "custom_components.vidaa.client.HisenseTvClient.async_submit_pin",
         AsyncMock(return_value={}),
     )
 
@@ -240,7 +241,7 @@ async def test_static_pin_submit_close_shows_retryable_error(monkeypatch, no_net
     flow = _flow(hass)
     monkeypatch.setattr(PROBE_PATH, AsyncMock(return_value=True))
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_submit_pin",
+        "custom_components.vidaa.client.HisenseTvClient.async_submit_pin",
         AsyncMock(side_effect=PairingStatusError("closed")),
     )
 
@@ -259,7 +260,7 @@ async def test_static_pin_submit_failure_after_pin_is_not_invalid_auth(monkeypat
     flow = _flow(hass)
     monkeypatch.setattr(PROBE_PATH, AsyncMock(return_value=True))
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_submit_pin",
+        "custom_components.vidaa.client.HisenseTvClient.async_submit_pin",
         AsyncMock(return_value={}),
     )
 
@@ -361,11 +362,11 @@ async def test_static_no_challenge_disconnects_probe_client(monkeypatch, no_netw
         disconnected.append(self)
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.async_disconnect",
+        "custom_components.vidaa.client.HisenseTvClient.async_disconnect",
         fake_disconnect,
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.client.HisenseTvClient.disconnect",
+        "custom_components.vidaa.client.HisenseTvClient.disconnect",
         fake_disconnect,
     )
 
@@ -394,7 +395,7 @@ async def test_static_reauth_disconnects_own_entry_before_probe(monkeypatch, no_
     sibling.mac = "e8:51:77:ec:98:1d"
     sibling.disconnect = MagicMock(side_effect=lambda: events.append("disconnect:sibling"))
     sibling.async_disconnect = AsyncMock(side_effect=lambda: events.append("disconnect:sibling"))
-    hass.data = {"hisense_vidaa": {"entry_1": {"client": own}, "entry_2": {"client": sibling}}}
+    hass.data = {DOMAIN: {"entry_1": {"client": own}, "entry_2": {"client": sibling}}}
 
     flow = _flow(hass, profile="legacy")
     flow._reauth_entry = MagicMock()

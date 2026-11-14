@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
+from custom_components.vidaa.client import HisenseTvClient
 
 
 def test_legacy_static_auth():
@@ -36,7 +36,7 @@ def test_probe_auth_methods():
         "client_cert_presented": True,
     }
 
-    with patch("custom_components.hisense_vidaa.client.async_probe_tv_auth_methods", return_value=fake_results):
+    with patch("custom_components.vidaa.client.async_probe_tv_auth_methods", return_value=fake_results):
         res = client.probe_auth_methods()
 
     assert res["legacy_static"]["supported"] is True
@@ -92,7 +92,7 @@ async def test_async_probe_tv_auth_methods_passes_brand():
     """Verify async_probe_tv_auth_methods accepts brand and generates brand-prefixed credentials."""
     import sys
 
-    from custom_components.hisense_vidaa.protocol.auth import async_probe_tv_auth_methods
+    from custom_components.vidaa.protocol.auth import async_probe_tv_auth_methods
 
     probed_creds = []
 
@@ -127,7 +127,7 @@ async def test_async_probe_tv_auth_methods_toptro_rejection_diagnostics():
     """Verify TOPTRO brand and timestamp propagation and AUTH_REJECTION_CODES classification."""
     import sys
 
-    from custom_components.hisense_vidaa.protocol.auth import async_probe_tv_auth_methods
+    from custom_components.vidaa.protocol.auth import async_probe_tv_auth_methods
 
     probed_creds = []
 

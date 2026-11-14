@@ -10,9 +10,10 @@ from homeassistant.components.media_player import (
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.media_player import HisenseVidaaMediaPlayer
-from custom_components.hisense_vidaa.remote import HisenseVidaaRemote
-from custom_components.hisense_vidaa.tv.settings import SettingMenuItem
+from custom_components.vidaa.const import CONF_ENABLE_MEDIA_CONTROLS, DOMAIN, LEGACY_DOMAIN
+from custom_components.vidaa.media_player import HisenseVidaaMediaPlayer
+from custom_components.vidaa.remote import HisenseVidaaRemote
+from custom_components.vidaa.tv.settings import SettingMenuItem
 
 
 def test_media_player_and_remote_device_info(mock_client, mock_entry):
@@ -23,7 +24,7 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
     )
     dev_info = mp.device_info
     assert mp.device_class == MediaPlayerDeviceClass.TV
-    assert dev_info["identifiers"] == {("hisense_vidaa", "test_entry_id")}
+    assert dev_info["identifiers"] == {(DOMAIN, "test_entry_id"), (LEGACY_DOMAIN, "test_entry_id")}
     assert dev_info["model"] == "65U7G"
     assert dev_info["manufacturer"] == "Hisense"
     assert dev_info["sw_version"] == "V1.0"
@@ -33,19 +34,27 @@ def test_media_player_and_remote_device_info(mock_client, mock_entry):
         entry=mock_entry,
     )
     rem_info = rem.device_info
-    assert rem_info["identifiers"] == {("hisense_vidaa", "test_entry_id")}
+    assert rem_info["identifiers"] == {(DOMAIN, "test_entry_id"), (LEGACY_DOMAIN, "test_entry_id")}
     assert rem_info["model"] == "65U7G"
 
 
 def test_media_player_assumed_state(mock_client, mock_entry):
-    """Test media player assumed_state returns True when on and False when off."""
+    """Test media player assumed_state respects enable_media_controls option."""
+    # 1. By default (enable_media_controls=False): assumed_state is False even when on
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
     mock_client.is_on = True
     mock_client.connected = True
-    assert mp.assumed_state is True
+    assert mp.assumed_state is False
+    assert not (mp.supported_features & MediaPlayerEntityFeature.PLAY)
+
+    # 2. When enable_media_controls is explicitly enabled in options
+    mock_entry.options = {CONF_ENABLE_MEDIA_CONTROLS: True}
+    mp_with_controls = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    assert mp_with_controls.assumed_state is True
+    assert bool(mp_with_controls.supported_features & MediaPlayerEntityFeature.PLAY)
 
     mock_client.is_on = False
-    assert mp.assumed_state is False
+    assert mp_with_controls.assumed_state is False
 
 
 @pytest.mark.anyio
@@ -170,7 +179,7 @@ async def test_media_player_cec_source_naming(mock_client, mock_entry):
     )
     mp.hass = hass
     mp._source_dict = {
-        "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1"},
+        "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1", "displayname2": "Chromecast"},
         "HDMI2": {"sourceid": "HDMI2", "sourcename": "HDMI2"},
     }
     mp._source = "HDMI2"
@@ -178,11 +187,50 @@ async def test_media_player_cec_source_naming(mock_client, mock_entry):
 
     assert mp.source == "HDMI2 (PlayStation 5)"
     assert "HDMI2 (PlayStation 5)" in mp.source_list
-    assert "HDMI1" in mp.source_list
+    assert "HDMI1 (Chromecast)" in mp.source_list
+    assert mp.extra_state_attributes["raw_source"] == "HDMI2"
+    assert mp.extra_state_attributes["custom_labels"] == {"HDMI1": "Chromecast"}
 
     # Test select_source stripping HDMI-CEC device label
     await mp.async_select_source("HDMI2 (PlayStation 5)")
     mock_client.change_source.assert_called_with("HDMI2", "HDMI2")
+
+    # Test select_source matching by CEC device name directly
+    await mp.async_select_source("Chromecast")
+    mock_client.change_source.assert_called_with("HDMI1", "HDMI1")
+
+
+@pytest.mark.anyio
+async def test_media_player_cec_source_naming_disabled_by_default(mock_client, mock_entry):
+    """Test that HDMI-CEC source labeling is disabled by default."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
+
+    # Empty options, should use DEFAULT_ENABLE_CEC_NAMES (False)
+    mock_entry.options = {"include_apps_in_sources": True}
+    mp = HisenseVidaaMediaPlayer(
+        client=mock_client,
+        entry=mock_entry,
+    )
+    mp.hass = hass
+    mp._source_dict = {
+        "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1", "displayname2": "Chromecast"},
+        "HDMI2": {"sourceid": "HDMI2", "sourcename": "HDMI2"},
+    }
+    mp._source = "HDMI2"
+    mp._connected_device = "PlayStation 5"
+
+    assert mp.source == "HDMI2"
+    assert "HDMI2" in mp.source_list
+    assert "HDMI2 (PlayStation 5)" not in mp.source_list
+    assert "HDMI1" in mp.source_list
+    assert "HDMI1 (Chromecast)" not in mp.source_list
 
 
 @pytest.mark.anyio
@@ -241,6 +289,56 @@ async def test_remote_and_media_player_idempotent_power_control(mock_client, moc
     await mp.async_turn_on()
     mock_client.send_key.assert_called_once_with("KEY_POWER")
     assert mp.state == "on"
+
+
+@pytest.mark.anyio
+async def test_media_player_select_source_and_play_media_when_off(mock_client, mock_entry):
+    """Test that selecting source or playing media when TV is off powers on first."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
+    import asyncio
+
+    def _mock_bg_task(coro, *a, **kw):
+        return asyncio.get_running_loop().create_task(coro)
+
+    hass.async_create_background_task = MagicMock(side_effect=_mock_bg_task)
+
+    mp = HisenseVidaaMediaPlayer(
+        client=mock_client,
+        entry=mock_entry,
+    )
+    mp.hass = hass
+    mp._source_dict = {
+        "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1"},
+        "HDMI2": {"sourceid": "HDMI2", "sourcename": "HDMI2"},
+    }
+    mp._app_dict = {
+        "Netflix": {"appId": "1", "name": "Netflix", "url": "url1"},
+    }
+
+    # Put TV in off state
+    mp._handle_state_update({"statetype": "fake_sleep_0"})
+    assert mp.state == "off"
+
+    # Test select_source when off: should turn on then change source
+    mock_client.send_key.reset_mock()
+    mock_client.change_source.reset_mock()
+    await mp.async_select_source("HDMI2")
+
+    mock_client.send_key.assert_called_once_with("KEY_POWER")
+    mock_client.change_source.assert_called_once_with("HDMI2", "HDMI2")
+
+    # Put TV in off state again
+    mp._handle_state_update({"statetype": "fake_sleep_0"})
+    assert mp.state == "off"
+
+    # Test play_media when off: should turn on then launch app
+    mock_client.send_key.reset_mock()
+    mock_client.async_launch_app = AsyncMock()
+    await mp.async_play_media("app", "Netflix")
+
+    mock_client.send_key.assert_called_once_with("KEY_POWER")
+    mock_client.async_launch_app.assert_awaited_once_with("1", "Netflix", "url1")
 
 
 @pytest.mark.anyio
@@ -341,7 +439,7 @@ async def test_media_player_parses_camelcase_source_and_app_payloads(mock_client
 
 def test_sourcelist_and_applist_parsers_accept_camelcase():
     """[F5-leg4] The data parsers accept the same spellings as the payload parsers."""
-    from custom_components.hisense_vidaa.tv.media import (
+    from custom_components.vidaa.tv.media import (
         parse_applist_data,
         parse_sourcelist_data,
     )
@@ -402,8 +500,8 @@ async def test_remote_platform_purges_registry_when_disabled(
     mock_client, mock_entry, monkeypatch
 ):
     """[F10-leg4] remote registry entry is purged when the feature is disabled."""
-    from custom_components.hisense_vidaa.const import CONF_ENABLE_REMOTE, DOMAIN
-    from custom_components.hisense_vidaa.remote import async_setup_entry as async_setup_remote
+    from custom_components.vidaa.const import CONF_ENABLE_REMOTE, DOMAIN
+    from custom_components.vidaa.remote import async_setup_entry as async_setup_remote
 
     hass = MagicMock(spec=HomeAssistant)
     hass.data = {DOMAIN: {mock_entry.entry_id: {"client": mock_client}}}
@@ -550,27 +648,88 @@ def test_media_player_dynamic_source_icons(mock_client, mock_entry):
     assert mp.icon == "mdi:television"
 
 
-def test_media_player_extra_state_attributes(mock_client, mock_entry):
-    """Test extra_state_attributes reporting client info and profiles safely."""
+def test_media_player_extra_state_attributes_and_standard_properties(mock_client, mock_entry):
+    """Test extra_state_attributes omits DeviceInfo duplicates and exposes standard app/title properties."""
     mock_client.device_name = "Hisense Bedroom TV"
     mock_client.model_name = "58A53FXVT"
     mock_client.firmware_version = "V0000.06.30T.N0921"
     mock_client.connected = True
     mock_client.brand = "his"
+    mock_client.current_program = None
 
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp._state = STATE_ON
+    mp._source = "HDMI2"
+    mp._source_dict = {
+        "HDMI1": {"sourceid": "HDMI1", "sourcename": "HDMI1", "displayname2": "Chromecast"},
+        "HDMI2": {"sourceid": "HDMI2", "sourcename": "HDMI2"},
+    }
+    mp._app_dict = {
+        "Netflix": {"appId": "1", "name": "Netflix", "url": "netflix://"},
+    }
+
     attrs = mp.extra_state_attributes
-    assert attrs["reported_name"] == "Hisense Bedroom TV"
-    assert attrs["model"] == "58A53FXVT"
-    assert attrs["software_version"] == "V0000.06.30T.N0921"
-    assert attrs["mqtt_connected"] is True
-    assert "auth_profile" in attrs
-    assert "brand_profile" in attrs
+    # DeviceInfo / diagnostic duplicates must NOT be in extra_state_attributes
+    for key in (
+        "reported_name",
+        "model",
+        "software_version",
+        "mac_address",
+        "mqtt_connected",
+        "auth_profile",
+        "brand_profile",
+        "active_brand",
+    ):
+        assert key not in attrs
+
+    # Source / audio runtime attributes remain present
+    assert attrs["audio_output"] == "TV Speakers"
+    assert attrs["raw_source"] == "HDMI2"
+    assert attrs["custom_labels"] == {"HDMI1": "Chromecast"}
+
+    # On unlabeled HDMI2: media_title, app_name, and app_id are None (no duplicate "HDMI2" title)
+    assert mp.media_title is None
+    assert mp.app_name is None
+    assert mp.app_id is None
+
+    # On labeled HDMI1: media_title resolves to connected CEC/custom label
+    mp._source = "HDMI1"
+    assert mp.media_title == "Chromecast"
+    assert mp.app_name is None
+    assert mp.app_id is None
+
+    # When running an app: standard app_name and app_id are populated, media_title is None
+    mp._source = "Netflix"
+    assert mp.app_name == "Netflix"
+    assert mp.app_id == "1"
+    assert mp.media_title is None
+
+    # When watching Live TV with EPG program: media_title returns current_program
+    mp._source = "TV"
+    mock_client.current_program = "Evening News"
+    assert mp.media_title == "Evening News"
+
+
+def test_media_player_audio_output_attribute(mock_client, mock_entry):
+    """audio_output attribute tracks volume_type (0=TV Speakers, 1=ARC/eARC); mute does not change it."""
+    mock_client.connected = True
+    mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
+    mp.hass = None
+    assert mp.extra_state_attributes["audio_output"] == "TV Speakers"
+
+    mp._handle_volume_update({"volume_type": "1", "volume_value": 5})
+    assert mp.extra_state_attributes["audio_output"] == "ARC / eARC"
+
+    mp._handle_volume_update({"volume_type": 2, "volume_value": 0})
+    assert mp.extra_state_attributes["audio_output"] == "ARC / eARC"
+
+    mp._handle_volume_update({"volume_type": 0, "volume_value": 5})
+    assert mp.extra_state_attributes["audio_output"] == "TV Speakers"
 
 
 def test_media_player_mro_precedence():
     """Ensure MediaPlayerControlsMixin overrides Home Assistant MediaPlayerEntity stubs."""
-    from custom_components.hisense_vidaa.media_player.controls import MediaPlayerControlsMixin
+    from custom_components.vidaa.media_player.controls import MediaPlayerControlsMixin
 
     # Check that async control methods resolve to MediaPlayerControlsMixin
     assert HisenseVidaaMediaPlayer.async_turn_on == MediaPlayerControlsMixin.async_turn_on
@@ -641,7 +800,7 @@ async def test_media_player_context_aware_track_controls(mock_client, mock_entry
 @pytest.mark.anyio
 async def test_media_player_source_filtering_option(mock_client, mock_entry):
     """Test user-configured source filtering via CONF_SOURCES option."""
-    from custom_components.hisense_vidaa.const import CONF_SOURCES
+    from custom_components.vidaa.const import CONF_SOURCES
 
     mp = HisenseVidaaMediaPlayer(client=mock_client, entry=mock_entry)
     mp._source_dict = {"HDMI1": {}, "HDMI2": {}, "TV": {}, "AV": {}}

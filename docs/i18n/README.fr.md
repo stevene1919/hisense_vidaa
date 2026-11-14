@@ -1,4 +1,4 @@
-# Intégration Hisense VIDAA TV pour Home Assistant
+# Intégration VIDAA Smart TV pour Home Assistant
 
 <p align="center">
   <a href="../../README.md"><img src="https://img.shields.io/badge/🇬🇧_English-gray?style=flat-square" alt="English"></a>
@@ -28,7 +28,7 @@ Elle se connecte **directement** au courtier MQTT interne du téléviseur (port 
 L'installation prend moins de 3 minutes en 3 étapes simples :
 
 ### 1️⃣ Installation via HACS
-Cliquez sur le bouton ci-dessous (ou recherchez **Hisense VIDAA TV** dans HACS → Intégrations → Télécharger) :
+Cliquez sur le bouton ci-dessous (ou recherchez **VIDAA Smart TV** dans HACS → Intégrations → Télécharger) :
 
 [![Ouvrir HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
@@ -43,7 +43,7 @@ Les téléviseurs VIDAA nécessitent une négociation TLS mutuelle sur le port 3
 
 ### 3️⃣ Appairage avec le code PIN à l'écran
 1. Redémarrez Home Assistant (`Paramètres` → `Système` → `Redémarrer`).
-2. Allez dans **Paramètres → Appareils et services → Ajouter une intégration** et recherchez **Hisense VIDAA TV**.
+2. Allez dans **Paramètres → Appareils et services → Ajouter une intégration** et recherchez **VIDAA Smart TV**.
 3. Saisissez l'adresse IP locale de votre téléviseur et cliquez sur **Soumettre**.
 4. Saisissez le **code PIN à 4 chiffres** affiché sur l'écran du téléviseur pour finaliser la configuration !
 
@@ -67,9 +67,8 @@ Prend officiellement en charge **tous les téléviseurs sous VIDAA OS** (appaira
 - **Contrôle 100 % Local sur le LAN (`iot_class: local_push`)** : Zéro dépendance au cloud, fonctionne dans des VLANs IoT isolés.
 - **Lecteur Multimédia (`media_player`)** : Allumage/extinction, volume, sélection des sources, changement de chaîne, lancement d'applications et touches contextuelles (zapping en direct, navigation de pistes dans les applications).
 - **Réglages Image & Son (`select` & `number`)** : Modes d'image (`Standard`, `Cinéma`, `Dynamique`, `Sport`, `Filmmaker`), luminosité, contraste et rétroéclairage ; modes audio et sortie sonore.
-- **Notifications à l'Écran (`notify`)** : Envoi de messages toast personnalisés sur l'écran du téléviseur.
 - **Télécommande Dédiée (`remote`)** : Flèches directionnelles, pavé numérique, menu, touches de couleur et répétition de touches configurable.
-- **Déclencheurs d'Allumage (`device_trigger`)** : Prise en charge native du déclencheur `hisense_vidaa.turn_on` pour activer des prises connectées ou Wake-on-LAN.
+- **Déclencheurs d'Allumage (`device_trigger`)** : Prise en charge native du déclencheur `vidaa.turn_on` pour activer des prises connectées ou Wake-on-LAN.
 
 ---
 

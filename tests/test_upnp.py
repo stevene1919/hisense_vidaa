@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.protocol.upnp import (
+from custom_components.vidaa.client import HisenseTvClient
+from custom_components.vidaa.protocol.upnp import (
     PATH_LAN_CONTROL,
     HisenseUpnpClient,
 )
@@ -257,7 +257,7 @@ async def test_client_upnp_wrappers():
 
 def test_upnp_desc_parsers() -> None:
     """Test dedicated UPnP descriptor parsing utilities."""
-    from custom_components.hisense_vidaa.tv.upnp_desc import (
+    from custom_components.vidaa.tv.upnp_desc import (
         parse_upnp_description_properties,
         parse_upnp_friendly_name,
         parse_upnp_renderer_descriptor,

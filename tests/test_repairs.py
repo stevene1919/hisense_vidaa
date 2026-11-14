@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.const import (
+from custom_components.vidaa.const import (
     CONF_AUTH_PROFILE,
     CONF_CERTFILE,
     CONF_KEYFILE,
 )
-from custom_components.hisense_vidaa.repairs import (
+from custom_components.vidaa.repairs import (
     AuthTokenInvalidatedRepairFlow,
     CertificateMissingRepairFlow,
     async_create_fix_flow,
@@ -30,7 +30,7 @@ async def test_repairs_flow_confirm_missing_certs(monkeypatch):
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.repairs.resolve_certificates",
+        "custom_components.vidaa.repairs.resolve_certificates",
         lambda: (None, None),
     )
 
@@ -48,11 +48,11 @@ async def test_repairs_flow_confirm_certs_found(monkeypatch):
     hass.async_add_executor_job = AsyncMock(side_effect=lambda func, *args: func(*args))
 
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.repairs.resolve_certificates",
+        "custom_components.vidaa.repairs.resolve_certificates",
         lambda: ("/path/to/cert.pem", "/path/to/key.pem"),
     )
     monkeypatch.setattr(
-        "custom_components.hisense_vidaa.repairs.check_certs_exist",
+        "custom_components.vidaa.repairs.check_certs_exist",
         lambda c, k: True,
     )
 
@@ -184,8 +184,8 @@ async def test_certificate_missing_repair_flow_reloads_entry_on_fix():
     assert isinstance(flow, CertificateMissingRepairFlow)
     flow.hass = hass
 
-    with patch("custom_components.hisense_vidaa.repairs.resolve_certificates", return_value=("/ssl/custom.crt", "/ssl/custom.key")), \
-         patch("custom_components.hisense_vidaa.repairs.check_certs_exist", return_value=True):
+    with patch("custom_components.vidaa.repairs.resolve_certificates", return_value=("/ssl/custom.crt", "/ssl/custom.key")), \
+         patch("custom_components.vidaa.repairs.check_certs_exist", return_value=True):
         result = await flow.async_step_confirm(user_input={})
         assert result["type"] == "create_entry"
         hass.config_entries.async_reload.assert_awaited_once_with("test_entry_cert")

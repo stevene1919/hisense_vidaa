@@ -1,25 +1,25 @@
 # 🔬 VIDAA Protocol & Cryptographic Architecture
 
-This document provides a comprehensive technical breakdown of the Hisense VIDAA OS MQTT communication protocol, reverse-engineered from `libmqttcrypt.so` and the official VIDAA / RemoteNOW Android applications.
+This document provides a comprehensive technical breakdown of the VIDAA OS MQTT communication protocol, reverse-engineered from `libmqttcrypt.so` and the official VIDAA / RemoteNOW Android applications.
 
 > [!NOTE]
 > **100% Pure Python Implementation (Zero Native Binaries):**
 > `libmqttcrypt.so` is the proprietary compiled C library inside the official Hisense Android APKs and TV firmware from which the dynamic hashing formulas and 64-bit XOR bitmasks were originally reverse-engineered.
 > 
-> This Home Assistant integration **does not** load, bundle, or execute any native binary files. All cryptographic calculations, dynamic timestamps, and challenge-response routines are implemented in **100% native Python** ([`crypto.py`](../custom_components/hisense_vidaa/crypto.py)), ensuring seamless cross-platform portability across any Home Assistant host architecture (Linux ARM64, AMD64, Raspberry Pi, Home Assistant OS) without external binaries or compilation steps.
+> This Home Assistant integration **does not** load, bundle, or execute any native binary files. All cryptographic calculations, dynamic timestamps, and challenge-response routines are implemented in **100% native Python** ([`crypto.py`](../custom_components/vidaa/protocol/crypto.py)), ensuring seamless cross-platform portability across any Home Assistant host architecture (Linux ARM64, AMD64, Raspberry Pi, Home Assistant OS) without external binaries or compilation steps.
 
 
 ---
 
 ## 🧭 Communication Overview
 
-Hisense smart TVs running VIDAA OS host an internal MQTT broker listening on TLS port `36669`. Communication requires mutual TLS with client certificates and a challenge-response pairing sequence.
+Smart TVs and projectors running VIDAA OS host an internal MQTT broker listening on TLS port `36669`. Communication requires mutual TLS with client certificates and a challenge-response pairing sequence.
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant HA as Home Assistant (Client)
-    participant TV as Hisense VIDAA TV (:36669)
+    participant TV as VIDAA Smart TV (:36669)
     
     Note over HA,TV: 1. TLS v1.2 Mutual Handshake (Client Cert & Key)
     HA->>TV: Connect MQTT (Dynamic Username + Salt Hash)
@@ -132,7 +132,11 @@ stateDiagram-v2
 | `/remoteapp/mobile/{client_id}/platform_service/data/soundsetting` | `Subscribe` | Response containing sound menu tree & active equalizer parameters |
 | `/remoteapp/mobile/broadcast/platform_service/data/picturesetting` | `Subscribe` | Broadcast state push when picture mode or brightness changes on TV |
 | `/remoteapp/mobile/broadcast/platform_service/data/soundsetting` | `Subscribe` | Broadcast state push when sound mode or audio setting changes on TV |
-| `/remoteapp/mobile/{client_id}/ui_service/data/capability` | `Subscribe` | TV capabilities descriptor (e.g. notifications/toast support) |
+| `/remoteapp/mobile/{client_id}/ui_service/data/capability` | `Subscribe` | TV capabilities descriptor (e.g. hardware capabilities) |
+
+### 🖱️ Web Browser vs TV UI Mode
+* **Dual Text Ingestion (`actions/txtinputdata` vs `actions/bwsinputdata`):** When injecting virtual keyboard text, the integration routes payloads to `txtinputdata` (native OS input fields and apps like YouTube) and simultaneously to `bwsinputdata` (built-in Web Browser address bar and in-page inputs) to ensure consistent text delivery regardless of active view.
+* **Web Browser Cursor Mode:** In the official companion APK (`com.universal.remote.multi`), the on-screen mouse trackpad layout (`activity_mouse.xml`) is marked `"Only available in Browser"`. The TV OS disables cursor rendering on the launcher home screen and in third-party video apps; mouse click (`KEY_LEFTMOUSEKEYS`) and zoom (`KEY_ZOOMIN`/`KEY_ZOOMOUT`) commands sent over `actions/sendkey` operate specifically when interacting with web browser content.
 
 ---
 
@@ -188,7 +192,7 @@ In addition to the primary MQTT broker on port `36669`, VIDAA OS exposes an unau
 ```mermaid
 flowchart TD
     HA["Home Assistant (Client)"]
-    TV["Hisense VIDAA TV (:38400)"]
+    TV["VIDAA Smart TV (:38400)"]
 
     HA -- "SSDP M-SEARCH (UDP 1900)" --> TV
     TV -- "SSDP Response (MediaRenderer:1)" --> HA
@@ -280,8 +284,8 @@ VIDAA OS is not exclusive to Hisense televisions; it is licensed globally to mul
    Once an OEM brand is resolved via cascade, certificate hinting, UPnP auto-detection, or manual selection, post-PIN device detail queries preserve the active OEM brand, preventing fallback resets to `"his"`.
 5. **Certificate Filename Hinting**:
    If users place brand-named client certificates in `/config/ssl/` (e.g. `toshiba.crt`, `loewe.pem`, `philips.crt`, `sharp.pem`, `jvc.key`, `toptro.crt`, `rcamobile.p12`), the integration automatically detects the brand from the file names during setup.
-6. **Dedicated Brand Profile Diagnostic Telemetry**:
-   Exposes `sensor.<device>_brand_profile` under Home Assistant's **Diagnostic** category. This displays the configured brand profile (`Auto Detect (Recommended)`, `Hisense`, `Toshiba`, etc.) and exposes diagnostic attributes (`configured_profile`, `active_brand_code`, `active_brand`), making it trivial to inspect which OEM salt is active in runtime.
+6. **Session & Brand Profile Diagnostic Telemetry**:
+   Exposes `sensor.<device>_session_status` under Home Assistant's **Diagnostic** category. Its state attributes include `brand_profile` (`Auto Detect (Recommended)`, `Hisense`, `Toshiba`, etc.), `active_brand`, `auth_profile`, and `configured_auth_profile`, making it trivial to inspect which OEM salt and authentication tier are active in runtime.
 7. **Runtime Brand Updates**:
    Changing `CONF_BRAND` in the Security Options menu dynamically regenerates pairing credentials and refreshes MQTT sessions without breaking existing entity registries.
 

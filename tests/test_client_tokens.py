@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.protocol.auth import is_token_expired
-from custom_components.hisense_vidaa.protocol.auth_lifecycle import TokenLifecycleManager
+from custom_components.vidaa.client import HisenseTvClient
+from custom_components.vidaa.protocol.auth import is_token_expired
+from custom_components.vidaa.protocol.auth_lifecycle import TokenLifecycleManager
 
 
 def test_check_and_refresh_token_not_expired():
@@ -77,7 +77,7 @@ async def test_check_and_refresh_token_expired():
         refresh_token_duration=30,
     )
 
-    with patch("custom_components.hisense_vidaa.client.async_perform_token_refresh", return_value=None) as mock_refresh, \
+    with patch("custom_components.vidaa.client.async_perform_token_refresh", return_value=None) as mock_refresh, \
          patch.object(client, "async_sync_clock"):
         assert await client.async_check_and_refresh_token(force=False) is False
         mock_refresh.assert_awaited_once()
@@ -290,7 +290,7 @@ async def test_refresh_tokens_restores_connection_on_failure():
     client.mqtt_client = MagicMock()
     client.connected = True
 
-    with patch("custom_components.hisense_vidaa.client.async_perform_token_refresh", return_value=None), \
+    with patch("custom_components.vidaa.client.async_perform_token_refresh", return_value=None), \
          patch.object(client, "async_sync_clock"), \
          patch.object(client, "async_connect_and_run") as mock_connect:
         assert await client.async_refresh_tokens() is False
@@ -378,4 +378,26 @@ async def test_token_refresh_failure_honors_clock_offset():
     # Even though refresh failed once, the refresh token has 55 days left in TV epoch,
     # so auth_failed MUST NOT be dispatched if clock_offset is applied properly!
     client._dispatch_auth_failed.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_async_sync_clock_fallback_uses_thread():
+    """Test async_sync_clock falls back to synchronous fn in a thread without blocking (Issue #59)."""
+    client = HisenseTvClient(ip="192.168.50.12")
+    host_now = int(time.time())
+    mock_tv_ts = host_now - 100
+
+    def mock_sync_get_tv_timestamp(ip, timeout=2.0):
+        import threading
+        assert threading.current_thread() is not threading.main_thread()
+        return mock_tv_ts
+
+    with (
+        patch.object(client.upnp, "async_get_tv_timestamp", AsyncMock(return_value=None)),
+        patch("custom_components.vidaa.tv.tokens._get_tv_timestamp_fn", return_value=mock_sync_get_tv_timestamp),
+    ):
+        offset = await client.async_sync_clock()
+
+    assert offset == mock_tv_ts - host_now
+    assert client.tv_timestamp == mock_tv_ts
 

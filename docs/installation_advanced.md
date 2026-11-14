@@ -1,6 +1,6 @@
 # 🛠️ Advanced Installation, Development & Lifecycle Guide
 
-This guide covers advanced deployment methods for the **Hisense VIDAA TV Integration**, including direct Git cloning, tracking pre-release/beta branches, Git submodule management, air-gapped offline installations, standalone CLI diagnostics, and clean uninstallation.
+This guide covers advanced deployment methods for the **VIDAA Smart TV Integration**, including direct Git cloning, tracking pre-release/beta branches, Git submodule management, air-gapped offline installations, standalone CLI diagnostics, and clean uninstallation.
 
 > [!NOTE]
 > For standard installations, using **HACS** (Home Assistant Community Store) or extracting the official release archive is recommended. See [Beginner's Quick Start Guide](quick_start_beginners.md).
@@ -27,13 +27,13 @@ Deploying via Git allows you to pull updates directly using `git pull` without w
 ### Architecture Warning (Avoid Nested Component Collision)
 The repository root contains developer tooling (`test_client.py`, tests, documentation, and metadata). Home Assistant expects the component directory to be located at:
 ```text
-/config/custom_components/hisense_vidaa/
+/config/custom_components/vidaa/
 ├── manifest.json
 ├── __init__.py
 └── ...
 ```
 > [!CAUTION]
-> **Do not clone the repository directly into `/config/custom_components/hisense_vidaa/`**. 
+> **Do not clone the repository directly into `/config/custom_components/vidaa/`**. 
 > Doing so places the repository root (and extraneous developer files) into Home Assistant's component loader path, causing loader errors.
 
 ### Recommended Git Setup (Symlink Method)
@@ -50,7 +50,7 @@ git clone https://github.com/stevene1919/hisense_vidaa.git hisense_vidaa_repo
 mkdir -p custom_components
 
 # 4. Symlink the integration component into custom_components
-ln -s /config/hisense_vidaa_repo/custom_components/hisense_vidaa /config/custom_components/hisense_vidaa
+ln -s /config/hisense_vidaa_repo/custom_components/vidaa /config/custom_components/vidaa
 
 # 5. Restart Home Assistant to load the component
 ```
@@ -99,11 +99,11 @@ cd /config
 git submodule add https://github.com/stevene1919/hisense_vidaa.git custom_components/hisense_vidaa_submodule
 
 # Symlink the inner component
-ln -s hisense_vidaa_submodule/custom_components/hisense_vidaa custom_components/hisense_vidaa
+ln -s hisense_vidaa_submodule/custom_components/vidaa custom_components/vidaa
 
 # Commit the submodule reference in your config repository
 git add .gitmodules custom_components/
-git commit -m "feat(submodule): add hisense_vidaa integration submodule"
+git commit -m "feat(submodule): add vidaa integration submodule"
 ```
 
 To update the submodule:
@@ -160,17 +160,17 @@ python3 scripts/test_client.py auth --ip 192.168.50.12 --profile auto
 For privacy-centric smart homes where Home Assistant and the TV operate on an isolated IoT VLAN without internet access:
 
 1. **Download Release Archive on an Internet-Connected Machine**:
-   - Download `hisense_vidaa.zip` from the [Latest Releases](https://github.com/stevene1919/hisense_vidaa/releases).
+   - Download `vidaa.zip` from the [Latest Releases](https://github.com/stevene1919/hisense_vidaa/releases).
 2. **Transfer to Home Assistant Host**:
    - Via Secure Copy (`scp`):
      ```bash
-     scp hisense_vidaa.zip <username>@<homeassistant_ip>:/tmp/
+     scp vidaa.zip <username>@<homeassistant_ip>:/tmp/
      ```
    - Or copy via local Samba / SMB network share into `/config/`.
 3. **Extract to `custom_components`**:
    ```bash
-   mkdir -p /config/custom_components/hisense_vidaa
-   unzip /tmp/hisense_vidaa.zip -d /config/custom_components/hisense_vidaa/
+   mkdir -p /config/custom_components/vidaa
+   unzip /tmp/vidaa.zip -d /config/custom_components/vidaa/
    ```
 4. **Copy Certificates**:
    - Place client certificates in `/config/ssl/` (e.g. `/config/ssl/remotenow_2018_cert.pem` and `key.pem`).
@@ -181,11 +181,11 @@ For privacy-centric smart homes where Home Assistant and the TV operate on an is
 
 ## 6. Clean Removal & Uninstallation
 
-To cleanly remove and uninstall the **Hisense VIDAA TV** integration from Home Assistant:
+To cleanly remove and uninstall the **VIDAA Smart TV** integration from Home Assistant:
 
 ### 6.1 Delete Config Entry
 1. In Home Assistant, navigate to **Settings → Devices & Services → Integrations**.
-2. Locate the **Hisense VIDAA TV** integration card.
+2. Locate the **VIDAA Smart TV** integration card.
 3. If you have multiple configured TVs, select the specific TV you wish to remove.
 4. Click the three vertical dots (`⋮`) menu in the card header and click **Delete**.
 5. Confirm the deletion when prompted.
@@ -194,21 +194,21 @@ To cleanly remove and uninstall the **Hisense VIDAA TV** integration from Home A
 > Deleting the config entry automatically unregisters associated entity devices, unloads custom services (when no other TVs remain configured), and cancels active background MQTT network loops.
 
 ### 6.2 Clean Up Certificates (Optional)
-If you placed client certificates or key files in `/config/ssl/hisense_vidaa/` (or `/config/ssl/` / `/ssl/`), and no other tools or TV instances require them:
+If you placed client certificates or key files in `/config/ssl/vidaa/` (or `/config/ssl/` / `/ssl/`), and no other tools or TV instances require them:
 1. Open your Home Assistant Terminal, SSH session, or File Editor.
-2. Delete the certificate files from the directory (e.g. `rm -rf /config/ssl/hisense_vidaa` or delete `El.p12`).
+2. Delete the certificate files from the directory (e.g. `rm -rf /config/ssl/vidaa` or delete `El.p12`).
 
 ### 6.3 Uninstall Component
 - **Via HACS (Recommended)**:
   1. Navigate to **HACS → Integrations**.
-  2. Find **Hisense VIDAA TV** in the list of installed integrations.
+  2. Find **VIDAA Smart TV** in the list of installed integrations.
   3. Click the three vertical dots (`⋮`) on the integration row and select **Remove**.
   4. Confirm the removal.
 - **Manual Installation**:
   1. Connect via SSH or Terminal to your Home Assistant host.
   2. Delete the integration directory:
      ```bash
-     rm -rf /config/custom_components/hisense_vidaa
+     rm -rf /config/custom_components/vidaa
      ```
 
 ### 6.4 Restart Home Assistant

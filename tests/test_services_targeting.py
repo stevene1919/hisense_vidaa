@@ -9,13 +9,13 @@ import pytest
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 
-from custom_components.hisense_vidaa import async_setup
-from custom_components.hisense_vidaa.const import (
+from custom_components.vidaa import async_setup
+from custom_components.vidaa.const import (
     ATTR_KEY,
     DOMAIN,
     SERVICE_SEND_KEY,
 )
-from custom_components.hisense_vidaa.services import _get_target_clients
+from custom_components.vidaa.services import _get_target_clients
 
 
 @pytest.mark.anyio
@@ -229,7 +229,7 @@ def test_multi_tv_ambiguous_target_guard() -> None:
     """Test single-TV auto targeting, multi-TV ambiguous target exception, and 'all' broadcast."""
     from types import SimpleNamespace
 
-    from custom_components.hisense_vidaa.services import (
+    from custom_components.vidaa.services import (
         _get_target_clients,
         _resolve_service_targets,
     )

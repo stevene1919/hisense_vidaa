@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "custom_components/hisense_vidaa/**"
+      - "custom_components/vidaa/**"
       - "tests/**"
       - "scripts/**"
       - "pyproject.toml"

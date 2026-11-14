@@ -807,7 +807,7 @@ def mock_entry(mock_client):
 def mock_client():
     from unittest.mock import AsyncMock
 
-    from custom_components.hisense_vidaa.tv.actions import turn_off_tv, turn_on_tv
+    from custom_components.vidaa.tv.actions import turn_off_tv, turn_on_tv
 
     client = MagicMock()
     client.ip = "192.168.50.12"
@@ -850,7 +850,6 @@ def mock_client():
     client.async_set_picture_setting = AsyncMock()
     client.async_set_sound_setting = AsyncMock()
     client.async_send_text_input = AsyncMock()
-    client.async_show_message = AsyncMock(return_value=True)
     client.async_launch_app = AsyncMock()
     client.async_get_picture_settings = AsyncMock()
     client.async_get_sound_settings = AsyncMock()
@@ -868,7 +867,6 @@ def mock_client():
     client.async_set_picture_setting.side_effect = lambda *a, **k: client.set_picture_setting(*a, **k)
     client.async_set_sound_setting.side_effect = lambda *a, **k: client.set_sound_setting(*a, **k)
     client.async_send_text_input.side_effect = lambda *a, **k: client.send_text_input(*a, **k)
-    client.async_show_message.side_effect = lambda *a, **k: client.show_message(*a, **k) or True
     client.async_launch_app.side_effect = lambda *a, **k: client.launch_app(*a, **k)
     client.async_change_source = AsyncMock(side_effect=lambda *a, **k: client.change_source(*a, **k))
     client.async_cycle_source = AsyncMock(side_effect=lambda *a, **k: client.cycle_source(*a, **k))

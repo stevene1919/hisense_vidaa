@@ -1,6 +1,6 @@
 # ⚙️ Configuration & Options Parameters Reference
 
-This document provides a comprehensive reference for all user-configurable parameters across the **Initial Setup (Config Flow)** and **Options Flow** in the `hisense_vidaa` Home Assistant integration.
+This document provides a comprehensive reference for all user-configurable parameters across the **Initial Setup (Config Flow)** and **Options Flow** in the **VIDAA Smart TV** (`vidaa`) Home Assistant integration.
 
 ---
 
@@ -21,12 +21,11 @@ The integration automatically registers entities across 9 Home Assistant platfor
 | Platform            | Entity Class                | Description & Features                                                                                                                                                                                |
 |:------------------- |:--------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`media_player`**  | `MediaPlayerDeviceClass.TV` | Power toggle, volume step/set, mute, source input switcher, Smart TV app launcher, media transport controls (Play, Pause, Stop, Next, Previous), active source/app artwork, and display state.        |
-| **`remote`**        | `RemoteEntity`              | Discrete key press commands, sequence dispatching (`hisense_vidaa.send_key_sequence`), configurable inter-key delays, and repeat counts.                                                              |
+| **`remote`**        | `RemoteEntity`              | Discrete key press commands, sequence dispatching (`vidaa.send_key_sequence`), configurable inter-key delays, and repeat counts.                                                              |
 | **`sensor`**        | `SensorEntity`              | Active Source, Active App, Audio Output Mode, Session Status, Auth Profile, and Hardware Clock Drift offset ($> 60\text{s}$ warning threshold).                                                       |
 | **`binary_sensor`** | `BinarySensorEntity`        | Live MQTT Connection state and In Use indicator.                                                                                                                                                      |
 | **`button`**        | `ButtonEntity`              | **Sync TV Clock**, **Force Reconnect**, and **Trigger Re-pairing** diagnostic buttons.                                                                                                                |
 | **`switch`**        | `SwitchEntity`              | **Debug Logging** logger toggle and **Audio Only** screen backlight toggle.                                                                                                                           |
-| **`notify`**        | `NotifyEntity`              | On-screen toast message notification service (`notify.send_message`).                                                                                                                                 |
 | **`select`**        | `SelectEntity`              | **Picture Mode** (`Standard`, `Cinema Day`, `Cinema Night`, `Dynamic`, `Sports`, `Game`, `Filmmaker`) and **Sound Mode** switcher (`Standard`, `Theatre`, `Music`, `Speech`, `Late Night`, `Sports`). |
 | **`number`**        | `NumberEntity`              | Calibration sliders for **Backlight**, **Brightness**, and **Contrast** (0–100).                                                                                                                      |
 
@@ -36,21 +35,23 @@ The integration automatically registers entities across 9 Home Assistant platfor
 
 Before deploying the integration, note the following hardware and firmware limitations:
 
-1. **No ICMP Ping in Standby**: Most Hisense VIDAA televisions turn off their ICMP ping responder while in low-power standby (`fake_sleep_0`). ICMP ping integration or ping binary sensors will report the TV as offline during standby.
+1. **No ICMP Ping in Standby**: Most VIDAA televisions turn off their ICMP ping responder while in low-power standby (`fake_sleep_0`). ICMP ping integration or ping binary sensors will report the TV as offline during standby.
 2. **Wi-Fi Wake-on-LAN Unreliability**: Wake-on-LAN (WoL) over 802.11 Wi-Fi can drop initial packets when the TV's Wi-Fi module enters deep power-saving mode. Connecting the TV via wired Ethernet or enabling multi-burst WoL in options is strongly recommended.
-3. **Firmware Compatibility Gaps**: Pre-2018 Hisense TV models (VIDAA U2 or earlier) lack the internal MQTT broker daemon on port `36669` and cannot be controlled via local TLS MQTT.
+3. **Firmware Compatibility Gaps**: Pre-2018 VIDAA TV models (VIDAA U2 or earlier) lack the internal MQTT broker daemon on port `36669` and cannot be controlled via local TLS MQTT.
 4. **App Deep-Linking Restrictions**: Certain Smart TV applications (e.g. Netflix, Disney+) enforce proprietary DRM restrictions that prevent launching directly into specific video content URLs without navigating through the app's main UI.
+5. **Mouse Cursor Browser-Only Scope**: The on-screen mouse pointer in VIDAA OS is exclusively functional when running the TV's native **Web Browser** application (*"Only available in Browser"*). VIDAA's home screen and video streaming apps do not support cursor movement and use standard D-pad directional controls (`up`, `down`, `left`, `right`, `ok`). Mouse button clicks (`mouse_click`, `mouse_up`, `mouse_down`) and zoom keys (`zoom_in`, `zoom_out`) can be dispatched via `remote.send_command`.
+6. **Virtual Keyboard Text Injection Requirements**: Text injected via `vidaa.send_text_input` or `remote.send_command` (`text:<string>`) targets the active search bar or input field on screen. The TV OS requires an active on-screen keyboard dialog or focused text entry box (e.g. in YouTube search, web browser, or Wi-Fi settings); sending text while on passive video playback or menus without input fields will be ignored by the TV.
 
 ---
 
 ## 🚀 1. Installation & Setup Parameters (Config Flow)
 
-When adding a new Hisense VIDAA TV (**Settings → Devices & Services → Add Integration → Hisense VIDAA TV**), the following parameters are available:
+When adding a new VIDAA Smart TV (**Settings → Devices & Services → Add Integration → VIDAA Smart TV**), the following parameters are available:
 
 | Parameter          | Type                 | Required                 | Default         | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 |:------------------ |:-------------------- |:------------------------ |:--------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`ip_address`**   | `string` (IPv4)      | **Yes**                  | None            | The local network IP address of the Hisense Smart TV (e.g. `192.168.50.12`). It is strongly recommended to configure a static DHCP reservation on your router.                                                                                                                                                                                                                                                                                                                                                                   |
-| **`name`**         | `string`             | Optional                 | `Hisense TV`    | User-friendly display name used to prefix created entity IDs and device registry names.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **`ip_address`**   | `string` (IPv4)      | **Yes**                  | None            | The local network IP address of the VIDAA Smart TV (e.g. `192.168.50.12`). It is strongly recommended to configure a static DHCP reservation on your router.                                                                                                                                                                                                                                                                                                                                                                   |
+| **`name`**         | `string`             | Optional                 | `<Brand> TV (<ip>)` | User-friendly display name used to prefix created entity IDs and device registry names.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | **`mac_address`**  | `string` (MAC)       | Optional                 | Auto-discovered | Hardware Ethernet or Wi-Fi MAC address (e.g. `e8:51:77:ec:98:1c`). Used for Wake-on-LAN packets and unique entity IDs. Discovered automatically via UPnP/ARP.                                                                                                                                                                                                                                                                                                                                                                    |
 | **`brand`**        | `select`             | Optional                 | `auto`          | TV / Projector OEM Brand profile selector. Defaults to `Auto Detect (Recommended)`, which automatically queries UPnP port `38400` / `18400` to extract `<modelDescription>` brand metadata, or matches certificate filenames. Can be manually overridden to any of 22+ OEM partners (Hisense, Toshiba, Loewe, TPV / Philips / AOC, Sharp, JVC, TOPTRO, Schneider, Akai, Beko, Telefunken, Bush, Vizio, Philco, Noblex, Sansei, RCA, Sinotec, Vestel, Brandt, Metz, Leica).                                                       |
 | **`auth_profile`** | `select`             | **Yes**                  | `auto`          | Authentication and certificate selection tier: <br>• `auto`: Dynamically cascades from modern dynamic auth to middle, standard, and legacy profiles.<br>• `modern`: Modern XOR-masked timestamp dynamic auth (VIDAA U6, U7, U8, 2024+ models).<br>• `middle`: Middle dynamic auth protocol (transport_protocol 3000–3285).<br>• `remotenow`: Legacy RemoteNOW protocol (VIDAA U3 / U4).<br>• `legacy`: Static authentication without timestamp hashing.<br>• `vidaa_2024`: 2024+ firmware profile with strict broker handshakes. |
@@ -63,7 +64,7 @@ When adding a new Hisense VIDAA TV (**Settings → Devices & Services → Add In
 
 ## 🎛️ 2. Options Flow Parameters
 
-To customize integration behavior for an existing TV, navigate to **Settings → Devices & Services → Hisense VIDAA TV → Configure**. Options are organized into 4 categorized tabs:
+To customize integration behavior for an existing TV, navigate to **Settings → Devices & Services → VIDAA Smart TV → Configure**. Options are organized into 4 categorized tabs:
 
 ### 2.1 Power & Network (`power_network`)
 
@@ -79,8 +80,8 @@ To customize integration behavior for an existing TV, navigate to **Settings →
 |:----------------------------- |:------------------------- |:------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`sources`**                 | `list` (multi-select)     | `All`   | Select which input sources and Smart TV applications appear in the `media_player` source dropdown. The active source is always preserved even if unselected.                                                                                                                                                                    |
 | **`include_apps_in_sources`** | `boolean`                 | `true`  | Merges installed Smart TV apps (Netflix, YouTube, Prime Video, etc.) directly into the `media_player` source selector dropdown.                                                                                                                                                                                                 |
-| **`enable_cec_names`**        | `boolean`                 | `true`  | Automatically replaces generic input names (`HDMI1`, `HDMI2`) with discovered HDMI-CEC device names (e.g. `Apple TV`, `PlayStation 5`, `Chromecast`).                                                                                                                                                                           |
-| **`enable_media_controls`**   | `boolean`                 | `true`  | Enables Play, Pause, Stop, Next, and Previous track controls on the media player entity. When enabled, Next/Previous track controls are **context-aware**: they step channels (`KEY_CHANNELUP`/`KEY_CHANNELDOWN`) while on Live TV, and step tracks (`KEY_FORWARDS`/`KEY_BACK`) when on streaming apps or external HDMI inputs. |
+| **`enable_cec_names`**        | `boolean`                 | `false` | Automatically replaces generic input names (`HDMI1`, `HDMI2`) with discovered HDMI-CEC device names (e.g. `Apple TV`, `PlayStation 5`, `Chromecast`).                                                                                                                                                                           |
+| **`enable_media_controls`**   | `boolean`                 | `false` | Enables Play, Pause, Stop, Next, and Previous track controls on the media player entity. When enabled, Next/Previous track controls are **context-aware**: they step channels (`KEY_CHANNELUP`/`KEY_CHANNELDOWN`) while on Live TV, and step tracks (`KEY_FORWARDS`/`KEY_BACK`) when on streaming apps or external HDMI inputs. |
 | **`playback_debounce`**       | `float` (slider, seconds) | `0.5`   | Settle window duration to filter out transient rapid state flickers (e.g., buffering transitions) from re-triggering automations.                                                                                                                                                                                               |
 
 ### 2.3 Entities & Remote Controls (`features_remote`)
@@ -88,7 +89,6 @@ To customize integration behavior for an existing TV, navigate to **Settings →
 | Parameter                     | Type                      | Default | Description                                                                                                |
 |:----------------------------- |:------------------------- |:------- |:---------------------------------------------------------------------------------------------------------- |
 | **`enable_remote`**           | `boolean`                 | `true`  | When enabled, registers a `remote.<tv>` entity for sending discrete remote keys and sequences.             |
-| **`enable_notify`**           | `boolean`                 | `true`  | When enabled, registers a `notify.<tv>` entity for displaying on-screen toast popup notifications.         |
 | **`enable_picture_controls`** | `boolean`                 | `true`  | Exposes `select.<tv>_picture_mode` and calibration number entities (Backlight, Brightness, Contrast).      |
 | **`enable_sound_controls`**   | `boolean`                 | `true`  | Exposes `select.<tv>_sound_mode` for switching audio modes (Standard, Theater, Music, Speech, Late Night). |
 | **`enable_audio_only`**       | `boolean`                 | `true`  | Exposes `switch.<tv>_audio_only` to turn off the TV display backlight while keeping audio playing.         |
@@ -114,7 +114,7 @@ In addition to the options flow, the integration implements a native **Reconfigu
 If your TV's local IP address changes (for example, if DHCP assigns a new lease) or you need to switch authentication profiles / update client certificates without losing device history:
 
 1. Go to **Settings → Devices & Services**.
-2. Locate your **Hisense VIDAA TV** integration entry.
+2. Locate your **VIDAA Smart TV** integration entry.
 3. Click the three-dots menu (`⋮`) and select **Reconfigure**.
 4. Update the **IP Address**, **Brand Profile**, and/or **Authentication Profile**.
 5. Home Assistant verifies the connection to the new IP and updates the existing configuration entry in place.
@@ -140,12 +140,10 @@ To facilitate real-time monitoring and troubleshooting directly from the Home As
 
 | Entity ID                               | Entity Name        | Description & Attributes                                                                                                                                                                                                                                                                                                                                                                                |
 |:--------------------------------------- |:------------------ |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`sensor.<tv>_clock_drift`**           | **Clock Drift**    | Reports TV hardware clock drift in seconds relative to the Home Assistant host. Automatically synchronized every 2 hours and on wake transition from standby. Changes icon between `mdi:clock-check-outline` (synced, $< 60\text{s}$) and `mdi:clock-alert-outline` ($> 60\text{s}$). Attributes: `synchronized` (bool), `drift_human` (e.g. `+15s`, `-5d 14h`), `tv_time`, `host_time`, `last_synced`. |
-| **`sensor.<tv>_session_status`**        | **Session Status** | Indicates active session state (`Active`, `Standby`, `Reauth Required`). Attributes: `encryption` (TLS version/port), `local_only` (bool), `paired_at`, `access_token_expires_at`, `refresh_token_expires_at`.                                                                                                                                                                                          |
-| **`sensor.<tv>_auth_profile`**          | **Auth Profile**   | Displays the active authentication tier negotiated with the TV (e.g. `VIDAA 2.0 (Newer Firmware / 2024+)`).                                                                                                                                                                                                                                                                                             |
-| **`sensor.<tv>_brand_profile`**         | **Brand Profile**  | Reports the configured brand selection profile (e.g. `Auto Detect (Recommended)`, `Hisense`, `Toshiba`, `TOPTRO`) and active runtime OEM branding. Attributes: `configured_profile` (e.g. `auto`, `his`), `active_brand_code` (e.g. `his`, `tos`, `tpo`), `active_brand` (human-readable resolved brand name).                                                                                          |
-| **`sensor.<tv>_audio_output`**          | **Audio Output**   | Displays whether sound is currently output through `TV Speakers` or `ARC / eARC`.                                                                                                                                                                                                                                                                                                                       |
-| **`sensor.<tv>_active_source`**         | **Active Source**  | Current input source name with `connected_device` HDMI-CEC display names.                                                                                                                                                                                                                                                                                                                               |
+| **`sensor.<tv>_clock_drift`**           | **Clock Drift**    | Reports TV hardware clock drift in seconds relative to the Home Assistant host (disabled by default). Automatically synchronized every 2 hours and on wake transition from standby. Changes icon between `mdi:clock-check-outline` (synced, $< 60\text{s}$) and `mdi:clock-alert-outline` ($> 60\text{s}$). Attributes: `synchronized` (bool), `drift_human` (e.g. `+15s`, `-5d 14h`), `tv_time`, `host_time`, `last_synced`. |
+| **`sensor.<tv>_session_status`**        | **Session Status** | Indicates active session state (`Active`, `Standby`, `Reauth Required`). Attributes: `client_id` (masked), `auth_profile`, `configured_auth_profile`, `brand_profile`, `active_brand`, `encryption` (TLS version/port), `local_only` (bool), `paired_at`, `access_token_expires_at`, `refresh_token_expires_at`. |
+| **`sensor.<tv>_reported_name`**         | **Reported Name**  | Displays the live friendly name reported by the TV over MQTT/UPnP (disabled by default). Attributes: `ip_address`, `mac_address`, `model_name`, `manufacturer`, `firmware_version`. |
+| **`sensor.<tv>_active_source`**         | **Active Source**  | Current hardware input source name (`HDMI1`, `HDMI2`, `TV`, `AV`, `App`, `Home Launcher`, `Standby`, `Off`). Attributes: `display_name` (e.g. `HDMI1 (Bedroom Chrome)`), `connected_device` (e.g. `Bedroom Chrome`), `available_sources` (physical hardware inputs), `connected_inputs` (physical inputs with active signal), `last_known_source`. |
 | **`sensor.<tv>_active_app`**            | **Active App**     | Currently running Smart TV application name.                                                                                                                                                                                                                                                                                                                                                            |
 | **`binary_sensor.<tv>_mqtt_connected`** | **MQTT Connected** | Live binary indicator of whether the persistent TLS MQTT socket to port `36669` is established.                                                                                                                                                                                                                                                                                                         |
 | **`binary_sensor.<tv>_in_use`**         | **In Use**         | Indicates whether the TV display is powered on and actively drawing playback/content.                                                                                                                                                                                                                                                                                                                   |
@@ -154,7 +152,7 @@ To facilitate real-time monitoring and troubleshooting directly from the Home As
 
 | Entity ID                       | Entity Name       | Description                                                                                                                                                             |
 |:------------------------------- |:----------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`switch.<tv>_debug_logging`** | **Debug Logging** | Dynamically enables or disables verbose `DEBUG` level logging for the `custom_components.hisense_vidaa` module in real-time without requiring a Home Assistant restart. |
+| **`switch.<tv>_debug_logging`** | **Debug Logging** | Dynamically enables or disables verbose `DEBUG` level logging for the `custom_components.vidaa` module in real-time without requiring a Home Assistant restart. |
 | **`switch.<tv>_audio_only`**    | **Audio Only**    | Turns off the physical screen panel backlight while keeping audio playback streaming through TV speakers or ARC soundbar.                                               |
 
 ---
@@ -172,12 +170,12 @@ There are four convenient methods to enable verbose debug logging for the integr
 Toggle the built-in diagnostic switch entity:
 
 - **Entity ID**: `switch.<tv>_debug_logging`
-- **Behavior**: Instantly sets the Python logger level for `custom_components.hisense_vidaa` to `DEBUG` without restarting Home Assistant or modifying any configuration files. Toggle off to return to `INFO` level.
+- **Behavior**: Instantly sets the Python logger level for `custom_components.vidaa` to `DEBUG` without restarting Home Assistant or modifying any configuration files. Toggle off to return to `INFO` level.
 
 #### Method 2: Via Home Assistant UI
 
 1. Navigate to **Settings** → **Devices & Services**.
-2. Locate the **Hisense VIDAA TV** integration card.
+2. Locate the **VIDAA Smart TV** integration card.
 3. Click the three-dot menu (**⋮**) and select **Enable debug logging**.
 4. Reproduce the issue, then return to the menu and click **Disable debug logging** to download the generated debug log bundle.
 
@@ -189,7 +187,7 @@ Add or update the `logger` integration in your Home Assistant configuration:
 logger:
   default: warning
   logs:
-    custom_components.hisense_vidaa: debug
+    custom_components.vidaa: debug
 ```
 
 Apply by restarting Home Assistant or calling the `logger.reload` action.
@@ -201,7 +199,7 @@ Without restarting, navigate to **Developer Tools** → **Actions** and execute:
 ```yaml
 action: logger.set_level
 data:
-  custom_components.hisense_vidaa: debug
+  custom_components.vidaa: debug
 ```
 
 ---
@@ -210,7 +208,7 @@ data:
 
 Home Assistant provides official sanitized diagnostic bundles for bug reports:
 
-1. Navigate to **Settings** → **Devices & Services** → **Hisense VIDAA TV**.
+1. Navigate to **Settings** → **Devices & Services** → **VIDAA Smart TV**.
 2. Click on the device or the integration three-dot menu (**⋮**) and choose **Download diagnostics**.
 3. **Privacy & Redaction**: The integration automatically sanitizes sensitive fields before generating the JSON file. Masked keys include:
    - Certificate file paths (`ssl_cert`, `ssl_key`, `p12_path`, `client_cert_path`, `client_key_path`)
@@ -238,9 +236,11 @@ Home Assistant provides official sanitized diagnostic bundles for bug reports:
 To view live integration logs:
 
 1. Go to **Settings** → **System** → **Logs**.
-2. Filter the search box by `custom_components.hisense_vidaa`.
+2. Filter the search box by `custom_components.vidaa`.
 3. Key log entries to monitor:
-   - `[hisense_vidaa] Connected to MQTT broker at <ip>:36669 (TLS 1.2)`
-   - `[hisense_vidaa] Clock drift detected: <offset>s (TV: <date>, Host: <date>)`
-   - `[hisense_vidaa] Connection dropped, reconnecting in <backoff>s...`
-   - `[hisense_vidaa] UPnP probed on port <port>: RenderingControl=True, AVTransport=True`
+   - `[custom_components.vidaa.protocol.connection] [<ip>] Connected to TV MQTT broker`
+   - `[custom_components.vidaa.tv.tokens] [<ip>] Synchronized TV clock: <epoch> (offset: <n> s)`
+   - `[custom_components.vidaa.protocol.connection] [<ip>] MQTT session error: Disconnected during message iteration`
+   - `[custom_components.vidaa.protocol.dispatcher] [<ip>] Message received: <payload> on topic <topic>`
+
+> **Audio output routing:** `media_player.<tv>` exposes an `audio_output` attribute (`TV Speakers` or `ARC / eARC`), derived from the TV's `volume_type` broadcasts. VIDAA firmware does not report Optical/SPDIF or Bluetooth output over MQTT, so those modes appear as `TV Speakers`.

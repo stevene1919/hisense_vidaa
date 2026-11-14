@@ -5,27 +5,24 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.hisense_vidaa.binary_sensor import (
+from custom_components.vidaa.binary_sensor import (
     HisenseVidaaInUseBinarySensor,
     HisenseVidaaMqttConnectedBinarySensor,
 )
-from custom_components.hisense_vidaa.button import (
+from custom_components.vidaa.button import (
     HisenseVidaaForceReconnectButton,
     HisenseVidaaSyncClockButton,
     HisenseVidaaTriggerReauthButton,
     async_setup_entry as async_setup_buttons,
 )
-from custom_components.hisense_vidaa.sensor import (
+from custom_components.vidaa.sensor import (
     HisenseVidaaActiveAppSensor,
     HisenseVidaaActiveSourceSensor,
-    HisenseVidaaAudioOutputSensor,
-    HisenseVidaaAuthProfileSensor,
-    HisenseVidaaBrandProfileSensor,
     HisenseVidaaClockDriftSensor,
     HisenseVidaaReportedNameSensor,
     HisenseVidaaSessionStatusSensor,
 )
-from custom_components.hisense_vidaa.switch import (
+from custom_components.vidaa.switch import (
     HisenseVidaaAudioOnlySwitch,
     HisenseVidaaDebugLoggingSwitch,
 )
@@ -51,8 +48,7 @@ async def test_sensor_entities(mock_client, mock_entry):
     assert s_status.native_value == "Reauth Required"
 
     mock_client.connected = True
-    s_profile = HisenseVidaaAuthProfileSensor(mock_client, mock_entry)
-    assert s_profile.native_value == "VIDAA 2.0 (Newer Firmware / 2024+)"
+    assert s_status.extra_state_attributes["configured_auth_profile"] == "VIDAA 2.0 (Newer Firmware / 2024+)"
 
     s_app = HisenseVidaaActiveAppSensor(mock_client, mock_entry)
     s_app._handle_applist_update([{"appId": "123", "appName": "Netflix"}])
@@ -60,27 +56,39 @@ async def test_sensor_entities(mock_client, mock_entry):
     assert s_app.native_value == "Netflix"
 
     s_source = HisenseVidaaActiveSourceSensor(mock_client, mock_entry)
-    s_source._handle_sourcelist_update([{"sourceName": "HDMI 1", "is_active": True}])
+    s_source._handle_sourcelist_update([
+        {"sourceName": "TV", "has_signal": 0, "is_active": False},
+        {"sourceName": "VIDAA tv", "has_signal": 1, "is_active": False},
+        {"sourceName": "HDMI 1", "displayname2": "Chromecast", "has_signal": 1, "is_active": True},
+        {"sourceName": "HDMI 2", "has_signal": 1, "is_active": False},
+    ])
     assert s_source.native_value == "HDMI 1"
+    assert "raw_source" not in s_source.extra_state_attributes
+    assert "custom_labels" not in s_source.extra_state_attributes
+    assert s_source.extra_state_attributes["connected_device"] == "Chromecast"
+    assert s_source.extra_state_attributes["display_name"] == "HDMI 1 (Chromecast)"
+    assert s_source.extra_state_attributes["available_sources"] == ["TV", "HDMI 1", "HDMI 2"]
+    assert s_source.extra_state_attributes["connected_inputs"] == ["HDMI 1", "HDMI 2"]
+    assert "VIDAA tv" not in s_source.extra_state_attributes["available_sources"]
+    assert "VIDAA tv" not in s_source.extra_state_attributes["connected_inputs"]
+
     s_source._handle_state_update({
         "statetype": "sourceswitch",
         "sourcename": "HDMI 1",
         "displayname2": "PlayStation 5",
     })
+    assert s_source.native_value == "HDMI 1"
     assert s_source.extra_state_attributes["connected_device"] == "PlayStation 5"
+    assert s_source.extra_state_attributes["display_name"] == "HDMI 1 (PlayStation 5)"
 
     s_source._handle_state_update({
         "statetype": "livetv",
         "channel_name": "ABC HD",
         "channel_num": "20",
     })
-    assert s_source.extra_state_attributes["channel_name"] == "ABC HD"
-    assert s_source.extra_state_attributes["channel_num"] == "20"
-
-    s_audio = HisenseVidaaAudioOutputSensor(mock_client, mock_entry)
-    assert s_audio.native_value == "TV Speakers"
-    s_audio._handle_volume_update({"volume_type": 1, "volume_value": 20})
-    assert s_audio.native_value == "ARC / eARC"
+    assert s_source.native_value == "TV"
+    assert "channel_name" not in s_source.extra_state_attributes
+    assert "channel_num" not in s_source.extra_state_attributes
 
     s_name = HisenseVidaaReportedNameSensor(mock_client, mock_entry)
     assert s_name.native_value == "Living Room TV"
@@ -206,59 +214,47 @@ async def test_switch_entities(mock_client, mock_entry):
 
 
 @pytest.mark.anyio
-async def test_in_use_binary_sensor_and_live_tv_metadata(mock_client, mock_entry):
-    """Test In Use binary sensor and Live TV broadcast attributes."""
+async def test_in_use_binary_sensor_and_active_app_cold_boot(mock_client, mock_entry):
+    """Test In Use binary sensor and Active App cold-boot sourcelist recovery."""
     mock_client.state = "on"
     mock_client.connected = True
-    mock_client.current_channel = "ABC HD"
-    mock_client.channel_number = "20"
-    mock_client.current_program = "News 7pm"
+    mock_client.is_on = True
 
     bin_in_use = HisenseVidaaInUseBinarySensor(mock_client, mock_entry)
     assert bin_in_use.is_on is True
-    assert bin_in_use.extra_state_attributes["channel_name"] == "ABC HD"
-    assert bin_in_use.extra_state_attributes["channel_number"] == "20"
-    assert bin_in_use.extra_state_attributes["program_title"] == "News 7pm"
+    assert not getattr(bin_in_use, "extra_state_attributes", None)
+
+    # Cold-boot recovery: ActiveAppSensor starts in Standby, then sourcelist reports HDMI2 active
+    s_app = HisenseVidaaActiveAppSensor(mock_client, mock_entry)
+    assert s_app.native_value == "Standby"
+    s_app._handle_sourcelist_update([
+        {"sourceName": "HDMI2", "has_signal": 1, "is_signal": 1},
+    ])
+    assert s_app.native_value == "TV Input"
 
 
-def test_auth_profile_sensor_prefers_entry_options(mock_client, mock_entry):
-    """[F6-leg4] The auth-profile sensor reads entry.options before entry.data."""
-    from custom_components.hisense_vidaa.const import AUTH_PROFILES
+def test_session_status_auth_and_brand_profile_attributes(mock_client, mock_entry):
+    """Test SessionStatusSensor exposes configured_auth_profile, brand_profile, and active_brand."""
+    from custom_components.vidaa.const import AUTH_PROFILES, BRAND_PROFILES
 
-    mock_entry.data = {**mock_entry.data, "auth_profile": "modern"}
+    mock_entry.data = {**mock_entry.data, "auth_profile": "modern", "brand": "his", "brand_profile": "auto"}
     mock_entry.options = {**mock_entry.options, "auth_profile": "legacy"}
-    sensor = HisenseVidaaAuthProfileSensor(mock_client, mock_entry)
-    assert sensor.native_value == AUTH_PROFILES["legacy"]
-
-    # Falls back to entry.data when options don't override the profile.
-    mock_entry.options = dict(mock_entry.options)
-    mock_entry.options.pop("auth_profile")
-    sensor_fallback = HisenseVidaaAuthProfileSensor(mock_client, mock_entry)
-    assert sensor_fallback.native_value == AUTH_PROFILES["modern"]
-
-
-def test_brand_profile_sensor_options_and_attributes(mock_client, mock_entry):
-    """Test the brand-profile sensor displays configured profile and active hardware attributes."""
-    from custom_components.hisense_vidaa.const import BRAND_PROFILES
-
-    # Auto detect profile
-    mock_entry.data = {**mock_entry.data, "brand": "his", "brand_profile": "auto"}
-    mock_entry.options = {}
     mock_client.brand = "his"
-    sensor = HisenseVidaaBrandProfileSensor(mock_client, mock_entry)
-    assert sensor.native_value == BRAND_PROFILES["auto"]
-    assert sensor.extra_state_attributes["configured_profile"] == "auto"
-    assert sensor.extra_state_attributes["active_brand_code"] == "his"
-    assert sensor.extra_state_attributes["active_brand"] == "Hisense"
 
-    # Options override with explicit brand (e.g. Toshiba or TOPTRO)
+    sensor = HisenseVidaaSessionStatusSensor(mock_client, mock_entry)
+    attrs = sensor.extra_state_attributes
+    assert attrs["configured_auth_profile"] == AUTH_PROFILES["legacy"]
+    assert attrs["brand_profile"] == BRAND_PROFILES["auto"]
+    assert attrs["active_brand"] == "Hisense"
+
+    # Falls back to entry.data when options don't override the profile, and respects explicit brand override
     mock_entry.options = {"brand": "tpo"}
     mock_client.brand = "tpo"
-    sensor_tpo = HisenseVidaaBrandProfileSensor(mock_client, mock_entry)
-    assert sensor_tpo.native_value == BRAND_PROFILES["tpo"]
-    assert sensor_tpo.extra_state_attributes["configured_profile"] == "tpo"
-    assert sensor_tpo.extra_state_attributes["active_brand_code"] == "tpo"
-    assert sensor_tpo.extra_state_attributes["active_brand"] == "TOPTRO"
+    sensor_tpo = HisenseVidaaSessionStatusSensor(mock_client, mock_entry)
+    attrs_tpo = sensor_tpo.extra_state_attributes
+    assert attrs_tpo["configured_auth_profile"] == AUTH_PROFILES["modern"]
+    assert attrs_tpo["brand_profile"] == BRAND_PROFILES["tpo"]
+    assert attrs_tpo["active_brand"] == "TOPTRO"
 
 
 def test_session_status_latches_reauth_required(mock_client, mock_entry):
@@ -279,19 +275,6 @@ def test_session_status_latches_reauth_required(mock_client, mock_entry):
     mock_client.connected = True
     sensor._handle_connected()
     assert sensor.native_value == "Active"
-
-
-def test_audio_output_sensor_string_volume_type(mock_client, mock_entry):
-    """[F9-leg4] The audio-output sensor coerces string volume_type broadcasts."""
-    mock_client.connected = True
-    sensor = HisenseVidaaAudioOutputSensor(mock_client, mock_entry)
-    assert sensor.native_value == "TV Speakers"
-
-    sensor._handle_volume_update({"volume_type": "1"})
-    assert sensor.native_value == "ARC / eARC"
-
-    sensor._handle_volume_update({"volume_type": "0"})
-    assert sensor.native_value == "TV Speakers"
 
 
 def test_session_status_sensor_masks_client_id_and_applies_offset():
@@ -322,14 +305,15 @@ def test_session_status_sensor_masks_client_id_and_applies_offset():
 @pytest.mark.anyio
 async def test_sensor_setup_entry_excludes_retired_sensors(mock_client, mock_entry):
     """Verify async_setup_entry for sensor platform does not add retired diagnostic entities."""
-    from custom_components.hisense_vidaa.sensor import async_setup_entry as async_setup_sensors
+    from custom_components.vidaa.sensor import async_setup_entry as async_setup_sensors
 
     hass = MagicMock(spec=HomeAssistant)
     added_sensors = []
     await async_setup_sensors(hass, mock_entry, lambda entities: added_sensors.extend(entities))
 
-    assert len(added_sensors) == 6
+    assert len(added_sensors) == 5
     unique_ids = [s.unique_id for s in added_sensors]
+    assert f"{mock_entry.entry_id}_audio_output" not in unique_ids
     assert f"{mock_entry.entry_id}_brand_profile" not in unique_ids
     assert f"{mock_entry.entry_id}_auth_profile" not in unique_ids
     assert any(isinstance(s, HisenseVidaaActiveSourceSensor) for s in added_sensors)
@@ -389,6 +373,40 @@ def test_active_app_standby_and_last_known_app(mock_client, mock_entry):
     assert sensor.extra_state_attributes["last_known_app"] == "Netflix"
 
 
+def test_active_app_and_source_remote_launcher_transition(mock_client, mock_entry):
+    """Test Active App and Source sensors correctly handle remote_launcher broadcast (Issue #58)."""
+    mock_client.connected = True
+    mock_client.is_on = True
+    app_sensor = HisenseVidaaActiveAppSensor(mock_client, mock_entry)
+    source_sensor = HisenseVidaaActiveSourceSensor(mock_client, mock_entry)
+
+    app_sensor._handle_applist_update([
+        {"appId": "1", "appName": "netflix"},
+        {"appId": "3", "appName": "youtube"},
+    ])
+    # Enter Netflix
+    app_sensor._handle_state_update({"statetype": "app", "name": "netflix", "url": "netflix", "appId": "1"})
+    assert app_sensor.native_value == "netflix"
+
+    # Return to Home Screen via remote_launcher
+    app_sensor._handle_state_update({"statetype": "remote_launcher"})
+    assert app_sensor.native_value == "Home Launcher"
+    assert app_sensor.extra_state_attributes["last_known_app"] == "Home Launcher"
+
+    # Active source sensor on remote_launcher and app transitions
+    source_sensor._handle_state_update({"statetype": "remote_launcher"})
+    assert source_sensor.native_value == "Home Launcher"
+    assert source_sensor.icon == "mdi:view-dashboard"
+
+    source_sensor._handle_state_update({"statetype": "app", "name": "youtube", "appId": "3"})
+    assert source_sensor.native_value == "App"
+    assert source_sensor.icon == "mdi:application"
+
+    # Enter YouTube
+    app_sensor._handle_state_update({"statetype": "app", "name": "youtube", "url": "youtube", "appId": "3"})
+    assert app_sensor.native_value == "youtube"
+
+
 def test_in_use_binary_sensor_dormant_and_hdmi_states(mock_client, mock_entry):
     """Test in_use binary sensor accounts for HDMI display, dormant modes, and power."""
     sensor = HisenseVidaaInUseBinarySensor(mock_client, mock_entry)
@@ -421,12 +439,12 @@ def test_in_use_binary_sensor_dormant_and_hdmi_states(mock_client, mock_entry):
 
 def test_disabled_by_default_entities(mock_client, mock_entry):
     """Verify specialized diagnostic entities are disabled by default."""
-    from custom_components.hisense_vidaa.button import HisenseVidaaProbeCapabilitiesButton
-    from custom_components.hisense_vidaa.sensor import (
+    from custom_components.vidaa.button import HisenseVidaaProbeCapabilitiesButton
+    from custom_components.vidaa.sensor import (
         HisenseVidaaClockDriftSensor,
         HisenseVidaaReportedNameSensor,
     )
-    from custom_components.hisense_vidaa.switch import HisenseVidaaDebugLoggingSwitch
+    from custom_components.vidaa.switch import HisenseVidaaDebugLoggingSwitch
 
     s_drift = HisenseVidaaClockDriftSensor(mock_client, mock_entry)
     assert s_drift.entity_registry_enabled_default is False

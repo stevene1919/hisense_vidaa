@@ -7,27 +7,27 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.hisense_vidaa.client import HisenseTvClient
-from custom_components.hisense_vidaa.protocol.auth import (
+from custom_components.vidaa.client import HisenseTvClient
+from custom_components.vidaa.protocol.auth import (
     apply_mqtt_tls,
     is_token_expired,
     perform_token_refresh,
 )
-from custom_components.hisense_vidaa.protocol.topics import (
+from custom_components.vidaa.protocol.topics import (
     TOPIC_BROADCAST_BASEPATH,
     TopicPaths,
     build_topic_paths,
 )
-from custom_components.hisense_vidaa.protocol.wol import send_wake_on_lan
-from custom_components.hisense_vidaa.tv.navigation import (
+from custom_components.vidaa.protocol.wol import send_wake_on_lan
+from custom_components.vidaa.tv.navigation import (
     change_source_by_name_or_id,
     cycle_tv_source,
     launch_app_by_name,
 )
-from custom_components.hisense_vidaa.tv.probe import (
+from custom_components.vidaa.tv.probe import (
     probe_tv_features_and_report,
 )
-from custom_components.hisense_vidaa.tv.settings import (
+from custom_components.vidaa.tv.settings import (
     SettingMenuItem,
     find_menu_item_by_name,
     parse_settings_payload,
@@ -99,7 +99,7 @@ async def test_perform_token_refresh_subscriptions() -> None:
     """Test that async_perform_token_refresh subscribes to exact topics rather than wildcard."""
     from unittest.mock import AsyncMock, patch
 
-    from custom_components.hisense_vidaa.protocol.auth import async_perform_token_refresh
+    from custom_components.vidaa.protocol.auth import async_perform_token_refresh
 
     subscribed_topics: list[tuple[str, int]] = []
     published_topics: list[tuple[str, str]] = []
@@ -134,7 +134,7 @@ async def test_perform_token_refresh_subscriptions() -> None:
             pass
 
     with patch("aiomqtt.Client", MockClientContext), \
-         patch("custom_components.hisense_vidaa.protocol.auth.build_mqtt_ssl_context"):
+         patch("custom_components.vidaa.protocol.auth.build_mqtt_ssl_context"):
         await async_perform_token_refresh(
             ip="192.168.50.12",
             client_id="test_client_id",
@@ -197,8 +197,8 @@ def test_settings_item_and_probe_report() -> None:
 
 
 def test_dispatch_incoming_mqtt_message() -> None:
-    from custom_components.hisense_vidaa.protocol.dispatcher import dispatch_incoming_mqtt_message
-    from custom_components.hisense_vidaa.protocol.topics import TopicPaths
+    from custom_components.vidaa.protocol.dispatcher import dispatch_incoming_mqtt_message
+    from custom_components.vidaa.protocol.topics import TopicPaths
 
     mock_client = MagicMock()
     mock_client.ip = "192.168.50.12"
@@ -231,7 +231,7 @@ async def test_test_tv_ssl_connection_unauthenticated():
     """Verify async_test_tv_ssl_connection allows testing TLS handshake without presenting client certificates."""
     from unittest.mock import AsyncMock
 
-    from custom_components.hisense_vidaa.protocol.auth import async_test_tv_ssl_connection
+    from custom_components.vidaa.protocol.auth import async_test_tv_ssl_connection
 
     mock_reader = AsyncMock()
     mock_writer = MagicMock()
@@ -242,7 +242,7 @@ async def test_test_tv_ssl_connection_unauthenticated():
     mock_writer.get_extra_info.return_value = mock_ssock
 
     with patch("asyncio.open_connection", return_value=(mock_reader, mock_writer)), \
-         patch("custom_components.hisense_vidaa.protocol.auth.build_mqtt_ssl_context"):
+         patch("custom_components.vidaa.protocol.auth.build_mqtt_ssl_context"):
         res = await async_test_tv_ssl_connection("192.168.50.12")
         assert res["connected"] is True
         assert res["tls_version"] == "TLSv1.3"
@@ -256,13 +256,13 @@ async def test_ping_tv_client_cert_tracking():
     """Verify async_ping_tv accurately tracks whether client certificates were presented."""
     from unittest.mock import AsyncMock, MagicMock
 
-    from custom_components.hisense_vidaa.protocol.ping import async_ping_tv
+    from custom_components.vidaa.protocol.ping import async_ping_tv
 
     mock_reader = AsyncMock()
     mock_writer = AsyncMock()
     mock_writer.close = MagicMock()
     with patch("asyncio.open_connection", return_value=(mock_reader, mock_writer)), \
-         patch("custom_components.hisense_vidaa.protocol.ping.async_test_tv_ssl_connection", return_value={
+         patch("custom_components.vidaa.protocol.ping.async_test_tv_ssl_connection", return_value={
              "connected": True,
              "tls_version": "TLSv1.3",
              "cipher": "TLS_AES_256_GCM_SHA384",
@@ -270,14 +270,14 @@ async def test_ping_tv_client_cert_tracking():
              "certfile": None,
              "keyfile": None,
          }), \
-         patch("custom_components.hisense_vidaa.protocol.ping.async_probe_tv_auth_methods", return_value={
+         patch("custom_components.vidaa.protocol.ping.async_probe_tv_auth_methods", return_value={
              "legacy_static": {"rc": None, "supported": False},
              "standard_dynamic": {"rc": None, "supported": False},
              "middle_dynamic": {"rc": None, "supported": False},
              "modern_dynamic": {"rc": None, "supported": False},
              "client_cert_presented": False,
          }), \
-         patch("custom_components.hisense_vidaa.tv.fingerprint.get_device_fingerprint", return_value={}):
+         patch("custom_components.vidaa.tv.fingerprint.get_device_fingerprint", return_value={}):
         res = await async_ping_tv("192.168.50.12")
         assert res["tcp_port_open"] is True
         assert res["tls_handshake"] is True
@@ -316,80 +316,12 @@ def test_query_initial_state_requests_capability() -> None:
     assert published[capability_topic] == ""
 
 
-def test_show_message_publishes_all_candidate_topics() -> None:
-    """Test show_message publishes to showmessage, toast, and notification topics with title/text payload."""
-    import json
-
-    from custom_components.hisense_vidaa.tv.actions_media import show_message
-
-    client = HisenseTvClient(ip="192.168.50.12", client_id="cid")
-    mqtt_mock = MagicMock()
-    client.mqtt_client = mqtt_mock
-    client.connected = True
-
-    result = show_message(client, message="Front Door", title="Alert", duration=10)
-    assert result is True
-
-    published = {c.args[0]: c.args[1] for c in mqtt_mock.publish.call_args_list}
-    assert f"{client.topics.ui}actions/showmessage" in published
-    assert f"{client.topics.ui}actions/toast" in published
-    assert f"{client.topics.ui}actions/notification" in published
-
-    payload = json.loads(published[f"{client.topics.ui}actions/showmessage"])
-    assert payload["message"] == "Front Door"
-    assert payload["text"] == "Front Door"
-    assert payload["title"] == "Alert"
-    assert payload["duration"] == 10
-    assert payload["type"] == "notify"
-
-
-@pytest.mark.anyio
-async def test_async_show_message_publishes_all_candidate_topics() -> None:
-    """Test async_show_message publishes to showmessage, toast, and notification topics."""
-    import json
-    from unittest.mock import AsyncMock
-
-    from custom_components.hisense_vidaa.tv.actions_media import async_show_message
-
-    client = HisenseTvClient(ip="192.168.50.12", client_id="cid")
-    client.connected = True
-    client.mqtt_client = MagicMock()
-    client.async_publish = AsyncMock()
-
-    result = await async_show_message(client, message="Ding Dong", title="Doorbell", duration=7)
-    assert result is True
-
-    assert client.async_publish.call_count == 3
-    topics = [c.args[0] for c in client.async_publish.call_args_list]
-    assert f"{client.topics.ui}actions/showmessage" in topics
-    assert f"{client.topics.ui}actions/toast" in topics
-    assert f"{client.topics.ui}actions/notification" in topics
-
-    payload = json.loads(client.async_publish.call_args_list[0].args[1])
-    assert payload["message"] == "Ding Dong"
-    assert payload["title"] == "Doorbell"
-    assert payload["duration"] == 7
-
-
-@pytest.mark.anyio
-async def test_show_message_not_connected() -> None:
-    """Test show_message returns False when client is disconnected."""
-    from custom_components.hisense_vidaa.tv.actions_media import async_show_message, show_message
-
-    client = HisenseTvClient(ip="192.168.50.12", client_id="cid")
-    client.connected = False
-    client.mqtt_client = None
-
-    assert show_message(client, message="Hello") is False
-    assert await async_show_message(client, message="Hello") is False
-
-
 @pytest.mark.anyio
 async def test_set_volume_and_async_set_volume() -> None:
     """Test set_volume and async_set_volume publish changevolume action."""
     from unittest.mock import AsyncMock
 
-    from custom_components.hisense_vidaa.tv.actions_media import async_set_volume, set_volume
+    from custom_components.vidaa.tv.actions_media import async_set_volume, set_volume
 
     client = HisenseTvClient(ip="192.168.50.12", client_id="cid")
     client.connected = True
