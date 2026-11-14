@@ -38,6 +38,20 @@ This major update rebrands the integration to **VIDAA Smart TV** (`vidaa`), refl
   - SSDP / UPnP discovery now checks for existing configured IP addresses and aborts if an entry for that TV already exists, eliminating redundant discovery prompts.
 - **MEDIA PLAYER UI CONTROLS (#55)**:
   - Ensured Previous/Next track and channel navigation buttons in the Home Assistant media player card remain visible and accessible whenever media playback controls are enabled.
+- **AUTO POWER-ON ON SOURCE & MEDIA PLAYBACK**:
+  - Automatically triggers TV wake/power-on (`async_turn_on()`) when selecting a source or launching media while the TV is in standby or powered off.
+- **HOME ASSISTANT CORE ARCHITECTURE & ENTITY STANDARDIZATION**:
+  - **Entity Naming Alignment**: Stripped redundant integration name prefixes from entity display titles, relying on Home Assistant's native device naming convention (`Hisense TV Active source` → `Active source`).
+  - **Media Player Property Compliance**: Implemented native `@property app_name` and `@property app_id` properties and pruned redundant diagnostic and hardware attributes (`model`, `software_version`, `mac_address`, etc., which reside exclusively on `DeviceInfo`). Cleaned `media_title` so unlabelled physical inputs do not duplicate `source`.
+  - **Diagnostic Sensor Consolidation**: Consolidated standalone `auth_profile` and `brand_profile` sensors into `sensor.<tv>_session_status` attributes (`configured_auth_profile`, `brand_profile`, `active_brand`) and automatically pruned retired entities from the registry.
+  - **Physical Input Filtering**: Filtered `sensor.<tv>_active_source` to strictly reflect physical hardware ports (HDMI, AV, TV tuner), preventing apps like "VIDAA tv" from masquerading as physical inputs.
+  - **Cold-Boot HDMI Signal Recovery**: Added sourcelist signal recovery on cold-boot for `sensor.<tv>_active_app`, preventing it from being stuck in "Standby" when HA restarts while the TV is on an external HDMI input.
+  - **Binary Sensor Cleanup**: Removed duplicate and null-leaking attributes from `binary_sensor.<tv>_in_use`.
+- **SETTINGS & CALIBRATION BROADCAST TELEMETRY**:
+  - Enhanced `apply_picture_update` and `apply_sound_update` to preserve discovered human-readable names and available `options` when incremental `notify_value_changed` broadcasts arrive from the TV remote.
+  - Resolved fallback menu IDs (`91` for Picture Mode, `1` for Sound Mode) so unsolicited TV broadcasts immediately update `client.picture_mode` and `client.sound_mode` even before a full menu tree is probed.
+- **PYTHON 3.16 COMPATIBILITY**:
+  - Replaced deprecated `asyncio.iscoroutinefunction()` and `asyncio.iscoroutine()` with `inspect.iscoroutinefunction()` and `inspect.iscoroutine()` in token synchronization routines.
 - **VIRTUAL KEYBOARD & REMOTE TEXT INPUT**:
   - Extended native `remote.send_command` action with command prefix parsing: `text:<string>` / `type:<string>` (insert text), `text:replace:<string>` (clear and replace text), and `clear_text` / `text:clear` (clear active input field).
   - Added CLI `text` / `send-text` action to `scripts/test_client.py` with `--text` and `--text-action` flags.
