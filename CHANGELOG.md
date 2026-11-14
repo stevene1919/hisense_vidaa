@@ -2,6 +2,28 @@
 
 All notable changes to the VIDAA Smart TV integration will be documented in this file.
 
+## [3.5.1] - 2026-11-14
+
+### ☕ Support the Project
+
+If this integration makes controlling your smart home entertainment a breeze, consider supporting continued open-source development:
+
+[![Support on Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/stevene_)
+
+### 🐛 Bug Fixes & Improvements
+
+- **CLEAN HOME ASSISTANT STARTUP (No More `IntegrationNotFound` Warning)**:
+  - Fixed a startup error (`Failed to load services.yaml for integration: hisense_vidaa`) that appeared after migrating to `v3.5.0` and removing the old folder.
+  - Legacy action aliases (e.g. `hisense_vidaa.send_key`) now register full schema descriptions directly with Home Assistant, keeping your startup logs clean and your existing automations running smoothly (#66).
+- **SMART STANDBY DETECTION & HDMI EXTERNAL DEVICES**:
+  - Fixed an issue where projectors (such as TOPTRO) or TVs with external streaming boxes (like Apple TV or Chromecast) falsely showed as "on" in Home Assistant after a restart while the display was actually in standby (#61).
+  - Toggling power off now reliably turns off the device rather than accidentally turning it on when HDMI signals remain active (#61).
+  - Improved live power state synchronization so running TVs that wake up during a restart are recognized instantly without delays (#53).
+- **SIMPLIFIED KEYSTORE EXTRACTION**:
+  - Updated documentation to highlight the standard `res/raw/client_mobile_android.p12` keystore path found when unzipping official companion APKs, saving time for new users (#65).
+- **SMART SERVICES PAIRING NOTICE**:
+  - Added clear setup guidance explaining that TV "Smart / Connected Services" must be accepted in TV settings for the 4-digit pairing PIN to display on screen, alongside router firewall tips for complete local-only isolation (#64).
+
 ## [3.5.0] - 2026-11-14 — 🚀 VIDAA Smart TV Rebrand Edition
 
 This major milestone rebrands the integration to **VIDAA Smart TV** (`vidaa`), celebrating full universal support across all TV and projector manufacturers powered by VIDAA OS (Hisense, Toshiba, Loewe, Philips, Sharp, JVC, TOPTRO, and regional brands).

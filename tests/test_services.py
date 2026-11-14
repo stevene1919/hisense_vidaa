@@ -1,6 +1,6 @@
 """Tests for Hisense VIDAA custom integration services."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import voluptuous as vol
@@ -520,5 +520,53 @@ def test_services_helpers() -> None:
     assert parse_key_sequence(["KEY_1", "KEY_2"]) == ["KEY_1", "KEY_2"]
     assert parse_key_sequence(None) == []
     assert parse_key_sequence("") == []
+
+
+@pytest.mark.anyio
+async def test_legacy_service_descriptions_registered_without_integration_not_found(caplog):
+    """Test legacy hisense_vidaa service aliases register explicit schemas to prevent IntegrationNotFound (Issue #66)."""
+    from custom_components.vidaa.const import LEGACY_DOMAIN
+    from custom_components.vidaa.services import async_setup_services
+
+    hass = MagicMock(spec=HomeAssistant)
+    hass.data = {}
+    registered_services = {}
+
+    def mock_async_register(domain, service, handler, *args, **kwargs):
+        registered_services[f"{domain}.{service}"] = handler
+
+    hass.services = MagicMock()
+    hass.services.has_service = MagicMock(return_value=False)
+    hass.services.async_register = MagicMock(side_effect=mock_async_register)
+
+    with patch("custom_components.vidaa.services.async_set_service_schema") as mock_set_schema:
+        await async_setup_services(hass)
+
+        # Check all 7 services registered under both DOMAIN and LEGACY_DOMAIN
+        assert hass.services.async_register.call_count == 14
+        legacy_calls = [c for c in hass.services.async_register.call_args_list if c[0][0] == LEGACY_DOMAIN]
+        assert len(legacy_calls) == 7
+
+        # Check async_set_service_schema was called for all 7 legacy services
+        assert mock_set_schema.call_count == 7
+        schema_domains = [c[0][1] for c in mock_set_schema.call_args_list]
+        schema_names = [c[0][2] for c in mock_set_schema.call_args_list]
+        schema_descs = [c[0][3] for c in mock_set_schema.call_args_list]
+
+        assert all(d == LEGACY_DOMAIN for d in schema_domains)
+        assert set(schema_names) == {
+            "send_key",
+            "send_key_sequence",
+            "change_channel",
+            "launch_app",
+            "set_picture_setting",
+            "set_sound_setting",
+            "send_text_input",
+        }
+        for desc in schema_descs:
+            assert desc["name"].startswith("[Deprecated]")
+            assert f"[Deprecated alias for {DOMAIN}." in desc["description"]
+            assert "fields" in desc
+
 
 

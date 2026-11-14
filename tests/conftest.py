@@ -459,6 +459,13 @@ if "homeassistant" not in sys.modules:
 
     # helpers
     helpers = types.ModuleType("homeassistant.helpers")
+    helpers.__path__ = []
+
+    # helpers.service
+    service_module = types.ModuleType("homeassistant.helpers.service")
+    service_module.async_set_service_schema = MagicMock()
+    helpers.service = service_module
+    sys.modules["homeassistant.helpers.service"] = service_module
 
     # helpers.entity
     entity_module = types.ModuleType("homeassistant.helpers.entity")
