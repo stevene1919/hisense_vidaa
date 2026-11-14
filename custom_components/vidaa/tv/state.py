@@ -136,6 +136,15 @@ def apply_device_info_update(client: HisenseTvClient, data: Any) -> None:
     if firmware_version and str(firmware_version).strip():
         client.firmware_version = str(firmware_version).strip()
 
+    # gettvinfo provides authoritative live power state via fake_sleep_state:
+    # 0 = standby (fake_sleep_0), 1 = awake (fake_sleep_1 / on).
+    if data.get("fake_sleep", 1) in (1, "1", True) and "fake_sleep_state" in data:
+        sleep_state = data["fake_sleep_state"]
+        if sleep_state in (0, "0", False):
+            client.state = "off"
+        elif sleep_state in (1, "1", True) and getattr(client, "state", "off") in ("off", ""):
+            client.state = "on"
+
 
 def apply_volume_update(client: HisenseTvClient, data: Any) -> None:
     """Updates client volume and mute attributes from TV volume payload."""

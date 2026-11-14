@@ -137,8 +137,20 @@ class CallbackRegistryMixin:
         self._dispatch("state", data)
 
     def _dispatch_device_info_update(self, data: Any) -> None:
+        was_on = getattr(self, "is_on", False)
         apply_device_info_update(self, data)
         self._dispatch("device_info", data)
+        is_now_on = getattr(self, "is_on", False)
+        if is_now_on != was_on:
+            if is_now_on:
+                synth_state: dict[str, Any] = {"statetype": "fake_sleep_1"}
+                if getattr(self, "current_source", None):
+                    synth_state["sourcename"] = self.current_source
+                self._dispatch("state", synth_state)
+                if getattr(self, "sources", None):
+                    self._dispatch("sourcelist", self.sources)
+            else:
+                self._dispatch("state", {"statetype": "fake_sleep_0"})
 
     def _dispatch_volume_update(self, data: Any) -> None:
         apply_volume_update(self, data)
@@ -165,7 +177,6 @@ class CallbackRegistryMixin:
                     )
                     if src_name and not self.current_source:
                         self.current_source = src_name
-                    self.is_on = True
                     break
         self._dispatch("sourcelist", self.sources)
 

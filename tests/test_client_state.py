@@ -434,6 +434,55 @@ async def test_async_send_command_text_prefixes():
     client.async_send_text_input.assert_called_with("", action="clear")
 
 
+def test_sourcelist_with_active_signal_does_not_wake_standby_tv():
+    """Test sourcelist broadcast with active HDMI signal (is_signal=1) does not wake client in standby (Issue #61)."""
+    client = HisenseTvClient(ip="192.168.50.12", client_id="test_client")
+    client.update_topic_paths()
+
+    # 1. TV reports standby via fake_sleep_0
+    mock_msg = MagicMock()
+    mock_msg.topic = f"{client.topics.broadcast}ui_service/state"
+    mock_msg.payload = b'{"statetype": "fake_sleep_0"}'
+    client._on_message(None, None, mock_msg)
+
+    assert client.state == "off"
+    assert client.is_on is False
+
+    # 2. TV broadcasts sourcelist where an external device (e.g. Apple TV on HDMI1) has active signal
+    mock_msg.topic = f"{client.topics.mobile}ui_service/data/sourcelist"
+    mock_msg.payload = (
+        b'[{"sourceid": "284", "sourcename": "VIDAA tv", "is_signal": "0", "has_signal": "1"}, '
+        b'{"sourceid": "HDMI1", "sourcename": "HDMI1", "is_signal": "1", "has_signal": "0"}]'
+    )
+    client._on_message(None, None, mock_msg)
+
+    # Client must remain in standby/off!
+    assert client.state == "off"
+    assert client.is_on is False
+    assert client.current_source == "HDMI1"
+
+    # 3. gettvinfo confirms fake_sleep_state == 0 (standby)
+    mock_msg.topic = f"{client.topics.mobile}platform_service/data/gettvinfo"
+    mock_msg.payload = b'{"fake_sleep": 1, "fake_sleep_state": 0, "uVersion": "V0000.09.50P"}'
+    client._on_message(None, None, mock_msg)
+    assert client.state == "off"
+    assert client.is_on is False
+
+    # 4. When TV is actually awake (fake_sleep_state == 1 in gettvinfo), even if ui_service/state was missed/stale (#53)
+    state_events = []
+    client.register_state_callback(lambda d: state_events.append(d))
+    mock_msg.topic = f"{client.topics.mobile}platform_service/data/gettvinfo"
+    mock_msg.payload = b'{"fake_sleep": 1, "fake_sleep_state": 1, "uVersion": "V0000.09.50P"}'
+    client._on_message(None, None, mock_msg)
+
+    assert client.state == "on"
+    assert client.is_on is True
+    assert len(state_events) == 1
+    assert state_events[0]["statetype"] == "fake_sleep_1"
+    assert state_events[0]["sourcename"] == "HDMI1"
+
+
+
 
 
 
