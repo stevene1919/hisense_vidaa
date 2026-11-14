@@ -32,9 +32,9 @@ Fai clic sul pulsante qui sotto (o cerca **VIDAA Smart TV** in HACS → Integraz
 
 [![Apri HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
-### 2️⃣ Posiziona il file della chiave (`El.p12`)
-I televisori VIDAA richiedono la crittografia reciproca TLS sulla porta 36669. Copia il file universale **`El.p12`** nella cartella **`/config/ssl/`** di Home Assistant.
-- Scarica l'app APK pubblica e gratuita **VIDAA Smart TV** sul tuo browser, rinomina `.apk` in `.zip` ed estrai `res/El.p12`.
+### 2️⃣ Posiziona il file della chiave (`client_mobile_android.p12` o `El.p12`)
+I televisori VIDAA richiedono la crittografia reciproca TLS sulla porta 36669. Copia il file universale **`client_mobile_android.p12`** (o `El.p12`) nella cartella **`/config/ssl/`** di Home Assistant.
+- Scarica l'app APK pubblica e gratuita **VIDAA Smart TV** sul tuo browser, rinomina `.apk` in `.zip` ed estrai `res/raw/client_mobile_android.p12` (o `res/El.p12`).
 - *Nessun dispositivo Android o emulatore richiesto!*
 
 > [!TIP]

@@ -38,9 +38,9 @@ Click the one-click button below (or search **VIDAA Smart TV** in HACS → Integ
 
 [![Open HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
-### 2️⃣ Place the Key File (`El.p12`)
-VIDAA TVs enforce mutual TLS on port 36669. Drop the universal **`El.p12`** file into your Home Assistant **`/config/ssl/`** directory.
-- Download the free public **VIDAA Smart TV** app APK on your PC/Mac browser, rename `.apk` to `.zip`, and extract `res/El.p12`.
+### 2️⃣ Place the Key File (`client_mobile_android.p12` or `El.p12`)
+VIDAA TVs enforce mutual TLS on port 36669. Drop the universal **`client_mobile_android.p12`** (or `El.p12`) file into your Home Assistant **`/config/ssl/`** directory.
+- Download the free public **VIDAA Smart TV** app APK on your PC/Mac browser, rename `.apk` to `.zip`, and extract `res/raw/client_mobile_android.p12` (or `res/El.p12` if obfuscated).
 - *No Android phone, tablet, or emulator is needed!* An `.apk` is simply a standard zip file.
 
 > [!TIP]
@@ -52,6 +52,11 @@ VIDAA TVs enforce mutual TLS on port 36669. Drop the universal **`El.p12`** file
 2. Go to **Settings → Devices & Services → Add Integration** and search for **VIDAA Smart TV**.
 3. Enter your TV's local IP address and click **Submit**.
 4. Type the **4-digit PIN** displayed on your TV screen to complete setup!
+
+> [!IMPORTANT]
+> **TV Prerequisite — Enable Smart / Connected Services**:  
+> The TV must have **Smart / Connected Services** enabled and the vendor terms of use accepted (`Settings → Support / System → Terms & Conditions / Smart Services`). If left disabled, the TV blocks the on-screen 4-digit PIN dialog from appearing during pairing.  
+> *(Privacy Tip: It is completely safe to block the TV from internet/WAN access at your router once paired; local control via Home Assistant operates 100% offline).*
 
 ---
 

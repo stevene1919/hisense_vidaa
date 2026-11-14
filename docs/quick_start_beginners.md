@@ -29,7 +29,7 @@ flowchart LR
 
 ---
 
-### Step 1: Download & Extract the Certificate File (`El.p12`)
+### Step 1: Download & Extract the Certificate File (`client_mobile_android.p12` or `El.p12`)
 
 1. On your computer (PC, Mac, or laptop), open your web browser.
 2. Go to a public mirror site (like [APKMirror.com](https://www.apkmirror.com/apk/vidaa-usa-inc/vidaa-smart-tv/)) and download the free **VIDAA Smart TV** app:
@@ -39,33 +39,35 @@ flowchart LR
    - **On Windows**:
      1. Right-click the downloaded file and rename the ending from `.apk` to `.zip` (e.g., `app.apk` ➔ `app.zip`).
      2. Double-click `app.zip` to open it.
-     3. Open the `res` folder.
-     4. Copy the file named **`El.p12`** to your desktop.
+     3. Open the `res/raw` folder (or `res`).
+     4. Copy the file named **`client_mobile_android.p12`** (or **`El.p12`** / **`3R.p12`**) to your desktop.
    - **On Mac**:
      1. Rename `.apk` to `.zip` and double-click to unzip it.
-     2. Open the `res` folder and copy **`El.p12`**.
+     2. Open the `res/raw` folder (or `res`) and copy **`client_mobile_android.p12`** (or **`El.p12`**).
    - **On Linux / Home Assistant Terminal**:
      ```bash
-     unzip -j com.universal.remote.multi.apk res/El.p12 -d /config/ssl/
+     unzip -j com.universal.remote.multi.apk res/raw/client_mobile_android.p12 -d /config/ssl/
+     # Or if obfuscated in alternative builds:
+     # unzip -j com.universal.remote.multi.apk res/El.p12 -d /config/ssl/
      ```
 
-*(If you ever see `3R.p12` instead of `El.p12` in a newer version, that works too!)*
+*(If you ever see `3R.p12` or `El.p12` instead of `client_mobile_android.p12`, those work identically!)*
 
 ---
 
-### Step 2: Put `El.p12` into Home Assistant
+### Step 2: Put the Key File into Home Assistant
 
-Copy your **`El.p12`** file into your Home Assistant **`/config/ssl/`** folder:
+Copy your **`client_mobile_android.p12`** (or **`El.p12`**) file into your Home Assistant **`/config/ssl/`** folder:
 
 - **Using the File Editor Add-on**:
   1. Open the File Editor in Home Assistant.
   2. Navigate into the `ssl` folder (inside `/config/`). If `ssl` doesn't exist, create it.
-  3. Click the **Upload** button (top right) and select `El.p12` from your computer.
+  3. Click the **Upload** button (top right) and select `client_mobile_android.p12` from your computer.
 - **Using Samba / Windows Network Share**:
   1. Open your Home Assistant shared network drive on your PC.
-  2. Open the `ssl` folder and paste `El.p12` inside.
+  2. Open the `ssl` folder and paste `client_mobile_android.p12` inside.
 
-*Home Assistant automatically extracts the certificates from `El.p12` on the fly—no passwords or conversion commands needed!*
+*Home Assistant automatically extracts the certificates from the `.p12` bundle on the fly—no passwords or conversion commands needed!*
 
 ---
 
@@ -85,6 +87,11 @@ Copy your **`El.p12`** file into your Home Assistant **`/config/ssl/`** folder:
    - Look at your TV screen—a **4-digit PIN code** will appear!
    - Type that 4-digit code into the prompt in Home Assistant.
    - Click **Submit**.
+
+> [!TIP]
+> **4-Digit PIN Not Appearing on Your TV Screen?**  
+> Check your TV settings to ensure **Smart / Connected Services** are accepted (`Settings → Support / System → Terms & Conditions / Smart Services`). VIDAA OS suppresses the on-screen pairing PIN popup if connected services are disabled.  
+> *(Privacy Note: It is completely safe to block the TV from internet/WAN access at your router once pairing is finished—Home Assistant local control works 100% offline).*
 
 🎉 **You're all done!** Your TV will appear in Home Assistant with full media controls, volume slider, input source selector, remote navigation, and app launcher.
 

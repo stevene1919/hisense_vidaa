@@ -63,7 +63,9 @@ When an automation or manual service call fails, Home Assistant displays an erro
 ## 🔐 Pairing & Authentication Issues
 
 ### 1. Pairing Fails or PIN Does Not Appear on Screen
+* **Smart / Connected Services Disabled (Terms of Use Not Accepted):** VIDAA OS suppresses the on-screen 4-digit pairing PIN popup if **Smart Services** (Connected Services, Terms of Use, and Privacy Policy) are turned off or skipped in TV settings (`Settings → Support / System → Terms & Conditions / Smart Services`). Enable them on the TV and try pairing again. If you wish to isolate the TV from the internet, you can safely block its IP address from WAN/internet access at your router once pairing is completed.
 * **Mobile App Conflict:** VIDAA TVs typically allow only one active remote control session at a time. If the official **RemoteNOW** or **VIDAA** mobile app is currently running on a phone or tablet, close the mobile app completely before starting pairing in Home Assistant.
+* **Keystore Bundle Filename:** Verify that `client_mobile_android.p12` or `El.p12` is in `/config/ssl/`.
 * **Stale Pairing Cache:** In Home Assistant, restart the config flow or trigger re-pairing via `button.<tv_name>_trigger_re_pairing`.
 * **Expired PIN:** PIN codes displayed on the TV screen expire after 60 seconds. Enter the 4-digit code promptly.
 

@@ -32,9 +32,9 @@
 
 [![打开 HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
-### 2️⃣ 放置证书密钥文件 (`El.p12`)
-VIDAA 电视要求在 36669 端口进行双向 TLS 认证。将通用秘钥文件 **`El.p12`** 放置在 Home Assistant 的 **`/config/ssl/`** 目录中。
-- 在浏览器中下载免费的 **VIDAA Smart TV** 应用安装包（APK），将扩展名 `.apk` 重命名为 `.zip`，解压提取其中的 `res/El.p12`。
+### 2️⃣ 放置证书密钥文件 (`client_mobile_android.p12` 或 `El.p12`)
+VIDAA 电视要求在 36669 端口进行双向 TLS 认证。将通用秘钥文件 **`client_mobile_android.p12`**（或 `El.p12`）放置在 Home Assistant 的 **`/config/ssl/`** 目录中。
+- 在浏览器中下载免费的 **VIDAA Smart TV** 应用安装包（APK），将扩展名 `.apk` 重命名为 `.zip`，解压提取其中的 `res/raw/client_mobile_android.p12`（若被混淆则为 `res/El.p12`）。
 - *无需任何 Android 设备或模拟器！*
 
 > [!TIP]

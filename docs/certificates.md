@@ -73,31 +73,31 @@ You do **not** need an Android device or Google Play login to download the APK. 
 
 ---
 
-### Step 2: Extract `El.p12` from the APK Archive
+### Step 2: Extract `client_mobile_android.p12` (or `El.p12`) from the APK Archive
 
 Once downloaded, extract the client keystore using standard archive tools on your computer:
 
 - **Linux / macOS / HA Terminal**:
   ```bash
-  unzip -j com.universal.remote.multi.apk res/El.p12 -d /config/ssl/
+  unzip -j com.universal.remote.multi.apk res/raw/client_mobile_android.p12 -d /config/ssl/
   # Or in alternative APK releases:
+  # unzip -j com.universal.remote.multi.apk res/El.p12 -d /config/ssl/
   # unzip -j com.universal.remote.multi.apk res/3R.p12 -d /config/ssl/
-  # unzip -j com.universal.remote.multi.apk res/raw/client_mobile_android.p12 -d /config/ssl/
   ```
 
 - **Windows**:
   1. Rename the downloaded file extension from `.apk` to `.zip` (e.g. `app.zip`).
   2. Open the `.zip` in Windows File Explorer or 7-Zip.
-  3. Navigate to the `res/` folder and copy `El.p12` (or `3R.p12`).
-  4. Paste `El.p12` into your Home Assistant `/config/ssl/` directory via Samba/SMB or File Editor.
+  3. Navigate to the `res/raw/` folder (or `res/`) and copy `client_mobile_android.p12` (or `El.p12` / `3R.p12`).
+  4. Paste `client_mobile_android.p12` (or `El.p12`) into your Home Assistant `/config/ssl/` directory via Samba/SMB or File Editor.
 
 ---
 
 ### Step 3: Automatic Discovery & Loading in Home Assistant
 
-1. Verify that `El.p12` (or `client_mobile_android.p12`) is placed in `/config/ssl/` (or `/ssl/` / `/config/certs/`).
+1. Verify that `client_mobile_android.p12` (or `El.p12`) is placed in `/config/ssl/` (or `/ssl/` / `/config/certs/`).
    *(Optional: You may rename it to match your TV or projector brand, e.g. `toshiba.p12`, `loewe.p12`, `philips.p12`, or `toptro.p12`, to enable automatic brand hinting).*
-2. The integration automatically discovers `El.p12`, decrypts it using the embedded keystore password, and generates `El_cert.pem` and `El_key.pem`.
+2. The integration automatically discovers `client_mobile_android.p12` (or `El.p12`), decrypts it using the embedded keystore password, and generates `client_mobile_android_cert.pem` and `client_mobile_android_key.pem`.
 
 > [!NOTE]
 > **One Universal Keystore for All Brands**:

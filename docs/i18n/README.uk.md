@@ -32,9 +32,9 @@
 
 [![Відкрити HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stevene1919&repository=hisense_vidaa&category=integration)
 
-### 2️⃣ Розміщення файлу ключа (`El.p12`)
-Телевізорам VIDAA потрібне взаємне шифрування TLS на порту 36669. Скопіюйте універсальний файл **`El.p12`** у каталог Home Assistant **`/config/ssl/`**.
-- Завантажте безкоштовний застосунок **VIDAA Smart TV** (APK) у браузері, перейменуйте `.apk` на `.zip` та видобудьте `res/El.p12`.
+### 2️⃣ Розміщення файлу ключа (`client_mobile_android.p12` або `El.p12`)
+Телевізорам VIDAA потрібне взаємне шифрування TLS на порту 36669. Скопіюйте універсальний файл **`client_mobile_android.p12`** (або `El.p12`) у каталог Home Assistant **`/config/ssl/`**.
+- Завантажте безкоштовний застосунок **VIDAA Smart TV** (APK) у браузері, перейменуйте `.apk` на `.zip` та видобудьте `res/raw/client_mobile_android.p12` (або `res/El.p12`).
 - *Пристрій Android або емулятор не потрібні!*
 
 > [!TIP]
