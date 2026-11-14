@@ -8,10 +8,10 @@ This document tracks active pending tasks, investigations, and future roadmap it
 
 ### 1. GitHub Repository & HACS Rebrand Finalization
 
-- [ ] **GitHub Repository Rename**:
+- [x] **GitHub Repository Rename**:
   - Rename repository on GitHub from `stevene1919/hisense_vidaa` $\rightarrow$ `stevene1919/vidaa` (leveraging GitHub's automatic HTTP & Git redirection).
   - Update local Git remotes and submodule paths to point to canonical `stevene1919/vidaa`.
-- [ ] **Release Tagging & Publishing**:
+- [x] **Release Tagging & Publishing**:
   - Create Git tag `v3.5.0` and publish the release on GitHub with attached `vidaa.zip` distribution archive.
   - Review automated release workflow (`.github/workflows/release.yml`) asset creation and hash generation.
 - [ ] **HACS Catalog Update**:
