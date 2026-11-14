@@ -226,3 +226,100 @@ def test_setting_menu_item_menu_type():
     assert value_item.is_select is False
 
 
+def test_apply_picture_update_incremental_broadcast():
+    """Verify apply_picture_update preserves menu metadata during incremental broadcast."""
+    from custom_components.vidaa.tv.state import apply_picture_update, apply_sound_update
+
+    mock_client = MagicMock()
+    mock_client.picture_settings = {}
+    mock_client.sound_settings = {}
+    mock_client.picture_mode = None
+    mock_client.backlight = None
+    mock_client.sound_mode = None
+
+    # 1. Full menu tree load from get_menu_info
+    initial_payload = {
+        "action": "get_menu_info",
+        "menu_info": [
+            {
+                "menu_id": 91,
+                "menu_name": "Picture Mode",
+                "menu_value": "Standard",
+                "menu_opts": ["Standard", "Cinema Day", "Cinema Night", "Dynamic"],
+            },
+            {
+                "menu_id": 92,
+                "menu_name": "Backlight",
+                "menu_value": 75,
+                "min_value": 0,
+                "max_value": 100,
+            },
+        ],
+    }
+    apply_picture_update(mock_client, initial_payload)
+    assert mock_client.picture_mode == "Standard"
+    assert mock_client.backlight == 75
+    assert mock_client.picture_settings[91].name == "Picture Mode"
+    assert mock_client.picture_settings[91].options == ["Standard", "Cinema Day", "Cinema Night", "Dynamic"]
+    assert mock_client.picture_settings[92].min_value == 0
+    assert mock_client.picture_settings[92].max_value == 100
+
+    # 2. Incremental broadcast update (notify_value_changed) from TV remote
+    broadcast_payload = {
+        "action": "notify_value_changed",
+        "menu_id": 91,
+        "menu_value": "Dynamic",
+    }
+    apply_picture_update(mock_client, broadcast_payload)
+    # Must update picture_mode
+    assert mock_client.picture_mode == "Dynamic"
+    # Must preserve existing name, options, and update value
+    assert mock_client.picture_settings[91].value == "Dynamic"
+    assert mock_client.picture_settings[91].name == "Picture Mode"
+    assert mock_client.picture_settings[91].options == ["Standard", "Cinema Day", "Cinema Night", "Dynamic"]
+
+    # 3. Incremental backlight change
+    backlight_broadcast = {
+        "action": "notify_value_changed",
+        "menu_id": 92,
+        "menu_value": 90,
+    }
+    apply_picture_update(mock_client, backlight_broadcast)
+    assert mock_client.backlight == 90
+    assert mock_client.picture_settings[92].value == 90
+    assert mock_client.picture_settings[92].name == "Backlight"
+    assert mock_client.picture_settings[92].max_value == 100
+
+    # 4. Fallback ID resolution when menu wasn't preloaded
+    mock_client_unloaded = MagicMock()
+    mock_client_unloaded.picture_settings = {}
+    mock_client_unloaded.picture_mode = None
+    apply_picture_update(mock_client_unloaded, broadcast_payload)
+    assert mock_client_unloaded.picture_mode == "Dynamic"
+
+    # 5. Sound mode incremental update
+    sound_initial = {
+        "action": "get_menu_info",
+        "menu_info": [
+            {
+                "menu_id": 1,
+                "menu_name": "Sound Mode",
+                "menu_value": "Standard",
+                "menu_opts": ["Standard", "Theatre", "Music"],
+            }
+        ],
+    }
+    apply_sound_update(mock_client, sound_initial)
+    assert mock_client.sound_mode == "Standard"
+    assert mock_client.sound_settings[1].name == "Sound Mode"
+
+    sound_broadcast = {
+        "action": "notify_value_changed",
+        "menu_id": 1,
+        "menu_value": "Theatre",
+    }
+    apply_sound_update(mock_client, sound_broadcast)
+    assert mock_client.sound_mode == "Theatre"
+    assert mock_client.sound_settings[1].value == "Theatre"
+    assert mock_client.sound_settings[1].name == "Sound Mode"
+    assert mock_client.sound_settings[1].options == ["Standard", "Theatre", "Music"]

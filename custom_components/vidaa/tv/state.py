@@ -5,7 +5,14 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING, Any
 
-from .settings import parse_settings_payload
+from .settings import (
+    DEFAULT_MENU_ID_BACKLIGHT,
+    DEFAULT_MENU_ID_BRIGHTNESS,
+    DEFAULT_MENU_ID_CONTRAST,
+    DEFAULT_MENU_ID_PICTURE_MODE,
+    DEFAULT_MENU_ID_SOUND_MODE,
+    parse_settings_payload,
+)
 
 if TYPE_CHECKING:
     from ..client import HisenseTvClient
@@ -46,8 +53,7 @@ def apply_state_update(client: HisenseTvClient, data: Any) -> None:
                 for source in sources:
                     if (
                         isinstance(source, dict)
-                        and str(source.get("sourceid", "")).strip().lower()
-                        == source_id_str.strip().lower()
+                        and str(source.get("sourceid", "")).strip().lower() == source_id_str.strip().lower()
                     ):
                         matched_name = source.get("sourcename") or source.get("displayname")
                         break
@@ -112,12 +118,7 @@ def apply_device_info_update(client: HisenseTvClient, data: Any) -> None:
     if model and str(model).strip():
         client.model_name = str(model).strip()
 
-    manufacturer_name = (
-        data.get("manufacturer")
-        or data.get("brand")
-        or data.get("brand_name")
-        or data.get("vendor")
-    )
+    manufacturer_name = data.get("manufacturer") or data.get("brand") or data.get("brand_name") or data.get("vendor")
     if manufacturer_name and str(manufacturer_name).strip():
         m_str = str(manufacturer_name).strip()
         from ..const import BRAND_MAP, GENERIC_MANUFACTURERS
@@ -169,28 +170,89 @@ def apply_picture_update(client: HisenseTvClient, data: Any) -> None:
     """Updates client picture settings from TV picture settings payload."""
     parsed_items = parse_settings_payload(data)
     for item in parsed_items:
-        client.picture_settings[item.menu_id] = item
-        name_clean = item.name.lower()
-        if "mode" in name_clean:
-            client.picture_mode = str(item.value)
-        elif "backlight" in name_clean:
+        existing = None
+        if isinstance(client.picture_settings, dict):
+            existing = client.picture_settings.get(item.menu_id)
+        elif isinstance(client.picture_settings, list):
+            for it in client.picture_settings:
+                if getattr(it, "menu_id", None) == item.menu_id:
+                    existing = it
+                    break
+
+        if existing is not None:
+            existing.value = item.value
+            if item.options:
+                existing.options = item.options
+            if item.min_value is not None:
+                existing.min_value = item.min_value
+            if item.max_value is not None:
+                existing.max_value = item.max_value
+            if item.step is not None:
+                existing.step = item.step
+            if not existing.name.startswith("Menu_") and item.name.startswith("Menu_"):
+                pass
+            else:
+                existing.name = item.name
+            target_item = existing
+        else:
+            if isinstance(client.picture_settings, dict):
+                client.picture_settings[item.menu_id] = item
+            elif isinstance(client.picture_settings, list):
+                client.picture_settings.append(item)
+            target_item = item
+
+        name_clean = target_item.name.lower()
+        menu_id = target_item.menu_id
+        if "mode" in name_clean or menu_id == DEFAULT_MENU_ID_PICTURE_MODE:
+            client.picture_mode = str(target_item.value)
+        elif "backlight" in name_clean or menu_id == DEFAULT_MENU_ID_BACKLIGHT:
             with contextlib.suppress(ValueError, TypeError):
-                client.backlight = int(item.value)
-        elif "brightness" in name_clean:
+                client.backlight = int(target_item.value)
+        elif "brightness" in name_clean or menu_id == DEFAULT_MENU_ID_BRIGHTNESS:
             with contextlib.suppress(ValueError, TypeError):
-                client.brightness = int(item.value)
-        elif "contrast" in name_clean:
+                client.brightness = int(target_item.value)
+        elif "contrast" in name_clean or menu_id == DEFAULT_MENU_ID_CONTRAST:
             with contextlib.suppress(ValueError, TypeError):
-                client.contrast = int(item.value)
+                client.contrast = int(target_item.value)
 
 
 def apply_sound_update(client: HisenseTvClient, data: Any) -> None:
     """Updates client sound settings from TV sound settings payload."""
     parsed_items = parse_settings_payload(data)
     for item in parsed_items:
-        client.sound_settings[item.menu_id] = item
-        if "mode" in item.name.lower():
-            client.sound_mode = str(item.value)
+        existing = None
+        if isinstance(client.sound_settings, dict):
+            existing = client.sound_settings.get(item.menu_id)
+        elif isinstance(client.sound_settings, list):
+            for it in client.sound_settings:
+                if getattr(it, "menu_id", None) == item.menu_id:
+                    existing = it
+                    break
+
+        if existing is not None:
+            existing.value = item.value
+            if item.options:
+                existing.options = item.options
+            if item.min_value is not None:
+                existing.min_value = item.min_value
+            if item.max_value is not None:
+                existing.max_value = item.max_value
+            if item.step is not None:
+                existing.step = item.step
+            if not existing.name.startswith("Menu_") and item.name.startswith("Menu_"):
+                pass
+            else:
+                existing.name = item.name
+            target_item = existing
+        else:
+            if isinstance(client.sound_settings, dict):
+                client.sound_settings[item.menu_id] = item
+            elif isinstance(client.sound_settings, list):
+                client.sound_settings.append(item)
+            target_item = item
+
+        if "mode" in target_item.name.lower() or target_item.menu_id == DEFAULT_MENU_ID_SOUND_MODE:
+            client.sound_mode = str(target_item.value)
 
 
 class TvStateMixin:
@@ -239,4 +301,3 @@ class TvStateMixin:
     def is_on(self, value: bool) -> None:
         """Sets the power state."""
         self.state = "on" if value else "off"
-
